@@ -249,3 +249,16 @@ Achieve 100% line/branch/statement/function coverage on all source files before 
 - Added 6 new tests for direct entry editing behavior
 - **883 tests across 33 suites, all passing**
 - Build, lint (0 errors), and type-check all pass
+
+### 2026-07-24 (Bulk operations for ranges/rows/columns)
+- Implemented bulk operations for range, row, and column selections:
+  - **Delete/Backspace** now clears all cells in the selection (not just active cell)
+  - Works for single cells, ranges (shift+arrow), full rows, and full columns
+  - Uses new `onCellsChange` callback for efficient bulk updates
+- Added `handleCellsChange` in App.tsx:
+  - Handles bulk cell updates in a single history push
+  - Properly deletes cells with empty values
+  - Preserves cell styles for non-empty updates
+- Added 4 new tests for bulk delete operations
+- **887 tests across 33 suites, all passing**
+- Build, lint (0 errors), and type-check all pass

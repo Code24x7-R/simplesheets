@@ -774,6 +774,106 @@ describe('Grid Component', () => {
     expect(onCellChange).toHaveBeenCalledWith(5, 5, '');
   });
 
+  // ─── Bulk Operations (Range / Row / Column) ────────────────────────
+
+  it('Delete key clears all cells in a range selection', () => {
+    const onCellsChange = jest.fn();
+    render(
+      <Grid
+        sheet={createTestSheet({ rowCount: 10, columnCount: 10 })}
+        onCellsChange={onCellsChange}
+        selectedCell={{ row: 0, col: 0 }}
+      />
+    );
+    const grid = document.querySelector('[tabindex="0"]') as HTMLElement;
+
+    // Create a 2x2 selection by shift+clicking
+    // First, set up a selection by navigating with shift+arrow
+    fireEvent.keyDown(grid, { key: 'ArrowRight', shiftKey: true });
+    fireEvent.keyDown(grid, { key: 'ArrowDown', shiftKey: true });
+
+    // Now press Delete to clear all cells in the selection
+    fireEvent.keyDown(grid, { key: 'Delete' });
+
+    // Should call onCellsChange with all 4 cells in the 2x2 range
+    expect(onCellsChange).toHaveBeenCalled();
+    const changes = onCellsChange.mock.calls[0][0];
+    expect(changes.length).toBe(4);
+    // All changes should have empty value
+    expect(changes.every((c: { value: string }) => c.value === '')).toBe(true);
+  });
+
+  it('Backspace key clears all cells in a range selection', () => {
+    const onCellsChange = jest.fn();
+    render(
+      <Grid
+        sheet={createTestSheet({ rowCount: 10, columnCount: 10 })}
+        onCellsChange={onCellsChange}
+        selectedCell={{ row: 0, col: 0 }}
+      />
+    );
+    const grid = document.querySelector('[tabindex="0"]') as HTMLElement;
+
+    // Create a 2x2 selection
+    fireEvent.keyDown(grid, { key: 'ArrowRight', shiftKey: true });
+    fireEvent.keyDown(grid, { key: 'ArrowDown', shiftKey: true });
+
+    // Backspace to clear
+    fireEvent.keyDown(grid, { key: 'Backspace' });
+
+    expect(onCellsChange).toHaveBeenCalled();
+    const changes = onCellsChange.mock.calls[0][0];
+    expect(changes.length).toBe(4);
+  });
+
+  it('Delete key clears all cells in a row selection', () => {
+    const onCellsChange = jest.fn();
+    render(
+      <Grid
+        sheet={createTestSheet({ rowCount: 10, columnCount: 10 })}
+        onCellsChange={onCellsChange}
+      />
+    );
+    const grid = document.querySelector('[tabindex="0"]') as HTMLElement;
+
+    // Select row 0 by clicking the row header
+    const rowHeader = screen.getByText('1').closest('.grid-cell-header') as HTMLElement;
+    fireEvent.mouseDown(rowHeader);
+
+    // Delete to clear the entire row
+    fireEvent.keyDown(grid, { key: 'Delete' });
+
+    expect(onCellsChange).toHaveBeenCalled();
+    const changes = onCellsChange.mock.calls[0][0];
+    // Should clear all columns in the row (10 columns based on columnCount)
+    expect(changes.length).toBe(10);
+    expect(changes[0].row).toBe(0);
+  });
+
+  it('Delete key clears all cells in a column selection', () => {
+    const onCellsChange = jest.fn();
+    render(
+      <Grid
+        sheet={createTestSheet({ rowCount: 10, columnCount: 10 })}
+        onCellsChange={onCellsChange}
+      />
+    );
+    const grid = document.querySelector('[tabindex="0"]') as HTMLElement;
+
+    // Select column A by clicking the column header
+    const colHeader = screen.getByText('A').closest('.grid-cell-header') as HTMLElement;
+    fireEvent.mouseDown(colHeader);
+
+    // Delete to clear the entire column
+    fireEvent.keyDown(grid, { key: 'Delete' });
+
+    expect(onCellsChange).toHaveBeenCalled();
+    const changes = onCellsChange.mock.calls[0][0];
+    // Should clear all rows in the column (10 rows based on rowCount)
+    expect(changes.length).toBe(10);
+    expect(changes[0].col).toBe(0);
+  });
+
   it('returns focus to grid after pressing Enter to commit edit', () => {
     const onCellChange = jest.fn();
     // Use cell (2, 2) which is visible in the 5x5 virtualizer mock

@@ -24,6 +24,8 @@ interface GridProps {
   sheet: Sheet;
   /** Callback when a cell value is edited. */
   onCellChange?: (row: number, col: number, value: string) => void;
+  /** Callback for bulk cell changes (e.g., delete range, paste). */
+  onCellsChange?: (changes: Array<{ row: number; col: number; value: string }>) => void;
   /** Currently selected cell (controlled). */
   selectedCell?: { row: number; col: number } | null;
   /** Callback when selection changes. */
@@ -74,7 +76,7 @@ const HIGHLIGHT_BORDER_COLORS = [
  * Renders only the visible cells within the viewport using @tanstack/react-virtual.
  * Supports 10,000+ rows with smooth scrolling.
  */
-export function Grid({ sheet, onCellChange, onSelect, selectedCell, highlightedRanges = [], isPointMode = false, pointSelection = null, onCellPick, onHeaderSelect, onColumnResize, onRowResize }: GridProps) {
+export function Grid({ sheet, onCellChange, onCellsChange, onSelect, selectedCell, highlightedRanges = [], isPointMode = false, pointSelection = null, onCellPick, onHeaderSelect, onColumnResize, onRowResize }: GridProps) {
   const parentRef = useRef<HTMLDivElement>(null);
   const [selection, setSelection] = useState<Selection | null>(null);
   const [editingCell, setEditingCell] = useState<string | null>(null);
@@ -678,8 +680,22 @@ export function Grid({ sheet, onCellChange, onSelect, selectedCell, highlightedR
       }
 
       // When a full row is selected, arrow up/down moves the row selection
-      /* istanbul ignore next - row/col header keyboard navigation */
       if (activeSelection.type === 'row') {
+        // Handle Delete/Backspace for bulk clear
+        if ((e.key === 'Delete' || e.key === 'Backspace') && onCellsChange) {
+          e.preventDefault();
+          const sel = activeSelection;
+          const minRow = Math.min(sel.startRow, sel.endRow);
+          const maxRow = Math.max(sel.startRow, sel.endRow);
+          const changes: Array<{ row: number; col: number; value: string }> = [];
+          for (let r = minRow; r <= maxRow; r++) {
+            for (let c = 0; c < columnCount; c++) {
+              changes.push({ row: r, col: c, value: '' });
+            }
+          }
+          onCellsChange(changes);
+          return;
+        }
         switch (e.key) {
           case 'ArrowUp':
             row = Math.max(0, row - 1);
@@ -723,8 +739,22 @@ export function Grid({ sheet, onCellChange, onSelect, selectedCell, highlightedR
       }
 
       // When a full column is selected, arrow left/right moves the column selection
-      /* istanbul ignore next - col header keyboard navigation */
       if (activeSelection.type === 'col') {
+        // Handle Delete/Backspace for bulk clear
+        if ((e.key === 'Delete' || e.key === 'Backspace') && onCellsChange) {
+          e.preventDefault();
+          const sel = activeSelection;
+          const minCol = Math.min(sel.startCol, sel.endCol);
+          const maxCol = Math.max(sel.startCol, sel.endCol);
+          const changes: Array<{ row: number; col: number; value: string }> = [];
+          for (let c = minCol; c <= maxCol; c++) {
+            for (let r = 0; r < rowCount; r++) {
+              changes.push({ row: r, col: c, value: '' });
+            }
+          }
+          onCellsChange(changes);
+          return;
+        }
         switch (e.key) {
           case 'ArrowLeft':
             col = Math.max(0, col - 1);
@@ -794,9 +824,25 @@ export function Grid({ sheet, onCellChange, onSelect, selectedCell, highlightedR
           return;
         case 'Delete':
         case 'Backspace':
-          // Clear cell contents without entering edit mode
-          if (onCellChange) {
-            onCellChange(row, col, '');
+          // Clear all cells in the selection (bulk operation)
+          {
+            const sel = activeSelection;
+            if (sel && onCellsChange) {
+              const minRow = Math.min(sel.startRow, sel.endRow);
+              const maxRow = Math.max(sel.startRow, sel.endRow);
+              const minCol = Math.min(sel.startCol, sel.endCol);
+              const maxCol = Math.max(sel.startCol, sel.endCol);
+              const changes: Array<{ row: number; col: number; value: string }> = [];
+              for (let r = minRow; r <= maxRow; r++) {
+                for (let c = minCol; c <= maxCol; c++) {
+                  changes.push({ row: r, col: c, value: '' });
+                }
+              }
+              onCellsChange(changes);
+            } else if (onCellChange) {
+              // Fallback: clear single cell
+              onCellChange(row, col, '');
+            }
           }
           return;
         /* istanbul ignore next - defensive default */
@@ -836,7 +882,7 @@ export function Grid({ sheet, onCellChange, onSelect, selectedCell, highlightedR
       columnVirtualizer.scrollToIndex(col);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [effectiveSelection, editingCell, rowCount, columnCount, handleCellSelect, handleCellEdit, handleCellEditWithChar, handleCopy, handleCut, handlePaste, isPrintableKey, rowVirtualizer, columnVirtualizer, onSelect, onCellChange]
+    [effectiveSelection, editingCell, rowCount, columnCount, handleCellSelect, handleCellEdit, handleCellEditWithChar, handleCopy, handleCut, handlePaste, isPrintableKey, rowVirtualizer, columnVirtualizer, onSelect, onCellChange, onCellsChange]
   );
 
   /**

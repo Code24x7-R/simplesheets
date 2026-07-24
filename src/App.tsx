@@ -317,6 +317,46 @@ function WorkbookView() {
     [workbook, pushHistory]
   );
 
+  const handleCellsChange = useCallback(
+    (changes: Array<{ row: number; col: number; value: string }>) => {
+      if (changes.length === 0) return;
+      // Create a new workbook with all updated cells
+      const newSheets = workbook.sheets.map((s, idx) => {
+        if (idx !== workbook.activeSheetIndex) return s;
+        const newCells = { ...s.cells };
+        for (const change of changes) {
+          const key = cellKey(change.row, change.col);
+          if (change.value === '') {
+            // Delete cell if it exists
+            delete newCells[key];
+          } else {
+            const existingCell = newCells[key];
+            newCells[key] = {
+              rawValue: change.value,
+              style: existingCell?.style,
+              rowSpan: existingCell?.rowSpan,
+              colSpan: existingCell?.colSpan,
+              isMergeAnchor: existingCell?.isMergeAnchor,
+            };
+          }
+        }
+        return {
+          ...s,
+          cells: newCells,
+        };
+      });
+      const newWorkbook: Workbook = {
+        ...workbook,
+        sheets: newSheets,
+        lastModified: Date.now(),
+      };
+      const cellCount = changes.length;
+      pushHistory(newWorkbook, `Updated ${cellCount} cell(s)`);
+      setStatusMessage(`Updated ${cellCount} cell(s)`);
+    },
+    [workbook, pushHistory]
+  );
+
   const handleCellSelect = useCallback(
     (row: number, col: number) => {
       setActiveCell({ row, col });
@@ -659,6 +699,7 @@ function WorkbookView() {
         <Grid
           sheet={updatedSheet}
           onCellChange={handleCellChange}
+          onCellsChange={handleCellsChange}
           onSelect={handleCellSelect}
           selectedCell={activeCell}
           highlightedRanges={highlightedRanges}
