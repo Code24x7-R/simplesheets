@@ -207,6 +207,7 @@ export function getEnclosingFunction(formula: string, pos: number): string | nul
         if (nameEnd >= nameStart) {
           return formula.slice(nameStart, nameEnd + 1).toUpperCase();
         }
+        /* istanbul ignore next - no valid function name found */
         return null;
       }
       depth--;

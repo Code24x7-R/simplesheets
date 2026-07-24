@@ -5,7 +5,6 @@ import {
   isOperatorChar,
   cycleReference,
   MODE_CODES,
-  type EditingState,
 } from './useCellEditing';
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -413,7 +412,7 @@ describe('useCellEditing - ENTER state', () => {
 });
 
 describe('useCellEditing - EDIT state', () => {
-  function enterEditState(result: any, cellValue = 'Hello') {
+  function enterEditState(result: any) {
     act(() => {
       result.current.handleKey('F2', false, false);
     });
@@ -421,7 +420,7 @@ describe('useCellEditing - EDIT state', () => {
 
   it('inserts character at caret position in EDIT mode', () => {
     const { result } = createHook({ cellValue: 'Helo' });
-    enterEditState(result, 'Helo');
+    enterEditState(result);
     // Move caret to position 3 (between 'l' and 'o')
     act(() => {
       // Simulate caret at position 3 by pressing ArrowLeft twice from end
@@ -438,7 +437,7 @@ describe('useCellEditing - EDIT state', () => {
 
   it('moves caret left in EDIT mode', () => {
     const { result } = createHook({ cellValue: 'Hello' });
-    enterEditState(result, 'Hello');
+    enterEditState(result);
     act(() => {
       result.current.handleKey('ArrowLeft', false, false);
     });
@@ -447,7 +446,7 @@ describe('useCellEditing - EDIT state', () => {
 
   it('moves caret right in EDIT mode', () => {
     const { result } = createHook({ cellValue: 'Hello' });
-    enterEditState(result, 'Hello');
+    enterEditState(result);
     // Move to start
     for (let i = 0; i < 5; i++) {
       act(() => {
@@ -462,7 +461,7 @@ describe('useCellEditing - EDIT state', () => {
 
   it('does not move caret left past 0', () => {
     const { result } = createHook({ cellValue: 'Hi' });
-    enterEditState(result, 'Hi');
+    enterEditState(result);
     // Move to start
     for (let i = 0; i < 3; i++) {
       act(() => {
@@ -474,7 +473,7 @@ describe('useCellEditing - EDIT state', () => {
 
   it('does not move caret right past buffer length', () => {
     const { result } = createHook({ cellValue: 'Hi' });
-    enterEditState(result, 'Hi');
+    enterEditState(result);
     act(() => {
       result.current.handleKey('ArrowRight', false, false);
     });
@@ -484,7 +483,7 @@ describe('useCellEditing - EDIT state', () => {
   it('commits and navigates on ArrowDown in EDIT mode (single line)', () => {
     const onCommit = jest.fn();
     const { result } = createHook({ cellValue: 'Hello', onCommit });
-    enterEditState(result, 'Hello');
+    enterEditState(result);
     let keyResult: any;
     act(() => {
       keyResult = result.current.handleKey('ArrowDown', false, false);
@@ -495,7 +494,7 @@ describe('useCellEditing - EDIT state', () => {
 
   it('deletes char before caret on Backspace in EDIT mode', () => {
     const { result } = createHook({ cellValue: 'Hello' });
-    enterEditState(result, 'Hello');
+    enterEditState(result);
     // Move caret to position 4
     act(() => {
       result.current.handleKey('ArrowLeft', false, false);
@@ -509,7 +508,7 @@ describe('useCellEditing - EDIT state', () => {
 
   it('does nothing on Backspace at position 0', () => {
     const { result } = createHook({ cellValue: 'Hi' });
-    enterEditState(result, 'Hi');
+    enterEditState(result);
     // Move to start
     for (let i = 0; i < 3; i++) {
       act(() => {
@@ -524,7 +523,7 @@ describe('useCellEditing - EDIT state', () => {
 
   it('deletes char after caret on Delete in EDIT mode', () => {
     const { result } = createHook({ cellValue: 'Hello' });
-    enterEditState(result, 'Hello');
+    enterEditState(result);
     // Move caret to position 3
     act(() => {
       result.current.handleKey('ArrowLeft', false, false);
@@ -540,7 +539,7 @@ describe('useCellEditing - EDIT state', () => {
 
   it('does nothing on Delete at end of buffer', () => {
     const { result } = createHook({ cellValue: 'Hi' });
-    enterEditState(result, 'Hi');
+    enterEditState(result);
     act(() => {
       result.current.handleKey('Delete', false, false);
     });
@@ -550,7 +549,7 @@ describe('useCellEditing - EDIT state', () => {
   it('commits on Enter in EDIT mode', () => {
     const onCommit = jest.fn();
     const { result } = createHook({ cellValue: 'Hello', onCommit });
-    enterEditState(result, 'Hello');
+    enterEditState(result);
     act(() => {
       result.current.handleKey('Enter', false, false);
     });
@@ -559,7 +558,7 @@ describe('useCellEditing - EDIT state', () => {
 
   it('cancels on Escape in EDIT mode', () => {
     const { result } = createHook({ cellValue: 'Hello' });
-    enterEditState(result, 'Hello');
+    enterEditState(result);
     act(() => {
       result.current.handleKey('Escape', false, false);
     });
@@ -568,7 +567,7 @@ describe('useCellEditing - EDIT state', () => {
 
   it('enters POINT mode on F2 in EDIT mode', () => {
     const { result } = createHook({ cellValue: '=SUM(' });
-    enterEditState(result, '=SUM(');
+    enterEditState(result);
     act(() => {
       result.current.handleKey('F2', false, false);
     });
@@ -643,6 +642,18 @@ describe('useCellEditing - POINT state', () => {
     expect(result.current.pointSession?.currentRow).toBe(2);
   });
 
+  it('F4 cycles reference in POINT mode', () => {
+    const { result } = createHook();
+    enterPointState(result);
+    // Press F4 immediately (before arrow keys) to cycle the single-cell reference
+    // The initial reference is at the active cell (A1)
+    act(() => {
+      result.current.handleKey('F4', false, false);
+    });
+    // Buffer should now contain the cycled reference ($A$1)
+    expect(result.current.session.buffer).toContain('$A$1');
+  });
+
   it('F2 exits POINT mode back to EDIT', () => {
     const { result } = createHook();
     enterPointState(result);
@@ -679,9 +690,8 @@ describe('useCellEditing - POINT state', () => {
     act(() => {
       result.current.handleKey('ArrowRight', false, false);
     });
-    let keyResult: any;
     act(() => {
-      keyResult = result.current.handleKey('+', false, false);
+      result.current.handleKey('+', false, false);
     });
     expect(result.current.session.state).toBe('EDIT');
     expect(result.current.pointSession).toBeNull();
@@ -789,9 +799,8 @@ describe('useCellEditing - direct actions', () => {
 
   it('handleCellClick does nothing when not in POINT mode', () => {
     const { result } = createHook();
-    let keyResult: any;
     act(() => {
-      keyResult = result.current.handleCellClick(5, 5, false);
+      result.current.handleCellClick(5, 5, false);
     });
     expect(result.current.session.state).toBe('SELECT');
   });

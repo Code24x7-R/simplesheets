@@ -81,6 +81,23 @@ describe('ImportExcelButton', () => {
       expect(onError).toHaveBeenCalledWith('Bad file');
     });
   });
+
+  it('calls onError when importExcelFile throws', async () => {
+    (importExcelFile as jest.Mock).mockRejectedValue(new Error('Network error'));
+
+    const onError = jest.fn();
+    render(<ImportExcelButton onImport={jest.fn()} onError={onError} />);
+
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const file = createMockFile('test.xlsx', 'content');
+
+    Object.defineProperty(input, 'files', { value: [file] });
+    fireEvent.change(input);
+
+    await waitFor(() => {
+      expect(onError).toHaveBeenCalledWith('Network error');
+    });
+  });
 });
 
 describe('ImportCsvButton', () => {

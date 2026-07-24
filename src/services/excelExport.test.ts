@@ -149,6 +149,26 @@ describe('Excel Export Service', () => {
     expect(blob.size).toBeGreaterThan(0);
   });
 
+  it('exports cells with computed values', () => {
+    const workbook: Workbook = {
+      ...createTestWorkbook(),
+      sheets: [
+        {
+          ...createTestWorkbook().sheets[0],
+          cells: {
+            '0:0': { rawValue: '42', computedValue: 42 },
+            '0:1': { rawValue: '3.14', computedValue: 3.14 },
+            '0:2': { rawValue: 'hello', computedValue: 'hello' },
+          },
+        },
+      ],
+    };
+
+    const blob = exportExcel(workbook);
+    expect(blob).toBeInstanceOf(Blob);
+    expect(blob.size).toBeGreaterThan(0);
+  });
+
   it('exports dates, booleans, and formatted cells', () => {
     const workbook: Workbook = {
       ...createTestWorkbook(),

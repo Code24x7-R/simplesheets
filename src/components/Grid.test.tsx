@@ -665,6 +665,142 @@ describe('Grid Component', () => {
     expect(onSelect).toHaveBeenCalledWith(1, 1);
   });
 
+  it('navigates cells with arrow keys when selectedCell prop is set', () => {
+    const onSelect = jest.fn();
+    // Simulate App.tsx: selectedCell is passed as a prop (not just internal click)
+    // Use a 10x10 sheet so we have room to navigate in all directions
+    render(<Grid sheet={createTestSheet({ rowCount: 10, columnCount: 10 })} onSelect={onSelect} selectedCell={{ row: 5, col: 5 }} />);
+    const grid = document.querySelector('[tabindex="0"]') as HTMLElement;
+
+    // Arrow right from F6 → G6
+    fireEvent.keyDown(grid, { key: 'ArrowRight' });
+    expect(onSelect).toHaveBeenCalledWith(5, 6);
+
+    // Arrow down from G6 → G7
+    fireEvent.keyDown(grid, { key: 'ArrowDown' });
+    expect(onSelect).toHaveBeenCalledWith(6, 6);
+
+    // Arrow left from G7 → F7
+    fireEvent.keyDown(grid, { key: 'ArrowLeft' });
+    expect(onSelect).toHaveBeenCalledWith(6, 5);
+
+    // Arrow up from F7 → F6
+    fireEvent.keyDown(grid, { key: 'ArrowUp' });
+    expect(onSelect).toHaveBeenCalledWith(5, 5);
+  });
+
+  it('clamps arrow key navigation at grid boundaries', () => {
+    const onSelect = jest.fn();
+    // Start at top-left corner (A1)
+    render(<Grid sheet={createTestSheet()} onSelect={onSelect} selectedCell={{ row: 0, col: 0 }} />);
+    const grid = document.querySelector('[tabindex="0"]') as HTMLElement;
+
+    // Arrow up should stay at row 0
+    fireEvent.keyDown(grid, { key: 'ArrowUp' });
+    expect(onSelect).toHaveBeenCalledWith(0, 0);
+
+    // Arrow left should stay at col 0
+    fireEvent.keyDown(grid, { key: 'ArrowLeft' });
+    expect(onSelect).toHaveBeenCalledWith(0, 0);
+  });
+
+  it('shift+arrow expands selection range', () => {
+    const onSelect = jest.fn();
+    render(<Grid sheet={createTestSheet({ rowCount: 10, columnCount: 10 })} onSelect={onSelect} selectedCell={{ row: 5, col: 5 }} />);
+    const grid = document.querySelector('[tabindex="0"]') as HTMLElement;
+
+    // Shift+ArrowRight should expand selection from anchor (5,5) to (5,6)
+    fireEvent.keyDown(grid, { key: 'ArrowRight', shiftKey: true });
+    expect(onSelect).toHaveBeenCalledWith(5, 6);
+
+    // Shift+ArrowDown should expand selection from anchor (5,5) to (6,6)
+    fireEvent.keyDown(grid, { key: 'ArrowDown', shiftKey: true });
+    expect(onSelect).toHaveBeenCalledWith(6, 6);
+  });
+
+  it('Home key moves to first column', () => {
+    const onSelect = jest.fn();
+    render(<Grid sheet={createTestSheet({ rowCount: 10, columnCount: 10 })} onSelect={onSelect} selectedCell={{ row: 5, col: 5 }} />);
+    const grid = document.querySelector('[tabindex="0"]') as HTMLElement;
+
+    // Home should move to column 0 of current row
+    fireEvent.keyDown(grid, { key: 'Home' });
+    expect(onSelect).toHaveBeenCalledWith(5, 0);
+  });
+
+  it('Ctrl+Home key moves to top-left corner', () => {
+    const onSelect = jest.fn();
+    render(<Grid sheet={createTestSheet({ rowCount: 10, columnCount: 10 })} onSelect={onSelect} selectedCell={{ row: 5, col: 5 }} />);
+    const grid = document.querySelector('[tabindex="0"]') as HTMLElement;
+
+    // Ctrl+Home should move to (0, 0)
+    fireEvent.keyDown(grid, { key: 'Home', ctrlKey: true });
+    expect(onSelect).toHaveBeenCalledWith(0, 0);
+  });
+
+  it('Delete key clears cell contents', () => {
+    const onSelect = jest.fn();
+    const onCellChange = jest.fn();
+    render(
+      <Grid
+        sheet={createTestSheet({ rowCount: 10, columnCount: 10 })}
+        onSelect={onSelect}
+        onCellChange={onCellChange}
+        selectedCell={{ row: 5, col: 5 }}
+      />
+    );
+    const grid = document.querySelector('[tabindex="0"]') as HTMLElement;
+
+    // Delete should clear the cell
+    fireEvent.keyDown(grid, { key: 'Delete' });
+    expect(onCellChange).toHaveBeenCalledWith(5, 5, '');
+  });
+
+  it('Backspace key clears cell contents', () => {
+    const onSelect = jest.fn();
+    const onCellChange = jest.fn();
+    render(
+      <Grid
+        sheet={createTestSheet({ rowCount: 10, columnCount: 10 })}
+        onSelect={onSelect}
+        onCellChange={onCellChange}
+        selectedCell={{ row: 5, col: 5 }}
+      />
+    );
+    const grid = document.querySelector('[tabindex="0"]') as HTMLElement;
+
+    // Backspace should clear the cell
+    fireEvent.keyDown(grid, { key: 'Backspace' });
+    expect(onCellChange).toHaveBeenCalledWith(5, 5, '');
+  });
+
+  it('returns focus to grid after pressing Enter to commit edit', () => {
+    const onCellChange = jest.fn();
+    // Use cell (2, 2) which is visible in the 5x5 virtualizer mock
+    render(
+      <Grid
+        sheet={createTestSheet({ rowCount: 10, columnCount: 10 })}
+        onCellChange={onCellChange}
+        selectedCell={{ row: 2, col: 2 }}
+      />
+    );
+    const grid = document.querySelector('[tabindex="0"]') as HTMLElement;
+
+    // Start editing
+    fireEvent.keyDown(grid, { key: 'Enter' });
+
+    // Find the input and type something
+    const input = document.querySelector('input.border-blue-500') as HTMLInputElement;
+    expect(input).not.toBeNull();
+    fireEvent.change(input, { target: { value: 'test' } });
+
+    // Press Enter to commit
+    fireEvent.keyDown(input, { key: 'Enter' });
+
+    // Grid should have focus back
+    expect(grid).toHaveFocus();
+  });
+
   it('edits cell on Enter key', () => {
     const onCellChange = jest.fn();
     render(<Grid sheet={createTestSheet()} onCellChange={onCellChange} />);
@@ -742,10 +878,25 @@ describe('Grid Component', () => {
     expect(onSelect).toHaveBeenCalledWith(4, 0); // rowCount=5, so lastRow=4
   });
 
+  // ─── Keyboard Shortcuts ────────────────────────────────────────
+
+  it('does not handle undo/redo keys (parent handles them)', () => {
+    const { container } = render(<Grid sheet={createTestSheet()} />);
+    const grid = container.querySelector('[tabindex="0"]') as HTMLElement;
+
+    // Press Ctrl+Z - should not throw (parent handles undo)
+    fireEvent.keyDown(grid, { key: 'z', ctrlKey: true });
+    // Press Ctrl+Y - should not throw (parent handles redo)
+    fireEvent.keyDown(grid, { key: 'y', ctrlKey: true });
+
+    // Should not throw and grid still renders
+    expect(grid).toBeInTheDocument();
+  });
+
   // ─── Highlighted Ranges ─────────────────────────────────────────
 
   it('renders highlighted ranges from formula references', () => {
-    const { container } = render(
+    render(
       <Grid
         sheet={createTestSheet()}
         highlightedRanges={[

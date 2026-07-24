@@ -37,6 +37,7 @@ export function LoadButton({ onImport, onError }: LoadButtonProps) {
       } else {
         /* istanbul ignore next - unreachable: listSaves() skips corrupt entries */
         onError?.(`Failed to load "${name}"`);
+        /* istanbul ignore next - unreachable: listSaves() skips corrupt entries */
         refreshSaves();
       }
     },

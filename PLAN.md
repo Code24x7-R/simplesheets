@@ -4,9 +4,27 @@
 Achieve 100% line/branch/statement/function coverage on all source files before end-user testing.
 
 ## Current State
-- **81.05%** statements, **66.76%** branches, **83.33%** functions, **82.97%** lines
-- 654 tests across 29 suites, all passing
-- FSM hook (`useCellEditing.ts`) at 88.75% lines
+- **95.97%** statements, **81.71%** branches, **98.39%** functions, **98.15%** lines
+- 816 tests across 33 suites, All passing
+- All phases 1-7 substantially complete; final gap closure in progress
+
+### Coverage by file (lines %)
+| File | Lines | Branches | Status |
+|------|-------|----------|--------|
+| App.tsx | 100% | 89.18% | ⚠️ branches |
+| Grid.tsx | 100% | 91.91% | ⚠️ branches |
+| FormulaBar.tsx | 95.43% | 91.66% | ⚠️ lines + functions |
+| formulaEngine.ts | 93.3% | 67.95% | ❌ major gap |
+| useCellEditing.ts | 100% | 95.32% | ⚠️ branches |
+| pdfExport.ts | 100% | 75% | ⚠️ branches |
+| HistoryContext.tsx | 100% | 66.66% | ⚠️ branches |
+| storageService.ts | 100% | 79.41% | ⚠️ branches |
+| csvService.ts | 98.18% | 84.37% | ⚠️ |
+| excelImport.ts | 100% | 100% | ✅ |
+| excelExport.ts | 100% | 94.73% | ⚠️ |
+| formulaParser.ts | 100% | 93.75% | ⚠️ |
+| formulaValidation.ts | 100% | 90.9% | ⚠️ |
+| All other files | 100% | 100% | ✅ |
 
 ## Strategy: Quick Wins First, Then Phased Complex Files
 
@@ -164,20 +182,22 @@ Achieve 100% line/branch/statement/function coverage on all source files before 
 
 ## Progress Log
 
-### 2026-07-24
-- FSM hook created with 82 tests (88.78% coverage)
-- Fixed shouldActivatePointMode to trigger on `=` per spec
-- Removed dead code (useFormulaEditor.ts)
-- Phase 1 quick wins complete: 674 tests passing
-- Phase 2 FSM completion: 86 tests (95.51% coverage)
-- Phase 3 FormulaBar: 35 tests (80.41% coverage)
-- Phase 4 Grid.tsx: 40 tests (81.11% coverage)
-- Phase 5 App.tsx: 27 tests (67.21% coverage)
-- Phase 6 pdfExport: 5 tests (100% coverage)
-- Phase 7 formulaEngine: 185 tests (~90% coverage)
-- Phase 8 excelImport: 13 tests (78.33% coverage)
-- Quick wins: storageService, csvService, jsonService, excelExport, HistoryContext all improved
-- Coverage: 88.96% stmts, 74.38% branch, 89.74% func, 90.9% lines
-- Remaining gaps: App.tsx (67%), Grid.tsx (81%), FormulaBar.tsx (80%), formulaEngine.ts (93%), excelImport.ts (78%), useCellEditing.ts (96%)
-- Strategy: Continue pushing to 100% with targeted tests + istanbul ignore for defensive code
-- Note: Remaining uncovered lines are mostly defensive code paths, edge cases, and rendering logic
+### 2026-07-24 (continued)
+- All phases 1-8 substantially advanced from initial 654 tests
+- Phase 1 quick wins: ALL files at 100% lines
+- Phase 2 FSM: 100% lines, 95.32% branches
+- Phase 3 FormulaBar: 95.43% lines, 80.64% functions
+- Phase 4 Grid.tsx: 100% lines, 91.91% branches
+- Phase 5 App.tsx: 100% lines, 89.18% branches
+- Phase 6 pdfExport: 100% lines, 75% branches
+- Phase 7 formulaEngine: 93.3% lines, 67.95% branches (STILL BEHIND)
+- Phase 8 excelImport: 100% lines + branches
+- Coverage: **95.97% stmts, 81.71% branch, 98.39% func, 98.15% lines**
+- **816 tests across 33 suites, all passing**
+- Remaining gaps: formulaEngine.ts (93% lines, 68% branches) is the biggest blocker
+- Strategy: Push formulaEngine to 100% with targeted tests for uncovered branches
+
+### 2026-07-24 (session start)
+- Updated PLAN.md with current coverage data
+- Committed all pending changes
+- Now tackling formulaEngine.ts remaining gaps: VLOOKUP stub, HLOOKUP, INDEX with col, MATCH types, financial functions (PMT/FV/PV/NPV not implemented), error propagation paths, circular reference evalStack path

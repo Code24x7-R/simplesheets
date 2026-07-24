@@ -83,7 +83,7 @@ describe('ExportPdfButton', () => {
   });
 
   it('calls downloadPdf on click', async () => {
-    const { downloadPdf } = require('../services/pdfExport');
+    require('../services/pdfExport');
 
     render(
       <PrintSetupProvider>

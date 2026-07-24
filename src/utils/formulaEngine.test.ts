@@ -1166,7 +1166,7 @@ describe('Formula Engine', () => {
     });
 
     it('returns #REF! for out-of-bounds reference', () => {
-      const sheet = createSheet({ '0:0': '=Z999' }, { rowCount: 10, colCount: 10 });
+      const sheet = createSheet({ '0:0': '=Z999' }, { rowCount: 10, columnCount: 10 });
       expect(evaluateWorkbook(sheet).cells['0:0'].computedValue).toBe('#REF!');
     });
 
