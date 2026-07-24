@@ -1,0 +1,30 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Grid-specific styles that go beyond utility classes */
+@layer components {
+  .grid-cell {
+    @apply border-r border-b border-grid-border px-1.5 truncate font-mono text-sm leading-7;
+  }
+
+  .grid-cell-header {
+    @apply bg-grid-header text-gray-600 font-semibold text-xs flex items-center justify-center;
+  }
+
+  .grid-cell-selected {
+    @apply bg-grid-selected ring-2 ring-grid-selected-border ring-inset;
+  }
+
+  .grid-cell-frozen {
+    @apply bg-grid-frozen;
+  }
+
+  .formula-bar {
+    @apply flex items-center gap-2 px-3 py-1.5 border-b border-gray-200 bg-white;
+  }
+
+  .toolbar-btn {
+    @apply px-3 py-1.5 text-sm rounded hover:bg-gray-100 active:bg-gray-200 transition-colors;
+  }
+}

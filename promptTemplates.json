@@ -1,0 +1,154 @@
+{
+  "promptTemplates": [
+    {
+      "taskId": "task-0-1",
+      "prompt": "Write a concise Markdown requirements document for SimpleSheet that captures the 80/20 core feature set for a small‑business user. Limit the list to no more than 12 items, grouped by functional area (Editing, Formulas, Import/Export, UI/UX, Performance). Include a short rationale for each item. Output the document as a code‑block labelled `markdown`.",
+      "outputFormat": "Markdown file (requirements.md)",
+      "acceptance": "Document contains ≤12 bullet items, each with a rationale, and is saved as a markdown code block."
+    },
+    {
+      "taskId": "task-0-2",
+      "prompt": "Create a feasibility matrix in Markdown that evaluates the following dependencies for SimpleSheet: Vite + TS + Tailwind, react‑virtual, xlsx (SheetJS), papaparse, html2pdf.js, and Lucide static icons. For each, list **Pros**, **Cons**, **Risk Level (Low/Medium/High)**, and a **Go/No‑Go** recommendation. Output as a markdown table inside a code block.",
+      "outputFormat": "Markdown file (feasibility.md)",
+      "acceptance": "Table includes all six items with the four columns and a clear Go/No‑Go decision."
+    },
+    {
+      "taskId": "task-1-1",
+      "prompt": "Generate a GitHub repository scaffold for SimpleSheet. Include a `.gitignore` (Node, Vite, OS files), a `README.md` with project description, setup instructions, and a badge for the CI workflow. Also create a GitHub Actions workflow file (`.github/workflows/ci.yml`) that runs `npm ci`, lint, type‑check, and tests on every push to `main`. Output each file as a separate fenced code block with the appropriate filename as the language label (e.g., ```gitignore).",
+      "outputFormat": "Multiple files: .gitignore, README.md, .github/workflows/ci.yml",
+      "acceptance": "All three files are syntactically correct and the CI workflow passes on a fresh `npm ci` run."
+    },
+    {
+      "taskId": "task-1-2",
+      "prompt": "Provide the complete Vite + React + TypeScript project boilerplate (package.json, vite.config.ts, tsconfig.json, tailwind.config.cjs, postcss.config.cjs, index.html, src/main.ts, src/App.tsx, src/index.css). Use Tailwind via the CDN script tag as described in the original spec. Output each file as a fenced code block named after the file (e.g., ```json for package.json).",
+      "outputFormat": "All source files as separate code blocks",
+      "acceptance": "Running `npm install && npm run dev` launches a clean UI with Tailwind loaded and no console errors."
+    },
+    {
+      "taskId": "task-1-3",
+      "prompt": "Write a TypeScript module `src/types.ts` that defines the core data model for SimpleSheet: `Workbook`, `Sheet`, `Cell`, `CellStyle`, `HistoryEntry`, `Selection`. Include JSDoc comments for each type. Also create a Jest test file (`src/types.test.ts`) that verifies the interfaces can be instantiated without type errors. Output both files as fenced code blocks.",
+      "outputFormat": "src/types.ts, src/types.test.ts",
+      "acceptance": "TypeScript compiles with no errors and the Jest test suite reports 100 % coverage for the type definitions."
+    },
+    {
+      "taskId": "task-2-1",
+      "prompt": "Implement a virtualized grid component `src/components/Grid.tsx` using `react‑virtual`. The grid should accept props for `rows`, `columns`, and `cellRenderer`. It must render only the visible rows/columns and support smooth scrolling for at least 10 000 rows. Include TypeScript types and a minimal demo usage in `App.tsx`. Output the component file and the updated `App.tsx` as fenced code blocks.",
+      "outputFormat": "src/components/Grid.tsx, src/App.tsx (updated)",
+      "acceptance": "Scrolling through 10 k rows is fluid (no jitter) and the demo renders correctly."
+    },
+    {
+      "taskId": "task-2-2",
+      "prompt": "Create a cell‑editing UI. Add a `CellEditor` component that appears when a cell is double‑clicked or when the user presses Enter. Include a formula bar at the top of the grid that shows the raw formula string. Ensure that numeric, date, and boolean values are detected automatically. Output `src/components/CellEditor.tsx` and the updated `App.tsx` with the formula bar as fenced code blocks.",
+      "outputFormat": "src/components/CellEditor.tsx, src/App.tsx (updated)",
+      "acceptance": "User can edit a cell, see the formula bar update, and the edited value persists in the state."
+    },
+    {
+      "taskId": "task-2-3",
+      "prompt": "Add copy/paste and drag‑fill functionality. Implement clipboard handling (Ctrl+C/V) for single cells and ranges, and a fill‑handle that extends numeric or date series when dragged. Provide utility functions in `src/utils/clipboard.ts` and update the grid to show the fill handle. Output the utility file and the modified grid component as fenced code blocks.",
+      "outputFormat": "src/utils/clipboard.ts, src/components/Grid.tsx (updated)",
+      "acceptance": "Copy‑paste works across cells; drag‑fill correctly increments numbers/dates."
+    },
+    {
+      "taskId": "task-2-4",
+      "prompt": "Implement an undo/redo stack using React Context. Create a `HistoryContext` that stores immutable snapshots of the workbook state and provides `undo`/`redo` actions. Add toolbar buttons with the appropriate shortcuts (Ctrl+Z/Y). Output `src/context/HistoryContext.tsx` and the toolbar snippet in `App.tsx` as fenced code blocks.",
+      "outputFormat": "src/context/HistoryContext.tsx, src/App.tsx (toolbar snippet)",
+      "acceptance": "Undo/redo revert up to at least 50 actions and the UI buttons are functional."
+    },
+    {
+      "taskId": "task-2-5",
+      "prompt": "Add **cell merging** support. Extend the data model (`Cell` type) to include `rowSpan` and `colSpan`. Update the grid renderer to respect these spans and render a single merged cell with the correct dimensions. Provide UI controls (toolbar button) to merge the currently selected range and to unmerge. Output the updated `src/types.ts`, the grid changes, and the toolbar button component as fenced code blocks.",
+      "outputFormat": "src/types.ts (updated), src/components/Grid.tsx (merged), src/components/Toolbar.tsx (merge button)",
+      "acceptance": "User can select a range, click “Merge”, and the cells render as one merged cell; unmerge restores the original cells."
+    },
+    {
+      "taskId": "task-2-6",
+      "prompt": "Implement **column and row resizing**. Add draggable resize handles to column headers and row numbers. Store width/height in the sheet state and apply them via inline Tailwind utility classes (e.g., `w-[150px]`). Output the resize handle component (`src/components/ResizeHandle.tsx`), the updated header row/column components, and any necessary state updates as fenced code blocks.",
+      "outputFormat": "src/components/ResizeHandle.tsx, src/components/ColumnHeader.tsx (updated), src/components/RowHeader.tsx (updated)",
+      "acceptance": "User can drag a header edge and the column/row width/height updates instantly."
+    },
+    {
+      "taskId": "task-2-7",
+      "prompt": "Add **freeze panes** functionality. Provide a toolbar toggle that, when enabled, freezes the top row and/or leftmost column. The grid should keep those rows/columns visible while scrolling. Update the virtualizer to treat frozen rows/columns as separate layers. Output the freeze‑pane state management (`src/context/FreezeContext.tsx`), the toolbar button, and the modified grid component as fenced code blocks.",
+      "outputFormat": "src/context/FreezeContext.tsx, src/components/Toolbar.tsx (freeze button), src/components/Grid.tsx (updated)",
+      "acceptance": "When freeze is active, scrolling does not move the frozen row/column and the UI reflects the frozen state."
+    },
+    {
+      "taskId": "task-3-1",
+      "prompt": "Write a formula parser that converts an A1‑style string into an abstract syntax tree (AST). Support the functions SUM, AVERAGE, COUNT, MIN, MAX, IF, and basic arithmetic. Use a recursive‑descent approach and export a `parseFormula` function. Output `src/utils/formulaParser.ts` and a Jest test suite (`src/utils/formulaParser.test.ts`).",
+      "outputFormat": "src/utils/formulaParser.ts, src/utils/formulaParser.test.ts",
+      "acceptance": "Parser returns a correct AST for valid formulas and throws informative errors for unsupported syntax."
+    },
+    {
+      "taskId": "task-3-2",
+      "prompt": "Implement a formula evaluator that computes cell values from the AST, builds a dependency graph, and detects circular references. Export an `evaluateWorkbook` function that returns a new workbook state with all calculated values. Output `src/utils/formulaEngine.ts` and a performance benchmark script (`src/utils/benchmark.ts`).",
+      "outputFormat": "src/utils/formulaEngine.ts, src/utils/benchmark.ts",
+      "acceptance": "Evaluations propagate instantly; circular references produce a `#CIRC!` error; benchmark shows ≤10 ms for 5 k cells."
+    },
+    {
+      "taskId": "task-4-1",
+      "prompt": "Create an Excel import service using the `xlsx` library. The service should read a file, extract sheet names, cell values, simple formulas, and basic formatting (font color, background). Return a `Workbook` object matching the internal data model. Output `src/services/excelImport.ts` and a small UI component (`src/components/ImportExcelButton.tsx`) that triggers a file‑picker and calls the service.",
+      "outputFormat": "src/services/excelImport.ts, src/components/ImportExcelButton.tsx",
+      "acceptance": "Uploading a valid .xlsx file populates the grid with correct values and shows a toast on success."
+    },
+    {
+      "taskId": "task-4-2",
+      "prompt": "Create an Excel export service that writes the current `Workbook` to an .xlsx file, preserving values, basic formulas, and simple formatting. Use the `xlsx` library to generate a Blob and trigger a download. Output `src/services/excelExport.ts` and a toolbar button component (`src/components/ExportExcelButton.tsx`).",
+      "outputFormat": "src/services/excelExport.ts, src/components/ExportExcelButton.tsx",
+      "acceptance": "Clicking the Export button downloads a file that opens correctly in Excel with matching data."
+    },
+    {
+      "taskId": "task-4-3",
+      "prompt": "Implement CSV/TSV import and export using `papaparse`. Provide functions `importCsv`, `exportCsv`, `importTsv`, `exportTsv` that work with the internal workbook model. Add UI buttons for each operation. Output `src/services/csvService.ts` and the corresponding toolbar components.",
+      "outputFormat": "src/services/csvService.ts, src/components/ImportCsvButton.tsx, src/components/ExportCsvButton.tsx",
+      "acceptance": "Round‑trip CSV preserves all cell values; TSV works similarly."
+    },
+    {
+      "taskId": "task-4-4",
+      "prompt": "Add plain‑text (TSV) import/export support. Re‑use the CSV service but default to tab delimiters and `.txt` extension. Provide UI buttons and ensure the file picker filters for `.txt`. Output the updated `src/services/csvService.ts` (with TSV functions) and the toolbar buttons.",
+      "outputFormat": "src/services/csvService.ts (updated), src/components/ImportTsvButton.tsx, src/components/ExportTsvButton.tsx",
+      "acceptance": "Importing a .txt file loads the data correctly; exporting produces a tab‑separated file."
+    },
+    {
+      "taskId": "task-4-5",
+      "prompt": "Add JSON import/export support. Implement `importJson` and `exportJson` functions that serialize/deserialize the entire `Workbook` object (including sheets, cell values, styles, merges, frozen panes, column widths, etc.). Provide UI buttons (`Import JSON`, `Export JSON`). Output `src/services/jsonService.ts` and the toolbar button components.",
+      "outputFormat": "src/services/jsonService.ts, src/components/ImportJsonButton.tsx, src/components/ExportJsonButton.tsx",
+      "acceptance": "Exported JSON can be re‑imported to restore the workbook exactly, including merges, freezes, and column sizes."
+    },
+    {
+      "taskId": "task-5-1",
+      "prompt": "Create a page‑setup UI that lets the user choose orientation (portrait/landscape), margins (top/right/bottom/left), and scaling (fit‑to‑page, actual size). Store the settings in a React Context (`PrintSetupContext`). Output `src/context/PrintSetupContext.tsx` and a modal component (`src/components/PrintSetupModal.tsx`).",
+      "outputFormat": "src/context/PrintSetupContext.tsx, src/components/PrintSetupModal.tsx",
+      "acceptance": "User can change settings, they persist in context, and the preview reflects them."
+    },
+    {
+      "taskId": "task-5-2",
+      "prompt": "Implement PDF generation using `html2pdf.js`. The service should take the printable view (styled with Tailwind) and generate a PDF that respects the page‑setup settings. Provide a toolbar button (`Export PDF`). Output `src/services/pdfExport.ts` and the toolbar button component.",
+      "outputFormat": "src/services/pdfExport.ts, src/components/ExportPdfButton.tsx",
+      "acceptance": "Exported PDF matches the on‑screen preview, includes cell formatting, and respects orientation/margins."
+    },
+    {
+      "taskId": "task-6-1",
+      "prompt": "Write Jest unit tests for the core data model, formula parser/evaluator, and import/export services. Aim for ≥ 80 % coverage across the `src/` directory. Output a single test entry point (`src/__tests__/index.test.ts`) that imports and runs all sub‑tests.",
+      "outputFormat": "src/__tests__/index.test.ts",
+      "acceptance": "Running `npm test` reports ≥ 80 % coverage and all tests pass."
+    },
+    {
+      "taskId": "task-6-2",
+      "prompt": "Create Cypress end‑to‑end tests that cover the main user flow: open a new sheet, edit cells, use a formula, undo, export to CSV, import the CSV back, and generate a PDF. Include screenshots on failure. Output the Cypress spec file (`cypress/e2e/simpleSheet.spec.ts`).",
+      "outputFormat": "cypress/e2e/simpleSheet.spec.ts",
+      "acceptance": "Cypress run finishes without failures; screenshots are saved for any error."
+    },
+    {
+      "taskId": "task-6-3",
+      "prompt": "Write a performance benchmark script (`src/utils/performance.ts`) that loads a workbook with 10 k rows, measures grid rendering time, scrolling FPS, and export latency. Log results to the console in a readable table. Output the script file.",
+      "outputFormat": "src/utils/performance.ts",
+      "acceptance": "Benchmark reports FPS ≥ 55 and export time ≤ 2 s; script runs without errors."
+    },
+    {
+      "taskId": "task-6-4",
+      "prompt": "Configure a production build and deployment pipeline. Use Vite’s `npm run build` to generate static assets, then create a Netlify `netlify.toml` (or Vercel `vercel.json`) that serves the `dist/` folder. Output the configuration file and a short README section with deployment steps.",
+      "outputFormat": "netlify.toml (or vercel.json), README.md snippet",
+      "acceptance": "Deploying to Netlify/Vercel yields a live HTTPS URL with no console errors and a gzipped bundle ≤ 1 MB."
+    }
+  ]
+}

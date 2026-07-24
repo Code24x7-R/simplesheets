@@ -1,0 +1,144 @@
+import { exportJson, importJson, downloadJson } from './jsonService';
+import type { Workbook } from '../types';
+
+describe('JSON Service', () => {
+  const testWorkbook: Workbook = {
+    id: 'test-wb',
+    title: 'Test Workbook',
+    sheets: [
+      {
+        id: 'sheet-1',
+        name: 'Sheet1',
+        cells: {
+          '0:0': { rawValue: 'Hello' },
+          '0:1': { rawValue: '42' },
+          '1:0': { rawValue: '=A1', computedValue: 'Hello' },
+        },
+        defaultColWidth: 100,
+        defaultRowHeight: 28,
+        columnWidths: { 0: 150 },
+        rowHeights: {},
+        columnCount: 26,
+        rowCount: 100,
+        frozenColumns: 0,
+        frozenRows: 0,
+      },
+    ],
+    activeSheetIndex: 0,
+    lastModified: 1234567890,
+  };
+
+  describe('exportJson', () => {
+    it('exports workbook to JSON string', () => {
+      const json = exportJson(testWorkbook);
+      const parsed = JSON.parse(json);
+      expect(parsed.title).toBe('Test Workbook');
+      expect(parsed.sheets).toHaveLength(1);
+    });
+
+    it('pretty-prints by default', () => {
+      const json = exportJson(testWorkbook);
+      expect(json).toContain('\n');
+      expect(json).toContain('  ');
+    });
+
+    it('can produce compact JSON', () => {
+      const json = exportJson(testWorkbook, { pretty: false });
+      expect(json).not.toContain('\n');
+    });
+  });
+
+  describe('importJson', () => {
+    it('imports a valid workbook JSON', () => {
+      const json = exportJson(testWorkbook);
+      const result = importJson(json);
+      expect(result.success).toBe(true);
+      expect(result.workbook?.title).toBe('Test Workbook');
+      expect(result.workbook?.sheets[0].cells['0:0']?.rawValue).toBe('Hello');
+    });
+
+    it('generates a new ID on import', () => {
+      const json = exportJson(testWorkbook);
+      const result = importJson(json);
+      expect(result.workbook?.id).not.toBe(testWorkbook.id);
+    });
+
+    it('updates lastModified on import', () => {
+      const json = exportJson(testWorkbook);
+      const result = importJson(json);
+      expect(result.workbook?.lastModified).toBeGreaterThanOrEqual(testWorkbook.lastModified);
+    });
+
+    it('rejects invalid JSON', () => {
+      const result = importJson('not valid json{{{');
+      expect(result.success).toBe(false);
+      expect(result.error).toBeDefined();
+    });
+
+    it('rejects non-workbook JSON', () => {
+      const result = importJson('{"foo": "bar"}');
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('Invalid workbook format');
+    });
+
+    it('rejects empty JSON object', () => {
+      const result = importJson('{}');
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects array JSON', () => {
+      const result = importJson('[1,2,3]');
+      expect(result.success).toBe(false);
+    });
+  });
+
+  describe('round-trip', () => {
+    it('preserves all data through export and import', () => {
+      const json = exportJson(testWorkbook);
+      const result = importJson(json);
+      expect(result.success).toBe(true);
+
+      const imported = result.workbook!;
+      expect(imported.sheets[0].columnWidths[0]).toBe(150);
+      expect(imported.sheets[0].cells['0:1']?.rawValue).toBe('42');
+      expect(imported.activeSheetIndex).toBe(0);
+    });
+  });
+
+  describe('downloadJson', () => {
+    it('creates a download link and clicks it', () => {
+      URL.createObjectURL = jest.fn(() => 'blob:mock');
+      URL.revokeObjectURL = jest.fn();
+
+      downloadJson(testWorkbook);
+
+      expect(URL.createObjectURL).toHaveBeenCalled();
+    });
+
+    it('uses custom filename when provided', () => {
+      URL.createObjectURL = jest.fn(() => 'blob:mock');
+      URL.revokeObjectURL = jest.fn();
+
+      downloadJson(testWorkbook, 'custom-name');
+
+      expect(URL.createObjectURL).toHaveBeenCalled();
+    });
+  });
+
+  describe('validation edge cases', () => {
+    it('rejects workbook with empty sheets array', () => {
+      const result = importJson('{"id":"1","title":"T","sheets":[],"activeSheetIndex":0}');
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects workbook with non-array sheets', () => {
+      const result = importJson('{"id":"1","title":"T","sheets":"not-array","activeSheetIndex":0}');
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects null JSON', () => {
+      const result = importJson('null');
+      expect(result.success).toBe(false);
+    });
+  });
+});
