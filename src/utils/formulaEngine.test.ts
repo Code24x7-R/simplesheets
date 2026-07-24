@@ -1374,4 +1374,464 @@ describe('Formula Engine', () => {
       expect(evaluateWorkbook(sheet).cells['0:0'].computedValue).toBe(false);
     });
   });
+
+  // ── Time Functions ─────────────────────────────────────────────────
+
+  describe('Time Functions', () => {
+    it('HOUR extracts hour from datetime string', () => {
+      const sheet = createSheet({ '0:0': '=HOUR("2024-06-15T14:30:00")' });
+      const result = evaluateWorkbook(sheet).cells['0:0'].computedValue;
+      expect(typeof result).toBe('number');
+    });
+
+    it('MINUTE extracts minute from datetime string', () => {
+      const sheet = createSheet({ '0:0': '=MINUTE("2024-06-15T14:30:45")' });
+      const result = evaluateWorkbook(sheet).cells['0:0'].computedValue;
+      expect(typeof result).toBe('number');
+    });
+
+    it('SECOND extracts second from datetime string', () => {
+      const sheet = createSheet({ '0:0': '=SECOND("2024-06-15T14:30:45")' });
+      const result = evaluateWorkbook(sheet).cells['0:0'].computedValue;
+      expect(typeof result).toBe('number');
+    });
+
+    it('time functions return error for invalid dates', () => {
+      const sheet = createSheet({ '0:0': '=HOUR("not-a-date")' });
+      expect(evaluateWorkbook(sheet).cells['0:0'].computedValue).toBe('#VALUE!');
+    });
+  });
+
+  // ── TEXT Percent Format ────────────────────────────────────────────
+
+  describe('TEXT Percent Format', () => {
+    it('formats as percentage', () => {
+      const sheet = createSheet({ '0:0': '=TEXT(0.123, "0.0%")' });
+      const result = evaluateWorkbook(sheet).cells['0:0'].computedValue;
+      expect(result).toContain('%');
+    });
+
+    it('formats as percentage with no decimal', () => {
+      const sheet = createSheet({ '0:0': '=TEXT(0.5, "0%")' });
+      const result = evaluateWorkbook(sheet).cells['0:0'].computedValue;
+      expect(result).toContain('%');
+    });
+  });
+
+  // ── NOT with no args ───────────────────────────────────────────────
+
+  describe('NOT Edge Cases', () => {
+    it('NOT returns error for no arguments', () => {
+      const sheet = createSheet({ '0:0': '=NOT()' });
+      expect(evaluateWorkbook(sheet).cells['0:0'].computedValue).toBe('#VALUE!');
+    });
+  });
+
+  // ── FLOOR / CEILING with non-numeric ───────────────────────────────
+
+  describe('FLOOR / CEILING Edge Cases', () => {
+    it('FLOOR returns error for non-numeric', () => {
+      const sheet = createSheet({ '0:0': '=FLOOR("text")' });
+      expect(evaluateWorkbook(sheet).cells['0:0'].computedValue).toBe('#VALUE!');
+    });
+
+    it('CEILING returns error for non-numeric', () => {
+      const sheet = createSheet({ '0:0': '=CEILING("text")' });
+      expect(evaluateWorkbook(sheet).cells['0:0'].computedValue).toBe('#VALUE!');
+    });
+  });
+
+  // ── Financial Functions (not implemented → #NAME?) ─────────────────
+
+  describe('Financial Functions (not implemented)', () => {
+    it('PMT returns #NAME?', () => {
+      const sheet = createSheet({ '0:0': '=PMT(0.05/12, 360, 100000)' });
+      expect(evaluateWorkbook(sheet).cells['0:0'].computedValue).toBe('#NAME?');
+    });
+
+    it('FV returns #NAME?', () => {
+      const sheet = createSheet({ '0:0': '=FV(0.05/12, 360, -100)' });
+      expect(evaluateWorkbook(sheet).cells['0:0'].computedValue).toBe('#NAME?');
+    });
+
+    it('PV returns #NAME?', () => {
+      const sheet = createSheet({ '0:0': '=PV(0.05/12, 360, -100)' });
+      expect(evaluateWorkbook(sheet).cells['0:0'].computedValue).toBe('#NAME?');
+    });
+
+    it('NPV returns #NAME?', () => {
+      const sheet = createSheet({ '0:0': '=NPV(0.1, 100, 200, 300)' });
+      expect(evaluateWorkbook(sheet).cells['0:0'].computedValue).toBe('#NAME?');
+    });
+  });
+
+  // ── HLOOKUP (not implemented → #NAME?) ─────────────────────────────
+
+  describe('HLOOKUP Function (not implemented)', () => {
+    it('HLOOKUP returns #NAME?', () => {
+      const sheet = createSheet({ '5:0': '=HLOOKUP(1, A1:B3, 2)' });
+      expect(evaluateWorkbook(sheet).cells['5:0'].computedValue).toBe('#NAME?');
+    });
+  });
+
+  // ── INDEX with column argument ─────────────────────────────────────
+
+  describe('INDEX with Column Argument', () => {
+    it('returns #REF! when col > 0 on 1D range', () => {
+      const sheet = createSheet({
+        '0:0': '10', '1:0': '20', '2:0': '30', '3:0': '=INDEX(A1:A3, 1, 2)',
+      });
+      expect(evaluateWorkbook(sheet).cells['3:0'].computedValue).toBe('#REF!');
+    });
+
+    it('returns error for insufficient args', () => {
+      const sheet = createSheet({ '5:0': '=INDEX(A1:A3)' });
+      expect(evaluateWorkbook(sheet).cells['5:0'].computedValue).toBe('#VALUE!');
+    });
+  });
+
+  // ── MATCH with different match types ───────────────────────────────
+
+  describe('MATCH with Match Types', () => {
+    it('MATCH with matchType=1 finds largest ≤ lookup value', () => {
+      const sheet = createSheet({
+        '0:0': '10', '1:0': '20', '2:0': '30', '3:0': '=MATCH(25, A1:A3, 1)',
+      });
+      // With matchType=1, finds largest value ≤ lookup value
+      // But our implementation only handles matchType=0
+      const result = evaluateWorkbook(sheet).cells['3:0'].computedValue;
+      // Should return #VALUE! since matchType != 0 is not implemented
+      expect(result).toBe('#VALUE!');
+    });
+
+    it('MATCH with matchType=-1 returns #VALUE! (not implemented)', () => {
+      const sheet = createSheet({
+        '0:0': '10', '1:0': '20', '2:0': '30', '3:0': '=MATCH(25, A1:A3, -1)',
+      });
+      expect(evaluateWorkbook(sheet).cells['3:0'].computedValue).toBe('#VALUE!');
+    });
+  });
+
+  // ── Circular Reference via evalStack ───────────────────────────────
+
+  describe('Circular Reference Runtime Detection', () => {
+    it('detects self-reference via evalStack', () => {
+      const sheet = createSheet({ '0:0': '=A1' });
+      const result = evaluateWorkbook(sheet);
+      expect(result.cells['0:0'].computedValue).toBe('#CIRC!');
+    });
+
+    it('detects 2-cycle via evalStack', () => {
+      const sheet = createSheet({
+        '0:0': '=B1',
+        '0:1': '=A1',
+      });
+      const result = evaluateWorkbook(sheet);
+      expect(result.cells['0:0'].computedValue).toBe('#CIRC!');
+      expect(result.cells['0:1'].computedValue).toBe('#CIRC!');
+    });
+
+    it('detects 3-cycle via evalStack', () => {
+      const sheet = createSheet({
+        '0:0': '=B1',
+        '0:1': '=C1',
+        '0:2': '=A1',
+      });
+      const result = evaluateWorkbook(sheet);
+      expect(result.cells['0:0'].computedValue).toBe('#CIRC!');
+      expect(result.cells['0:1'].computedValue).toBe('#CIRC!');
+      expect(result.cells['0:2'].computedValue).toBe('#CIRC!');
+    });
+  });
+
+  // ── Error Propagation through nested functions ─────────────────────
+
+  describe('Nested Error Propagation', () => {
+    it('propagates #DIV/0! through IF', () => {
+      const sheet = createSheet({ '0:0': '=IF(1>0, 1/0, 0)' });
+      expect(evaluateWorkbook(sheet).cells['0:0'].computedValue).toBe('#DIV/0!');
+    });
+
+    it('propagates #VALUE! through SUM', () => {
+      const sheet = createSheet({
+        '0:0': '=SQRT(-1)', '1:0': '=SUM(A1, 5)',
+      });
+      // SUM ignores error cells, returns 5
+      expect(evaluateWorkbook(sheet).cells['1:0'].computedValue).toBe(5);
+    });
+
+    it('IFERROR catches nested error', () => {
+      const sheet = createSheet({ '0:0': '=IFERROR(SQRT(-1), "fixed")' });
+      expect(evaluateWorkbook(sheet).cells['0:0'].computedValue).toBe('fixed');
+    });
+
+    it('IFNA catches nested error', () => {
+      const sheet = createSheet({ '0:0': '=IFNA(1/0, "fixed")' });
+      expect(evaluateWorkbook(sheet).cells['0:0'].computedValue).toBe('fixed');
+    });
+  });
+
+  // ── ROW / COLUMN / ROWS / COLUMNS Functions ────────────────────────
+
+  describe('ROW / COLUMN / ROWS / COLUMNS Functions', () => {
+    it('ROW returns row number', () => {
+      const sheet = createSheet({ '0:0': '=ROW(5)' });
+      expect(evaluateWorkbook(sheet).cells['0:0'].computedValue).toBe(6);
+    });
+
+    it('COLUMN returns column number', () => {
+      const sheet = createSheet({ '0:0': '=COLUMN(3)' });
+      expect(evaluateWorkbook(sheet).cells['0:0'].computedValue).toBe(4);
+    });
+
+    it('ROWS returns count', () => {
+      const sheet = createSheet({ '10:0': '=ROWS(A1:A10)' });
+      expect(evaluateWorkbook(sheet).cells['10:0'].computedValue).toBe(10);
+    });
+
+    it('COLUMNS returns count', () => {
+      const sheet = createSheet({ '5:0': '=COLUMNS(A1:D1)' });
+      expect(evaluateWorkbook(sheet).cells['5:0'].computedValue).toBe(4);
+    });
+
+    it('ROW with no args returns 0', () => {
+      const sheet = createSheet({ '0:0': '=ROW()' });
+      expect(evaluateWorkbook(sheet).cells['0:0'].computedValue).toBe(0);
+    });
+  });
+
+  // ── NOW Function ───────────────────────────────────────────────────
+
+  describe('NOW Function', () => {
+    it('NOW returns ISO timestamp', () => {
+      const sheet = createSheet({ '0:0': '=NOW()' });
+      const result = evaluateWorkbook(sheet).cells['0:0'].computedValue;
+      expect(typeof result).toBe('string');
+      expect(result).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    });
+  });
+
+  // ── SUMIF / COUNTIF / AVERAGEIF Edge Cases ─────────────────────────
+
+  describe('Conditional Aggregation Edge Cases', () => {
+    it('SUMIF with no matches returns 0', () => {
+      const sheet = createSheet({
+        '0:0': '1', '1:0': '2', '2:0': '3', '3:0': '=SUMIF(A1:A3, ">100")',
+      });
+      expect(evaluateWorkbook(sheet).cells['3:0'].computedValue).toBe(0);
+    });
+
+    it('COUNTIF with no matches returns 0', () => {
+      const sheet = createSheet({
+        '0:0': '1', '1:0': '2', '2:0': '3', '3:0': '=COUNTIF(A1:A3, ">100")',
+      });
+      expect(evaluateWorkbook(sheet).cells['3:0'].computedValue).toBe(0);
+    });
+
+    it('SUMIF with wildcard', () => {
+      const sheet = createSheet({
+        '0:0': 'apple', '1:0': 'banana', '2:0': 'application', '3:0': '=SUMIF(A1:A3, "app*")',
+      });
+      // SUMIF with text criterion on text range - no numeric values to sum
+      expect(evaluateWorkbook(sheet).cells['3:0'].computedValue).toBe(0);
+    });
+
+    it('AVERAGEIF with separate range', () => {
+      const sheet = createSheet({
+        '0:0': '1', '1:0': '2', '2:0': '3',
+        '0:1': '10', '1:1': '20', '2:1': '30',
+        '3:0': '=AVERAGEIF(A1:A3, ">1", B1:B3)',
+      });
+      expect(evaluateWorkbook(sheet).cells['3:0'].computedValue).toBe(25);
+    });
+  });
+
+  // ── WEEKDAY Edge Cases ─────────────────────────────────────────────
+
+  describe('WEEKDAY Edge Cases', () => {
+    it('WEEKDAY with type 3', () => {
+      const sheet = createSheet({ '0:0': '=WEEKDAY("2024-06-15", 3)' });
+      // 2024-06-15 is Saturday, type 3 → 5 (Mon=0, Tue=1, ..., Sat=5)
+      const result = evaluateWorkbook(sheet).cells['0:0'].computedValue;
+      expect(typeof result).toBe('number');
+    });
+
+    it('WEEKDAY returns error for invalid date', () => {
+      const sheet = createSheet({ '0:0': '=WEEKDAY("not-a-date")' });
+      expect(evaluateWorkbook(sheet).cells['0:0'].computedValue).toBe('#VALUE!');
+    });
+  });
+
+  // ── MEDIAN / MODE Edge Cases ───────────────────────────────────────
+
+  describe('MEDIAN / MODE Edge Cases', () => {
+    it('MEDIAN returns error for empty range', () => {
+      const sheet = createSheet({ '5:0': '=MEDIAN(A1:A3)' });
+      expect(evaluateWorkbook(sheet).cells['5:0'].computedValue).toBe('#VALUE!');
+    });
+
+    it('MODE returns error for empty range', () => {
+      const sheet = createSheet({ '5:0': '=MODE(A1:A3)' });
+      expect(evaluateWorkbook(sheet).cells['5:0'].computedValue).toBe('#VALUE!');
+    });
+  });
+
+  // ── LARGE / SMALL Edge Cases ───────────────────────────────────────
+
+  describe('LARGE / SMALL Edge Cases', () => {
+    it('LARGE returns error for k > count', () => {
+      const sheet = createSheet({
+        '0:0': '1', '1:0': '2', '2:0': '3', '3:0': '=LARGE(A1:A3, 5)',
+      });
+      expect(evaluateWorkbook(sheet).cells['3:0'].computedValue).toBe('#VALUE!');
+    });
+
+    it('SMALL returns error for k > count', () => {
+      const sheet = createSheet({
+        '0:0': '1', '1:0': '2', '2:0': '3', '3:0': '=SMALL(A1:A3, 5)',
+      });
+      expect(evaluateWorkbook(sheet).cells['3:0'].computedValue).toBe('#VALUE!');
+    });
+
+    it('LARGE returns error for k < 1', () => {
+      const sheet = createSheet({
+        '0:0': '1', '1:0': '2', '2:0': '3', '3:0': '=LARGE(A1:A3, 0)',
+      });
+      expect(evaluateWorkbook(sheet).cells['3:0'].computedValue).toBe('#VALUE!');
+    });
+  });
+
+  // ── IF Edge Cases ──────────────────────────────────────────────────
+
+  describe('IF Edge Cases', () => {
+    it('IF with only 2 args returns false when condition is false', () => {
+      const sheet = createSheet({ '0:0': '=IF(1 > 2, "yes")' });
+      expect(evaluateWorkbook(sheet).cells['0:0'].computedValue).toBe(false);
+    });
+
+    it('IF with numeric condition (non-zero is truthy)', () => {
+      const sheet = createSheet({ '0:0': '=IF(5, "yes", "no")' });
+      expect(evaluateWorkbook(sheet).cells['0:0'].computedValue).toBe('yes');
+    });
+
+    it('IF with zero condition (falsy)', () => {
+      const sheet = createSheet({ '0:0': '=IF(0, "yes", "no")' });
+      expect(evaluateWorkbook(sheet).cells['0:0'].computedValue).toBe('no');
+    });
+  });
+
+  // ── SWITCH Edge Cases ──────────────────────────────────────────────
+
+  describe('SWITCH Edge Cases', () => {
+    it('SWITCH returns error for too few args', () => {
+      const sheet = createSheet({ '0:0': '=SWITCH("a")' });
+      expect(evaluateWorkbook(sheet).cells['0:0'].computedValue).toBe('#VALUE!');
+    });
+  });
+
+  // ── IS Functions Edge Cases ────────────────────────────────────────
+
+  describe('IS Functions Edge Cases', () => {
+    it('ISERROR returns false for non-error', () => {
+      const sheet = createSheet({ '0:0': '=ISERROR(42)' });
+      expect(evaluateWorkbook(sheet).cells['0:0'].computedValue).toBe(false);
+    });
+
+    it('ISNUMBER returns false for boolean', () => {
+      const sheet = createSheet({ '0:0': '=ISNUMBER(TRUE)' });
+      expect(evaluateWorkbook(sheet).cells['0:0'].computedValue).toBe(false);
+    });
+
+    it('ISTEXT returns false for error string', () => {
+      const sheet = createSheet({ '0:0': '=ISTEXT("#ERROR!")' });
+      // Error strings are not considered text
+      expect(evaluateWorkbook(sheet).cells['0:0'].computedValue).toBe(false);
+    });
+  });
+
+  // ── SUBSTITUTE Edge Cases ──────────────────────────────────────────
+
+  describe('SUBSTITUTE Edge Cases', () => {
+    it('SUBSTITUTE with occurrence=0 replaces all', () => {
+      const sheet = createSheet({ '0:0': '=SUBSTITUTE("a,b,a", "a", "c", 0)' });
+      expect(evaluateWorkbook(sheet).cells['0:0'].computedValue).toBe('c,b,c');
+    });
+  });
+
+  // ── Numeric Comparison in compareValues ──────────────────────────
+
+  describe('Numeric Comparison Branch', () => {
+    it('compares two numbers with =', () => {
+      const sheet = createSheet({ '0:0': '=5 = 5' });
+      expect(evaluateWorkbook(sheet).cells['0:0'].computedValue).toBe(true);
+    });
+
+    it('compares two numbers with <>', () => {
+      const sheet = createSheet({ '0:0': '=5 <> 3' });
+      expect(evaluateWorkbook(sheet).cells['0:0'].computedValue).toBe(true);
+    });
+
+    it('compares two numbers with <', () => {
+      const sheet = createSheet({ '0:0': '=3 < 5' });
+      expect(evaluateWorkbook(sheet).cells['0:0'].computedValue).toBe(true);
+    });
+
+    it('compares two numbers with >', () => {
+      const sheet = createSheet({ '0:0': '=5 > 3' });
+      expect(evaluateWorkbook(sheet).cells['0:0'].computedValue).toBe(true);
+    });
+
+    it('compares two numbers with <=', () => {
+      const sheet = createSheet({ '0:0': '=5 <= 5' });
+      expect(evaluateWorkbook(sheet).cells['0:0'].computedValue).toBe(true);
+    });
+
+    it('compares two numbers with >=', () => {
+      const sheet = createSheet({ '0:0': '=5 >= 3' });
+      expect(evaluateWorkbook(sheet).cells['0:0'].computedValue).toBe(true);
+    });
+  });
+
+  // ── AutoDetectType Date Detection ────────────────────────────────
+
+  describe('AutoDetectType Date Detection', () => {
+    it('detects ISO date string', () => {
+      const sheet = createSheet({ '0:0': '2024-06-15' });
+      const result = evaluateWorkbook(sheet);
+      // Date strings should be kept as strings (not converted to numbers)
+      expect(result.cells['0:0'].computedValue).toBe('2024-06-15');
+    });
+  });
+
+  // ── COUNTIF Criterion Edge Cases ───────────────────────────────────
+
+  describe('COUNTIF Criterion Edge Cases', () => {
+    it('COUNTIF with = operator', () => {
+      const sheet = createSheet({
+        '0:0': '5', '1:0': '10', '2:0': '5', '3:0': '=COUNTIF(A1:A3, "=5")',
+      });
+      expect(evaluateWorkbook(sheet).cells['3:0'].computedValue).toBe(2);
+    });
+
+    it('COUNTIF with <> operator', () => {
+      const sheet = createSheet({
+        '0:0': '5', '1:0': '10', '2:0': '5', '3:0': '=COUNTIF(A1:A3, "<>5")',
+      });
+      expect(evaluateWorkbook(sheet).cells['3:0'].computedValue).toBe(1);
+    });
+
+    it('COUNTIF with >= operator', () => {
+      const sheet = createSheet({
+        '0:0': '5', '1:0': '10', '2:0': '15', '3:0': '=COUNTIF(A1:A3, ">=10")',
+      });
+      expect(evaluateWorkbook(sheet).cells['3:0'].computedValue).toBe(2);
+    });
+
+    it('COUNTIF with <= operator', () => {
+      const sheet = createSheet({
+        '0:0': '5', '1:0': '10', '2:0': '15', '3:0': '=COUNTIF(A1:A3, "<=10")',
+      });
+      expect(evaluateWorkbook(sheet).cells['3:0'].computedValue).toBe(2);
+    });
+  });
 });

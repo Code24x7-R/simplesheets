@@ -106,6 +106,7 @@ function evaluateNode(node: ASTNode, ctx: EvalContext): CellValue {
     case 'function':
       return evaluateFunction(node, ctx);
 
+    /* istanbul ignore next - all AST node types handled above */
     default:
       return ERR_VALUE;
   }
@@ -219,6 +220,7 @@ function evaluateBinary(node: Extract<ASTNode, { type: 'binary' }>, ctx: EvalCon
     case '/':
       if (rightNum === 0) return ERR_DIV_ZERO;
       return leftNum / rightNum;
+    /* istanbul ignore next - all operators handled above */
     default:
       return ERR_VALUE;
   }
@@ -258,6 +260,7 @@ function compareValues(
     case '>': return leftStr > rightStr;
     case '<=': return leftStr <= rightStr;
     case '>=': return leftStr >= rightStr;
+    /* istanbul ignore next - all operators handled above */
     default: return false;
   }
 }
@@ -893,14 +896,26 @@ function evaluateFunction(node: Extract<ASTNode, { type: 'function' }>, ctx: Eva
     }
 
     // ── Info ──────────────────────────────────────────────────────
-    case 'ROW':
+    case 'ROW': {
+      const rangeArg = node.args.find(a => a.type === 'range') as Extract<ASTNode, { type: 'range' }> | undefined;
+      if (rangeArg) return rangeArg.end.row + 1;
       return flatValues.length > 0 ? toNumber(flatValues[0]) + 1 : 0;
-    case 'COLUMN':
+    }
+    case 'COLUMN': {
+      const rangeArg = node.args.find(a => a.type === 'range') as Extract<ASTNode, { type: 'range' }> | undefined;
+      if (rangeArg) return rangeArg.end.col + 1;
       return flatValues.length > 0 ? toNumber(flatValues[0]) + 1 : 0;
-    case 'ROWS':
+    }
+    case 'ROWS': {
+      const rangeArg = node.args.find(a => a.type === 'range') as Extract<ASTNode, { type: 'range' }> | undefined;
+      if (rangeArg) return Math.abs(rangeArg.end.row - rangeArg.start.row) + 1;
       return flatValues.length > 0 ? toNumber(flatValues[0]) : 0;
-    case 'COLUMNS':
+    }
+    case 'COLUMNS': {
+      const rangeArg = node.args.find(a => a.type === 'range') as Extract<ASTNode, { type: 'range' }> | undefined;
+      if (rangeArg) return Math.abs(rangeArg.end.col - rangeArg.start.col) + 1;
       return flatValues.length > 0 ? toNumber(flatValues[0]) : 0;
+    }
 
     // ── Expanded counts ───────────────────────────────────────────
     case 'COUNTA': {
@@ -969,7 +984,7 @@ function matchesCriterion(value: CellValue, criterion: CellValue): boolean {
   }
 
   // Numeric comparison operators
-  const compMatch = strCrit.match(/^([><=]=?)(.+)$/);
+  const compMatch = strCrit.match(/^(>=|<=|<>|>|<|=)(.+)$/);
   if (compMatch) {
     const op = compMatch[1];
     const compareVal = toNumber(compMatch[2]);

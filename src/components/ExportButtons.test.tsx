@@ -4,6 +4,7 @@ import { ExportJsonButton } from './ExportJsonButton';
 import { ExportPdfButton } from './ExportPdfButton';
 import type { Workbook, Sheet } from '../types';
 import { PrintSetupProvider } from '../context/PrintSetupContext';
+import { downloadPdf } from '../services/pdfExport';
 
 // Mock pdfExport for ExportPdfButton tests
 jest.mock('../services/pdfExport', () => ({
@@ -83,8 +84,6 @@ describe('ExportPdfButton', () => {
   });
 
   it('calls downloadPdf on click', async () => {
-    require('../services/pdfExport');
-
     render(
       <PrintSetupProvider>
         <ExportPdfButton sheet={mockSheet} />
@@ -99,8 +98,7 @@ describe('ExportPdfButton', () => {
   });
 
   it('calls onError when PDF generation fails', async () => {
-    const { downloadPdf } = require('../services/pdfExport');
-    downloadPdf.mockRejectedValueOnce(new Error('PDF failed'));
+    (downloadPdf as jest.Mock).mockRejectedValueOnce(new Error('PDF failed'));
 
     const onError = jest.fn();
     render(

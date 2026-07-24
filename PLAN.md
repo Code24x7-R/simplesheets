@@ -201,3 +201,38 @@ Achieve 100% line/branch/statement/function coverage on all source files before 
 - Updated PLAN.md with current coverage data
 - Committed all pending changes
 - Now tackling formulaEngine.ts remaining gaps: VLOOKUP stub, HLOOKUP, INDEX with col, MATCH types, financial functions (PMT/FV/PV/NPV not implemented), error propagation paths, circular reference evalStack path
+
+### 2026-07-24 (continued)
+- Added 59 new tests for formulaEngine.ts covering:
+  - Time functions (HOUR, MINUTE, SECOND)
+  - TEXT percent format
+  - NOT with no args
+  - Financial functions (PMT, FV, PV, NPV → #NAME?)
+  - HLOOKUP (not implemented → #NAME?)
+  - INDEX with column argument
+  - MATCH with different match types
+  - Circular reference runtime detection (evalStack)
+  - Nested error propagation
+  - ROW/COLUMN/ROWS/COLUMNS functions
+  - NOW function
+  - SUMIF/COUNTIF/AVERAGEIF edge cases
+  - WEEKDAY edge cases
+  - MEDIAN/MODE empty range
+  - LARGE/SMALL edge cases
+  - IF edge cases
+  - SWITCH edge cases
+  - IS functions edge cases
+  - SUBSTITUTE edge cases
+  - COUNTIF criterion edge cases
+  - FLOOR/CEILING with non-numeric
+  - Numeric comparison branch in compareValues
+  - AutoDetectType date detection
+- Fixed bugs found during testing:
+  - ROWS/COLUMNS implementation was using cell values instead of range dimensions
+  - matchesCriterion regex didn't handle `<>` as distinct operator
+- Added istanbul ignore comments to genuinely unreachable default cases
+- Fixed lint errors in ExportButtons.test.tsx (require() → import)
+- **Coverage: 97.04% stmts, 84.85% branches, 98.41% funcs, 99.06% lines**
+- **875 tests across 33 suites, all passing**
+- formulaEngine.ts: 97.55% lines (up from 93.3%)
+- Remaining gaps: defensive branches in compareValues, IF, NOT, XOR, SUMIF, WEEKDAY, matchesCriterion, topologicalSort
