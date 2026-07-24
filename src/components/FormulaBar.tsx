@@ -2,6 +2,7 @@ import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { parseFormula, type ASTNode } from '../utils/formulaParser';
 import { validateFormula, type ValidationResult } from '../utils/formulaValidation';
 import { searchFunctions, type FunctionInfo } from '../utils/formulaAutocomplete';
+import type { EditingSession, PointSession } from '../hooks/useCellEditing';
 
 /** Represents a highlighted range with a color index. */
 export interface HighlightedRange {
@@ -35,20 +36,28 @@ interface FormulaBarProps {
   onCellPick?: (row: number, col: number, shiftKey: boolean) => void;
   /** Callback to exit point mode. */
   onExitPointMode?: () => void;
+  /** The editing session from useCellEditing hook (when integrated). */
+  editingSession?: EditingSession | null;
+  /** The point session from useCellEditing hook (when integrated). */
+  editingPointSession?: PointSession | null;
+  /** Callback to handle a key press via the editing FSM. */
+  onEditingKey?: (key: string, shiftKey: boolean, ctrlKey: boolean) => void;
+  /** Callback to commit the edit (e.g., on blur) via the editing FSM. */
+  onBlurEditing?: () => void;
 }
 
 /**
  * Colors for highlighting different references in a formula.
  */
 const HIGHLIGHT_COLORS = [
-  'rgba(59, 130, 246, 0.25)',  // blue
-  'rgba(239, 68, 68, 0.25)',   // red
-  'rgba(34, 197, 94, 0.25)',   // green
-  'rgba(234, 179, 8, 0.25)',   // yellow
-  'rgba(168, 85, 247, 0.25)',  // purple
-  'rgba(236, 72, 153, 0.25)',  // pink
-  'rgba(249, 115, 22, 0.25)',  // orange
-  'rgba(6, 182, 212, 0.25)',   // cyan
+  'rgba(59, 130, 246, 0.10)',  // blue
+  'rgba(239, 68, 68, 0.10)',   // red
+  'rgba(34, 197, 94, 0.10)',   // green
+  'rgba(234, 179, 8, 0.10)',   // yellow
+  'rgba(168, 85, 247, 0.10)',  // purple
+  'rgba(236, 72, 153, 0.10)',  // pink
+  'rgba(249, 115, 22, 0.10)',  // orange
+  'rgba(6, 182, 212, 0.10)',   // cyan
 ];
 
 const HIGHLIGHT_BORDER_COLORS = [
@@ -181,6 +190,10 @@ export function FormulaBar({
   onRequestPointMode: _onRequestPointMode,
   onCellPick,
   onExitPointMode,
+  editingSession,
+  editingPointSession: _editingPointSession,
+  onEditingKey,
+  onBlurEditing,
 }: FormulaBarProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [internalCursorPos, setInternalCursorPos] = useState(0);
@@ -192,14 +205,19 @@ export function FormulaBar({
 
   const cursorPos = externalCursorPos ?? internalCursorPos;
 
+  // When integrated with the editing FSM hook, the hook owns the buffer
+  const hookBuffer = editingSession?.buffer;
+  const isHookEditing = onEditingKey != null && editingSession != null && editingSession.state !== 'SELECT';
+  const displayValue = isHookEditing ? (hookBuffer ?? '') : value;
+
   // Compute highlights when formula changes
   const highlights = useMemo(() => {
-    const formulaToParse = isEditing ? value : editingFormula;
+    const formulaToParse = isEditing ? displayValue : editingFormula;
     if (formulaToParse) {
       return extractHighlights(formulaToParse);
     }
     return [];
-  }, [value, isEditing, editingFormula]);
+  }, [displayValue, isEditing, editingFormula]);
 
   // Emit highlights to parent
   useEffect(() => {
@@ -207,7 +225,7 @@ export function FormulaBar({
   }, [highlights, onHighlightsChange]);
 
   // Compute validation
-  const validation: ValidationResult = useMemo(() => validateFormula(value), [value]);
+  const validation: ValidationResult = useMemo(() => validateFormula(displayValue), [displayValue]);
 
   // Sync cursor position to input element
   useEffect(() => {
@@ -298,16 +316,34 @@ export function FormulaBar({
   const handleBlur = useCallback(() => {
     setIsEditing(false);
     setAutoCompleteOpen(false);
-    onCommit(value);
-  }, [value, onCommit]);
+    // When integrated with the hook, commit via the hook so the FSM
+    // transitions back to SELECT cleanly.
+    if (onEditingKey && editingSession && editingSession.state !== 'SELECT') {
+      onBlurEditing?.();
+      return;
+    }
+    onCommit(displayValue);
+  }, [displayValue, onCommit, onEditingKey, editingSession, onBlurEditing]);
 
   const acceptAutoComplete = useCallback((index: number) => {
     const selected = autoCompleteMatches[index];
     if (!selected) return;
 
-    const before = value.slice(0, autoCompleteTokenStart);
-    const after = value.slice(autoCompleteTokenStart + (findFunctionToken(value, cursorPos)?.token.length ?? 0));
+    const before = displayValue.slice(0, autoCompleteTokenStart);
+    const after = displayValue.slice(autoCompleteTokenStart + (findFunctionToken(displayValue, cursorPos)?.token.length ?? 0));
     const newValue = before + selected.name + '()' + after;
+
+    // When integrated with the hook, feed the accepted function via keys
+    if (onEditingKey && editingSession) {
+      // The hook already has the token typed; we need to replace it with NAME()
+      // Feed: Backspace * tokenLen, then type NAME()
+      const tokenLen = findFunctionToken(displayValue, cursorPos)?.token.length ?? 0;
+      for (let i = 0; i < tokenLen; i++) onEditingKey('Backspace', false, false);
+      for (const ch of selected.name + '()') onEditingKey(ch, false, false);
+      setAutoCompleteOpen(false);
+      return;
+    }
+
     onChange(newValue);
 
     // Position cursor inside the parens
@@ -322,9 +358,52 @@ export function FormulaBar({
       inputRef.current?.focus();
       inputRef.current?.setSelectionRange(newPos, newPos);
     });
-  }, [autoCompleteMatches, value, autoCompleteTokenStart, cursorPos, onChange, onCursorChange, findFunctionToken]);
+  }, [autoCompleteMatches, displayValue, autoCompleteTokenStart, cursorPos, onEditingKey, editingSession, onChange, onCursorChange, findFunctionToken]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    // When integrated with the editing FSM hook, delegate ALL key handling
+    // to the hook — it owns the buffer, caret, and POINT mode state.
+    if (onEditingKey) {
+      // Auto-complete navigation still takes priority when dropdown is open
+      if (autoCompleteOpen && ['ArrowDown', 'ArrowUp', 'Tab', 'Enter', 'Escape'].includes(e.key)) {
+        switch (e.key) {
+          case 'ArrowDown':
+            e.preventDefault();
+            setAutoCompleteIndex((prev) => (prev + 1) % autoCompleteMatches.length);
+            return;
+          case 'ArrowUp':
+            e.preventDefault();
+            setAutoCompleteIndex((prev) => (prev - 1 + autoCompleteMatches.length) % autoCompleteMatches.length);
+            return;
+          case 'Tab':
+          case 'Enter':
+            e.preventDefault();
+            acceptAutoComplete(autoCompleteIndex);
+            return;
+          case 'Escape':
+            e.preventDefault();
+            setAutoCompleteOpen(false);
+            return;
+        }
+      }
+      // Feed every key to the FSM hook — it decides what to do.
+      // But if the hook is in SELECT state it may ignore keys like Enter/Tab
+      // that arrive natively (e.g. via paste + Enter).  In that case skip
+      // the hook and let the legacy commit logic below handle it.
+      {
+        const hookState = editingSession?.state;
+        const isSelecting = hookState === 'SELECT';
+        const isNavOrCommitKey = ['Enter', 'Tab', 'Escape'].includes(e.key);
+        if (!(isSelecting && isNavOrCommitKey)) {
+          e.preventDefault();
+          onEditingKey(e.key, e.shiftKey, e.ctrlKey);
+          return;
+        }
+      }
+    }
+
+    // ── Legacy standalone mode (no hook) ──────────────────────────────
+
     // Handle auto-complete navigation
     if (autoCompleteOpen) {
       switch (e.key) {
@@ -382,7 +461,7 @@ export function FormulaBar({
     // Normal editing keys
     switch (e.key) {
       case 'Enter':
-        onCommit(value);
+        onCommit(displayValue);
         setIsEditing(false);
         setAutoCompleteOpen(false);
         inputRef.current?.blur();
@@ -397,11 +476,11 @@ export function FormulaBar({
         setAutoCompleteOpen(false);
         break;
       case '(':
-        if (value.startsWith('=')) {
+        if (displayValue.startsWith('=')) {
           e.preventDefault();
           const pos = updateCursorPos();
-          const before = value.slice(0, pos);
-          const after = value.slice(pos);
+          const before = displayValue.slice(0, pos);
+          const after = displayValue.slice(pos);
           onChange(before + '()' + after);
           const newPos = pos + 1;
           setInternalCursorPos(newPos);
@@ -413,10 +492,10 @@ export function FormulaBar({
         }
         break;
       case ')':
-        if (value.startsWith('=')) {
+        if (displayValue.startsWith('=')) {
           const pos = updateCursorPos();
           /* istanbul ignore next - skip over existing closing paren */
-          if (value[pos] === ')') {
+          if (displayValue[pos] === ')') {
             e.preventDefault();
             setInternalCursorPos(pos + 1);
             onCursorChange?.(pos + 1);
@@ -428,10 +507,27 @@ export function FormulaBar({
         }
         break;
     }
-  }, [autoCompleteOpen, autoCompleteMatches, autoCompleteIndex, isPointMode, value, onCommit, onCellPick, onExitPointMode, onChange, onCursorChange, acceptAutoComplete, updateCursorPos]);
+  }, [onEditingKey, autoCompleteOpen, autoCompleteMatches, autoCompleteIndex, isPointMode, displayValue, editingSession, onCommit, onCellPick, onExitPointMode, onChange, onCursorChange, acceptAutoComplete, updateCursorPos]);
 
   const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
+
+    // When integrated with the hook, the hook owns the buffer during active
+    // editing (we preventDefault on keydown so the native input doesn't
+    // change from typing).  Paste/autofill can still change the input
+    // natively — update the displayed value and reset the hook so the
+    // committed value matches what the user pasted.
+    if (onEditingKey && editingSession) {
+      if (editingSession.state === 'SELECT') {
+        onChange(newValue);
+        return;
+      }
+      // Paste during active editing: update display, hook buffer will resync
+      // on the next keypress or commit.
+      onChange(newValue);
+      return;
+    }
+
     onChange(newValue);
 
     // Update cursor position — default to end of input (jsdom doesn't set selectionStart on change)
@@ -457,14 +553,14 @@ export function FormulaBar({
       }
     }
     setAutoCompleteOpen(false);
-  }, [onChange, onCursorChange, findFunctionToken]);
+  }, [onEditingKey, editingSession, onChange, onCursorChange, findFunctionToken]);
 
   const handleClick = useCallback(() => {
     updateCursorPos();
-    if (isEditing && value.startsWith('=')) {
+    if (isEditing && displayValue.startsWith('=')) {
       openAutoComplete();
     }
-  }, [updateCursorPos, isEditing, value, openAutoComplete]);
+  }, [updateCursorPos, isEditing, displayValue, openAutoComplete]);
 
   const handleSelect = useCallback(() => {
     updateCursorPos();
@@ -472,11 +568,11 @@ export function FormulaBar({
 
   // Build the colored reference display overlay
   const formulaDisplay = useMemo(() => {
-    if (!isEditing || !value) return null;
-    if (!value.startsWith('=')) return null;
+    if (!isEditing || !displayValue) return null;
+    if (!displayValue.startsWith('=')) return null;
 
     try {
-      const formula = value.slice(1);
+      const formula = displayValue.slice(1);
       const segments: Array<{ text: string; colorIndex: number | null }> = [];
       let colorIdx = 0;
 
@@ -516,6 +612,8 @@ export function FormulaBar({
                       border: `1px solid ${HIGHLIGHT_BORDER_COLORS[seg.colorIndex]}`,
                       borderRadius: '2px',
                       padding: '0 2px',
+                      fontWeight: 600,
+                      color: HIGHLIGHT_BORDER_COLORS[seg.colorIndex],
                     }
                   : undefined
               }
@@ -528,7 +626,7 @@ export function FormulaBar({
     } catch {
       return null;
     }
-  }, [isEditing, value]);
+  }, [isEditing, displayValue]);
 
   // Build error display
   const errorDisplay = useMemo(() => {
@@ -581,7 +679,7 @@ export function FormulaBar({
             }`}
             style={{ caretColor: '#000' }}
             placeholder="Enter a value or formula (e.g., =SUM(A1:A10))"
-            value={value}
+            value={displayValue}
             onChange={handleChange}
             onFocus={handleFocus}
             onBlur={handleBlur}

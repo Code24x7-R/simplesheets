@@ -91,7 +91,7 @@ describe('App', () => {
 
   it('shows row and column count in status bar', () => {
     render(<App />);
-    expect(screen.getByText(/10,000 rows/)).toBeInTheDocument();
+    expect(screen.getByText(/100,000 rows/)).toBeInTheDocument();
   });
 
   it('handles formula bar input', () => {
@@ -314,5 +314,73 @@ describe('App', () => {
 
     // If we got here without errors, keyboard navigation is working
     expect(grid).toHaveFocus();
+  });
+
+  it('renders sheet tabs for multi-sheet workbooks', () => {
+    render(<App />);
+    // The demo workbook has one sheet named Sheet1
+    expect(screen.getByText('Sheet1')).toBeInTheDocument();
+    // The add button should be present
+    expect(screen.getByText('+')).toBeInTheDocument();
+  });
+
+  it('shows 100,000 rows in the status bar', () => {
+    render(<App />);
+    expect(screen.getByText(/100,000 rows/)).toBeInTheDocument();
+  });
+
+  it('adds a new sheet when + is clicked', () => {
+    render(<App />);
+    // Start with one sheet
+    expect(screen.getByText('Sheet1')).toBeInTheDocument();
+    // Click add
+    fireEvent.click(screen.getByText('+'));
+    // Now there should be a Sheet2
+    expect(screen.getByText('Sheet2')).toBeInTheDocument();
+  });
+
+  it('renames a sheet via double-click', () => {
+    render(<App />);
+    // Add a sheet so we have two
+    fireEvent.click(screen.getByText('+'));
+    expect(screen.getByText('Sheet2')).toBeInTheDocument();
+    // Double-click to rename
+    fireEvent.doubleClick(screen.getByText('Sheet2'));
+    const input = screen.getByDisplayValue('Sheet2');
+    fireEvent.change(input, { target: { value: 'Revenue' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    // Sheet should now have the new name
+    expect(screen.getByText('Revenue')).toBeInTheDocument();
+    expect(screen.queryByText('Sheet2')).toBeNull();
+  });
+
+  it('copies a sheet via the actions menu', () => {
+    render(<App />);
+    // Add a sheet so we have two
+    fireEvent.click(screen.getByText('+'));
+    expect(screen.getByText('Sheet2')).toBeInTheDocument();
+    // Open the actions menu on Sheet2
+    const toggles = screen.getAllByTitle('Sheet actions');
+    fireEvent.click(toggles[1]); // Second sheet's toggle
+    // Click Copy
+    fireEvent.mouseDown(screen.getByText('Copy'));
+    // Should now have a copy
+    expect(screen.getByText('Sheet2 (Copy)')).toBeInTheDocument();
+  });
+
+  it('deletes a sheet via the actions menu', () => {
+    render(<App />);
+    // Add a sheet so we have two
+    fireEvent.click(screen.getByText('+'));
+    expect(screen.getByText('Sheet2')).toBeInTheDocument();
+    // Open the actions menu on Sheet2
+    const toggles = screen.getAllByTitle('Sheet actions');
+    fireEvent.click(toggles[1]);
+    // Click Delete
+    fireEvent.mouseDown(screen.getByText('Delete'));
+    // Sheet2 should be gone
+    expect(screen.queryByText('Sheet2')).toBeNull();
+    // Sheet1 should still be there
+    expect(screen.getByText('Sheet1')).toBeInTheDocument();
   });
 });

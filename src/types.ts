@@ -197,11 +197,11 @@ export function colToLetter(col: number): string {
  * @returns Tuple of [row, col] (zero‑based).
  */
 export function refToRowCol(ref: string): [number, number] {
-  const match = ref.match(/^([A-Z]+)(\d+)$/);
+  const match = ref.match(/^([A-Za-z]+)(\d+)$/);
   if (!match) throw new Error(`Invalid cell reference: ${ref}`);
 
   let col = 0;
-  for (const ch of match[1]) {
+  for (const ch of match[1].toUpperCase()) {
     col = col * 26 + (ch.charCodeAt(0) - 64);
   }
 

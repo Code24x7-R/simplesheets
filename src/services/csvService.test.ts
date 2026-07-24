@@ -123,6 +123,32 @@ describe('CSV Service', () => {
       expect(URL.createObjectURL).toHaveBeenCalled();
     });
   });
+
+  describe('large imports', () => {
+    it('handles CSV with more than 26 columns', () => {
+      const headers = Array.from({ length: 30 }, (_, i) => `Col${i}`);
+      const row = Array.from({ length: 30 }, (_, i) => String(i));
+      const csv = [headers.join(','), row.join(',')].join('\n');
+
+      const result = importCsv(csv, { hasHeader: true });
+      expect(result.success).toBe(true);
+      expect(result.colCount).toBe(30);
+      expect(result.workbook!.sheets[0].columnCount).toBe(30);
+    });
+
+    it('handles CSV with many rows', () => {
+      const rows: string[] = [];
+      for (let r = 0; r < 1000; r++) {
+        rows.push(`${r},${r * 2},${r * 3}`);
+      }
+      const csv = rows.join('\n');
+
+      const result = importCsv(csv);
+      expect(result.success).toBe(true);
+      expect(result.rowCount).toBe(1000);
+      expect(result.workbook!.sheets[0].rowCount).toBe(1010); // 1000 + 10 padding
+    });
+  });
 });
 
 function createTestSheet(cells: Record<string, Cell | string>): Sheet {

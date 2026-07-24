@@ -44,12 +44,16 @@ export interface CellRefNode {
   absoluteCol: boolean;
   /** Whether the row is absolute ($1). */
   absoluteRow: boolean;
+  /** Sheet name qualifier (e.g., "Sheet1" for Sheet1!A1). Null for same-sheet refs. */
+  sheetName?: string;
 }
 
 export interface RangeNode {
   type: 'range';
   start: CellRefNode;
   end: CellRefNode;
+  /** Sheet name qualifier (e.g., "Sheet1" for Sheet1!A1:B10). Null for same-sheet refs. */
+  sheetName?: string;
 }
 
 export interface BinaryOpNode {

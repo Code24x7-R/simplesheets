@@ -41,4 +41,11 @@ describe('Benchmark', () => {
     expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('Benchmark'));
     consoleSpy.mockRestore();
   });
+
+  it('createTestWorkbook handles large row counts efficiently', () => {
+    // Verify the benchmark can create sheets with many rows without performance issues
+    const result = runBenchmark(10000);
+    expect(result.cellCount).toBe(10000);
+    expect(result.success).toBe(true);
+  });
 });

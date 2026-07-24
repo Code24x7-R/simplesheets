@@ -178,4 +178,28 @@ describe('Excel Import Edge Cases', () => {
     // Verify that the import handles the formula option without error
     expect(result.cellCount).toBeGreaterThanOrEqual(0);
   });
+
+  it('handles sheets with more than 26 columns', () => {
+    // Create a sheet with 30 columns (more than A-Z)
+    const row: number[] = [];
+    for (let i = 0; i < 30; i++) row.push(i);
+    const buffer = createXlsxBuffer([row]);
+
+    const result = importExcel(buffer);
+    expect(result.success).toBe(true);
+    expect(result.workbook!.sheets[0].columnCount).toBe(30);
+  });
+
+  it('handles sheets with many rows', () => {
+    // Create a sheet with 500 rows
+    const data: number[][] = [];
+    for (let r = 0; r < 500; r++) {
+      data.push([r, r * 2, r * 3]);
+    }
+    const buffer = createXlsxBuffer(data);
+
+    const result = importExcel(buffer);
+    expect(result.success).toBe(true);
+    expect(result.workbook!.sheets[0].rowCount).toBe(500);
+  });
 });

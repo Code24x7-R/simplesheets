@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import type { Workbook } from './types';
 import { cellKey, colToLetter } from './types';
 import { HistoryProvider, useHistory } from './context/HistoryContext';
@@ -8,7 +8,6 @@ import { Grid } from './components/Grid';
 import type { PointModeSelection } from './components/Grid';
 import { FormulaBar } from './components/FormulaBar';
 import type { HighlightedRange } from './components/FormulaBar';
-import { colToLetter as colLetter } from './types';
 import { Toolbar } from './components/Toolbar';
 import { ImportExcelButton } from './components/ImportExcelButton';
 import { ExportExcelButton } from './components/ExportExcelButton';
@@ -21,17 +20,19 @@ import { NewSheetButton } from './components/NewSheetButton';
 import { SaveButton } from './components/SaveButton';
 import { LoadButton } from './components/LoadButton';
 import { PrintSetupModal } from './components/PrintSetupModal';
+import { SheetTabs } from './components/SheetTabs';
 import { evaluateWorkbook } from './utils/formulaEngine';
 import { copyRange, cutRange as clipCutRange, getClipboard, clearClipboard } from './utils/clipboard';
 import { adjustFormulaRefs } from './utils/formulaParser';
 import { useAutosave } from './hooks/useAutosave';
+import { useCellEditing } from './hooks/useCellEditing';
 import { loadAutosave } from './services/storageService';
-import type { Cell, Selection } from './types';
+import type { Cell, Selection, Sheet } from './types';
 
 // ─── Demo Workbook ───────────────────────────────────────────────────────────
 
 function createDemoWorkbook(): Workbook {
-  const rows = 10000;
+  const rows = 100000;
   const cols = 26;
   const cells: Workbook['sheets'][0]['cells'] = {};
 
@@ -117,14 +118,50 @@ function WorkbookView() {
   const [highlightedRanges, setHighlightedRanges] = useState<HighlightedRange[]>([]);
   const [pendingCutRange, setPendingCutRange] = useState<Selection | null>(null);
 
-  // ─── Point Mode State ──────────────────────────────────────────────
-  const [isPointMode, setIsPointMode] = useState(false);
-  const [pointSelection, setPointSelection] = useState<PointModeSelection | null>(null);
-  const [formulaCursorPos, setFormulaCursorPos] = useState(0);
-  // Ref to track point mode selection origin for arrow key navigation
-  const pointOriginRef = useRef<{ row: number; col: number }>({ row: 0, col: 0 });
-
+  // Sheet reference (needed by the editing hook and everywhere else)
   const sheet = workbook.sheets[workbook.activeSheetIndex];
+
+  // ─── Editing FSM (useCellEditing hook) ────────────────────────────
+  const [formulaCursorPos, setFormulaCursorPos] = useState(0);
+
+  // The editing hook manages the FSM (SELECT/ENTER/EDIT/POINT) and the
+  // formula buffer.  We feed it the active cell's coordinates and value,
+  // and it tells us when to commit a cell or navigate the grid.
+  const {
+    session: editingSession,
+    pointSession: editingPointSession,
+    handleKey: handleEditingKey,
+    handleCellClick: handleEditingCellClick,
+    commit: commitEditing,
+    reset: resetEditing,
+  } = useCellEditing({
+    activeRow: activeCell?.row ?? 0,
+    activeCol: activeCell?.col ?? 0,
+    cellValue: activeCell
+      ? sheet.cells[cellKey(activeCell.row, activeCell.col)]?.rawValue ?? ''
+      : '',
+    rowCount: sheet.rowCount,
+    colCount: sheet.columnCount,
+    onCommit: (row, col, value) => {
+      handleCellChange(row, col, value);
+    },
+    onNavigate: (row, col) => {
+      setActiveCell({ row, col });
+      const cell = sheet.cells[cellKey(row, col)];
+      setFormulaBarValue(cell?.rawValue ?? '');
+    },
+  });
+
+  // Derive point-mode flags from the hook's session
+  const isPointMode = editingSession.state === 'POINT';
+  const pointSelection: PointModeSelection | null = editingPointSession
+    ? {
+        startRow: editingPointSession.anchorRow,
+        startCol: editingPointSession.anchorCol,
+        endRow: editingPointSession.currentRow,
+        endCol: editingPointSession.currentCol,
+      }
+    : null;
 
   // Update frozen state in sheet
   const updatedSheet = useMemo(
@@ -284,6 +321,19 @@ function WorkbookView() {
     };
   }, [sheet, workbook, pushHistory, pendingCutRange]);
 
+  // ─── Window Blur Handler (Spec §5) ──────────────────────────────────────
+  // Commit any active edit when the window loses focus, clear pointing overlays,
+  // and return the state machine to SELECT.
+  useEffect(() => {
+    const handleWindowBlur = () => {
+      if (editingSession.state !== 'SELECT') {
+        commitEditing();
+      }
+    };
+    window.addEventListener('blur', handleWindowBlur);
+    return () => window.removeEventListener('blur', handleWindowBlur);
+  }, [editingSession.state, commitEditing]);
+
   // ─── Cell Action Handlers ─────────────────────────────────────────────────
 
   const handleCellChange = useCallback(
@@ -396,109 +446,55 @@ function WorkbookView() {
     setFormulaBarValue(value);
   }, []);
 
-  // ─── Point Mode Handlers ──────────────────────────────────────────
+  // ─── Editing FSM Bridge ───────────────────────────────────────────
+  // These callbacks connect the FormulaBar and Grid to the useCellEditing
+  // hook.  The hook owns the buffer, caret, and POINT-mode state machine.
 
-  /* istanbul ignore next - onRequestPointMode is passed to FormulaBar but never invoked */
-  const handleRequestPointMode = useCallback(() => {
-    if (!activeCell) return;
-    setIsPointMode(true);
-    const sel: PointModeSelection = {
-      startRow: activeCell.row,
-      startCol: activeCell.col,
-      endRow: activeCell.row,
-      endCol: activeCell.col,
-    };
-    setPointSelection(sel);
-    pointOriginRef.current = { row: activeCell.row, col: activeCell.col };
-  }, [activeCell]);
-
-  /* istanbul ignore next - handleCellPick requires isPointMode which can't be set from UI */
-  const handleCellPick = useCallback((dRow: number, dCol: number, shiftKey: boolean) => {
-    if (!isPointMode) return;
-
-    // Determine if this is an arrow-key delta or an absolute cell click
-    // Arrow keys pass small deltas (-1, 0, 1); clicks pass absolute row/col
-    const isDelta = Math.abs(dRow) <= 1 && Math.abs(dCol) <= 1 && (dRow !== 0 || dCol !== 0);
-
-    if (isDelta) {
-      // Arrow key navigation — apply delta to current point position
-      setPointSelection((prev) => {
-        const base = prev ?? {
-          startRow: pointOriginRef.current.row,
-          startCol: pointOriginRef.current.col,
-          endRow: pointOriginRef.current.row,
-          endCol: pointOriginRef.current.col,
-        };
-        const newRow = Math.max(0, base.endRow + dRow);
-        const newCol = Math.max(0, base.endCol + dCol);
-        if (shiftKey) {
-          // Extend range from anchor
-          return {
-            ...base,
-            endRow: newRow,
-            endCol: newCol,
-          };
-        } else {
-          // Move both start and end (single cell)
-          return {
-            startRow: newRow,
-            startCol: newCol,
-            endRow: newRow,
-            endCol: newCol,
-          };
-        }
-      });
-    } else {
-      // Absolute cell click from Grid
-      if (shiftKey) {
-        setPointSelection((prev) => ({
-          startRow: prev?.startRow ?? dRow,
-          startCol: prev?.startCol ?? dCol,
-          endRow: dRow,
-          endCol: dCol,
-        }));
-      } else {
-        const sel: PointModeSelection = {
-          startRow: dRow,
-          startCol: dCol,
-          endRow: dRow,
-          endCol: dCol,
-        };
-        setPointSelection(sel);
-        pointOriginRef.current = { row: dRow, col: dCol };
+  // FormulaBar calls this for every keypress when integrated with the hook.
+  // We use the returned session to keep formulaCursorPos in sync, and the
+  // navigate delta to move the active cell when the hook requests it.
+  const handleFormulaEditingKey = useCallback(
+    (key: string, shiftKey: boolean, ctrlKey: boolean) => {
+      const result = handleEditingKey(key, shiftKey, ctrlKey);
+      // Keep the FormulaBar cursor synced with the hook's caret position
+      if (result.session.caretPos !== editingSession.caretPos) {
+        setFormulaCursorPos(result.session.caretPos);
       }
-    }
-  }, [isPointMode]);
+      // Handle navigation that the hook couldn't apply internally
+      // (e.g., arrow keys in SELECT state return a navigate delta)
+      if (result.navigate && result.session.state === 'SELECT') {
+        const baseRow = activeCell?.row ?? 0;
+        const baseCol = activeCell?.col ?? 0;
+        const newRow = Math.max(0, Math.min(sheet.rowCount - 1, baseRow + result.navigate.dRow));
+        const newCol = Math.max(0, Math.min(sheet.columnCount - 1, baseCol + result.navigate.dCol));
+        const cell = sheet.cells[cellKey(newRow, newCol)];
+        setActiveCell({ row: newRow, col: newCol });
+        setFormulaBarValue(cell?.rawValue ?? '');
+      }
+    },
+    [handleEditingKey, editingSession.caretPos, activeCell, sheet],
+  );
 
-  /* istanbul ignore next - handleExitPointMode requires isPointMode which can't be set from UI */
-  const handleExitPointMode = useCallback(() => {
-    if (!isPointMode || !pointSelection) {
-      setIsPointMode(false);
-      return;
-    }
+  // Grid calls this when a cell is clicked during POINT mode
+  const handleFormulaCellClick = useCallback(
+    (row: number, col: number, shiftKey: boolean) => {
+      handleEditingCellClick(row, col, shiftKey);
+    },
+    [handleEditingCellClick],
+  );
 
-    // Build the cell reference string
-    const { startRow, startCol, endRow, endCol } = pointSelection;
-    let ref: string;
-    if (startRow === endRow && startCol === endCol) {
-      ref = `${colLetter(startCol)}${startRow + 1}`;
-    } else {
-      ref = `${colLetter(startCol)}${startRow + 1}:${colLetter(endCol)}${endRow + 1}`;
-    }
+  // Commit the current edit (used when FormulaBar loses focus)
+  const handleFormulaBlurEditing = useCallback(() => {
+    commitEditing();
+  }, [commitEditing]);
 
-    // Insert the reference at the cursor position in the formula
-    const before = formulaBarValue.slice(0, formulaCursorPos);
-    const after = formulaBarValue.slice(formulaCursorPos);
-    const newValue = before + ref + after;
-    setFormulaBarValue(newValue);
-
-    // Update cursor position
-    const newPos = formulaCursorPos + ref.length;
-    setFormulaCursorPos(newPos);
-
-    setIsPointMode(false);
-    setPointSelection(null);
-  }, [isPointMode, pointSelection, formulaBarValue, formulaCursorPos]);
+  // When the active cell changes externally (e.g., clicking a different cell
+  // in the grid), reset the editing FSM so it starts fresh for the new cell.
+  const activeCellKey = activeCell ? `${activeCell.row}:${activeCell.col}` : '';
+  useEffect(() => {
+    resetEditing();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeCellKey]);
 
   const handleUndo = useCallback(() => {
     const prev = undo();
@@ -592,6 +588,113 @@ function WorkbookView() {
     [resetHistory]
   );
 
+  const handleSwitchSheet = useCallback(
+    (index: number) => {
+      if (index === workbook.activeSheetIndex) return;
+      if (index < 0 || index >= workbook.sheets.length) return;
+      const newWb: Workbook = {
+        ...workbook,
+        activeSheetIndex: index,
+        lastModified: Date.now(),
+      };
+      pushHistory(newWb, `Switch to ${workbook.sheets[index].name}`);
+      setActiveCell(null);
+      setFormulaBarValue('');
+    },
+    [workbook, pushHistory]
+  );
+
+  const handleAddSheet = useCallback(() => {
+    const sheetNum = workbook.sheets.length + 1;
+    const newSheet = {
+      id: `sheet-${Date.now()}`,
+      name: `Sheet${sheetNum}`,
+      cells: {},
+      defaultColWidth: 100,
+      defaultRowHeight: 28,
+      columnWidths: {},
+      rowHeights: {},
+      columnCount: 26,
+      rowCount: 1000,
+      frozenColumns: 0,
+      frozenRows: 0,
+    };
+    const newWb: Workbook = {
+      ...workbook,
+      sheets: [...workbook.sheets, newSheet],
+      activeSheetIndex: workbook.sheets.length,
+      lastModified: Date.now(),
+    };
+    pushHistory(newWb, `Add Sheet${sheetNum}`);
+    setActiveCell(null);
+    setFormulaBarValue('');
+  }, [workbook, pushHistory]);
+
+  const handleRenameSheet = useCallback(
+    (index: number, newName: string) => {
+      const trimmed = newName.trim();
+      if (!trimmed || trimmed === workbook.sheets[index].name) return;
+      const newSheets = workbook.sheets.map((s, i) =>
+        i === index ? { ...s, name: trimmed } : s
+      );
+      const newWb: Workbook = {
+        ...workbook,
+        sheets: newSheets,
+        lastModified: Date.now(),
+      };
+      pushHistory(newWb, `Rename sheet to "${trimmed}"`);
+      setStatusMessage(`Renamed sheet to "${trimmed}"`);
+    },
+    [workbook, pushHistory]
+  );
+
+  const handleCopySheet = useCallback(
+    (index: number) => {
+      const source = workbook.sheets[index];
+      const copyName = `${source.name} (Copy)`;
+      const copied: Sheet = {
+        ...source,
+        id: `sheet-${Date.now()}`,
+        name: copyName,
+        cells: { ...source.cells },
+        columnWidths: { ...source.columnWidths },
+        rowHeights: { ...source.rowHeights },
+      };
+      const newSheets = [...workbook.sheets];
+      newSheets.splice(index + 1, 0, copied);
+      const newWb: Workbook = {
+        ...workbook,
+        sheets: newSheets,
+        activeSheetIndex: index + 1,
+        lastModified: Date.now(),
+      };
+      pushHistory(newWb, `Copy sheet "${source.name}"`);
+      setActiveCell(null);
+      setFormulaBarValue('');
+    },
+    [workbook, pushHistory]
+  );
+
+  const handleDeleteSheet = useCallback(
+    (index: number) => {
+      /* istanbul ignore next - guard prevents deleting the last sheet */
+      if (workbook.sheets.length <= 1) return;
+      const sheetName = workbook.sheets[index].name;
+      const newSheets = workbook.sheets.filter((_, i) => i !== index);
+      const newActive = Math.min(workbook.activeSheetIndex, newSheets.length - 1);
+      const newWb: Workbook = {
+        ...workbook,
+        sheets: newSheets,
+        activeSheetIndex: newActive < 0 ? 0 : newActive,
+        lastModified: Date.now(),
+      };
+      pushHistory(newWb, `Delete sheet "${sheetName}"`);
+      setActiveCell(null);
+      setFormulaBarValue('');
+    },
+    [workbook, pushHistory]
+  );
+
   /* istanbul ignore next - handleImportError requires import failure (tested in ImportButtons.test.tsx) */
   const handleImportError = useCallback((msg: string) => {
     setStatusMessage(`Import error: ${msg}`);
@@ -640,9 +743,10 @@ function WorkbookView() {
         onCursorChange={setFormulaCursorPos}
         isPointMode={isPointMode}
         pointSelection={pointSelection}
-        onRequestPointMode={handleRequestPointMode}
-        onCellPick={handleCellPick}
-        onExitPointMode={handleExitPointMode}
+        editingSession={editingSession}
+        editingPointSession={editingPointSession}
+        onEditingKey={handleFormulaEditingKey}
+        onBlurEditing={handleFormulaBlurEditing}
       />
 
       {/* Toolbar */}
@@ -694,6 +798,16 @@ function WorkbookView() {
         </button>
       </div>
 
+      {/* Sheet Tabs */}
+      <SheetTabs
+        workbook={workbook}
+        onSwitchSheet={handleSwitchSheet}
+        onAddSheet={handleAddSheet}
+        onRenameSheet={handleRenameSheet}
+        onCopySheet={handleCopySheet}
+        onDeleteSheet={handleDeleteSheet}
+      />
+
       {/* Grid */}
       <div className="flex-1 overflow-hidden">
         <Grid
@@ -705,7 +819,7 @@ function WorkbookView() {
           highlightedRanges={highlightedRanges}
           isPointMode={isPointMode}
           pointSelection={pointSelection}
-          onCellPick={handleCellPick}
+          onCellPick={handleFormulaCellClick}
           onHeaderSelect={handleHeaderSelect}
           onColumnResize={handleColumnResize}
           onRowResize={handleRowResize}

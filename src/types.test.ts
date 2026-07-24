@@ -205,12 +205,23 @@ describe('Core Data Model', () => {
       expect(colToLetter(52)).toBe('BA');
     });
 
+    it('colToLetter handles triple-letter columns', () => {
+      expect(colToLetter(702)).toBe('AAA');
+      expect(colToLetter(703)).toBe('AAB');
+    });
+
     it('refToRowCol parses A1 references', () => {
       expect(refToRowCol('A1')).toEqual([0, 0]);
       expect(refToRowCol('B3')).toEqual([2, 1]);
       expect(refToRowCol('Z1')).toEqual([0, 25]);
       expect(refToRowCol('AA1')).toEqual([0, 26]);
       expect(refToRowCol('AB10')).toEqual([9, 27]);
+    });
+
+    it('refToRowCol handles lowercase references', () => {
+      expect(refToRowCol('a1')).toEqual([0, 0]);
+      expect(refToRowCol('ab10')).toEqual([9, 27]);
+      expect(refToRowCol('zz100')).toEqual([99, 701]);
     });
 
     it('refToRowCol throws on invalid input', () => {

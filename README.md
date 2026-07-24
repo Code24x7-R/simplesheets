@@ -18,7 +18,8 @@ A lightweight, browser‑based spreadsheet for small businesses. No server, no a
 - 📤 **Export** — .xlsx, .csv, .tsv, .json, .pdf
 - 🖨️ **PDF export** with page setup (orientation, margins, scaling)
 - 💾 **Auto-save** to localStorage + named save slots
-- ⚡ **Virtualized grid** — smooth scrolling for 10 k+ rows
+- 📑 **Multi-sheet workbooks** — add, rename, copy, delete sheets with cross-sheet formula references
+- ⚡ **Virtualized grid** — smooth scrolling for 100 k+ rows × unlimited columns
 
 ---
 
@@ -71,7 +72,7 @@ npm test
 npm run cypress
 ```
 
-Current test suite: **752 tests** across 30 suites with **~91% line coverage**.
+Current test suite: **945 tests** across 35 suites with **~93% line coverage**.
 
 ---
 
@@ -80,8 +81,9 @@ Current test suite: **752 tests** across 30 suites with **~91% line coverage**.
 ```
 simplesheets/
 ├── src/
-│   ├── components/      # React components (Grid, Toolbar, editors…)
+│   ├── components/      # React components (Grid, Toolbar, SheetTabs, editors…)
 │   ├── context/         # React Context providers (History, Freeze, PrintSetup)
+│   ├── hooks/           # Custom hooks (useCellEditing FSM, useAutosave)
 │   ├── services/        # Import/Export services (Excel, CSV, JSON, PDF)
 │   ├── utils/           # Formula parser, evaluator, clipboard, benchmark
 │   ├── types.ts         # Core data model (Workbook, Sheet, Cell…)

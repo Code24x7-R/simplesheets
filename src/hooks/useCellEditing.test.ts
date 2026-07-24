@@ -5,6 +5,7 @@ import {
   isOperatorChar,
   cycleReference,
   MODE_CODES,
+  type KeyHandlingResult,
 } from './useCellEditing';
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -239,7 +240,7 @@ describe('useCellEditing - SELECT state', () => {
   it('handles ArrowDown in SELECT state', () => {
     const onNavigate = jest.fn();
     const { result } = createHook({ onNavigate });
-    let navResult: any;
+    let navResult!: KeyHandlingResult;
     act(() => {
       navResult = result.current.handleKey('ArrowDown', false, false);
     });
@@ -248,7 +249,7 @@ describe('useCellEditing - SELECT state', () => {
 
   it('handles ArrowUp in SELECT state', () => {
     const { result } = createHook({ activeRow: 5 });
-    let navResult: any;
+    let navResult!: KeyHandlingResult;
     act(() => {
       navResult = result.current.handleKey('ArrowUp', false, false);
     });
@@ -257,7 +258,7 @@ describe('useCellEditing - SELECT state', () => {
 
   it('handles ArrowLeft in SELECT state', () => {
     const { result } = createHook({ activeCol: 3 });
-    let navResult: any;
+    let navResult!: KeyHandlingResult;
     act(() => {
       navResult = result.current.handleKey('ArrowLeft', false, false);
     });
@@ -266,11 +267,47 @@ describe('useCellEditing - SELECT state', () => {
 
   it('handles ArrowRight in SELECT state', () => {
     const { result } = createHook();
-    let navResult: any;
+    let navResult!: KeyHandlingResult;
     act(() => {
       navResult = result.current.handleKey('ArrowRight', false, false);
     });
     expect(navResult.navigate).toEqual({ dRow: 0, dCol: 1 });
+  });
+
+  it('Shift+Enter moves up in SELECT state', () => {
+    const { result } = createHook({ activeRow: 5 });
+    let navResult!: KeyHandlingResult;
+    act(() => {
+      navResult = result.current.handleKey('Enter', true, false);
+    });
+    expect(navResult.navigate).toEqual({ dRow: -1, dCol: 0 });
+  });
+
+  it('Shift+Tab moves left in SELECT state', () => {
+    const { result } = createHook({ activeCol: 3 });
+    let navResult!: KeyHandlingResult;
+    act(() => {
+      navResult = result.current.handleKey('Tab', true, false);
+    });
+    expect(navResult.navigate).toEqual({ dRow: 0, dCol: -1 });
+  });
+
+  it('Home moves to column 0 in SELECT state', () => {
+    const { result } = createHook({ activeCol: 5 });
+    let navResult!: KeyHandlingResult;
+    act(() => {
+      navResult = result.current.handleKey('Home', false, false);
+    });
+    expect(navResult.navigate).toEqual({ dRow: 0, dCol: -5 });
+  });
+
+  it('Ctrl+Home moves to (0,0) in SELECT state', () => {
+    const { result } = createHook({ activeRow: 5, activeCol: 5 });
+    let navResult!: KeyHandlingResult;
+    act(() => {
+      navResult = result.current.handleKey('Home', false, true);
+    });
+    expect(navResult.navigate).toEqual({ dRow: -5, dCol: -5 });
   });
 
   it('clears cell on Backspace in SELECT state', () => {
@@ -293,12 +330,23 @@ describe('useCellEditing - SELECT state', () => {
 
   it('ignores non-printable keys in SELECT state', () => {
     const { result } = createHook();
-    let navResult: any;
+    let navResult!: KeyHandlingResult;
     act(() => {
       navResult = result.current.handleKey('Escape', false, false);
     });
     expect(result.current.session.state).toBe('SELECT');
     expect(navResult.navigate).toBeNull();
+  });
+
+  it('Escape in SELECT clears selection', () => {
+    const { result } = createHook();
+    let keyResult!: KeyHandlingResult;
+    act(() => {
+      keyResult = result.current.handleKey('Escape', false, false);
+    });
+    // Should return a result with status message (no crash)
+    expect(keyResult.statusMessage).toBe('Selection cleared');
+    expect(result.current.session.state).toBe('SELECT');
   });
 });
 
@@ -355,7 +403,7 @@ describe('useCellEditing - ENTER state', () => {
     act(() => {
       result.current.handleKey('H', false, false);
     });
-    let keyResult: any;
+    let keyResult!: KeyHandlingResult;
     act(() => {
       keyResult = result.current.handleKey('Enter', false, false);
     });
@@ -369,12 +417,65 @@ describe('useCellEditing - ENTER state', () => {
     act(() => {
       result.current.handleKey('H', false, false);
     });
-    let keyResult: any;
+    let keyResult!: KeyHandlingResult;
     act(() => {
       keyResult = result.current.handleKey('Tab', false, false);
     });
     expect(onCommit).toHaveBeenCalledWith(0, 0, 'H');
     expect(keyResult.navigate).toEqual({ dRow: 0, dCol: 1 });
+  });
+
+  it('Shift+Enter commits and moves up in ENTER mode', () => {
+    const onCommit = jest.fn();
+    const { result } = createHook({ onCommit, activeRow: 5 });
+    act(() => {
+      result.current.handleKey('H', false, false);
+    });
+    let keyResult!: KeyHandlingResult;
+    act(() => {
+      keyResult = result.current.handleKey('Enter', true, false);
+    });
+    expect(onCommit).toHaveBeenCalledWith(5, 0, 'H');
+    expect(keyResult.navigate).toEqual({ dRow: -1, dCol: 0 });
+  });
+
+  it('Shift+Tab commits and moves left in ENTER mode', () => {
+    const onCommit = jest.fn();
+    const { result } = createHook({ onCommit, activeCol: 3 });
+    act(() => {
+      result.current.handleKey('H', false, false);
+    });
+    let keyResult!: KeyHandlingResult;
+    act(() => {
+      keyResult = result.current.handleKey('Tab', true, false);
+    });
+    expect(onCommit).toHaveBeenCalledWith(0, 3, 'H');
+    expect(keyResult.navigate).toEqual({ dRow: 0, dCol: -1 });
+  });
+
+  it('Home moves caret to index 0 in ENTER mode', () => {
+    const { result } = createHook();
+    act(() => {
+      result.current.handleKey('H', false, false);
+    });
+    act(() => {
+      result.current.handleKey('i', false, false);
+    });
+    act(() => {
+      result.current.handleKey('Home', false, false);
+    });
+    expect(result.current.session.caretPos).toBe(0);
+  });
+
+  it('F4 cycles reference in ENTER mode', () => {
+    const { result } = createHook();
+    // Type =A1 which has a reference at the end
+    act(() => { result.current.handleKey('=', false, false); });
+    act(() => { result.current.handleKey('A', false, false); });
+    act(() => { result.current.handleKey('1', false, false); });
+    let keyResult!: KeyHandlingResult;
+    act(() => { keyResult = result.current.handleKey('F4', false, false); });
+    expect(keyResult.session.buffer).toBe('=$A$1');
   });
 
   it('cancels on Escape in ENTER mode', () => {
@@ -394,7 +495,7 @@ describe('useCellEditing - ENTER state', () => {
     act(() => {
       result.current.handleKey('H', false, false);
     });
-    let keyResult: any;
+    let keyResult!: KeyHandlingResult;
     act(() => {
       keyResult = result.current.handleKey('ArrowDown', false, false);
     });
@@ -409,10 +510,36 @@ describe('useCellEditing - ENTER state', () => {
     });
     expect(result.current.session.isFormula).toBe(true);
   });
+
+  it('typing - enters ENTER mode as formula', () => {
+    const { result } = createHook();
+    let keyResult!: KeyHandlingResult;
+    act(() => {
+      keyResult = result.current.handleKey('-', false, false);
+    });
+    expect(keyResult.session.state).toBe('ENTER');
+    expect(keyResult.session.isFormula).toBe(true);
+    expect(keyResult.session.buffer).toBe('-');
+    // Hook state should also reflect the change
+    expect(result.current.session.state).toBe('ENTER');
+    expect(result.current.session.isFormula).toBe(true);
+  });
+
+  it('colon after single ref duplicates as endpoint (ENTER→POINT)', () => {
+    const { result } = createHook();
+    // Type =A1 then : should duplicate A1 as endpoint
+    act(() => { result.current.handleKey('=', false, false); });
+    act(() => { result.current.handleKey('A', false, false); });
+    act(() => { result.current.handleKey('1', false, false); });
+    let keyResult!: KeyHandlingResult;
+    act(() => { keyResult = result.current.handleKey(':', false, false); });
+    expect(keyResult.session.state).toBe('POINT');
+    expect(keyResult.session.buffer).toBe('=A1:A1');
+  });
 });
 
 describe('useCellEditing - EDIT state', () => {
-  function enterEditState(result: any) {
+  function enterEditState(result: ReturnType<typeof createHook>['result']) {
     act(() => {
       result.current.handleKey('F2', false, false);
     });
@@ -484,12 +611,58 @@ describe('useCellEditing - EDIT state', () => {
     const onCommit = jest.fn();
     const { result } = createHook({ cellValue: 'Hello', onCommit });
     enterEditState(result);
-    let keyResult: any;
+    let keyResult!: KeyHandlingResult;
     act(() => {
       keyResult = result.current.handleKey('ArrowDown', false, false);
     });
     expect(onCommit).toHaveBeenCalledWith(0, 0, 'Hello');
     expect(keyResult.navigate).toEqual({ dRow: 1, dCol: 0 });
+  });
+
+  it('Shift+Enter commits and moves up in EDIT mode', () => {
+    const onCommit = jest.fn();
+    const { result } = createHook({ cellValue: 'Hello', onCommit, activeRow: 5 });
+    enterEditState(result);
+    let keyResult!: KeyHandlingResult;
+    act(() => {
+      keyResult = result.current.handleKey('Enter', true, false);
+    });
+    expect(onCommit).toHaveBeenCalledWith(5, 0, 'Hello');
+    expect(keyResult.navigate).toEqual({ dRow: -1, dCol: 0 });
+  });
+
+  it('Shift+Tab commits and moves left in EDIT mode', () => {
+    const onCommit = jest.fn();
+    const { result } = createHook({ cellValue: 'Hello', onCommit, activeCol: 3 });
+    enterEditState(result);
+    let keyResult!: KeyHandlingResult;
+    act(() => {
+      keyResult = result.current.handleKey('Tab', true, false);
+    });
+    expect(onCommit).toHaveBeenCalledWith(0, 3, 'Hello');
+    expect(keyResult.navigate).toEqual({ dRow: 0, dCol: -1 });
+  });
+
+  it('Tab commits and moves right in EDIT mode', () => {
+    const onCommit = jest.fn();
+    const { result } = createHook({ cellValue: 'Hello', onCommit });
+    enterEditState(result);
+    let keyResult!: KeyHandlingResult;
+    act(() => {
+      keyResult = result.current.handleKey('Tab', false, false);
+    });
+    expect(onCommit).toHaveBeenCalledWith(0, 0, 'Hello');
+    expect(keyResult.navigate).toEqual({ dRow: 0, dCol: 1 });
+  });
+
+  it('Home moves caret to index 0 in EDIT mode', () => {
+    const { result } = createHook({ cellValue: 'Hello' });
+    enterEditState(result);
+    // Move caret to end first
+    act(() => {
+      result.current.handleKey('Home', false, false);
+    });
+    expect(result.current.session.caretPos).toBe(0);
   });
 
   it('deletes char before caret on Backspace in EDIT mode', () => {
@@ -575,10 +748,20 @@ describe('useCellEditing - EDIT state', () => {
     expect(result.current.pointSession).not.toBeNull();
     expect(result.current.pointSession?.isActive).toBe(true);
   });
+
+  it('colon after single ref duplicates as endpoint (EDIT→POINT)', () => {
+    const { result } = createHook({ cellValue: '=SUM(A1' });
+    enterEditState(result);
+    // Buffer is "=SUM(A1", type : should duplicate A1 as endpoint
+    let keyResult!: KeyHandlingResult;
+    act(() => { keyResult = result.current.handleKey(':', false, false); });
+    expect(keyResult.session.state).toBe('POINT');
+    expect(keyResult.session.buffer).toBe('=SUM(A1:A1');
+  });
 });
 
 describe('useCellEditing - POINT state', () => {
-  function enterPointState(result: any) {
+  function enterPointState(result: ReturnType<typeof createHook>['result']) {
     // Type =SUM( which triggers POINT mode
     act(() => {
       result.current.handleKey('=', false, false);
@@ -707,7 +890,7 @@ describe('useCellEditing - POINT state', () => {
     act(() => {
       result.current.handleKey('ArrowDown', false, false);
     });
-    let keyResult: any;
+    let keyResult!: KeyHandlingResult;
     act(() => {
       keyResult = result.current.handleKey('Enter', false, false);
     });
@@ -719,12 +902,97 @@ describe('useCellEditing - POINT state', () => {
     const onCommit = jest.fn();
     const { result } = createHook({ onCommit });
     enterPointState(result);
-    let keyResult: any;
+    let keyResult!: KeyHandlingResult;
     act(() => {
       keyResult = result.current.handleKey('Tab', false, false);
     });
     expect(onCommit).toHaveBeenCalled();
     expect(keyResult.navigate).toEqual({ dRow: 0, dCol: 1 });
+  });
+
+  it('Shift+Enter commits reference and moves up', () => {
+    const onCommit = jest.fn();
+    const { result } = createHook({ onCommit, activeRow: 5 });
+    enterPointState(result);
+    let keyResult!: KeyHandlingResult;
+    act(() => {
+      keyResult = result.current.handleKey('Enter', true, false);
+    });
+    expect(onCommit).toHaveBeenCalled();
+    expect(keyResult.navigate).toEqual({ dRow: -1, dCol: 0 });
+  });
+
+  it('Shift+Tab commits reference and moves left', () => {
+    const onCommit = jest.fn();
+    const { result } = createHook({ onCommit });
+    enterPointState(result);
+    let keyResult!: KeyHandlingResult;
+    act(() => {
+      keyResult = result.current.handleKey('Tab', true, false);
+    });
+    expect(onCommit).toHaveBeenCalled();
+    expect(keyResult.navigate).toEqual({ dRow: 0, dCol: -1 });
+  });
+
+  it('Backspace in POINT deletes reference and returns to EDIT', () => {
+    const { result } = createHook();
+    enterPointState(result);
+    // Move to create a range
+    act(() => {
+      result.current.handleKey('ArrowDown', false, false);
+    });
+    act(() => {
+      result.current.handleKey('ArrowRight', false, false);
+    });
+    let keyResult!: KeyHandlingResult;
+    act(() => {
+      keyResult = result.current.handleKey('Backspace', false, false);
+    });
+    expect(keyResult.session.state).toBe('EDIT');
+    expect(keyResult.pointSession).toBeNull();
+    expect(keyResult.session.buffer).toBe('=SUM(');
+  });
+
+  it('Delete in POINT deletes reference and returns to EDIT', () => {
+    const { result } = createHook();
+    enterPointState(result);
+    act(() => {
+      result.current.handleKey('ArrowDown', false, false);
+    });
+    let keyResult!: KeyHandlingResult;
+    act(() => {
+      keyResult = result.current.handleKey('Delete', false, false);
+    });
+    expect(keyResult.session.state).toBe('EDIT');
+    expect(keyResult.pointSession).toBeNull();
+  });
+
+  it('Home in POINT moves pointing box to column 0', () => {
+    const { result } = createHook();
+    enterPointState(result);
+    // Move right first
+    act(() => {
+      result.current.handleKey('ArrowRight', false, false);
+    });
+    act(() => {
+      result.current.handleKey('ArrowRight', false, false);
+    });
+    let keyResult!: KeyHandlingResult;
+    act(() => {
+      keyResult = result.current.handleKey('Home', false, false);
+    });
+    expect(keyResult.pointSession?.currentCol).toBe(0);
+  });
+
+  it('Ctrl+Home in POINT moves pointing box to (0,0)', () => {
+    const { result } = createHook({ activeRow: 5, activeCol: 5 });
+    enterPointState(result);
+    let keyResult!: KeyHandlingResult;
+    act(() => {
+      keyResult = result.current.handleKey('Home', false, true);
+    });
+    expect(keyResult.pointSession?.currentRow).toBe(0);
+    expect(keyResult.pointSession?.currentCol).toBe(0);
   });
 });
 
@@ -842,7 +1110,7 @@ describe('useCellEditing - F4 cycling in EDIT mode', () => {
     act(() => { result.current.handleKey('ArrowLeft', false, false); });
     act(() => { result.current.handleKey('ArrowLeft', false, false); });
     // Press F4 to cycle A1 → $A$1
-    let keyResult: any;
+    let keyResult!: KeyHandlingResult;
     act(() => { keyResult = result.current.handleKey('F4', false, false); });
     expect(keyResult.session.buffer).toBe('=$A$1+B1');
   });
@@ -851,7 +1119,7 @@ describe('useCellEditing - F4 cycling in EDIT mode', () => {
     const { result } = createHook({ cellValue: '=A1+B1' });
     act(() => { result.current.handleKey('F2', false, false); });
     // Caret at end (position 6), adjacent to B1 - should cycle B1
-    let keyResult: any;
+    let keyResult!: KeyHandlingResult;
     act(() => { keyResult = result.current.handleKey('F4', false, false); });
     expect(keyResult.session.buffer).toBe('=A1+$B$1');
   });
@@ -859,7 +1127,7 @@ describe('useCellEditing - F4 cycling in EDIT mode', () => {
   it('does nothing on F4 when buffer has no references', () => {
     const { result } = createHook({ cellValue: 'Hello' });
     act(() => { result.current.handleKey('F2', false, false); });
-    let keyResult: any;
+    let keyResult!: KeyHandlingResult;
     act(() => { keyResult = result.current.handleKey('F4', false, false); });
     expect(keyResult.session.buffer).toBe('Hello');
   });
@@ -878,7 +1146,7 @@ describe('useCellEditing - EDIT → POINT transition', () => {
     act(() => { result.current.handleKey('A', false, false); });
     act(() => { result.current.handleKey('1', false, false); });
     // Type , which is a separator - should trigger POINT
-    let keyResult: any;
+    let keyResult!: KeyHandlingResult;
     act(() => { keyResult = result.current.handleKey(',', false, false); });
     expect(keyResult.session.state).toBe('POINT');
   });

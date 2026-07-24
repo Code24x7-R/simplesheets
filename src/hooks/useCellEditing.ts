@@ -110,7 +110,7 @@ function isPrintableChar(key: string): boolean {
  * and caret position, per the specification's deterministic trigger check.
  */
 export function shouldActivatePointMode(buffer: string, caretPos: number): boolean {
-  if (!buffer.startsWith('=')) return false;
+  if (!buffer.startsWith('=') && !buffer.startsWith('+') && !buffer.startsWith('-')) return false;
   if (caretPos < 1) return false; // Before '=' — no trigger
 
   // Look at the last non-whitespace character before the caret
@@ -286,7 +286,7 @@ export function useCellEditing({
 
   const startEnter = useCallback((key: string) => {
     const newBuffer = key;
-    const isFormula = key === '=' || key === '+';
+    const isFormula = key === '=' || key === '+' || key === '-';
     setSession({
       state: 'ENTER',
       row: activeRow,
@@ -372,7 +372,7 @@ export function useCellEditing({
 
   // ─── Keyboard Handler ──────────────────────────────────────────────────
 
-  const handleKey = useCallback((key: string, shiftKey: boolean, _ctrlKey: boolean): KeyHandlingResult => {
+  const handleKey = useCallback((key: string, shiftKey: boolean, ctrlKey: boolean): KeyHandlingResult => {
     const s = sessionRef.current;
     const result: KeyHandlingResult = {
       session: s,
@@ -386,13 +386,22 @@ export function useCellEditing({
     if (s.state === 'SELECT') {
       if (isPrintableChar(key)) {
         startEnter(key);
-        result.session = { ...s, state: 'ENTER', buffer: key, caretPos: 1, isFormula: key === '=' || key === '+' };
+        const isFormula = key === '=' || key === '+' || key === '-';
+        result.session = { ...s, state: 'ENTER', buffer: key, caretPos: 1, isFormula };
         return result;
       }
 
       if (key === 'F2') {
         startEdit();
-        result.session = { ...s, state: 'EDIT', buffer: cellValue, caretPos: cellValue.length, isFormula: cellValue.startsWith('=') };
+        const isFormula = cellValue.startsWith('=') || cellValue.startsWith('+') || cellValue.startsWith('-');
+        result.session = { ...s, state: 'EDIT', buffer: cellValue, caretPos: cellValue.length, isFormula };
+        return result;
+      }
+
+      // Escape clears multi-cell selection (Spec §2)
+      if (key === 'Escape') {
+        result.statusMessage = 'Selection cleared';
+        result.shouldCommit = false;
         return result;
       }
 
@@ -402,6 +411,26 @@ export function useCellEditing({
         if (nav) {
           result.navigate = nav;
           result.statusMessage = null;
+        }
+        return result;
+      }
+
+      // Shift+Enter moves up, Shift+Tab moves left (Spec §2)
+      if (key === 'Enter' && shiftKey) {
+        result.navigate = { dRow: -1, dCol: 0 };
+        return result;
+      }
+      if (key === 'Tab' && shiftKey) {
+        result.navigate = { dRow: 0, dCol: -1 };
+        return result;
+      }
+
+      // Home / Ctrl+Home (Spec §2)
+      if (key === 'Home') {
+        if (ctrlKey) {
+          result.navigate = { dRow: -s.row, dCol: -s.col }; // to (0,0)
+        } else {
+          result.navigate = { dRow: 0, dCol: -s.col }; // to column 0
         }
         return result;
       }
@@ -427,34 +456,71 @@ export function useCellEditing({
       }
 
       if (key === 'Enter') {
-        commit({ dRow: 1, dCol: 0 });
+        const dir = shiftKey ? { dRow: -1, dCol: 0 } : { dRow: 1, dCol: 0 };
+        commit(dir);
         result.session = { ...s, state: 'SELECT' };
-        result.navigate = { dRow: 1, dCol: 0 };
+        result.navigate = dir;
         result.statusMessage = 'Value committed';
         return result;
       }
 
       if (key === 'Tab') {
-        commit({ dRow: 0, dCol: 1 });
+        const dir = shiftKey ? { dRow: 0, dCol: -1 } : { dRow: 0, dCol: 1 };
+        commit(dir);
         result.session = { ...s, state: 'SELECT' };
-        result.navigate = { dRow: 0, dCol: 1 };
+        result.navigate = dir;
         return result;
       }
 
       if (key === 'F2') {
-        // Switch to EDIT mode (caret at end)
+        // Toggle to EDIT mode (caret at end)
         setSession((prev) => ({ ...prev, state: 'EDIT' }));
         result.session = { ...s, state: 'EDIT' };
+        return result;
+      }
+
+      if (key === 'F4') {
+        // Cycle reference at end of buffer (Spec §2 — ENTER state)
+        const refInfo = findRefAtCaret(s.buffer, s.buffer.length);
+        if (refInfo) {
+          const cycled = cycleReference(refInfo.ref);
+          const newBuffer = s.buffer.slice(0, refInfo.start) + cycled + s.buffer.slice(refInfo.end);
+          const newCaret = refInfo.start + cycled.length;
+          setSession((prev) => ({ ...prev, buffer: newBuffer, caretPos: newCaret }));
+          result.session = { ...s, buffer: newBuffer, caretPos: newCaret };
+          result.statusMessage = `Reference: ${cycled}`;
+        }
+        return result;
+      }
+
+      // Home / Ctrl+Home — move caret (Spec §2)
+      if (key === 'Home') {
+        const newCaret = 0;
+        setSession((prev) => ({ ...prev, caretPos: newCaret }));
+        result.session = { ...s, caretPos: newCaret };
         return result;
       }
 
       if (isPrintableChar(key)) {
         const newBuffer = s.buffer + key;
         const newCaret = newBuffer.length;
-        const isFormula = newBuffer.startsWith('=') || newBuffer.startsWith('+');
+        const isFormula = newBuffer.startsWith('=') || newBuffer.startsWith('+') || newBuffer.startsWith('-');
 
         // Check if this should trigger POINT mode (e.g., typing = or separator after =)
         if (shouldActivatePointMode(newBuffer, newCaret)) {
+          // Explicit colon duplication (Spec §3.3.1): if typing : after a
+          // single cell reference, duplicate it as the default endpoint
+          if (key === ':') {
+            const refBeforeColon = extractRefBeforeCaret(s.buffer, s.caretPos);
+            if (refBeforeColon) {
+              const dupBuffer = s.buffer.slice(0, s.caretPos) + ':' + refBeforeColon;
+              const dupCaret = dupBuffer.length;
+              setSession((prev) => ({ ...prev, buffer: dupBuffer, caretPos: dupCaret, isFormula }));
+              enterPointMode({ ...s, buffer: dupBuffer, caretPos: dupCaret, isFormula });
+              result.session = { ...s, state: 'POINT', buffer: dupBuffer, caretPos: dupCaret, isFormula };
+              return result;
+            }
+          }
           setSession((prev) => ({ ...prev, buffer: newBuffer, caretPos: newCaret, isFormula }));
           enterPointMode({ ...s, buffer: newBuffer, caretPos: newCaret, isFormula });
           result.session = { ...s, state: 'POINT', buffer: newBuffer, caretPos: newCaret, isFormula };
@@ -505,9 +571,18 @@ export function useCellEditing({
       }
 
       if (key === 'Enter') {
-        commit({ dRow: 1, dCol: 0 });
+        const dir = shiftKey ? { dRow: -1, dCol: 0 } : { dRow: 1, dCol: 0 };
+        commit(dir);
         result.session = { ...s, state: 'SELECT' };
-        result.navigate = { dRow: 1, dCol: 0 };
+        result.navigate = dir;
+        return result;
+      }
+
+      if (key === 'Tab') {
+        const dir = shiftKey ? { dRow: 0, dCol: -1 } : { dRow: 0, dCol: 1 };
+        commit(dir);
+        result.session = { ...s, state: 'SELECT' };
+        result.navigate = dir;
         return result;
       }
 
@@ -535,6 +610,19 @@ export function useCellEditing({
       if (isPrintableChar(key)) {
         // Check if this should trigger POINT mode (caret after separator)
         if (shouldActivatePointMode(s.buffer + key, s.caretPos + 1)) {
+          // Explicit colon duplication (Spec §3.3.1): if typing : after a
+          // single cell reference, duplicate it as the default endpoint
+          if (key === ':') {
+            const refBeforeColon = extractRefBeforeCaret(s.buffer, s.caretPos);
+            if (refBeforeColon) {
+              const newBuffer = s.buffer.slice(0, s.caretPos) + ':' + refBeforeColon;
+              const newCaret = newBuffer.length;
+              setSession((prev) => ({ ...prev, buffer: newBuffer, caretPos: newCaret }));
+              enterPointMode({ ...s, buffer: newBuffer, caretPos: newCaret });
+              result.session = { ...s, state: 'POINT', buffer: newBuffer, caretPos: newCaret };
+              return result;
+            }
+          }
           // Insert char first, then enter POINT
           const newBuffer = s.buffer.slice(0, s.caretPos) + key + s.buffer.slice(s.caretPos);
           setSession((prev) => ({ ...prev, buffer: newBuffer, caretPos: s.caretPos + 1 }));
@@ -545,7 +633,7 @@ export function useCellEditing({
 
         // Insert at caret
         const newBuffer = s.buffer.slice(0, s.caretPos) + key + s.buffer.slice(s.caretPos);
-        const isFormula = newBuffer.startsWith('=') || newBuffer.startsWith('+');
+        const isFormula = newBuffer.startsWith('=') || newBuffer.startsWith('+') || newBuffer.startsWith('-');
         setSession((prev) => ({
           ...prev,
           buffer: newBuffer,
@@ -594,6 +682,18 @@ export function useCellEditing({
         return result;
       }
 
+      // Home / Ctrl+Home — move caret (Spec §2)
+      if (key === 'Home') {
+        if (ctrlKey) {
+          setSession((prev) => ({ ...prev, caretPos: 0 }));
+          result.session = { ...s, caretPos: 0 };
+        } else {
+          setSession((prev) => ({ ...prev, caretPos: 0 }));
+          result.session = { ...s, caretPos: 0 };
+        }
+        return result;
+      }
+
       /* istanbul ignore next - defensive return for unhandled keys */
       return result;
     }
@@ -632,19 +732,101 @@ export function useCellEditing({
         return result;
       }
 
+      // Backspace/Delete in POINT — delete target reference token, return to EDIT (Spec §2)
+      if (key === 'Backspace' || key === 'Delete') {
+        // Remove the reference from buffer at insertPos to caretPos, return to EDIT
+        const ps = pointRef.current;
+        if (ps) {
+          const newBuffer = s.buffer.slice(0, ps.insertPos) + s.buffer.slice(s.caretPos);
+          const newCaret = ps.insertPos;
+          setSession((prev) => ({ ...prev, state: 'EDIT', buffer: newBuffer, caretPos: newCaret }));
+          setPointSession(null);
+          result.session = { ...s, state: 'EDIT', buffer: newBuffer, caretPos: newCaret };
+          result.pointSession = null;
+          result.statusMessage = 'Reference removed';
+        }
+        return result;
+      }
+
+      // Home / Ctrl+Home — move pointing box (Spec §2)
+      if (key === 'Home') {
+        const ps = pointRef.current;
+        if (ps) {
+          if (ctrlKey) {
+            // Move to (0,0)
+            const newPs = { ...ps, currentRow: 0, currentCol: 0 };
+            setPointSession(newPs);
+            result.pointSession = newPs;
+          } else {
+            // Move to column 0
+            const newPs = { ...ps, currentCol: 0 };
+            setPointSession(newPs);
+            result.pointSession = newPs;
+          }
+        }
+        return result;
+      }
+
       if (key.startsWith('Arrow')) {
         // Navigate the pointing box
         const nav = getNavigationDelta(key, shiftKey);
         if (nav) {
-          setPointSession((prev) => {
-            if (!prev) return prev;
-            const newRow = Math.max(0, Math.min(rowCount - 1, prev.currentRow + nav.dRow));
-            const newCol = Math.max(0, Math.min(colCount - 1, prev.currentCol + nav.dCol));
-            return { ...prev, currentRow: newRow, currentCol: newCol };
-          });
-          result.pointSession = pointRef.current;
+          const ps = pointRef.current;
+          if (ps) {
+            const newRow = Math.max(0, Math.min(rowCount - 1, ps.currentRow + nav.dRow));
+            const newCol = Math.max(0, Math.min(colCount - 1, ps.currentCol + nav.dCol));
+            const newPs = { ...ps, currentRow: newRow, currentCol: newCol };
+            setPointSession(newPs);
+            result.pointSession = newPs;
+          }
         }
         return result;
+      }
+
+      // Typing a cell reference character (A-Z, 0-9, $) exits POINT mode
+      // and inserts the character — matches Excel behavior where you can
+      // either navigate with arrows OR type the reference directly.
+      if (isPrintableChar(key) && /[A-Za-z0-9$]/.test(key)) {
+        const newBuffer = s.buffer.slice(0, s.caretPos) + key + s.buffer.slice(s.caretPos);
+        setSession((prev) => ({ ...prev, state: 'EDIT', buffer: newBuffer, caretPos: s.caretPos + 1 }));
+        setPointSession(null);
+        result.session = { ...s, state: 'EDIT', buffer: newBuffer, caretPos: s.caretPos + 1 };
+        result.pointSession = null;
+        return result;
+      }
+
+      // ')' commits the current reference and closes the function
+      if (key === ')') {
+        const ps = pointRef.current;
+        if (ps) {
+          const refStr = formatPointRef(ps);
+          const beforeRef = s.buffer.slice(0, ps.insertPos);
+          const newBuffer = beforeRef + refStr + ')';
+          const newCaret = newBuffer.length;
+          setSession((prev) => ({ ...prev, state: 'EDIT', buffer: newBuffer, caretPos: newCaret }));
+          setPointSession(null);
+          result.session = { ...s, state: 'EDIT', buffer: newBuffer, caretPos: newCaret };
+          result.pointSession = null;
+        }
+        return result;
+      }
+
+      // Explicit colon (Spec §3.3.1) — if pointing at a single cell, duplicate
+      // it as the default trailing range endpoint (e.g., =SUM(A1: → =SUM(A1:A1))
+      if (key === ':') {
+        const ps = pointRef.current;
+        if (ps && ps.anchorRow === ps.currentRow && ps.anchorCol === ps.currentCol) {
+          // Single cell reference — duplicate as endpoint
+          const anchorRef = `${colToLetter(ps.anchorCol)}${ps.anchorRow + 1}`;
+          const beforeRef = s.buffer.slice(0, ps.insertPos);
+          const afterRef = s.buffer.slice(s.caretPos);
+          const newBuffer = beforeRef + anchorRef + ':' + anchorRef + afterRef;
+          const newCaret = beforeRef.length + anchorRef.length * 2 + 1;
+          setSession((prev) => ({ ...prev, buffer: newBuffer, caretPos: newCaret }));
+          result.session = { ...s, buffer: newBuffer, caretPos: newCaret };
+          return result;
+        }
+        // Fall through to operator commit if already a range
       }
 
       if (isOperatorChar(key)) {
@@ -671,7 +853,13 @@ export function useCellEditing({
         if (ps) {
           const refStr = formatPointRef(ps);
           const newBuffer = s.buffer.slice(0, ps.insertPos) + refStr;
-          const direction = key === 'Tab' ? { dRow: 0, dCol: 1 } : { dRow: 1, dCol: 0 };
+          // Determine direction: Enter=down, Shift+Enter=up, Tab=right, Shift+Tab=left
+          let direction: { dRow: number; dCol: number };
+          if (key === 'Enter') {
+            direction = shiftKey ? { dRow: -1, dCol: 0 } : { dRow: 1, dCol: 0 };
+          } else {
+            direction = shiftKey ? { dRow: 0, dCol: -1 } : { dRow: 0, dCol: 1 };
+          }
           // Commit the cell with the final buffer
           onCommit(s.row, s.col, newBuffer);
           if (onNavigate) {
@@ -762,4 +950,16 @@ function formatPointRef(ps: PointSession): string {
 function insertRefAt(buffer: string, insertPos: number, ref: string, caretPos: number): string {
   // Replace text from insertPos to caretPos with the cycled reference
   return buffer.slice(0, insertPos) + ref + buffer.slice(caretPos);
+}
+
+/**
+ * Extracts a single cell reference (e.g., "A1", "$B$2") that ends at the caret
+ * position. Returns null if no complete reference is found.
+ * Used for colon auto-duplication (Spec §3.3.1).
+ */
+function extractRefBeforeCaret(buffer: string, caretPos: number): string | null {
+  // Match a cell reference at the end of the text before caret
+  const textBefore = buffer.slice(0, caretPos);
+  const match = textBefore.match(/(\$?[A-Za-z]+\$?\d+)$/);
+  return match ? match[1] : null;
 }

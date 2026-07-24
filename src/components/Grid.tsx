@@ -1,4 +1,4 @@
-import { useRef, useCallback, useState, useMemo } from 'react';
+import { useRef, useCallback, useState, useMemo, useEffect } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import type { Sheet, Selection } from '../types';
 import { cellKey, colToLetter } from '../types';
@@ -49,14 +49,14 @@ interface GridProps {
 const ROW_WIDTH = 50; // Width of row number column
 
 const HIGHLIGHT_COLORS = [
-  'rgba(59, 130, 246, 0.25)',  // blue
-  'rgba(239, 68, 68, 0.25)',   // red
-  'rgba(34, 197, 94, 0.25)',   // green
-  'rgba(234, 179, 8, 0.25)',   // yellow
-  'rgba(168, 85, 247, 0.25)',  // purple
-  'rgba(236, 72, 153, 0.25)',  // pink
-  'rgba(249, 115, 22, 0.25)',  // orange
-  'rgba(6, 182, 212, 0.25)',   // cyan
+  'rgba(59, 130, 246, 0.10)',  // blue
+  'rgba(239, 68, 68, 0.10)',   // red
+  'rgba(34, 197, 94, 0.10)',   // green
+  'rgba(234, 179, 8, 0.10)',   // yellow
+  'rgba(168, 85, 247, 0.10)',  // purple
+  'rgba(236, 72, 153, 0.10)',  // pink
+  'rgba(249, 115, 22, 0.10)',  // orange
+  'rgba(6, 182, 212, 0.10)',   // cyan
 ];
 
 const HIGHLIGHT_BORDER_COLORS = [
@@ -135,6 +135,19 @@ export function Grid({ sheet, onCellChange, onCellsChange, onSelect, selectedCel
   const virtualRows = rowVirtualizer.getVirtualItems();
   const virtualColumns = columnVirtualizer.getVirtualItems();
 
+  // ─── Auto-scroll during POINT mode (Spec §5) ───────────────────────────
+  // When the pointed-to cell is outside the viewport, scroll it into view.
+  useEffect(() => {
+    if (!isPointMode || !pointSelection) return;
+    const endRow = pointSelection.endRow;
+    const endCol = pointSelection.endCol;
+    // Use a small delay to allow the virtualizer to update after state change
+    const timer = setTimeout(() => {
+      rowVirtualizer.scrollToIndex(endRow, { align: 'auto' });
+      columnVirtualizer.scrollToIndex(endCol, { align: 'auto' });
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [isPointMode, pointSelection, rowVirtualizer, columnVirtualizer]);
 
   /**
    * Gets the width of a specific column, accounting for overrides.
@@ -1023,11 +1036,13 @@ export function Grid({ sheet, onCellChange, onCellsChange, onSelect, selectedCel
                 cellStyle.backgroundColor = HIGHLIGHT_COLORS[highlightIdx % HIGHLIGHT_COLORS.length];
                 cellStyle.boxShadow = `inset 0 0 0 2px ${HIGHLIGHT_BORDER_COLORS[highlightIdx % HIGHLIGHT_BORDER_COLORS.length]}`;
               }
-              // Apply point mode selection highlight (dashed border)
+              // Apply point mode selection highlight (dashed border, 10% fill per Spec §4.2)
               /* istanbul ignore next - point mode selection highlight */
               if (inPointSelection) {
                 cellStyle.boxShadow = 'inset 0 0 0 2px rgb(59, 130, 246)';
-                cellStyle.backgroundColor = 'rgba(59, 130, 246, 0.15)';
+                cellStyle.outline = '2px dashed rgb(59, 130, 246)';
+                cellStyle.outlineOffset = '-2px';
+                cellStyle.backgroundColor = 'rgba(59, 130, 246, 0.10)';
               }
               return (
                 <div
@@ -1077,6 +1092,187 @@ export function Grid({ sheet, onCellChange, onCellsChange, onSelect, selectedCel
           </div>
         ))}
       </div>
+
+      {/* ─── POINT Mode Range Resize Handles (Spec §3.3.2, §4.2) ─────────── */}
+      {isPointMode && pointSelection && (
+        <PointResizeHandles
+          pointSelection={pointSelection}
+          sheet={sheet}
+          rowVirtualizer={rowVirtualizer}
+          columnVirtualizer={columnVirtualizer}
+          rowCount={rowCount}
+          colCount={columnCount}
+          onResize={(newSelection) => {
+            // Update the point session via the parent callback
+            if (onCellPick) {
+              onCellPick(newSelection.endRow, newSelection.endCol, false);
+            }
+          }}
+        />
+      )}
     </div>
+  );
+}
+
+// ─── POINT Mode Range Resize Handles ──────────────────────────────────────
+
+interface PointResizeHandlesProps {
+  pointSelection: PointModeSelection;
+  sheet: Sheet;
+  rowVirtualizer: { getVirtualItems: () => { index: number; start: number }[] };
+  columnVirtualizer: { getVirtualItems: () => { index: number; start: number }[] };
+  rowCount: number;
+  colCount: number;
+  onResize: (newSelection: PointModeSelection) => void;
+}
+
+/**
+ * Calculates the pixel position of a cell in the grid.
+ */
+function getCellPixelPosition(
+  row: number,
+  col: number,
+  sheet: Sheet,
+  rowVirtualizer: { getVirtualItems: () => { index: number; start: number }[] },
+  columnVirtualizer: { getVirtualItems: () => { index: number; start: number }[] }
+): { top: number; left: number; width: number; height: number } | null {
+  const virtualRows = rowVirtualizer.getVirtualItems();
+  const virtualCols = columnVirtualizer.getVirtualItems();
+  const virtualRow = virtualRows.find((vr) => vr.index === row);
+  const virtualCol = virtualCols.find((vc) => vc.index === col);
+  if (!virtualRow || !virtualCol) return null;
+  return {
+    top: virtualRow.start,
+    left: ROW_WIDTH + virtualCol.start,
+    width: getColWidthLocal(col, sheet),
+    height: getRowHeightLocal(row, sheet),
+  };
+}
+
+function getColWidthLocal(col: number, sheet: Sheet): number {
+  return sheet.columnWidths[col] ?? sheet.defaultColWidth;
+}
+
+function getRowHeightLocal(row: number, sheet: Sheet): number {
+  return sheet.rowHeights[row] ?? sheet.defaultRowHeight;
+}
+
+/**
+ * Renders 6px corner handles for resizing a POINT mode range selection.
+ * Per Spec §4.2: 6px filled squares on the 4 corners.
+ */
+function PointResizeHandles({
+  pointSelection,
+  sheet,
+  rowVirtualizer,
+  columnVirtualizer,
+  rowCount: _rowCount,
+  colCount: _colCount,
+  onResize,
+}: PointResizeHandlesProps) {
+  const minRow = Math.min(pointSelection.startRow, pointSelection.endRow);
+  const maxRow = Math.max(pointSelection.startRow, pointSelection.endRow);
+  const minCol = Math.min(pointSelection.startCol, pointSelection.endCol);
+  const maxCol = Math.max(pointSelection.startCol, pointSelection.endCol);
+
+  // Get pixel positions for the 4 corners
+  const tl = getCellPixelPosition(minRow, minCol, sheet, rowVirtualizer, columnVirtualizer);
+  const tr = getCellPixelPosition(minRow, maxCol, sheet, rowVirtualizer, columnVirtualizer);
+  const bl = getCellPixelPosition(maxRow, minCol, sheet, rowVirtualizer, columnVirtualizer);
+  const br = getCellPixelPosition(maxRow, maxCol, sheet, rowVirtualizer, columnVirtualizer);
+
+  if (!tl || !tr || !bl || !br) return null;
+
+  const handleStyle: React.CSSProperties = {
+    position: 'absolute',
+    width: 6,
+    height: 6,
+    backgroundColor: 'rgb(59, 130, 246)',
+    border: '1px solid white',
+    borderRadius: 1,
+    zIndex: 30,
+    cursor: 'nwse-resize',
+  };
+
+  // Calculate handle positions (centered on corners)
+  const handles = [
+    { id: 'tl', top: tl.top - 3, left: tl.left - 3, cursor: 'nwse-resize', corner: 'tl' as const },
+    { id: 'tr', top: tr.top - 3, left: tr.left + tr.width - 3, cursor: 'nesw-resize', corner: 'tr' as const },
+    { id: 'bl', top: bl.top + bl.height - 3, left: bl.left - 3, cursor: 'nesw-resize', corner: 'bl' as const },
+    { id: 'br', top: br.top + br.height - 3, left: br.left + br.width - 3, cursor: 'nwse-resize', corner: 'br' as const },
+  ];
+
+  const handleMouseDown = (e: React.MouseEvent, corner: 'tl' | 'tr' | 'bl' | 'br') => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const startRow = pointSelection.startRow;
+    const startCol = pointSelection.startCol;
+    const endRow = pointSelection.endRow;
+    const endCol = pointSelection.endCol;
+
+    const onMouseMove = (moveEvent: MouseEvent) => {
+      const deltaX = moveEvent.clientX - startX;
+      const deltaY = moveEvent.clientY - startY;
+
+      // Convert pixel delta to cell delta (approximate)
+      const avgColWidth = sheet.defaultColWidth;
+      const avgRowHeight = sheet.defaultRowHeight;
+      const dCol = Math.round(deltaX / avgColWidth);
+      const dRow = Math.round(deltaY / avgRowHeight);
+
+      let newStartRow = startRow;
+      let newStartCol = startCol;
+      let newEndRow = endRow;
+      let newEndCol = endCol;
+
+      switch (corner) {
+        case 'tl':
+          newStartRow = Math.max(0, startRow + dRow);
+          newStartCol = Math.max(0, startCol + dCol);
+          break;
+        case 'tr':
+          newStartRow = Math.max(0, startRow + dRow);
+          newEndCol = Math.max(0, endCol + dCol);
+          break;
+        case 'bl':
+          newEndRow = Math.max(0, endRow + dRow);
+          newStartCol = Math.max(0, startCol + dCol);
+          break;
+        case 'br':
+          newEndRow = Math.max(0, endRow + dRow);
+          newEndCol = Math.max(0, endCol + dCol);
+          break;
+      }
+
+      onResize({
+        startRow: newStartRow,
+        startCol: newStartCol,
+        endRow: newEndRow,
+        endCol: newEndCol,
+      });
+    };
+
+    const onMouseUp = () => {
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+  };
+
+  return (
+    <>
+      {handles.map((h) => (
+        <div
+          key={h.id}
+          style={{ ...handleStyle, top: h.top, left: h.left, cursor: h.cursor }}
+          onMouseDown={(e) => handleMouseDown(e, h.corner)}
+        />
+      ))}
+    </>
   );
 }
