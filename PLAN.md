@@ -236,3 +236,16 @@ Achieve 100% line/branch/statement/function coverage on all source files before 
 - **875 tests across 33 suites, all passing**
 - formulaEngine.ts: 97.55% lines (up from 93.3%)
 - Remaining gaps: defensive branches in compareValues, IF, NOT, XOR, SUMIF, WEEKDAY, matchesCriterion, topologicalSort
+
+### 2026-07-24 (Excel-like direct entry editing)
+- Implemented Excel-like cell editing UX in Grid component:
+  - Typing any printable character (A-Z, a-z, 0-9, punctuation) on a selected cell immediately starts editing
+  - The typed character replaces the cell content (Excel behavior)
+  - Enter key commits the edit and exits editing mode, returning focus to the grid
+  - F2 key also exits editing mode (toggle behavior like Excel)
+  - Escape cancels editing and restores original value
+- Added `isPrintableKey` helper to detect editable characters
+- Added `handleCellEditWithChar` for starting edit with initial character
+- Added 6 new tests for direct entry editing behavior
+- **883 tests across 33 suites, all passing**
+- Build, lint (0 errors), and type-check all pass

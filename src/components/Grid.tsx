@@ -605,10 +605,34 @@ export function Grid({ sheet, onCellChange, onSelect, selectedCell, highlightedR
   );
 
   /**
+   * Checks if a key is a printable character (letters, numbers, punctuation).
+   */
+  const isPrintableKey = useCallback((key: string): boolean => {
+    if (key.length !== 1) return false;
+    const code = key.charCodeAt(0);
+    // ASCII printable range 32-126 (space through ~)
+    return code >= 32 && code <= 126;
+  }, []);
+
+  /**
+   * Starts editing a cell with an initial character (Excel-like direct entry).
+   */
+  const handleCellEditWithChar = useCallback(
+    (row: number, col: number, char: string) => {
+      const key = cellKey(row, col);
+      setEditingCell(key);
+      setEditValue(char);
+    },
+    []
+  );
+
+  /**
    * Handles keyboard navigation within the grid.
+   * Implements Excel-like editing: typing a character starts editing immediately.
    */
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
+      // If already editing, let the input field handle keys
       if (editingCell) return;
 
       // Handle Ctrl+C, Ctrl+V, Ctrl+X
@@ -644,6 +668,14 @@ export function Grid({ sheet, onCellChange, onSelect, selectedCell, highlightedR
       // For single-cell selections, startRow/startCol === endRow/endCol
       let row = activeSelection.endRow;
       let col = activeSelection.endCol;
+
+      // Excel-like: typing a printable character starts editing immediately
+      if (isPrintableKey(e.key) && activeSelection.type === 'cell') {
+        e.preventDefault();
+        handleCellSelect(row, col);
+        handleCellEditWithChar(row, col, e.key);
+        return;
+      }
 
       // When a full row is selected, arrow up/down moves the row selection
       /* istanbul ignore next - row/col header keyboard navigation */
@@ -735,7 +767,6 @@ export function Grid({ sheet, onCellChange, onSelect, selectedCell, highlightedR
       }
 
       // Standard cell-range navigation
-      /* istanbul ignore next - cell range keyboard navigation */
       switch (e.key) {
         case 'ArrowUp':
           row = Math.max(0, row - 1);
@@ -805,7 +836,7 @@ export function Grid({ sheet, onCellChange, onSelect, selectedCell, highlightedR
       columnVirtualizer.scrollToIndex(col);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [effectiveSelection, editingCell, rowCount, columnCount, handleCellSelect, handleCellEdit, handleCopy, handleCut, handlePaste, rowVirtualizer, columnVirtualizer, onSelect, onCellChange]
+    [effectiveSelection, editingCell, rowCount, columnCount, handleCellSelect, handleCellEdit, handleCellEditWithChar, handleCopy, handleCut, handlePaste, isPrintableKey, rowVirtualizer, columnVirtualizer, onSelect, onCellChange]
   );
 
   /**
@@ -973,6 +1004,11 @@ export function Grid({ sheet, onCellChange, onSelect, selectedCell, highlightedR
                           e.preventDefault();
                           commitEdit();
                           // Return focus to the grid so arrow keys work
+                          parentRef.current?.focus();
+                        } else if (e.key === 'F2') {
+                          // F2 toggles edit mode off (Excel behavior)
+                          e.preventDefault();
+                          commitEdit();
                           parentRef.current?.focus();
                         } else if (e.key === 'Escape') {
                           e.preventDefault();

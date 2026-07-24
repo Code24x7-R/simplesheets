@@ -846,6 +846,108 @@ describe('Grid Component', () => {
     expect(document.querySelector('input.border-blue-500')).toBeNull();
   });
 
+  // ─── Excel-like Direct Entry Editing ─────────────────────────────
+
+  it('starts editing when typing a letter character', () => {
+    const onCellChange = jest.fn();
+    render(<Grid sheet={createTestSheet()} onCellChange={onCellChange} selectedCell={{ row: 0, col: 0 }} />);
+    const grid = document.querySelector('[tabindex="0"]') as HTMLElement;
+
+    // Type a letter — should start editing immediately
+    fireEvent.keyDown(grid, { key: 'a' });
+
+    const input = document.querySelector('input.border-blue-500') as HTMLInputElement;
+    expect(input).not.toBeNull();
+    expect(input.value).toBe('a');
+  });
+
+  it('starts editing when typing a number character', () => {
+    const onCellChange = jest.fn();
+    render(<Grid sheet={createTestSheet()} onCellChange={onCellChange} selectedCell={{ row: 1, col: 0 }} />);
+    const grid = document.querySelector('[tabindex="0"]') as HTMLElement;
+
+    // Type a number — should start editing immediately
+    fireEvent.keyDown(grid, { key: '5' });
+
+    const input = document.querySelector('input.border-blue-500') as HTMLInputElement;
+    expect(input).not.toBeNull();
+    expect(input.value).toBe('5');
+  });
+
+  it('starts editing when typing punctuation', () => {
+    const onCellChange = jest.fn();
+    render(<Grid sheet={createTestSheet()} onCellChange={onCellChange} selectedCell={{ row: 0, col: 0 }} />);
+    const grid = document.querySelector('[tabindex="0"]') as HTMLElement;
+
+    // Type punctuation — should start editing immediately
+    fireEvent.keyDown(grid, { key: '!' });
+
+    const input = document.querySelector('input.border-blue-500') as HTMLInputElement;
+    expect(input).not.toBeNull();
+    expect(input.value).toBe('!');
+  });
+
+  it('exits editing mode when pressing F2 during edit', () => {
+    const onCellChange = jest.fn();
+    render(<Grid sheet={createTestSheet()} onCellChange={onCellChange} selectedCell={{ row: 0, col: 0 }} />);
+    const grid = document.querySelector('[tabindex="0"]') as HTMLElement;
+
+    // Start editing by typing
+    fireEvent.keyDown(grid, { key: 'a' });
+    const input = document.querySelector('input.border-blue-500') as HTMLInputElement;
+    expect(input).not.toBeNull();
+
+    // Type more characters
+    fireEvent.change(input, { target: { value: 'abc' } });
+
+    // Press F2 to exit editing
+    fireEvent.keyDown(input, { key: 'F2' });
+
+    // Input should be gone (editing exited)
+    expect(document.querySelector('input.border-blue-500')).toBeNull();
+    // Cell should be committed
+    expect(onCellChange).toHaveBeenCalledWith(0, 0, 'abc');
+  });
+
+  it('exits editing mode when pressing Enter during edit', () => {
+    const onCellChange = jest.fn();
+    render(<Grid sheet={createTestSheet()} onCellChange={onCellChange} selectedCell={{ row: 0, col: 0 }} />);
+    const grid = document.querySelector('[tabindex="0"]') as HTMLElement;
+
+    // Start editing by typing
+    fireEvent.keyDown(grid, { key: 'x' });
+    const input = document.querySelector('input.border-blue-500') as HTMLInputElement;
+    expect(input).not.toBeNull();
+
+    // Type more characters
+    fireEvent.change(input, { target: { value: 'xyz' } });
+
+    // Press Enter to commit and exit
+    fireEvent.keyDown(input, { key: 'Enter' });
+
+    // Input should be gone
+    expect(document.querySelector('input.border-blue-500')).toBeNull();
+    // Cell should be committed
+    expect(onCellChange).toHaveBeenCalledWith(0, 0, 'xyz');
+    // Grid should have focus back
+    expect(grid).toHaveFocus();
+  });
+
+  it('replaces cell content when typing a character', () => {
+    const onCellChange = jest.fn();
+    // Cell A1 has content 'A1'
+    render(<Grid sheet={createTestSheet()} onCellChange={onCellChange} selectedCell={{ row: 0, col: 0 }} />);
+    const grid = document.querySelector('[tabindex="0"]') as HTMLElement;
+
+    // Type a character — should replace content, not append
+    fireEvent.keyDown(grid, { key: 'N' });
+
+    const input = document.querySelector('input.border-blue-500') as HTMLInputElement;
+    expect(input).not.toBeNull();
+    // Value should be just the typed character, not the original 'A1' + 'N'
+    expect(input.value).toBe('N');
+  });
+
   // ─── Row / Column Header Keyboard Navigation ─────────────────────
 
   it('switches from row selection to cell selection on arrow left/right', () => {
