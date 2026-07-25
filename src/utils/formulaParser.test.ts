@@ -125,6 +125,40 @@ describe('Formula Parser', () => {
     });
   });
 
+  describe('Cross-Sheet References', () => {
+    it('parses sheet-qualified cell Sheet1!A1', () => {
+      const ast = parseFormula('Sheet1!A1');
+      expect(ast).toEqual({ type: 'cell', row: 0, col: 0, absoluteCol: false, absoluteRow: false, sheetName: 'Sheet1' });
+    });
+
+    it('parses sheet-qualified range Sheet2!A1:B5', () => {
+      const ast = parseFormula('Sheet2!A1:B5');
+      expect(ast.type).toBe('range');
+      if (ast.type === 'range') {
+        expect(ast.sheetName).toBe('Sheet2');
+        expect(ast.start).toEqual({ type: 'cell', row: 0, col: 0, absoluteCol: false, absoluteRow: false, sheetName: 'Sheet2' });
+        expect(ast.end).toEqual({ type: 'cell', row: 4, col: 1, absoluteCol: false, absoluteRow: false, sheetName: 'Sheet2' });
+      }
+    });
+
+    it('parses quoted sheet name with spaces', () => {
+      const ast = parseFormula("'My Sheet'!A1");
+      expect(ast).toEqual({ type: 'cell', row: 0, col: 0, absoluteCol: false, absoluteRow: false, sheetName: 'My Sheet' });
+    });
+
+    it('parses sheet-qualified ref in function SUM(Sheet1!A1:A10)', () => {
+      const ast = parseFormula('SUM(Sheet1!A1:A10)');
+      expect(ast.type).toBe('function');
+      if (ast.type === 'function') {
+        expect(ast.name).toBe('SUM');
+        expect(ast.args[0].type).toBe('range');
+        if (ast.args[0].type === 'range') {
+          expect(ast.args[0].sheetName).toBe('Sheet1');
+        }
+      }
+    });
+  });
+
   describe('Arithmetic', () => {
     it('parses addition', () => {
       const ast = parseFormula('1 + 2');

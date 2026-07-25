@@ -8,19 +8,10 @@ import { Grid } from './components/Grid';
 import type { PointModeSelection } from './components/Grid';
 import { FormulaBar } from './components/FormulaBar';
 import type { HighlightedRange } from './components/FormulaBar';
-import { Toolbar } from './components/Toolbar';
-import { ImportExcelButton } from './components/ImportExcelButton';
-import { ExportExcelButton } from './components/ExportExcelButton';
-import { ImportCsvButton } from './components/ImportCsvButton';
-import { ExportCsvButton } from './components/ExportCsvButton';
-import { ImportJsonButton } from './components/ImportJsonButton';
-import { ExportJsonButton } from './components/ExportJsonButton';
-import { ExportPdfButton } from './components/ExportPdfButton';
-import { NewSheetButton } from './components/NewSheetButton';
-import { SaveButton } from './components/SaveButton';
-import { LoadButton } from './components/LoadButton';
 import { PrintSetupModal } from './components/PrintSetupModal';
 import { SheetTabs } from './components/SheetTabs';
+import { MenuBar } from './components/MenuBar';
+import { ImportExportBridge } from './components/ImportExportBridge';
 import { evaluateWorkbook } from './utils/formulaEngine';
 import { copyRange, cutRange as clipCutRange, getClipboard, clearClipboard } from './utils/clipboard';
 import { adjustFormulaRefs } from './utils/formulaParser';
@@ -175,12 +166,12 @@ function WorkbookView() {
 
   // Evaluate formulas
   useMemo(() => {
-    const result = evaluateWorkbook(updatedSheet);
+    const result = evaluateWorkbook({ ...workbook, sheets: workbook.sheets.map((s, idx) => idx === workbook.activeSheetIndex ? updatedSheet : s) }, workbook.activeSheetIndex);
     /* istanbul ignore next - circular ref warning requires self-referencing formula (tested in formulaEngine.test.ts) */
     if (result.circularRefs.length > 0) {
       setStatusMessage(`Warning: ${result.circularRefs.length} circular reference(s) detected`);
     }
-  }, [updatedSheet]);
+  }, [workbook, updatedSheet]);
 
   // ─── Copy/Paste Event Handlers ────────────────────────────────────────────
 
@@ -488,6 +479,55 @@ function WorkbookView() {
     commitEditing();
   }, [commitEditing]);
 
+  // ─── Help Actions ──────────────────────────────────────────────────────
+
+  const handleAbout = useCallback(() => {
+    setStatusMessage('SimpleSheet v0.1.0 — A lightweight spreadsheet app');
+  }, []);
+
+  const handleShortcuts = useCallback(() => {
+    setStatusMessage('Press Ctrl+/ to see keyboard shortcuts');
+  }, []);
+
+  // ─── Save / Load Triggers (for menu) ──────────────────────────────────
+
+  const handleSaveMenu = useCallback(() => {
+    setStatusMessage('Use the Save button in the toolbar to save');
+  }, []);
+
+  const handleLoadMenu = useCallback(() => {
+    setStatusMessage('Use the Open button to load a saved workbook');
+  }, []);
+
+  // Import / Export triggers — dispatch events that the hidden import buttons listen for
+  const handleImportExcelMenu = useCallback(() => {
+    window.dispatchEvent(new CustomEvent('simplesheets:import-excel'));
+  }, []);
+
+  const handleImportCsvMenu = useCallback(() => {
+    window.dispatchEvent(new CustomEvent('simplesheets:import-csv'));
+  }, []);
+
+  const handleImportJsonMenu = useCallback(() => {
+    window.dispatchEvent(new CustomEvent('simplesheets:import-json'));
+  }, []);
+
+  const handleExportExcelMenu = useCallback(() => {
+    window.dispatchEvent(new CustomEvent('simplesheets:export-excel'));
+  }, []);
+
+  const handleExportCsvMenu = useCallback(() => {
+    window.dispatchEvent(new CustomEvent('simplesheets:export-csv'));
+  }, []);
+
+  const handleExportJsonMenu = useCallback(() => {
+    window.dispatchEvent(new CustomEvent('simplesheets:export-json'));
+  }, []);
+
+  const handleExportPdfMenu = useCallback(() => {
+    window.dispatchEvent(new CustomEvent('simplesheets:export-pdf'));
+  }, []);
+
   // When the active cell changes externally (e.g., clicking a different cell
   // in the grid), reset the editing FSM so it starts fresh for the new cell.
   const activeCellKey = activeCell ? `${activeCell.row}:${activeCell.col}` : '';
@@ -700,34 +740,277 @@ function WorkbookView() {
     setStatusMessage(`Import error: ${msg}`);
   }, []);
 
-  /* istanbul ignore next - handlePdfError requires PDF export failure (tested in ExportPdfButton) */
-  const handlePdfError = useCallback((msg: string) => {
-    setStatusMessage(`PDF error: ${msg}`);
-  }, []);
-
   // ─── Derived State ────────────────────────────────────────────────────────
 
   const activeCellRef = activeCell
     ? `${colToLetter(activeCell.col)}${activeCell.row + 1}`
     : 'A1';
 
-  const selection: Selection | null = activeCell
-    ? {
-        type: 'cell',
-        startRow: activeCell.row,
-        startCol: activeCell.col,
-        endRow: activeCell.row,
-        endCol: activeCell.col,
-        anchorRow: activeCell.row,
-        anchorCol: activeCell.col,
+  const selection: Selection | null = useMemo(() => {
+    if (!activeCell) return null;
+    return {
+      type: 'cell' as const,
+      startRow: activeCell.row,
+      startCol: activeCell.col,
+      endRow: activeCell.row,
+      endCol: activeCell.col,
+      anchorRow: activeCell.row,
+      anchorCol: activeCell.col,
+    };
+  }, [activeCell]);
+
+  const hasSelection = selection !== null;
+  const hasRangeSelection =
+    hasSelection &&
+    (selection.endRow !== selection.startRow || selection.endCol !== selection.startCol);
+
+  // ─── Clear Contents ────────────────────────────────────────────────────
+
+  const handleClear = useCallback(() => {
+    if (!activeCell) return;
+    const sel = selection;
+    if (!sel) return;
+    const minRow = Math.min(sel.startRow, sel.endRow);
+    const maxRow = Math.max(sel.startRow, sel.endRow);
+    const minCol = Math.min(sel.startCol, sel.endCol);
+    const maxCol = Math.max(sel.startCol, sel.endCol);
+    const changes: Array<{ row: number; col: number; value: string }> = [];
+    for (let r = minRow; r <= maxRow; r++) {
+      for (let c = minCol; c <= maxCol; c++) {
+        const key = cellKey(r, c);
+        if (sheet.cells[key]) {
+          changes.push({ row: r, col: c, value: '' });
+        }
       }
-    : null;
+    }
+    if (changes.length > 0) {
+      handleCellsChange(changes);
+    }
+  }, [activeCell, selection, sheet.cells, handleCellsChange]);
+
+  // ─── Clipboard Menu Actions ────────────────────────────────────────────
+
+  const handleCopyMenu = useCallback(() => {
+    if (!selection) return;
+    window.dispatchEvent(new CustomEvent('simplesheets:copy', {
+      detail: {
+        startRow: selection.startRow,
+        startCol: selection.startCol,
+        endRow: selection.endRow,
+        endCol: selection.endCol,
+        selectionType: selection.type,
+      },
+    }));
+  }, [selection]);
+
+  const handleCutMenu = useCallback(() => {
+    if (!selection) return;
+    window.dispatchEvent(new CustomEvent('simplesheets:cut', {
+      detail: {
+        startRow: selection.startRow,
+        startCol: selection.startCol,
+        endRow: selection.endRow,
+        endCol: selection.endCol,
+        selectionType: selection.type,
+      },
+    }));
+  }, [selection]);
+
+  const handlePasteMenu = useCallback(() => {
+    if (!selection) return;
+    window.dispatchEvent(new CustomEvent('simplesheets:paste', {
+      detail: {
+        startRow: selection.startRow,
+        startCol: selection.startCol,
+        selectionType: selection.type,
+      },
+    }));
+  }, [selection]);
+
+  // ─── Insert / Delete Row / Column ───────────────────────────────────────
+
+  const handleInsertRowAbove = useCallback(() => {
+    if (!activeCell) return;
+    const insertRow = activeCell.row;
+    const newSheets = workbook.sheets.map((s, idx) => {
+      if (idx !== workbook.activeSheetIndex) return s;
+      const newCells: typeof s.cells = {};
+      for (const [key, cell] of Object.entries(s.cells)) {
+        const row = parseInt(key.split(':')[0]);
+        const col = parseInt(key.split(':')[1]);
+        if (row >= insertRow) {
+          newCells[`${row + 1}:${col}`] = cell;
+        } else {
+          newCells[key] = cell;
+        }
+      }
+      return { ...s, cells: newCells, rowCount: s.rowCount + 1 };
+    });
+    const newWb: Workbook = { ...workbook, sheets: newSheets, lastModified: Date.now() };
+    pushHistory(newWb, `Insert row ${insertRow + 1}`);
+    setActiveCell({ row: insertRow, col: activeCell.col });
+    setStatusMessage(`Inserted row ${insertRow + 1}`);
+  }, [workbook, pushHistory, activeCell]);
+
+  const handleInsertRowBelow = useCallback(() => {
+    if (!activeCell) return;
+    const insertRow = activeCell.row + 1;
+    const newSheets = workbook.sheets.map((s, idx) => {
+      if (idx !== workbook.activeSheetIndex) return s;
+      const newCells: typeof s.cells = {};
+      for (const [key, cell] of Object.entries(s.cells)) {
+        const row = parseInt(key.split(':')[0]);
+        const col = parseInt(key.split(':')[1]);
+        if (row >= insertRow) {
+          newCells[`${row + 1}:${col}`] = cell;
+        } else {
+          newCells[key] = cell;
+        }
+      }
+      return { ...s, cells: newCells, rowCount: s.rowCount + 1 };
+    });
+    const newWb: Workbook = { ...workbook, sheets: newSheets, lastModified: Date.now() };
+    pushHistory(newWb, `Insert row ${insertRow + 1}`);
+    setStatusMessage(`Inserted row ${insertRow + 1}`);
+  }, [workbook, pushHistory, activeCell]);
+
+  const handleInsertColLeft = useCallback(() => {
+    if (!activeCell) return;
+    const insertCol = activeCell.col;
+    const newSheets = workbook.sheets.map((s, idx) => {
+      if (idx !== workbook.activeSheetIndex) return s;
+      const newCells: typeof s.cells = {};
+      for (const [key, cell] of Object.entries(s.cells)) {
+        const row = parseInt(key.split(':')[0]);
+        const col = parseInt(key.split(':')[1]);
+        if (col >= insertCol) {
+          newCells[`${row}:${col + 1}`] = cell;
+        } else {
+          newCells[key] = cell;
+        }
+      }
+      return { ...s, cells: newCells, columnCount: s.columnCount + 1 };
+    });
+    const newWb: Workbook = { ...workbook, sheets: newSheets, lastModified: Date.now() };
+    pushHistory(newWb, `Insert col ${colToLetter(insertCol)}`);
+    setActiveCell({ row: activeCell.row, col: insertCol });
+    setStatusMessage(`Inserted column ${colToLetter(insertCol)}`);
+  }, [workbook, pushHistory, activeCell]);
+
+  const handleInsertColRight = useCallback(() => {
+    if (!activeCell) return;
+    const insertCol = activeCell.col + 1;
+    const newSheets = workbook.sheets.map((s, idx) => {
+      if (idx !== workbook.activeSheetIndex) return s;
+      const newCells: typeof s.cells = {};
+      for (const [key, cell] of Object.entries(s.cells)) {
+        const row = parseInt(key.split(':')[0]);
+        const col = parseInt(key.split(':')[1]);
+        if (col >= insertCol) {
+          newCells[`${row}:${col + 1}`] = cell;
+        } else {
+          newCells[key] = cell;
+        }
+      }
+      return { ...s, cells: newCells, columnCount: s.columnCount + 1 };
+    });
+    const newWb: Workbook = { ...workbook, sheets: newSheets, lastModified: Date.now() };
+    pushHistory(newWb, `Insert col ${colToLetter(insertCol)}`);
+    setStatusMessage(`Inserted column ${colToLetter(insertCol)}`);
+  }, [workbook, pushHistory, activeCell]);
+
+  const handleDeleteRow = useCallback(() => {
+    if (!activeCell) return;
+    const deleteRow = activeCell.row;
+    const newSheets = workbook.sheets.map((s, idx) => {
+      if (idx !== workbook.activeSheetIndex) return s;
+      const newCells: typeof s.cells = {};
+      for (const [key, cell] of Object.entries(s.cells)) {
+        const row = parseInt(key.split(':')[0]);
+        const col = parseInt(key.split(':')[1]);
+        if (row < deleteRow) {
+          newCells[key] = cell;
+        } else if (row > deleteRow) {
+          newCells[`${row - 1}:${col}`] = cell;
+        }
+      }
+      return { ...s, cells: newCells, rowCount: Math.max(1, s.rowCount - 1) };
+    });
+    const newWb: Workbook = { ...workbook, sheets: newSheets, lastModified: Date.now() };
+    pushHistory(newWb, `Delete row ${deleteRow + 1}`);
+    setActiveCell({ row: Math.max(0, deleteRow - 1), col: activeCell.col });
+    setStatusMessage(`Deleted row ${deleteRow + 1}`);
+  }, [workbook, pushHistory, activeCell]);
+
+  const handleDeleteCol = useCallback(() => {
+    if (!activeCell) return;
+    const deleteCol = activeCell.col;
+    const newSheets = workbook.sheets.map((s, idx) => {
+      if (idx !== workbook.activeSheetIndex) return s;
+      const newCells: typeof s.cells = {};
+      for (const [key, cell] of Object.entries(s.cells)) {
+        const row = parseInt(key.split(':')[0]);
+        const col = parseInt(key.split(':')[1]);
+        if (col < deleteCol) {
+          newCells[key] = cell;
+        } else if (col > deleteCol) {
+          newCells[`${row}:${col - 1}`] = cell;
+        }
+      }
+      return { ...s, cells: newCells, columnCount: Math.max(1, s.columnCount - 1) };
+    });
+    const newWb: Workbook = { ...workbook, sheets: newSheets, lastModified: Date.now() };
+    pushHistory(newWb, `Delete col ${colToLetter(deleteCol)}`);
+    setActiveCell({ row: activeCell.row, col: Math.max(0, deleteCol - 1) });
+    setStatusMessage(`Deleted column ${colToLetter(deleteCol)}`);
+  }, [workbook, pushHistory, activeCell]);
+
+  const handleDeleteCells = useCallback(() => {
+    handleClear();
+  }, [handleClear]);
 
   return (
     <div className="h-screen flex flex-col">
-      {/* Header */}
-      <header className="flex items-center justify-between px-4 py-2 border-b border-gray-200 bg-white">
+      {/* Header with Menu Bar */}
+      <header className="flex items-center justify-between px-4 py-1.5 border-b border-gray-200 bg-white">
         <h1 className="text-lg font-bold text-blue-700">SimpleSheet</h1>
+        <MenuBar
+          onNew={() => handleNewSheet(createDemoWorkbook())}
+          onSave={handleSaveMenu}
+          onLoad={handleLoadMenu}
+          onImportExcel={handleImportExcelMenu}
+          onImportCsv={handleImportCsvMenu}
+          onImportJson={handleImportJsonMenu}
+          onExportExcel={handleExportExcelMenu}
+          onExportCsv={handleExportCsvMenu}
+          onExportJson={handleExportJsonMenu}
+          onExportPdf={handleExportPdfMenu}
+          onPageSetup={() => setShowPrintSetup(true)}
+          onUndo={handleUndo}
+          onRedo={handleRedo}
+          canUndo={canUndo}
+          canRedo={canRedo}
+          onCopy={handleCopyMenu}
+          onCut={handleCutMenu}
+          onPaste={handlePasteMenu}
+          onClear={handleClear}
+          onDeleteRow={handleDeleteRow}
+          onDeleteCol={handleDeleteCol}
+          onDeleteCells={handleDeleteCells}
+          onFreeze={handleFreeze}
+          onUnfreeze={handleUnfreeze}
+          hasFrozenPanes={frozenRows > 0 || frozenColumns > 0}
+          onInsertRowAbove={handleInsertRowAbove}
+          onInsertRowBelow={handleInsertRowBelow}
+          onInsertColLeft={handleInsertColLeft}
+          onInsertColRight={handleInsertColRight}
+          onMerge={handleMerge}
+          onUnmerge={handleUnmerge}
+          canMerge={hasRangeSelection}
+          canUnmerge={hasSelection}
+          onAbout={handleAbout}
+          onShortcuts={handleShortcuts}
+        />
         <span className="text-sm text-gray-500">{workbook.title}</span>
       </header>
 
@@ -748,55 +1031,6 @@ function WorkbookView() {
         onEditingKey={handleFormulaEditingKey}
         onBlurEditing={handleFormulaBlurEditing}
       />
-
-      {/* Toolbar */}
-      <Toolbar
-        workbook={workbook}
-        selection={selection}
-        onUndo={handleUndo}
-        onRedo={handleRedo}
-        onMerge={handleMerge}
-        onUnmerge={handleUnmerge}
-        onFreeze={handleFreeze}
-        onUnfreeze={handleUnfreeze}
-        canUndo={canUndo}
-        canRedo={canRedo}
-        frozenRows={frozenRows}
-        frozenCols={frozenColumns}
-      />
-
-      {/* Save / Load Buttons */}
-      <div className="flex items-center gap-1 px-3 py-1.5 border-b border-gray-200 bg-gray-50 flex-wrap">
-        <NewSheetButton onNewSheet={handleNewSheet} />
-        <SaveButton
-          workbook={workbook}
-          onSaved={(name) => setStatusMessage(`Saved "${name}"`)}
-          onError={(msg) => setStatusMessage(`Save error: ${msg}`)}
-        />
-        <LoadButton onImport={handleImport} onError={handleImportError} />
-        <div className="w-px h-5 bg-gray-300 mx-1" />
-      </div>
-
-      {/* Import/Export Buttons */}
-      <div className="flex items-center gap-1 px-3 py-1.5 border-b border-gray-200 bg-gray-50 flex-wrap">
-        <ImportExcelButton onImport={handleImport} onError={handleImportError} />
-        <ExportExcelButton workbook={workbook} />
-        <div className="w-px h-5 bg-gray-300 mx-1" />
-        <ImportCsvButton onImport={handleImport} onError={handleImportError} />
-        <ExportCsvButton sheet={sheet} />
-        <div className="w-px h-5 bg-gray-300 mx-1" />
-        <ImportJsonButton onImport={handleImport} onError={handleImportError} />
-        <ExportJsonButton workbook={workbook} />
-        <div className="w-px h-5 bg-gray-300 mx-1" />
-        <ExportPdfButton sheet={sheet} onError={handlePdfError} />
-        <button
-          className="toolbar-btn"
-          onClick={() => setShowPrintSetup(true)}
-          title="Page setup"
-        >
-          Page Setup
-        </button>
-      </div>
 
       {/* Sheet Tabs */}
       <SheetTabs
@@ -842,6 +1076,14 @@ function WorkbookView() {
           </span>
         </div>
       </footer>
+
+      {/* Hidden import/export bridge for menu actions */}
+      <ImportExportBridge
+        workbook={workbook}
+        sheet={sheet}
+        onImport={handleImport}
+        onError={handleImportError}
+      />
 
       {/* Modals */}
       <PrintSetupModal isOpen={showPrintSetup} onClose={() => setShowPrintSetup(false)} />

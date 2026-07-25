@@ -70,10 +70,9 @@ export function runBenchmark(cellCount: number = 5000): {
   success: boolean;
 } {
   const workbook = createTestWorkbook(cellCount);
-  const sheet = workbook.sheets[0];
 
   const start = performance.now();
-  const result = evaluateWorkbook(sheet);
+  const result = evaluateWorkbook(workbook, 0);
   const end = performance.now();
 
   const evalTimeMs = end - start;

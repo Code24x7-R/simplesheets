@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react';
+import { useCallback, useRef, forwardRef } from 'react';
 import { importCsv } from '../services/csvService';
 import type { Workbook } from '../types';
 
@@ -10,7 +10,8 @@ interface ImportCsvButtonProps {
 /**
  * Button that opens a file picker for CSV files and imports them.
  */
-export function ImportCsvButton({ onImport, onError }: ImportCsvButtonProps) {
+export const ImportCsvButton = forwardRef<HTMLButtonElement, ImportCsvButtonProps>(
+  function ImportCsvButton({ onImport, onError }, ref) {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleClick = useCallback(() => {
@@ -47,9 +48,9 @@ export function ImportCsvButton({ onImport, onError }: ImportCsvButtonProps) {
         className="hidden"
         onChange={handleFileChange}
       />
-      <button className="toolbar-btn" onClick={handleClick} title="Import a CSV file">
+      <button ref={ref} className="toolbar-btn" onClick={handleClick} title="Import a CSV file">
         📄 Import CSV
       </button>
     </>
   );
-}
+})

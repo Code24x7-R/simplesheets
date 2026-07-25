@@ -27,4 +27,78 @@
   .toolbar-btn {
     @apply px-3 py-1.5 text-sm rounded hover:bg-gray-100 active:bg-gray-200 transition-colors;
   }
+
+  /* Menu system */
+  .menu-bar {
+    @apply flex items-center gap-0 px-2 py-0.5 border-b border-gray-200 bg-gray-50 select-none;
+  }
+
+  .menu-trigger {
+    @apply px-3 py-1 text-sm text-gray-700 rounded hover:bg-gray-200 transition-colors cursor-pointer border-none bg-transparent;
+  }
+
+  .menu-trigger-active {
+    @apply bg-gray-200;
+  }
+
+  .menu-dropdown {
+    @apply absolute top-full left-0 mt-0 bg-white border border-gray-300 rounded shadow-lg z-[100] min-w-[200px] py-1;
+  }
+
+  .menu-item {
+    @apply flex items-center gap-2 px-3 py-1.5 text-sm text-gray-700 cursor-pointer hover:bg-blue-50 hover:text-blue-700 relative;
+  }
+
+  .menu-item-disabled {
+    @apply text-gray-300 cursor-not-allowed hover:bg-transparent hover:text-gray-300;
+  }
+
+  .menu-item-icon {
+    @apply w-5 text-center flex-shrink-0;
+  }
+
+  .menu-item-label {
+    @apply flex-1 whitespace-nowrap;
+  }
+
+  .menu-item-shortcut {
+    @apply text-xs text-gray-400 ml-4;
+  }
+
+  .menu-item-arrow {
+    @apply text-xs text-gray-400 ml-2;
+  }
+
+  .menu-separator {
+    @apply border-t border-gray-200 my-1;
+  }
+
+  .menu-submenu {
+    @apply absolute left-full top-0 ml-0 bg-white border border-gray-300 rounded shadow-lg z-[100] min-w-[180px] py-1;
+  }
+
+  .menu-item-submenu:hover .menu-submenu {
+    display: block;
+  }
+
+  .menu-item-submenu .menu-submenu {
+    display: none;
+  }
+
+  .dropdown-menu {
+    @apply relative;
+  }
+
+  /* Formula bar wizard mode */
+  .formula-bar-wizard {
+    @apply min-h-[80px];
+  }
+
+  .function-bar {
+    @apply flex items-center gap-1 px-3 py-1 border-t border-gray-100 bg-gray-50 overflow-x-auto;
+  }
+
+  .function-btn {
+    @apply px-2 py-0.5 text-xs font-mono rounded border border-gray-200 bg-white hover:bg-blue-50 hover:border-blue-300 transition-colors whitespace-nowrap;
+  }
 }

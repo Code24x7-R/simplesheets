@@ -29,8 +29,12 @@ type ReverseDeps = Map<string, Set<string>>;
 // ─── Evaluation Context ──────────────────────────────────────────────────────
 
 interface EvalContext {
-  /** Cells available for reference. */
+  /** Cells available for reference (current sheet). */
   cells: Record<string, Cell>;
+  /** All sheets in the workbook (for cross-sheet references). */
+  allSheets: Sheet[];
+  /** Index of the currently evaluating sheet. */
+  activeSheetIndex: number;
   /** Cache of computed results. */
   cache: Map<string, CellValue>;
   /** Current evaluation stack (for circular reference detection). */
@@ -74,6 +78,16 @@ function isError(val: CellValue): boolean {
 /**
  * Evaluates a single AST node in the given context.
  */
+/**
+ * Resolves a sheet name to its index in the workbook.
+ * Returns undefined for same-sheet references (no sheetName).
+ */
+function resolveSheetIndex(sheetName: string | undefined, ctx: EvalContext): number | undefined {
+  if (!sheetName) return undefined;
+  const idx = ctx.allSheets.findIndex((s) => s.name === sheetName);
+  return idx >= 0 ? idx : undefined;
+}
+
 function evaluateNode(node: ASTNode, ctx: EvalContext): CellValue {
   switch (node.type) {
     case 'number':
@@ -85,8 +99,12 @@ function evaluateNode(node: ASTNode, ctx: EvalContext): CellValue {
     case 'boolean':
       return node.value;
 
-    case 'cell':
-      return evaluateCell(node.row, node.col, ctx);
+    case 'cell': {
+      const sheetIdx = resolveSheetIndex(node.sheetName, ctx);
+      // If a sheet name was specified but not found, return #REF!
+      if (node.sheetName && sheetIdx === undefined) return ERR_REF;
+      return evaluateCell(node.row, node.col, ctx, sheetIdx);
+    }
 
     /* istanbul ignore next - bare range not valid as value */
     case 'range':
@@ -115,47 +133,62 @@ function evaluateNode(node: ASTNode, ctx: EvalContext): CellValue {
 /**
  * Evaluates a cell reference, handling caching and circular detection.
  */
-function evaluateCell(row: number, col: number, ctx: EvalContext): CellValue {
-  // Bounds check
-  if (row < 0 || row >= ctx.rowCount || col < 0 || col >= ctx.colCount) {
+function evaluateCell(row: number, col: number, ctx: EvalContext, sheetIndex?: number): CellValue {
+  // Resolve the target sheet (for cross-sheet references)
+  const targetIndex = sheetIndex ?? ctx.activeSheetIndex;
+  const targetSheet = ctx.allSheets[targetIndex];
+  /* istanbul ignore next - invalid sheet index guard */
+  if (!targetSheet) return ERR_REF;
+
+  // Bounds check against the target sheet dimensions
+  if (row < 0 || row >= targetSheet.rowCount || col < 0 || col >= targetSheet.columnCount) {
     return ERR_REF;
   }
 
   const key = cellKey(row, col);
 
-  // Check cache
-  if (ctx.cache.has(key)) {
-    return ctx.cache.get(key)!;
+  // Check cache (include sheet index in cache key for cross-sheet)
+  const cacheKey = sheetIndex !== undefined ? `${targetIndex}:${key}` : key;
+  if (ctx.cache.has(cacheKey)) {
+    return ctx.cache.get(cacheKey)!;
   }
 
   /* istanbul ignore next - circular reference detection */
-  if (ctx.evalStack.has(key)) {
+  if (ctx.evalStack.has(cacheKey)) {
     return ERR_CIRCULAR;
   }
 
-  const cell = ctx.cells[key];
+  const cell = targetSheet.cells[key];
   if (!cell) return null;
 
   // If it's a formula, evaluate it
   if (cell.rawValue.startsWith('=')) {
-    ctx.evalStack.add(key);
+    ctx.evalStack.add(cacheKey);
     try {
       const ast = parseFormula(cell.rawValue.slice(1));
-      const result = evaluateNode(ast, ctx);
-      ctx.cache.set(key, result);
+      // Create a sub-context for evaluating the other sheet's formula
+      const subCtx: EvalContext = {
+        ...ctx,
+        cells: targetSheet.cells,
+        rowCount: targetSheet.rowCount,
+        colCount: targetSheet.columnCount,
+        activeSheetIndex: targetIndex,
+      };
+      const result = evaluateNode(ast, subCtx);
+      ctx.cache.set(cacheKey, result);
       return result;
     } catch {
       /* istanbul ignore next - parse error fallback */
-      ctx.cache.set(key, ERR_VALUE);
+      ctx.cache.set(cacheKey, ERR_VALUE);
       return ERR_VALUE;
     } finally {
-      ctx.evalStack.delete(key);
+      ctx.evalStack.delete(cacheKey);
     }
   }
 
   // Literal value — try to auto-detect type
   const result = autoDetectType(cell.rawValue);
-  ctx.cache.set(key, result);
+  ctx.cache.set(cacheKey, result);
   return result;
 }
 
@@ -274,10 +307,15 @@ function collectRangeValues(node: Extract<ASTNode, { type: 'range' }>, ctx: Eval
   const maxRow = Math.max(node.start.row, node.end.row);
   const minCol = Math.min(node.start.col, node.end.col);
   const maxCol = Math.max(node.start.col, node.end.col);
+  const sheetIdx = resolveSheetIndex(node.sheetName, ctx);
+  // If a sheet name was specified but not found, return #REF! for all cells
+  if (node.sheetName && sheetIdx === undefined) {
+    return [ERR_REF];
+  }
 
   for (let r = minRow; r <= maxRow; r++) {
     for (let c = minCol; c <= maxCol; c++) {
-      values.push(evaluateCell(r, c, ctx));
+      values.push(evaluateCell(r, c, ctx, sheetIdx));
     }
   }
 
@@ -1014,6 +1052,8 @@ function matchesCriterion(value: CellValue, criterion: CellValue): boolean {
 
 /**
  * Builds a dependency graph for all formula cells in a sheet.
+ * Cross-sheet references are excluded from the intra-sheet dependency graph
+ * (they cannot create cycles within this sheet).
  */
 export function buildDependencyGraph(sheet: Sheet): { deps: DependencyGraph; reverseDeps: ReverseDeps } {
   const deps: DependencyGraph = new Map();
@@ -1027,6 +1067,8 @@ export function buildDependencyGraph(sheet: Sheet): { deps: DependencyGraph; rev
         const depSet = new Set<string>();
 
         for (const ref of refs) {
+          // Skip cross-sheet references — they don't create intra-sheet cycles
+          if (ref.sheetName) continue;
           const depKey = cellKey(ref.row, ref.col);
           depSet.add(depKey);
 
@@ -1102,13 +1144,21 @@ export interface EvaluationResult {
 }
 
 /**
- * Evaluates all formulas in a sheet and returns the updated cell state.
- * @param sheet - The sheet to evaluate.
+ * Evaluates all formulas in the active sheet of a workbook and returns the updated cell state.
+ * Supports cross-sheet references via the workbook's sheet list.
+ * @param workbook - The workbook containing all sheets.
+ * @param activeSheetIndex - Index of the sheet to evaluate.
  * @returns EvaluationResult with computed values and circular reference info.
  */
-export function evaluateWorkbook(sheet: Sheet): EvaluationResult {
+export function evaluateWorkbook(workbook: import('../types').Workbook, activeSheetIndex: number): EvaluationResult {
+  const sheet = workbook.sheets[activeSheetIndex];
+  /* istanbul ignore next - invalid sheet index guard */
+  if (!sheet) return { cells: {}, circularRefs: [], success: false };
+
   const ctx: EvalContext = {
     cells: sheet.cells,
+    allSheets: workbook.sheets,
+    activeSheetIndex,
     cache: new Map(),
     evalStack: new Set(),
     rowCount: sheet.rowCount,

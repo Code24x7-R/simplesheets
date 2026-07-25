@@ -95,21 +95,6 @@ export function Toolbar({
         ⊡ Unfreeze
       </button>
 
-      <div className="w-px h-5 bg-gray-300 mx-1" />
-
-      {/* Import/Export buttons (placeholder) */}
-      <button className="toolbar-btn" title="Import Excel file">
-        📥 .xlsx
-      </button>
-      <button className="toolbar-btn" title="Export to Excel">
-        📤 .xlsx
-      </button>
-      <button className="toolbar-btn" title="Export to CSV">
-        📄 .csv
-      </button>
-      <button className="toolbar-btn" title="Export to PDF">
-        🖨️ PDF
-      </button>
     </div>
   );
 }

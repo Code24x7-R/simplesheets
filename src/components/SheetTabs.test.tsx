@@ -158,5 +158,14 @@ describe('SheetTabs', () => {
       const deleteBtn = screen.getByText('Delete');
       expect(deleteBtn).toBeDisabled();
     });
+
+    it('enters rename mode when Rename menu item is clicked', () => {
+      const wb = createTestWorkbook(['Sheet1', 'Sheet2']);
+      render(<SheetTabs workbook={wb} {...mockCallbacks} />);
+      fireEvent.click(screen.getAllByTitle('Sheet actions')[0]);
+      fireEvent.mouseDown(screen.getByText('Rename'));
+      // Rename input should appear with current name
+      expect(screen.getByDisplayValue('Sheet1')).toBeTruthy();
+    });
   });
 });

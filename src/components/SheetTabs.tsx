@@ -77,7 +77,7 @@ export function SheetTabs({
         const canDelete = workbook.sheets.length > 1;
 
         return (
-          <div key={sheet.id} className="relative flex items-center">
+          <div key={sheet.id} className="relative flex items-center group">
             {isRenaming ? (
               <input
                 ref={inputRef}
@@ -109,8 +109,10 @@ export function SheetTabs({
             {/* Actions menu button (visible on hover or when menu is open) */}
             {!isRenaming && (
               <button
-                className={`absolute right-0 top-1/2 -translate-y-1/2 px-0.5 text-xs rounded transition-opacity ${
-                  openMenuIndex === idx ? 'opacity-100 text-gray-700' : 'opacity-0 group-hover:opacity-100 text-gray-400'
+                className={`px-1 py-1 text-xs rounded transition-opacity flex-shrink-0 ${
+                  openMenuIndex === idx
+                    ? 'opacity-100 text-gray-700'
+                    : 'opacity-0 group-hover:opacity-100 text-gray-400'
                 } hover:text-gray-700`}
                 onClick={(e) => {
                   e.stopPropagation();

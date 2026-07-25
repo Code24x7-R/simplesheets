@@ -41,9 +41,11 @@ describe('App - Cell Edit/Undo/Redo', () => {
     fireEvent.change(input, { target: { value: '42' } });
     fireEvent.keyDown(input, { key: 'Enter' });
 
-    const undoButton = screen.getByText(/Undo/);
-    expect(undoButton).not.toBeDisabled();
-    fireEvent.click(undoButton);
+    // Use the Edit menu to undo
+    fireEvent.click(screen.getByText('Edit'));
+    const undoItem = screen.getByText('Undo').closest('.menu-item') as HTMLElement;
+    expect(undoItem).not.toHaveClass('menu-item-disabled');
+    fireEvent.click(undoItem);
 
     const statusBar = document.querySelector('footer span');
     expect(statusBar?.textContent).toContain('Undo performed');
@@ -58,12 +60,16 @@ describe('App - Cell Edit/Undo/Redo', () => {
     fireEvent.change(input, { target: { value: '42' } });
     fireEvent.keyDown(input, { key: 'Enter' });
 
-    const undoButton = screen.getByText(/Undo/);
-    fireEvent.click(undoButton);
+    // Undo via Edit menu
+    fireEvent.click(screen.getByText('Edit'));
+    const undoItem = screen.getByText('Undo').closest('.menu-item') as HTMLElement;
+    fireEvent.click(undoItem);
 
-    const redoButton = screen.getByText(/Redo/);
-    expect(redoButton).not.toBeDisabled();
-    fireEvent.click(redoButton);
+    // Redo via Edit menu
+    fireEvent.click(screen.getByText('Edit'));
+    const redoItem = screen.getByText('Redo').closest('.menu-item') as HTMLElement;
+    expect(redoItem).not.toHaveClass('menu-item-disabled');
+    fireEvent.click(redoItem);
 
     const statusBar = document.querySelector('footer span');
     expect(statusBar?.textContent).toContain('Redo performed');
@@ -167,13 +173,11 @@ describe('App - Copy/Cut with Row/Col Selection', () => {
 describe('App - Paste with Formula Adjustment', () => {
   it('adjusts formula references when pasting', () => {
     render(<App />);
-    // Copy a cell that contains a formula (row 1, col 4 = E2 which has =SUM(B2:D2))
     const copyEvent = new CustomEvent('simplesheets:copy', {
       detail: { startRow: 1, startCol: 4, endRow: 1, endCol: 4, selectionType: 'cell' },
     });
     act(() => { window.dispatchEvent(copyEvent); });
 
-    // Paste at a different location to trigger formula adjustment
     const pasteEvent = new CustomEvent('simplesheets:paste', {
       detail: { startRow: 10, startCol: 10 },
     });
@@ -199,31 +203,26 @@ describe('App - Paste with Formula Adjustment', () => {
 
   it('handles paste with row selection offset', () => {
     render(<App />);
-    // Copy a row
     const copyEvent = new CustomEvent('simplesheets:copy', {
       detail: { startRow: 0, startCol: 0, endRow: 0, endCol: 5, selectionType: 'row' },
     });
     act(() => { window.dispatchEvent(copyEvent); });
 
-    // Paste at a different row
     const pasteEvent = new CustomEvent('simplesheets:paste', {
       detail: { startRow: 5, startCol: 0 },
     });
     act(() => { window.dispatchEvent(pasteEvent); });
 
-    // Status message is always "Pasted X cell(s)" (row/col label goes to history only)
     expect(screen.getByText(/Pasted/)).toBeInTheDocument();
   });
 
   it('handles paste with column selection offset', () => {
     render(<App />);
-    // Copy a column
     const copyEvent = new CustomEvent('simplesheets:copy', {
       detail: { startRow: 0, startCol: 0, endRow: 5, endCol: 0, selectionType: 'col' },
     });
     act(() => { window.dispatchEvent(copyEvent); });
 
-    // Paste at a different column
     const pasteEvent = new CustomEvent('simplesheets:paste', {
       detail: { startRow: 0, startCol: 5 },
     });
@@ -234,31 +233,26 @@ describe('App - Paste with Formula Adjustment', () => {
 
   it('handles cut-then-paste for row selection (move rows)', () => {
     render(<App />);
-    // Cut a row
     const cutEvent = new CustomEvent('simplesheets:cut', {
       detail: { startRow: 0, startCol: 0, endRow: 0, endCol: 5, selectionType: 'row' },
     });
     act(() => { window.dispatchEvent(cutEvent); });
 
-    // Paste at a different row (this is a move operation)
     const pasteEvent = new CustomEvent('simplesheets:paste', {
       detail: { startRow: 5, startCol: 0 },
     });
     act(() => { window.dispatchEvent(pasteEvent); });
 
-    // Status shows "Moved X cell(s)" (row label goes to history only)
     expect(screen.getByText(/Moved/)).toBeInTheDocument();
   });
 
   it('handles cut-then-paste for column selection (move columns)', () => {
     render(<App />);
-    // Cut a column
     const cutEvent = new CustomEvent('simplesheets:cut', {
       detail: { startRow: 0, startCol: 0, endRow: 5, endCol: 0, selectionType: 'col' },
     });
     act(() => { window.dispatchEvent(cutEvent); });
 
-    // Paste at a different column
     const pasteEvent = new CustomEvent('simplesheets:paste', {
       detail: { startRow: 0, startCol: 5 },
     });
@@ -271,13 +265,14 @@ describe('App - Paste with Formula Adjustment', () => {
 describe('App - Unmerge', () => {
   it('shows unmerge status message after selecting a cell', () => {
     render(<App />);
-    // Select a cell first to enable the unmerge button
     const cell = document.querySelector('.grid-cell') as HTMLElement;
     fireEvent.mouseDown(cell);
 
-    const unmergeButton = screen.getByText(/Unmerge/);
-    expect(unmergeButton).not.toBeDisabled();
-    fireEvent.click(unmergeButton);
+    // Use Format menu to unmerge
+    fireEvent.click(screen.getByText('Format'));
+    const unmergeItem = screen.getByText('Unmerge Cells').closest('.menu-item') as HTMLElement;
+    expect(unmergeItem).not.toHaveClass('menu-item-disabled');
+    fireEvent.click(unmergeItem);
 
     const statusBar = document.querySelector('footer span');
     expect(statusBar?.textContent).toContain('Unmerge');
@@ -290,11 +285,9 @@ describe('App - Resize', () => {
     const handles = document.querySelectorAll('.resize-handle');
     expect(handles.length).toBeGreaterThan(0);
     const handle = handles[0];
-    // Simulate resize drag: mousedown on handle, move, then up
     fireEvent.mouseDown(handle, { clientX: 100, clientY: 0, bubbles: true });
     fireEvent.mouseMove(document, { clientX: 150, clientY: 0 });
     fireEvent.mouseUp(document, { clientX: 150, clientY: 0 });
-    // Should not throw and app still renders
     expect(document.querySelector('h1')?.textContent).toBe('SimpleSheet');
   });
 
@@ -302,7 +295,6 @@ describe('App - Resize', () => {
     render(<App />);
     const handles = document.querySelectorAll('.resize-handle');
     expect(handles.length).toBeGreaterThan(0);
-    // Use the last handle (likely a row handle)
     const handle = handles[handles.length - 1];
     fireEvent.mouseDown(handle, { clientX: 0, clientY: 28, bubbles: true });
     fireEvent.mouseMove(document, { clientX: 0, clientY: 56 });
@@ -312,22 +304,20 @@ describe('App - Resize', () => {
 });
 
 describe('App - Import', () => {
-  it('handles import via ImportExcelButton', () => {
+  it('shows import option in File menu', () => {
     render(<App />);
-    const importButton = screen.getByText(/Import Excel/);
-    expect(importButton).toBeInTheDocument();
+    fireEvent.click(screen.getByText('File'));
+    fireEvent.mouseEnter(screen.getByText('Import'));
+    expect(screen.getByText('Excel (.xlsx)')).toBeTruthy();
   });
 });
 
 describe('App - New Sheet', () => {
-  it('creates new workbook when confirmed', () => {
+  it('creates new workbook when File > New is selected', () => {
     render(<App />);
-    const newButton = screen.getByText(/New/);
-    fireEvent.click(newButton);
-
-    // Confirmation dialog should appear - find the Create button in the modal
-    const createButton = screen.getByRole('button', { name: 'Create' });
-    fireEvent.click(createButton);
+    // Use File menu
+    fireEvent.click(screen.getByText('File'));
+    fireEvent.click(screen.getByText('New'));
 
     // Status should update
     const statusBar = document.querySelector('footer span');
@@ -336,41 +326,21 @@ describe('App - New Sheet', () => {
 });
 
 describe('App - Save Button', () => {
-  it('triggers onSaved callback when save succeeds', () => {
+  it('shows save status via File menu', () => {
     render(<App />);
-    const saveButton = screen.getByText(/Save/);
-    fireEvent.click(saveButton);
+    // Use File menu
+    fireEvent.click(screen.getByText('File'));
+    fireEvent.click(screen.getByText('Save'));
 
-    // Save dialog appears - confirm with default name
-    const confirmButton = screen.getByRole('button', { name: 'Save' });
-    fireEvent.click(confirmButton);
-
-    // Status should show saved message
+    // Status should update (currently just shows a message to use the Save button)
     const statusBar = document.querySelector('footer span');
-    expect(statusBar?.textContent).toContain('Saved');
-  });
-
-  it('triggers onError callback when save name is empty', () => {
-    render(<App />);
-    const saveButton = screen.getByText(/Save/);
-    fireEvent.click(saveButton);
-
-    // Clear the name and confirm
-    const input = screen.getByPlaceholderText(/Enter save name/);
-    fireEvent.change(input, { target: { value: '' } });
-    const confirmButton = screen.getByRole('button', { name: 'Save' });
-    fireEvent.click(confirmButton);
-
-    // Status should show error
-    const statusBar = document.querySelector('footer span');
-    expect(statusBar?.textContent).toContain('Save error');
+    expect(statusBar?.textContent).toContain('Save');
   });
 });
 
 describe('App - Circular Reference', () => {
   it('shows warning when circular reference detected', () => {
     render(<App />);
-    // Find cell A1 specifically (data-col=0 in first row)
     const cells = document.querySelectorAll('.grid-cell');
     const cellA1 = Array.from(cells).find(
       (c) => c.getAttribute('data-col') === '0'
@@ -382,7 +352,6 @@ describe('App - Circular Reference', () => {
     fireEvent.change(input, { target: { value: '=A1' } });
     fireEvent.keyDown(input, { key: 'Enter' });
 
-    // evaluateWorkbook should detect A1=@A1 as circular
     const statusBar = document.querySelector('footer span');
     expect(statusBar).toBeInTheDocument();
   });

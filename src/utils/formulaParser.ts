@@ -82,6 +82,8 @@ type TokenType =
   | 'STRING'
   | 'BOOLEAN'
   | 'CELL'
+  | 'SHEET_NAME'
+  | 'BANG'
   | 'FUNCTION'
   | 'OPERATOR'
   | 'LPAREN'
@@ -178,7 +180,36 @@ function tokenize(input: string): Token[] {
         throw new FormulaError('Unterminated string literal', i);
       }
       i++; // skip closing quote
-      tokens.push({ type: 'STRING', value: str, pos: i - str.length - 2 });
+      // Check for sheet qualifier: "Sheet Name"!A1
+      if (i < input.length && input[i] === '!') {
+        i++; // consume '!'
+        tokens.push({ type: 'SHEET_NAME', value: str, pos: i - str.length - 3 });
+        tokens.push({ type: 'BANG', value: '!', pos: i - 1 });
+      } else {
+        tokens.push({ type: 'STRING', value: str, pos: i - str.length - 2 });
+      }
+      continue;
+    }
+
+    // Single-quoted strings (used for sheet names with spaces: 'My Sheet'!A1)
+    if (ch === "'") {
+      let str = '';
+      i++; // skip opening quote
+      while (i < input.length && input[i] !== "'") {
+        str += input[i++];
+      }
+      if (i >= input.length) {
+        throw new FormulaError('Unterminated sheet name', i);
+      }
+      i++; // skip closing quote
+      // Must be followed by "!" to be a sheet qualifier
+      if (i < input.length && input[i] === '!') {
+        i++; // consume '!'
+        tokens.push({ type: 'SHEET_NAME', value: str, pos: i - str.length - 3 });
+        tokens.push({ type: 'BANG', value: '!', pos: i - 1 });
+      } else {
+        throw new FormulaError(`Expected '!' after sheet name '${str}'`, i);
+      }
       continue;
     }
 
@@ -236,12 +267,26 @@ function tokenize(input: string): Token[] {
         while (i < input.length && /[0-9]/.test(input[i])) {
           row += input[i++];
         }
-        // Normalize cell ref to uppercase
-        const cellRef = `${absoluteCol ? '$' : ''}${ref.toUpperCase()}${absoluteRow ? '$' : ''}${row}`;
-        tokens.push({ type: 'CELL', value: cellRef, pos: startPos });
+        // Check for sheet qualifier: word! means this is a sheet name (e.g., Sheet1!A1)
+        if (i < input.length && input[i] === '!') {
+          // This is a sheet name qualifier — emit SHEET_NAME and BANG
+          i++; // consume '!'
+          const sheetName = `${absoluteCol ? '$' : ''}${ref}${absoluteRow ? '$' : ''}${row}`;
+          tokens.push({ type: 'SHEET_NAME', value: sheetName, pos: startPos });
+          tokens.push({ type: 'BANG', value: '!', pos: i - 1 });
+        } else {
+          // Normalize cell ref to uppercase
+          const cellRef = `${absoluteCol ? '$' : ''}${ref.toUpperCase()}${absoluteRow ? '$' : ''}${row}`;
+          tokens.push({ type: 'CELL', value: cellRef, pos: startPos });
+        }
       } else {
         const upperRef = ref.toUpperCase();
-        if (FUNCTIONS.has(upperRef)) {
+        // Check for sheet qualifier on bare names (e.g., Sheet!A1 where Sheet has no digits)
+        if (i < input.length && input[i] === '!') {
+          i++; // consume '!'
+          tokens.push({ type: 'SHEET_NAME', value: ref, pos: startPos });
+          tokens.push({ type: 'BANG', value: '!', pos: i - 1 });
+        } else if (FUNCTIONS.has(upperRef)) {
           tokens.push({ type: 'FUNCTION', value: upperRef, pos: startPos });
         } else {
           // Treat as named variable or error
@@ -475,6 +520,30 @@ class Parser {
         return { type: 'boolean', value: token.value === 'TRUE' };
       }
 
+      case 'SHEET_NAME': {
+        const sheetName = token.value;
+        this.advance(); // consume sheet name
+        this.expect('BANG');
+        // Next must be a cell or range on the specified sheet
+        const nextToken = this.expect('CELL');
+        const ref = parseCellRef(nextToken.value);
+
+        // Check if this is part of a range (e.g., Sheet1!A1:B5)
+        if (this.current().type === 'COLON') {
+          this.advance(); // consume colon
+          const endToken = this.expect('CELL');
+          const endRef = parseCellRef(endToken.value);
+          return {
+            type: 'range',
+            sheetName,
+            start: { type: 'cell', row: ref.row, col: ref.col, absoluteCol: ref.absoluteCol, absoluteRow: ref.absoluteRow, sheetName },
+            end: { type: 'cell', row: endRef.row, col: endRef.col, absoluteCol: endRef.absoluteCol, absoluteRow: endRef.absoluteRow, sheetName },
+          };
+        }
+
+        return { type: 'cell', row: ref.row, col: ref.col, absoluteCol: ref.absoluteCol, absoluteRow: ref.absoluteRow, sheetName };
+      }
+
       case 'CELL': {
         this.advance();
         const ref = parseCellRef(token.value);
@@ -637,13 +706,22 @@ export interface CellRef {
   absoluteRow: boolean;
 }
 
-export function extractCellRefs(node: ASTNode): CellRef[] {
-  const refs: CellRef[] = [];
+export interface SheetCellRef {
+  row: number;
+  col: number;
+  absoluteCol: boolean;
+  absoluteRow: boolean;
+  /** Sheet name qualifier, if this is a cross-sheet reference. */
+  sheetName?: string;
+}
+
+export function extractCellRefs(node: ASTNode): SheetCellRef[] {
+  const refs: SheetCellRef[] = [];
 
   function walk(n: ASTNode): void {
     switch (n.type) {
       case 'cell':
-        refs.push({ row: n.row, col: n.col, absoluteCol: n.absoluteCol, absoluteRow: n.absoluteRow });
+        refs.push({ row: n.row, col: n.col, absoluteCol: n.absoluteCol, absoluteRow: n.absoluteRow, sheetName: n.sheetName });
         break;
       case 'range': {
         const minRow = Math.min(n.start.row, n.end.row);
@@ -652,7 +730,7 @@ export function extractCellRefs(node: ASTNode): CellRef[] {
         const maxCol = Math.max(n.start.col, n.end.col);
         for (let r = minRow; r <= maxRow; r++) {
           for (let c = minCol; c <= maxCol; c++) {
-            refs.push({ row: r, col: c, absoluteCol: n.start.absoluteCol && n.end.absoluteCol, absoluteRow: n.start.absoluteRow && n.end.absoluteRow });
+            refs.push({ row: r, col: c, absoluteCol: n.start.absoluteCol && n.end.absoluteCol, absoluteRow: n.start.absoluteRow && n.end.absoluteRow, sheetName: n.sheetName });
           }
         }
         break;

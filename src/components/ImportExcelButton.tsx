@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useRef, useState, forwardRef } from 'react';
 import { importExcelFile } from '../services/excelImport';
 import type { Workbook } from '../types';
 
@@ -12,7 +12,8 @@ interface ImportExcelButtonProps {
 /**
  * Button that opens a file picker for .xlsx files and imports them.
  */
-export function ImportExcelButton({ onImport, onError }: ImportExcelButtonProps) {
+export const ImportExcelButton = forwardRef<HTMLButtonElement, ImportExcelButtonProps>(
+  function ImportExcelButton({ onImport, onError }, ref) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
 
@@ -54,6 +55,7 @@ export function ImportExcelButton({ onImport, onError }: ImportExcelButtonProps)
         onChange={handleFileChange}
       />
       <button
+        ref={ref}
         className="toolbar-btn"
         onClick={handleClick}
         disabled={loading}
@@ -63,4 +65,4 @@ export function ImportExcelButton({ onImport, onError }: ImportExcelButtonProps)
       </button>
     </>
   );
-}
+})

@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react';
+import { useCallback, useRef, forwardRef } from 'react';
 import { importJson } from '../services/jsonService';
 import type { Workbook } from '../types';
 
@@ -10,7 +10,8 @@ interface ImportJsonButtonProps {
 /**
  * Button that opens a file picker for JSON files and imports them as workbooks.
  */
-export function ImportJsonButton({ onImport, onError }: ImportJsonButtonProps) {
+export const ImportJsonButton = forwardRef<HTMLButtonElement, ImportJsonButtonProps>(
+  function ImportJsonButton({ onImport, onError }, ref) {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleClick = useCallback(() => {
@@ -47,9 +48,9 @@ export function ImportJsonButton({ onImport, onError }: ImportJsonButtonProps) {
         className="hidden"
         onChange={handleFileChange}
       />
-      <button className="toolbar-btn" onClick={handleClick} title="Import a JSON workbook">
+      <button ref={ref} className="toolbar-btn" onClick={handleClick} title="Import a JSON workbook">
         📋 Import JSON
       </button>
     </>
   );
-}
+})

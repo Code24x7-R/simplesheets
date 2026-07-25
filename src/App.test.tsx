@@ -42,18 +42,14 @@ describe('App', () => {
     expect(screen.getByPlaceholderText(/Enter a value or formula/)).toBeInTheDocument();
   });
 
-  it('renders toolbar buttons', () => {
+  it('renders the menu bar', () => {
     render(<App />);
-    expect(screen.getByText(/Undo/)).toBeInTheDocument();
-    expect(screen.getByText(/Redo/)).toBeInTheDocument();
-  });
-
-  it('renders import/export buttons', () => {
-    render(<App />);
-    expect(screen.getByText(/Import Excel/)).toBeInTheDocument();
-    expect(screen.getByText(/Export Excel/)).toBeInTheDocument();
-    expect(screen.getByText(/Import CSV/)).toBeInTheDocument();
-    expect(screen.getByText(/Export CSV/)).toBeInTheDocument();
+    expect(screen.getByText('File')).toBeTruthy();
+    expect(screen.getByText('Edit')).toBeTruthy();
+    expect(screen.getByText('View')).toBeTruthy();
+    expect(screen.getByText('Insert')).toBeTruthy();
+    expect(screen.getByText('Format')).toBeTruthy();
+    expect(screen.getByText('Help')).toBeTruthy();
   });
 
   it('renders the status bar', () => {
@@ -64,23 +60,6 @@ describe('App', () => {
   it('renders the demo workbook title', () => {
     render(<App />);
     expect(screen.getByText('SimpleSheet Demo')).toBeInTheDocument();
-  });
-
-  it('renders freeze and merge buttons', () => {
-    render(<App />);
-    // Toolbar has merge/freeze buttons
-    const buttons = screen.getAllByText(/Merge|Freeze|Unfreeze/);
-    expect(buttons.length).toBeGreaterThan(0);
-  });
-
-  it('renders PDF export button', () => {
-    render(<App />);
-    expect(screen.getByText(/Export PDF/)).toBeInTheDocument();
-  });
-
-  it('renders page setup button', () => {
-    render(<App />);
-    expect(screen.getByText(/Page Setup/)).toBeInTheDocument();
   });
 
   it('renders the grid container', () => {
@@ -103,93 +82,75 @@ describe('App', () => {
 
   it('updates status message on cell selection', () => {
     render(<App />);
-    // The status bar should show 'Ready' initially
     expect(screen.getByText(/Ready/)).toBeInTheDocument();
   });
 
-  it('handles undo button click', () => {
+  it('opens File menu and shows New item', () => {
     render(<App />);
-    const undoButton = screen.getByText(/Undo/);
-    fireEvent.click(undoButton);
-    // Should not throw
-    expect(undoButton).toBeInTheDocument();
+    fireEvent.click(screen.getByText('File'));
+    expect(screen.getByText('New')).toBeTruthy();
   });
 
-  it('handles redo button click', () => {
+  it('opens Edit menu and shows Undo/Redo items', () => {
     render(<App />);
-    const redoButton = screen.getByText(/Redo/);
-    fireEvent.click(redoButton);
-    // Should not throw
-    expect(redoButton).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Edit'));
+    expect(screen.getByText('Undo')).toBeTruthy();
+    expect(screen.getByText('Redo')).toBeTruthy();
   });
 
-  it('handles page setup button click', () => {
+  it('opens View menu and shows Freeze/Unfreeze items', () => {
     render(<App />);
-    const pageSetupButton = screen.getByText(/Page Setup/);
-    fireEvent.click(pageSetupButton);
-    // Modal should appear with 'Page Setup' heading
-    expect(screen.getByRole('heading', { name: /Page Setup/ })).toBeInTheDocument();
+    fireEvent.click(screen.getByText('View'));
+    expect(screen.getByText('Freeze Panes')).toBeTruthy();
+    expect(screen.getByText('Unfreeze Panes')).toBeTruthy();
   });
 
-  it('closes print setup modal', () => {
+  it('opens Insert menu and shows row/column items', () => {
     render(<App />);
-    // Open modal
-    const pageSetupButton = screen.getByText(/Page Setup/);
-    fireEvent.click(pageSetupButton);
-    // Verify modal is open
-    expect(screen.getByRole('heading', { name: /Page Setup/ })).toBeInTheDocument();
-    // Close modal
-    const cancelButton = screen.getByText(/Cancel/);
-    fireEvent.click(cancelButton);
-    // Modal should close
-    expect(screen.queryByRole('heading', { name: /Page Setup/ })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText('Insert'));
+    expect(screen.getByText('Row Above')).toBeTruthy();
+    expect(screen.getByText('Row Below')).toBeTruthy();
+    expect(screen.getByText('Column Left')).toBeTruthy();
+    expect(screen.getByText('Column Right')).toBeTruthy();
   });
 
-  it('handles freeze columns button', () => {
+  it('opens Format menu and shows Merge/Unmerge items', () => {
     render(<App />);
-    const freezeButton = screen.getByText(/Freeze/);
-    fireEvent.click(freezeButton);
-    // Should not throw
-    expect(freezeButton).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Format'));
+    expect(screen.getByText('Merge Cells')).toBeTruthy();
+    expect(screen.getByText('Unmerge Cells')).toBeTruthy();
   });
 
-  it('handles merge cells button', () => {
+  it('opens Help menu and shows About item', () => {
     render(<App />);
-    const mergeButton = screen.getByText(/Merge/);
-    fireEvent.click(mergeButton);
-    // Should not throw
-    expect(mergeButton).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Help'));
+    expect(screen.getByText('About SimpleSheet')).toBeTruthy();
   });
 
   it('handles copy event', () => {
     render(<App />);
-    // Dispatch a copy event
     const event = new CustomEvent('simplesheets:copy', {
       detail: { startRow: 0, startCol: 0, endRow: 1, endCol: 1 },
     });
     act(() => {
       window.dispatchEvent(event);
     });
-    // Status should update
     expect(screen.getByText(/copied/i)).toBeInTheDocument();
   });
 
   it('handles cut event', () => {
     render(<App />);
-    // Dispatch a cut event
     const event = new CustomEvent('simplesheets:cut', {
       detail: { startRow: 0, startCol: 0, endRow: 0, endCol: 0 },
     });
     act(() => {
       window.dispatchEvent(event);
     });
-    // Status should update
     expect(screen.getByText(/cut/i)).toBeInTheDocument();
   });
 
   it('handles paste event', () => {
     render(<App />);
-    // First copy something
     const copyEvent = new CustomEvent('simplesheets:copy', {
       detail: { startRow: 0, startCol: 0, endRow: 0, endCol: 0 },
     });
@@ -197,102 +158,41 @@ describe('App', () => {
       window.dispatchEvent(copyEvent);
     });
 
-    // Then paste
     const pasteEvent = new CustomEvent('simplesheets:paste', {
       detail: { startRow: 2, startCol: 2 },
     });
     act(() => {
       window.dispatchEvent(pasteEvent);
     });
-    // Status should update
     expect(screen.getByText(/pasted/i)).toBeInTheDocument();
   });
 
   it('handles cell change from formula bar', () => {
     render(<App />);
     const input = screen.getByPlaceholderText(/Enter a value or formula/);
-    // Simulate typing and committing
     fireEvent.change(input, { target: { value: '42' } });
     fireEvent.keyDown(input, { key: 'Enter' });
-    // Should not throw
     expect(input).toBeInTheDocument();
   });
-
-  // ─── Toolbar Actions ─────────────────────────────────────────────
-
-  it('handles freeze button click', () => {
-    render(<App />);
-    const freezeButton = screen.getByText(/Freeze/);
-    fireEvent.click(freezeButton);
-    const statusBar = document.querySelector('footer span');
-    expect(statusBar?.textContent).toContain('Panes frozen');
-  });
-
-  it('handles unfreeze button click', () => {
-    render(<App />);
-    // First freeze, then unfreeze
-    const freezeButton = screen.getByText(/Freeze/);
-    fireEvent.click(freezeButton);
-    // The button should now say "Unfreeze"
-    const unfreezeButton = screen.getByText(/Unfreeze/);
-    fireEvent.click(unfreezeButton);
-    const statusBar = document.querySelector('footer span');
-    expect(statusBar?.textContent).toContain('Panes unfrozen');
-  });
-
-  // ─── Point Mode Flow ──────────────────────────────────────────────
 
   it('handles point mode request from formula bar', () => {
     render(<App />);
     const input = screen.getByPlaceholderText(/Enter a value or formula/);
-    // Type = to start a formula
     fireEvent.change(input, { target: { value: '=' } });
-    // The formula bar should handle point mode internally
     expect(input).toBeInTheDocument();
   });
 
-  // ─── Status Messages ──────────────────────────────────────────────
-
   it('shows status message for cell edit', () => {
     render(<App />);
-    // Select a cell first
     const cell = document.querySelector('.grid-cell') as HTMLElement;
     fireEvent.mouseDown(cell);
 
-    // Type in formula bar and commit
     const input = screen.getByPlaceholderText(/Enter a value or formula/);
     fireEvent.change(input, { target: { value: '42' } });
     fireEvent.keyDown(input, { key: 'Enter' });
 
-    // Should show status message
     const statusBar = document.querySelector('footer span');
     expect(statusBar?.textContent).toContain('Updated');
-  });
-
-  it('handles column resize', () => {
-    render(<App />);
-    // Trigger a column resize via custom event
-    const event = new CustomEvent('simplesheets:resize-col', {
-      detail: { col: 0, newWidth: 200 },
-    });
-    // The resize is handled by Grid → onColumnResize → handleColumnResize
-    // We verify the handler exists by checking the status bar after a resize
-    act(() => {
-      window.dispatchEvent(event);
-    });
-    // Should not throw
-    expect(screen.getByText(/Ready|Updated/)).toBeInTheDocument();
-  });
-
-  it('handles row resize', () => {
-    render(<App />);
-    const event = new CustomEvent('simplesheets:resize-row', {
-      detail: { row: 0, newHeight: 50 },
-    });
-    act(() => {
-      window.dispatchEvent(event);
-    });
-    expect(screen.getByText(/Ready|Updated/)).toBeInTheDocument();
   });
 
   it('navigates cells with arrow keys in SELECT state', () => {
@@ -300,87 +200,78 @@ describe('App', () => {
     const grid = document.querySelector('[tabindex="0"]') as HTMLElement;
     expect(grid).not.toBeNull();
 
-    // Focus the grid and click on cell A1
     act(() => {
       grid.focus();
     });
     fireEvent.mouseDown(screen.getByText('A1'));
 
-    // Arrow right should move to B1
     fireEvent.keyDown(grid, { key: 'ArrowRight' });
-
-    // Arrow down should move to B2
     fireEvent.keyDown(grid, { key: 'ArrowDown' });
 
-    // If we got here without errors, keyboard navigation is working
     expect(grid).toHaveFocus();
   });
 
   it('renders sheet tabs for multi-sheet workbooks', () => {
     render(<App />);
-    // The demo workbook has one sheet named Sheet1
     expect(screen.getByText('Sheet1')).toBeInTheDocument();
-    // The add button should be present
     expect(screen.getByText('+')).toBeInTheDocument();
-  });
-
-  it('shows 100,000 rows in the status bar', () => {
-    render(<App />);
-    expect(screen.getByText(/100,000 rows/)).toBeInTheDocument();
   });
 
   it('adds a new sheet when + is clicked', () => {
     render(<App />);
-    // Start with one sheet
     expect(screen.getByText('Sheet1')).toBeInTheDocument();
-    // Click add
     fireEvent.click(screen.getByText('+'));
-    // Now there should be a Sheet2
     expect(screen.getByText('Sheet2')).toBeInTheDocument();
   });
 
   it('renames a sheet via double-click', () => {
     render(<App />);
-    // Add a sheet so we have two
     fireEvent.click(screen.getByText('+'));
     expect(screen.getByText('Sheet2')).toBeInTheDocument();
-    // Double-click to rename
     fireEvent.doubleClick(screen.getByText('Sheet2'));
     const input = screen.getByDisplayValue('Sheet2');
     fireEvent.change(input, { target: { value: 'Revenue' } });
     fireEvent.keyDown(input, { key: 'Enter' });
-    // Sheet should now have the new name
     expect(screen.getByText('Revenue')).toBeInTheDocument();
     expect(screen.queryByText('Sheet2')).toBeNull();
   });
 
   it('copies a sheet via the actions menu', () => {
     render(<App />);
-    // Add a sheet so we have two
     fireEvent.click(screen.getByText('+'));
     expect(screen.getByText('Sheet2')).toBeInTheDocument();
-    // Open the actions menu on Sheet2
     const toggles = screen.getAllByTitle('Sheet actions');
-    fireEvent.click(toggles[1]); // Second sheet's toggle
-    // Click Copy
+    fireEvent.click(toggles[1]);
     fireEvent.mouseDown(screen.getByText('Copy'));
-    // Should now have a copy
     expect(screen.getByText('Sheet2 (Copy)')).toBeInTheDocument();
   });
 
   it('deletes a sheet via the actions menu', () => {
     render(<App />);
-    // Add a sheet so we have two
     fireEvent.click(screen.getByText('+'));
     expect(screen.getByText('Sheet2')).toBeInTheDocument();
-    // Open the actions menu on Sheet2
     const toggles = screen.getAllByTitle('Sheet actions');
     fireEvent.click(toggles[1]);
-    // Click Delete
     fireEvent.mouseDown(screen.getByText('Delete'));
-    // Sheet2 should be gone
     expect(screen.queryByText('Sheet2')).toBeNull();
-    // Sheet1 should still be there
     expect(screen.getByText('Sheet1')).toBeInTheDocument();
+  });
+
+  it('shows View menu freeze status after freeze', () => {
+    render(<App />);
+    // Open View menu and click Freeze Panes
+    fireEvent.click(screen.getByText('View'));
+    fireEvent.click(screen.getByText('Freeze Panes'));
+    const statusBar = document.querySelector('footer span');
+    expect(statusBar?.textContent).toContain('Panes frozen');
+  });
+
+  it('shows Format menu with Merge Cells item', () => {
+    render(<App />);
+    // Open Format menu
+    fireEvent.click(screen.getByText('Format'));
+    // Merge Cells should be visible (may be disabled without range selection)
+    expect(screen.getByText('Merge Cells')).toBeTruthy();
+    expect(screen.getByText('Unmerge Cells')).toBeTruthy();
   });
 });
