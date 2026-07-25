@@ -85,6 +85,74 @@ describe('Grid Component', () => {
     expect(cellEl.style.textAlign).toBe('center');
   });
 
+  it('renders number format on numeric cells', () => {
+    const sheet = createTestSheet();
+    sheet.cells['1:0'] = {
+      rawValue: '42.5',
+      computedValue: 42.5,
+      style: { numberFormat: '0.00' },
+    };
+    render(<Grid sheet={sheet} />);
+    // Should display formatted as "42.50"
+    expect(screen.getByText('42.50')).toBeInTheDocument();
+  });
+
+  it('renders currency format', () => {
+    const sheet = createTestSheet();
+    sheet.cells['1:0'] = {
+      rawValue: '1234.56',
+      computedValue: 1234.56,
+      style: { numberFormat: '$#,##0.00' },
+    };
+    render(<Grid sheet={sheet} />);
+    expect(screen.getByText('$1,234.56')).toBeInTheDocument();
+  });
+
+  it('renders percentage format', () => {
+    const sheet = createTestSheet();
+    sheet.cells['1:0'] = {
+      rawValue: '0.2567',
+      computedValue: 0.2567,
+      style: { numberFormat: '0.00%' },
+    };
+    render(<Grid sheet={sheet} />);
+    expect(screen.getByText('25.67%')).toBeInTheDocument();
+  });
+
+  it('does not apply number format to non-numeric cells', () => {
+    const sheet = createTestSheet();
+    sheet.cells['0:0'] = {
+      rawValue: 'Hello',
+      style: { numberFormat: '0.00' },
+    };
+    render(<Grid sheet={sheet} />);
+    // Text should remain unchanged
+    expect(screen.getByText('Hello')).toBeInTheDocument();
+    expect(screen.queryByText('Hello.00')).not.toBeInTheDocument();
+  });
+
+  it('renders General format as raw value', () => {
+    const sheet = createTestSheet();
+    sheet.cells['1:0'] = {
+      rawValue: '42.5',
+      computedValue: 42.5,
+      style: { numberFormat: 'General' },
+    };
+    render(<Grid sheet={sheet} />);
+    expect(screen.getByText('42.5')).toBeInTheDocument();
+  });
+
+  it('applies textAlign to the content span', () => {
+    const sheet = createTestSheet();
+    sheet.cells['0:0'] = {
+      rawValue: 'Centered',
+      style: { textAlign: 'center' },
+    };
+    render(<Grid sheet={sheet} />);
+    const span = screen.getByText('Centered') as HTMLElement;
+    expect(span.style.textAlign).toBe('center');
+  });
+
   it('renders text color and font-style', () => {
     const sheet = createTestSheet();
     sheet.cells['1:1'] = {

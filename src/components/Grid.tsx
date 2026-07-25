@@ -6,6 +6,7 @@ import { cellKey, colToLetter } from '../types';
 import type { HighlightedRange } from './FormulaBar';
 import type { ReferenceFormat } from '../hooks/useReferenceFormat';
 import { ResizeHandle } from './ResizeHandle';
+import { formatNumberValue, isNumberFormat, isNumericValue } from '../utils/numberFormat';
 
 /** Point mode selection range (for visual feedback during formula editing). */
 export interface PointModeSelection {
@@ -160,6 +161,25 @@ export function Grid({ sheet, onCellChange, onCellsChange, onSelect, selectedCel
   }, [selection, onSelectionChange]);
 
   const { defaultRowHeight, defaultColWidth, columnWidths, rowHeights, rowCount, columnCount, cells } = sheet;
+
+  // ─── Display Value Helper ─────────────────────────────────────────
+  // Returns the display string for a cell, applying number formatting if the cell
+  // has a numberFormat style and the value is numeric.
+  const getDisplayValue = useCallback(
+    (cell: { rawValue: string; computedValue?: string | number | boolean | null; style?: { numberFormat?: string } } | undefined): string => {
+      if (!cell) return '';
+      const rawDisplay = cell.computedValue !== undefined && cell.computedValue !== null
+        ? String(cell.computedValue)
+        : cell.rawValue ?? '';
+      // Apply number format if present and value is numeric
+      const format = cell.style?.numberFormat;
+      if (format && format !== 'General' && isNumberFormat(format) && isNumericValue(cell.computedValue ?? cell.rawValue)) {
+        return formatNumberValue(cell.computedValue ?? cell.rawValue, format);
+      }
+      return rawDisplay;
+    },
+    []
+  );
 
   // Row virtualizer — handles vertical scrolling
   /* istanbul ignore next - virtualizer is mocked in tests */
@@ -1232,10 +1252,11 @@ export function Grid({ sheet, onCellChange, onCellsChange, onSelect, selectedCel
                       }}
                     />
                   ) : (
-                    <span className="block w-full h-full px-1 overflow-hidden text-ellipsis">
-                      {cell?.computedValue !== undefined && cell?.computedValue !== null
-                        ? String(cell.computedValue)
-                        : cell?.rawValue ?? ''}
+                    <span
+                      className="block w-full h-full px-1 overflow-hidden text-ellipsis"
+                      style={cell?.style?.textAlign ? { textAlign: cell.style.textAlign } : undefined}
+                    >
+                      {getDisplayValue(cell)}
                     </span>
                   )}
                 </div>
