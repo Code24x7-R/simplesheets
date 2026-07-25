@@ -3,6 +3,7 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import type { Sheet, Selection } from '../types';
 import { cellKey, colToLetter } from '../types';
 import type { HighlightedRange } from './FormulaBar';
+import type { ReferenceFormat } from '../hooks/useReferenceFormat';
 import { ResizeHandle } from './ResizeHandle';
 
 /** Point mode selection range (for visual feedback during formula editing). */
@@ -44,6 +45,8 @@ interface GridProps {
   onColumnResize?: (col: number, newWidth: number) => void;
   /** Callback when a row is resized (index, newHeight). */
   onRowResize?: (row: number, newHeight: number) => void;
+  /** Reference format for column headers (A1 or R1C1). */
+  referenceFormat?: ReferenceFormat;
 }
 
 const ROW_WIDTH = 50; // Width of row number column
@@ -76,7 +79,7 @@ const HIGHLIGHT_BORDER_COLORS = [
  * Renders only the visible cells within the viewport using @tanstack/react-virtual.
  * Supports 10,000+ rows with smooth scrolling.
  */
-export function Grid({ sheet, onCellChange, onCellsChange, onSelect, selectedCell, highlightedRanges = [], isPointMode = false, pointSelection = null, onCellPick, onHeaderSelect, onColumnResize, onRowResize }: GridProps) {
+export function Grid({ sheet, onCellChange, onCellsChange, onSelect, selectedCell, highlightedRanges = [], isPointMode = false, pointSelection = null, onCellPick, onHeaderSelect, onColumnResize, onRowResize, referenceFormat = 'A1' }: GridProps) {
   const parentRef = useRef<HTMLDivElement>(null);
   const [selection, setSelection] = useState<Selection | null>(null);
   const [editingCell, setEditingCell] = useState<string | null>(null);
@@ -950,7 +953,7 @@ export function Grid({ sheet, onCellChange, onCellsChange, onSelect, selectedCel
                 handleColHeaderClick(col, e.shiftKey);
               }}
             >
-              {colToLetter(col)}
+              {referenceFormat === 'R1C1' ? String(col + 1) : colToLetter(col)}
               {onColumnResize && (
                 <ResizeHandle
                   orientation="column"

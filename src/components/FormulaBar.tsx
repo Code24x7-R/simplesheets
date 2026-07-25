@@ -3,6 +3,7 @@ import { parseFormula, type ASTNode } from '../utils/formulaParser';
 import { validateFormula, type ValidationResult } from '../utils/formulaValidation';
 import { searchFunctions, type FunctionInfo } from '../utils/formulaAutocomplete';
 import type { EditingSession, PointSession } from '../hooks/useCellEditing';
+import type { ReferenceFormat } from '../hooks/useReferenceFormat';
 
 /** Represents a highlighted range with a color index. */
 export interface HighlightedRange {
@@ -44,6 +45,12 @@ interface FormulaBarProps {
   onEditingKey?: (key: string, shiftKey: boolean, ctrlKey: boolean) => void;
   /** Callback to commit the edit (e.g., on blur) via the editing FSM. */
   onBlurEditing?: () => void;
+  /** Reference format (A1 or R1C1). */
+  referenceFormat?: ReferenceFormat;
+  /** Callback when the reference format toggle is clicked. */
+  onToggleReferenceFormat?: () => void;
+  /** Callback when a function is selected from the function bar. */
+  onInsertFunction?: (functionName: string) => void;
 }
 
 /**
@@ -194,6 +201,9 @@ export function FormulaBar({
   editingPointSession: _editingPointSession,
   onEditingKey,
   onBlurEditing,
+  referenceFormat = 'A1',
+  onToggleReferenceFormat,
+  onInsertFunction,
 }: FormulaBarProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [internalCursorPos, setInternalCursorPos] = useState(0);
@@ -651,10 +661,14 @@ export function FormulaBar({
   return (
     <div className="relative">
       <div className="flex items-center gap-2 px-3 py-1.5 border-b border-gray-200 bg-white">
-        {/* Active cell reference */}
-        <span className="font-mono text-sm text-gray-600 w-14 text-center border border-gray-300 rounded bg-gray-50 px-1 py-0.5">
+        {/* Active cell reference (click to toggle A1/R1C1) */}
+        <button
+          className="font-mono text-sm text-gray-600 w-14 text-center border border-gray-300 rounded bg-gray-50 px-1 py-0.5 hover:bg-blue-50 hover:border-blue-300 transition-colors cursor-pointer"
+          onClick={onToggleReferenceFormat}
+          title={`Active cell — click to switch to ${referenceFormat === 'A1' ? 'R1C1' : 'A1'} format`}
+        >
           {activeCellRef}
-        </span>
+        </button>
 
         {/* Formula fx indicator */}
         <span className="text-gray-400 font-medium">fx</span>
@@ -688,6 +702,20 @@ export function FormulaBar({
             onSelect={handleSelect}
           />
         </div>
+      </div>
+
+      {/* Function bar — one line of common functions */}
+      <div className="function-bar">
+        {['SUM', 'AVERAGE', 'COUNT', 'MAX', 'MIN', 'IF', 'SUMIF', 'COUNTIF', 'VLOOKUP', 'ROUND'].map((fn) => (
+          <button
+            key={fn}
+            className="function-btn"
+            onClick={() => onInsertFunction?.(fn)}
+            title={`Insert ${fn}() formula`}
+          >
+            {fn}
+          </button>
+        ))}
       </div>
 
       {/* Error / incomplete display */}

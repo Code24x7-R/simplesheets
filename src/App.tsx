@@ -17,6 +17,7 @@ import { copyRange, cutRange as clipCutRange, getClipboard, clearClipboard } fro
 import { adjustFormulaRefs } from './utils/formulaParser';
 import { useAutosave } from './hooks/useAutosave';
 import { useCellEditing } from './hooks/useCellEditing';
+import { useReferenceFormat, toR1C1 } from './hooks/useReferenceFormat';
 import { loadAutosave } from './services/storageService';
 import type { Cell, Selection, Sheet } from './types';
 
@@ -103,6 +104,7 @@ function WorkbookView() {
 
   // Auto-save to localStorage on every workbook change (debounced)
   useAutosave(workbook);
+  const { format: referenceFormat, toggle: toggleReferenceFormat } = useReferenceFormat();
   const [showPrintSetup, setShowPrintSetup] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string>('Ready');
   const [formulaBarValue, setFormulaBarValue] = useState('');
@@ -743,8 +745,10 @@ function WorkbookView() {
   // ─── Derived State ────────────────────────────────────────────────────────
 
   const activeCellRef = activeCell
-    ? `${colToLetter(activeCell.col)}${activeCell.row + 1}`
-    : 'A1';
+    ? referenceFormat === 'R1C1'
+      ? toR1C1(activeCell.row, activeCell.col)
+      : `${colToLetter(activeCell.col)}${activeCell.row + 1}`
+    : (referenceFormat === 'R1C1' ? 'R1C1' : 'A1');
 
   const selection: Selection | null = useMemo(() => {
     if (!activeCell) return null;
@@ -1030,6 +1034,13 @@ function WorkbookView() {
         editingPointSession={editingPointSession}
         onEditingKey={handleFormulaEditingKey}
         onBlurEditing={handleFormulaBlurEditing}
+        referenceFormat={referenceFormat}
+        onToggleReferenceFormat={toggleReferenceFormat}
+        onInsertFunction={(fn) => {
+          // Insert function template at cursor
+          const template = `${fn}()`;
+          setFormulaBarValue((prev) => prev + template);
+        }}
       />
 
       {/* Sheet Tabs */}
@@ -1057,6 +1068,7 @@ function WorkbookView() {
           onHeaderSelect={handleHeaderSelect}
           onColumnResize={handleColumnResize}
           onRowResize={handleRowResize}
+          referenceFormat={referenceFormat}
         />
       </div>
 
