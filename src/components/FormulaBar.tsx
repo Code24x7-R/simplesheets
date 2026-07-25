@@ -45,6 +45,8 @@ interface FormulaBarProps {
   onEditingKey?: (key: string, shiftKey: boolean, ctrlKey: boolean) => void;
   /** Callback to commit the edit (e.g., on blur) via the editing FSM. */
   onBlurEditing?: () => void;
+  /** Callback when the formula bar is focused (to enter EDIT mode at caret position). */
+  onFocusEditing?: (caretPosition: number) => void;
   /** Reference format (A1 or R1C1). */
   referenceFormat?: ReferenceFormat;
   /** Callback when the reference format toggle is clicked. */
@@ -203,6 +205,7 @@ export function FormulaBar({
   editingPointSession: _editingPointSession,
   onEditingKey,
   onBlurEditing,
+  onFocusEditing,
   referenceFormat = 'A1',
   onToggleReferenceFormat,
   onInsertFunction,
@@ -324,7 +327,15 @@ export function FormulaBar({
 
   const handleFocus = useCallback(() => {
     setIsEditing(true);
-  }, []);
+    // When integrated with the editing FSM hook, entering the formula bar
+    // should transition to EDIT mode (preserving the existing formula buffer)
+    // with the caret at the click position, so the user can edit in-place.
+    if (onFocusEditing && onEditingKey && editingSession && editingSession.state === 'SELECT') {
+      const input = inputRef.current;
+      const caretPos = input ? (input.selectionStart ?? 0) : displayValue.length;
+      onFocusEditing(caretPos);
+    }
+  }, [onFocusEditing, onEditingKey, editingSession, displayValue]);
 
   const handleBlur = useCallback(() => {
     setIsEditing(false);

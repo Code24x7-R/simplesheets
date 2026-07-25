@@ -1015,6 +1015,32 @@ describe('useCellEditing - direct actions', () => {
     expect(result.current.session.buffer).toBe('Test');
   });
 
+  it('startEditAt sets EDIT state with caret at specified position', () => {
+    const { result } = createHook({ cellValue: '=SUM(A1:A10)' });
+    act(() => {
+      result.current.startEditAt(7); // After 'A1:'
+    });
+    expect(result.current.session.state).toBe('EDIT');
+    expect(result.current.session.buffer).toBe('=SUM(A1:A10)');
+    expect(result.current.session.caretPos).toBe(7);
+  });
+
+  it('startEditAt clamps caret to valid range', () => {
+    const { result } = createHook({ cellValue: '=SUM(A1:A10)' });
+    act(() => {
+      result.current.startEditAt(100); // Beyond buffer length
+    });
+    expect(result.current.session.caretPos).toBe(12); // Clamped to buffer length
+  });
+
+  it('startEditAt handles negative caret position', () => {
+    const { result } = createHook({ cellValue: '=SUM(A1:A10)' });
+    act(() => {
+      result.current.startEditAt(-5);
+    });
+    expect(result.current.session.caretPos).toBe(0); // Clamped to 0
+  });
+
   it('commit calls onCommit and resets to SELECT', () => {
     const onCommit = jest.fn();
     const { result } = createHook({ onCommit });

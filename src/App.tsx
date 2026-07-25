@@ -137,6 +137,7 @@ function WorkbookView() {
     pointSession: editingPointSession,
     handleKey: handleEditingKey,
     handleCellClick: handleEditingCellClick,
+    startEditAt,
     commit: commitEditing,
     reset: resetEditing,
   } = useCellEditing({
@@ -509,6 +510,15 @@ function WorkbookView() {
   const handleFormulaBlurEditing = useCallback(() => {
     commitEditing();
   }, [commitEditing]);
+
+  // When the formula bar is focused, enter EDIT mode at the caret position
+  // so the user can edit the existing formula in-place (instead of replacing it)
+  const handleFormulaFocusEditing = useCallback(
+    (caretPosition: number) => {
+      startEditAt(caretPosition);
+    },
+    [startEditAt],
+  );
 
   // ─── Help Actions ──────────────────────────────────────────────────────
 
@@ -1063,6 +1073,7 @@ function WorkbookView() {
         editingPointSession={editingPointSession}
         onEditingKey={handleFormulaEditingKey}
         onBlurEditing={handleFormulaBlurEditing}
+        onFocusEditing={handleFormulaFocusEditing}
         referenceFormat={referenceFormat}
         onToggleReferenceFormat={toggleReferenceFormat}
         onInsertFunction={(fn) => {

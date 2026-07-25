@@ -464,3 +464,80 @@ describe('FormulaBar Auto-Close Parentheses', () => {
     }
   });
 });
+
+describe('FormulaBar Focus Editing (onFocusEditing)', () => {
+  const defaultProps = {
+    value: '=SUM(A1:A10)',
+    onChange: jest.fn(),
+    onCommit: jest.fn(),
+    activeCellRef: 'A1',
+    editingFormula: null,
+    onHighlightsChange: jest.fn(),
+    onEditingKey: jest.fn(),
+    editingSession: { state: 'SELECT' as const, row: 0, col: 0, buffer: '', originalValue: '', caretPos: 0, isFormula: false },
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('calls onFocusEditing when focused in SELECT state with formula', () => {
+    const onFocusEditing = jest.fn();
+    render(<FormulaBar {...defaultProps} onFocusEditing={onFocusEditing} />);
+    const input = screen.getByDisplayValue('=SUM(A1:A10)');
+    act(() => {
+      fireEvent.focus(input);
+    });
+    expect(onFocusEditing).toHaveBeenCalled();
+  });
+
+  it('does not call onFocusEditing when no onEditingKey is provided', () => {
+    const onFocusEditing = jest.fn();
+    const propsWithoutHook = { ...defaultProps, onEditingKey: undefined };
+    render(<FormulaBar {...propsWithoutHook} onFocusEditing={onFocusEditing} />);
+    const input = screen.getByDisplayValue('=SUM(A1:A10)');
+    act(() => {
+      fireEvent.focus(input);
+    });
+    expect(onFocusEditing).not.toHaveBeenCalled();
+  });
+
+  it('does not call onFocusEditing when hook is in EDIT state', () => {
+    const onFocusEditing = jest.fn();
+    render(
+      <FormulaBar
+        {...defaultProps}
+        onFocusEditing={onFocusEditing}
+        editingSession={{ state: 'EDIT' as const, row: 0, col: 0, buffer: '=SUM(A1:A10)', originalValue: '', caretPos: 5, isFormula: true }}
+      />,
+    );
+    const input = screen.getByDisplayValue('=SUM(A1:A10)');
+    act(() => {
+      fireEvent.focus(input);
+    });
+    expect(onFocusEditing).not.toHaveBeenCalled();
+  });
+
+  it('passes caret position to onFocusEditing', () => {
+    const onFocusEditing = jest.fn();
+    render(<FormulaBar {...defaultProps} onFocusEditing={onFocusEditing} />);
+    const input = screen.getByDisplayValue('=SUM(A1:A10)') as HTMLInputElement;
+    // Simulate clicking at position 7 (after "A1:")
+    input.setSelectionRange(7, 7);
+    act(() => {
+      fireEvent.focus(input);
+    });
+    expect(onFocusEditing).toHaveBeenCalledWith(expect.any(Number));
+  });
+
+  it('calls onFocusEditing on focus even without prior selection', () => {
+    const onFocusEditing = jest.fn();
+    render(<FormulaBar {...defaultProps} onFocusEditing={onFocusEditing} />);
+    const input = screen.getByDisplayValue('=SUM(A1:A10)');
+    act(() => {
+      fireEvent.focus(input);
+    });
+    // jsdom places caret at end of input on focus (length = 12)
+    expect(onFocusEditing).toHaveBeenCalledWith(12);
+  });
+});
