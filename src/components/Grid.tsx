@@ -32,6 +32,8 @@ interface GridProps {
   selectedCell?: { row: number; col: number } | null;
   /** Callback when selection changes. */
   onSelect?: (row: number, col: number) => void;
+  /** Callback when the full selection object changes (includes range selections). */
+  onSelectionChange?: (selection: Selection | null) => void;
   /** Ranges to highlight (from formula editing). */
   highlightedRanges?: HighlightedRange[];
   /** Whether point mode is active (arrow keys select cells for formula). */
@@ -103,7 +105,7 @@ const HIGHLIGHT_BORDER_COLORS = [
  * Renders only the visible cells within the viewport using @tanstack/react-virtual.
  * Supports 10,000+ rows with smooth scrolling.
  */
-export function Grid({ sheet, onCellChange, onCellsChange, onSelect, selectedCell, highlightedRanges = [], isPointMode = false, pointSelection = null, onCellPick, onHeaderSelect, onColumnResize, onRowResize, referenceFormat = 'A1', onInsertRowAbove, onInsertRowBelow, onDeleteRow, onInsertColLeft, onInsertColRight, onDeleteCol, clipboardRange, onClearClipboard }: GridProps) {
+export function Grid({ sheet, onCellChange, onCellsChange, onSelect, selectedCell, highlightedRanges = [], isPointMode = false, pointSelection = null, onCellPick, onHeaderSelect, onSelectionChange, onColumnResize, onRowResize, referenceFormat = 'A1', onInsertRowAbove, onInsertRowBelow, onDeleteRow, onInsertColLeft, onInsertColRight, onDeleteCol, clipboardRange, onClearClipboard }: GridProps) {
   const parentRef = useRef<HTMLDivElement>(null);
   const [selection, setSelection] = useState<Selection | null>(null);
   const [editingCell, setEditingCell] = useState<string | null>(null);
@@ -151,6 +153,11 @@ export function Grid({ sheet, onCellChange, onCellsChange, onSelect, selectedCel
   // is null (e.g., after focus loss to menus/formula bar).
   const selectionRef = useRef<Selection | null>(null);
   selectionRef.current = selection ?? effectiveSelection;
+
+  // Notify parent when the internal selection changes (for style application on ranges)
+  useEffect(() => {
+    onSelectionChange?.(selection);
+  }, [selection, onSelectionChange]);
 
   const { defaultRowHeight, defaultColWidth, columnWidths, rowHeights, rowCount, columnCount, cells } = sheet;
 

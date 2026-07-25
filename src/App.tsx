@@ -105,6 +105,9 @@ function WorkbookView() {
   const { workbook, canUndo, canRedo, pushHistory, undo, redo, resetHistory } = useHistory();
   const { frozenColumns, frozenRows, freeze, unfreeze } = useFreeze();
   const [activeCell, setActiveCell] = useState<{ row: number; col: number } | null>(null);
+  // Tracks the full selection from Grid (including range selections via shift+click).
+  // The `selection` derived below falls back to activeCell when this is null.
+  const [gridSelection, setGridSelection] = useState<Selection | null>(null);
 
   // Auto-save to localStorage on every workbook change (debounced)
   useAutosave(workbook);
@@ -603,6 +606,11 @@ function WorkbookView() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeCellKey]);
 
+  // Clear the grid selection when activeCell is null (e.g., after New, Undo, sheet switch)
+  useEffect(() => {
+    if (!activeCell) setGridSelection(null);
+  }, [activeCell]);
+
   // Clears both the marching-ants range and the clipboard data (Esc / typing)
   const handleClearClipboard = useCallback(() => {
     setClipboardRange(null);
@@ -844,6 +852,9 @@ function WorkbookView() {
     : (referenceFormat === 'R1C1' ? 'R1C1' : 'A1');
 
   const selection: Selection | null = useMemo(() => {
+    // Prefer the Grid's selection (tracks range selections via shift+click/shift+arrow)
+    if (gridSelection) return gridSelection;
+    // Fall back to activeCell as a single-cell selection
     if (!activeCell) return null;
     return {
       type: 'cell' as const,
@@ -854,7 +865,7 @@ function WorkbookView() {
       anchorRow: activeCell.row,
       anchorCol: activeCell.col,
     };
-  }, [activeCell]);
+  }, [gridSelection, activeCell]);
 
   const hasSelection = selection !== null;
   const hasRangeSelection =
@@ -1125,6 +1136,7 @@ function WorkbookView() {
           pointSelection={pointSelection}
           onCellPick={handleFormulaCellClick}
           onHeaderSelect={handleHeaderSelect}
+          onSelectionChange={setGridSelection}
           onColumnResize={handleColumnResize}
           onRowResize={handleRowResize}
           referenceFormat={referenceFormat}

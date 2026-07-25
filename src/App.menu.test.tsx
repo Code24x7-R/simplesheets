@@ -386,3 +386,125 @@ describe('App - Undo/Redo keyboard shortcuts', () => {
     expect(statusBar?.textContent).toContain('Redo performed');
   });
 });
+
+describe('App - Cell Style System (single cell & range)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('applies bold to a single selected cell via Format menu', () => {
+    render(<App />);
+    const statusBar = document.querySelector('footer span');
+
+    // Select a single cell
+    const cell = document.querySelector('.grid-cell') as HTMLElement;
+    fireEvent.mouseDown(cell);
+
+    // Apply bold via Format menu
+    fireEvent.click(screen.getByText('Format'));
+    fireEvent.click(screen.getByText('Bold'));
+
+    expect(statusBar?.textContent).toContain('Bold');
+    expect(statusBar?.textContent).toContain('1 cell');
+  });
+
+  it('applies bold to a range selection via Format menu', () => {
+    render(<App />);
+    const statusBar = document.querySelector('footer span');
+
+    // Select a cell, then shift+click to create a range
+    const cells = document.querySelectorAll('.grid-cell');
+    const firstCell = cells[0] as HTMLElement;
+    const thirdCell = cells[2] as HTMLElement;
+
+    // Click first cell
+    fireEvent.mouseDown(firstCell);
+    // Shift+click third cell to extend selection
+    fireEvent.mouseDown(thirdCell, { shiftKey: true, bubbles: true });
+
+    // Apply bold via Format menu — should apply to the range
+    fireEvent.click(screen.getByText('Format'));
+    fireEvent.click(screen.getByText('Bold'));
+
+    // The status message should mention cells were updated
+    expect(statusBar?.textContent).toContain('Bold');
+  });
+
+  it('applies italic to a single cell', () => {
+    render(<App />);
+    const statusBar = document.querySelector('footer span');
+
+    const cell = document.querySelector('.grid-cell') as HTMLElement;
+    fireEvent.mouseDown(cell);
+
+    fireEvent.click(screen.getByText('Format'));
+    fireEvent.click(screen.getByText('Italic'));
+
+    expect(statusBar?.textContent).toContain('Italic');
+  });
+
+  it('applies text alignment via Format menu', () => {
+    render(<App />);
+    const statusBar = document.querySelector('footer span');
+
+    const cell = document.querySelector('.grid-cell') as HTMLElement;
+    fireEvent.mouseDown(cell);
+
+    fireEvent.click(screen.getByText('Format'));
+    const alignLabel = screen.getByText('Alignment');
+    fireEvent.mouseEnter(alignLabel);
+    fireEvent.click(screen.getByText('Center'));
+
+    expect(statusBar?.textContent).toContain('Align center');
+  });
+
+  it('applies text color via Format menu', () => {
+    render(<App />);
+    const statusBar = document.querySelector('footer span');
+
+    const cell = document.querySelector('.grid-cell') as HTMLElement;
+    fireEvent.mouseDown(cell);
+
+    fireEvent.click(screen.getByText('Format'));
+    const colorLabel = screen.getByText('Text Color');
+    fireEvent.mouseEnter(colorLabel);
+    fireEvent.click(screen.getByText('Red'));
+
+    expect(statusBar?.textContent).toContain('Text color');
+  });
+
+  it('clears styles via Format menu', () => {
+    render(<App />);
+    const statusBar = document.querySelector('footer span');
+
+    const cell = document.querySelector('.grid-cell') as HTMLElement;
+    fireEvent.mouseDown(cell);
+
+    // First apply bold
+    fireEvent.click(screen.getByText('Format'));
+    fireEvent.click(screen.getByText('Bold'));
+    expect(statusBar?.textContent).toContain('Bold');
+
+    // Then clear styles
+    fireEvent.click(screen.getByText('Format'));
+    fireEvent.click(screen.getByText('Clear Styles'));
+    expect(statusBar?.textContent).toContain('Cleared styles');
+  });
+
+  it('applies style and supports undo', () => {
+    render(<App />);
+    const statusBar = document.querySelector('footer span');
+
+    const cell = document.querySelector('.grid-cell') as HTMLElement;
+    fireEvent.mouseDown(cell);
+
+    // Apply bold
+    fireEvent.click(screen.getByText('Format'));
+    fireEvent.click(screen.getByText('Bold'));
+    expect(statusBar?.textContent).toContain('Bold');
+
+    // Undo the style change
+    fireEvent.keyDown(window, { key: 'z', ctrlKey: true });
+    expect(statusBar?.textContent).toContain('Undo performed');
+  });
+});
