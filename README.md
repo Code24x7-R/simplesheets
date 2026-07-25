@@ -20,6 +20,60 @@ A lightweight, browser‑based spreadsheet for small businesses. No server, no a
 - 💾 **Auto-save** to localStorage + named save slots
 - 📑 **Multi-sheet workbooks** — add, rename, copy, delete sheets with cross-sheet formula references
 - ⚡ **Virtualized grid** — smooth scrolling for 100 k+ rows × unlimited columns
+- 🎯 **Clean menu-based UI** — File, Edit, View, Insert, Format, Help dropdown menus
+- 📌 **Function bar** — one-click access to common functions (SUM, AVERAGE, COUNT, MAX, MIN, IF, etc.)
+- 🔢 **R1C1 reference format** — toggle between A1 and R1C1 notation by clicking the cell reference
+
+---
+
+## UI Overview
+
+SimpleSheet uses a clean, menu-based interface:
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│  SimpleSheet                                 File  Edit  View  Help│  Menu bar
+├──────────────────────────────────────────────────────────────────┤
+│  [A1 ▾]  fx  [═══════════════════════════════════════]          │  Formula bar
+│          SUM  AVERAGE  COUNT  MAX  MIN  IF  ...                 │  Function bar
+├──────────────────────────────────────────────────────────────────┤
+│  [Sheet1] [Sheet2] [+]                                         │  Sheet tabs
+├──────────────────────────────────────────────────────────────────┤
+│  │ A │ B │ C │ D │ E │                                         │  Grid
+│  └──────────────────────────────────────────────────────────── │
+│  Ready                                          100,000 × 26   │  Status bar
+└──────────────────────────────────────────────────────────────────┘
+```
+
+### Menu Structure
+
+| Menu | Actions |
+|------|---------|
+| **File** | New, Save, Open, Import (Excel/CSV/JSON), Export (Excel/CSV/JSON/PDF), Page Setup |
+| **Edit** | Undo, Redo, Copy, Cut, Paste, Clear Contents, Delete (Row/Column/Cells) |
+| **View** | Freeze Panes, Unfreeze Panes |
+| **Insert** | Row Above, Row Below, Column Left, Column Right |
+| **Format** | Merge Cells, Unmerge Cells |
+| **Help** | Keyboard Shortcuts, About |
+
+### Keyboard Shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| `Ctrl+Z` | Undo |
+| `Ctrl+Y` | Redo |
+| `Ctrl+C` | Copy |
+| `Ctrl+X` | Cut |
+| `Ctrl+V` | Paste |
+| `Delete` | Clear cell contents |
+| `F2` | Edit cell / Toggle edit mode |
+| `F4` | Cycle reference absolute/relative |
+| `Enter` | Commit edit |
+| `Escape` | Cancel edit |
+
+### Reference Format Toggle
+
+Click the cell reference button (e.g., `A1`) in the formula bar to toggle between **A1** and **R1C1** notation. The preference is saved to localStorage.
 
 ---
 
@@ -72,7 +126,7 @@ npm test
 npm run cypress
 ```
 
-Current test suite: **945 tests** across 35 suites with **~93% line coverage**.
+Current test suite: **1002 tests** across 39 suites with **~93% line coverage**.
 
 ---
 
@@ -81,9 +135,16 @@ Current test suite: **945 tests** across 35 suites with **~93% line coverage**.
 ```
 simplesheets/
 ├── src/
-│   ├── components/      # React components (Grid, Toolbar, SheetTabs, editors…)
+│   ├── components/
+│   │   ├── DropdownMenu.tsx    # Reusable dropdown menu component
+│   │   ├── MenuBar.tsx          # Top-level menu bar
+│   │   ├── FormulaBar.tsx       # Formula bar with function bar
+│   │   ├── Grid.tsx             # Virtualized grid
+│   │   ├── SheetTabs.tsx        # Multi-sheet tab strip
+│   │   ├── ImportExportBridge.tsx # Menu-to-import/export bridge
+│   │   └── ...                  # Import/Export/Print buttons
 │   ├── context/         # React Context providers (History, Freeze, PrintSetup)
-│   ├── hooks/           # Custom hooks (useCellEditing FSM, useAutosave)
+│   ├── hooks/           # Custom hooks (useCellEditing FSM, useAutosave, useReferenceFormat)
 │   ├── services/        # Import/Export services (Excel, CSV, JSON, PDF)
 │   ├── utils/           # Formula parser, evaluator, clipboard, benchmark
 │   ├── types.ts         # Core data model (Workbook, Sheet, Cell…)

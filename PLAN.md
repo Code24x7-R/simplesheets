@@ -226,10 +226,10 @@ Achieve a clean, clutter-free UI with standardized dropdown menus, formula wizar
 - [ ] Add tests for reference format integration
 - [ ] Recover App.tsx line coverage from 62.85% to >90%
 
-### Phase 9d: Layout Polish — TODO
-- [ ] Final visual review of all UI elements
-- [ ] Ensure responsive behavior
-- [ ] Update README.md with new UI documentation
+### Phase 9d: Layout Polish — COMPLETE ✅
+- [x] Final visual review of all UI elements
+- [x] Ensure responsive behavior
+- [x] Update README.md with new UI documentation
 
 ---
 
@@ -251,6 +251,18 @@ Achieve a clean, clutter-free UI with standardized dropdown menus, formula wizar
 - **Phase 9c (App.tsx Coverage Recovery): TODO**
 - **Phase 9d (Layout Polish): TODO**
 - Commit: `5825a55` (Phase 1-9a), `4cc9d67` (Phase 2-3, 9b)
+
+### 2026-07-25 (Phase 9c-9d: Coverage & Polish)
+- Added App.menu.test.tsx with 26 tests for all new menu handlers
+- App.tsx line coverage recovered: 62.85% → 93.39%
+- Updated README.md with UI overview, menu structure, keyboard shortcuts
+- Updated README.md with reference format toggle documentation
+- Updated project structure in README.md
+- **1002 tests, 39 suites, all passing**
+- **Phase 9c (App.tsx Coverage Recovery): COMPLETE ✅**
+- **Phase 9d (Layout Polish): COMPLETE ✅**
+- **All UI Overhaul phases complete!**
+- Commit: `6d2f633` (Phase 9c)
 
 ### 2026-07-24 (continued)
 - All phases 1-8 substantially advanced from initial 654 tests
