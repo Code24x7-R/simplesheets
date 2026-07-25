@@ -345,4 +345,77 @@ describe('useCellStyles', () => {
       expect(mockSetStatus).toHaveBeenCalledWith(expect.stringContaining('1 cell'));
     });
   });
+
+  describe('sparse iteration (performance)', () => {
+    it('only touches existing cells when a full column is selected', () => {
+      const workbook = createTestWorkbook();
+      // Simulate selecting an entire column (0 to 99999 rows)
+      const selection: Selection = {
+        type: 'col',
+        startRow: 0, startCol: 0, endRow: 99999, endCol: 0,
+        anchorRow: 0, anchorCol: 0,
+      };
+      const { result } = renderCellStyles(workbook, { row: 0, col: 0 }, selection);
+
+      act(() => {
+        result.current.setNumberFormat('0.00');
+      });
+
+      const newWb = mockPushHistory.mock.calls[0][0];
+      // Only the existing cells in column 0 should be styled (not 100k empty cells)
+      const styledCells = Object.values(newWb.sheets[0].cells).filter(
+        (cell) => (cell as { style?: { numberFormat?: string } }).style?.numberFormat === '0.00'
+      );
+      // The test workbook has cells at 0:0, 1:0 (and 21:0 for Grand Total)
+      expect(styledCells.length).toBeLessThan(30);
+      expect(styledCells.length).toBeGreaterThan(0);
+    });
+
+    it('only touches existing cells when a full row is selected', () => {
+      const workbook = createTestWorkbook();
+      // Simulate selecting an entire row (0 to 25 columns)
+      const selection: Selection = {
+        type: 'row',
+        startRow: 0, startCol: 0, endRow: 0, endCol: 25,
+        anchorRow: 0, anchorCol: 0,
+      };
+      const { result } = renderCellStyles(workbook, { row: 0, col: 0 }, selection);
+
+      act(() => {
+        result.current.toggleBoldStyle();
+      });
+
+      const newWb = mockPushHistory.mock.calls[0][0];
+      const styledCells = Object.values(newWb.sheets[0].cells).filter(
+        (cell) => (cell as { style?: { fontWeight?: string } }).style?.fontWeight === 'bold'
+      );
+      // Only existing cells in row 0 should be styled (headers row has ~6 cells)
+      expect(styledCells.length).toBeLessThan(10);
+      expect(styledCells.length).toBeGreaterThan(0);
+    });
+
+    it('does not create empty cells for large selections', () => {
+      const workbook = createTestWorkbook();
+      // Column 0 has cells (0:0 and 1:0), but selection spans 100k rows
+      const selection: Selection = {
+        type: 'col',
+        startRow: 0, startCol: 0, endRow: 99999, endCol: 0,
+        anchorRow: 0, anchorCol: 0,
+      };
+      const { result } = renderCellStyles(workbook, { row: 0, col: 0 }, selection);
+
+      act(() => {
+        result.current.setTextAlign('right');
+      });
+
+      const newWb = mockPushHistory.mock.calls[0][0];
+      // The total cell count should not explode — only existing cells get styled
+      const totalCells = Object.keys(newWb.sheets[0].cells).length;
+      // Original workbook has 4 cells; should not become 100k
+      expect(totalCells).toBeLessThan(10);
+      // Verify the existing cells in column 0 got styled
+      expect(newWb.sheets[0].cells['0:0']?.style?.textAlign).toBe('right');
+      expect(newWb.sheets[0].cells['1:0']?.style?.textAlign).toBe('right');
+    });
+  });
 });

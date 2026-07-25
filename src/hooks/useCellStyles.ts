@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import type { Cell, CellStyle, Selection, Workbook } from '../types';
+import type { CellStyle, Selection, Workbook } from '../types';
 import { cellKey } from '../types';
 import {
   type CellStyleState,
@@ -70,24 +70,19 @@ export function useCellStyles({
       const newCells = { ...sheet.cells };
       let cellsUpdated = 0;
 
-      for (let r = minRow; r <= maxRow; r++) {
-        for (let c = minCol; c <= maxCol; c++) {
-          const key = cellKey(r, c);
-          const existing = newCells[key];
-          const currentStyle = deriveCellStyleState(existing?.style);
-          const styleUpdate = mutate(currentStyle);
+      // Sparse iteration: only visit cells that actually exist in the sheet.
+      // This prevents lockups when full rows/columns are selected (e.g., 100k rows).
+      for (const [key, existing] of Object.entries(sheet.cells)) {
+        const colonIndex = key.indexOf(':');
+        const r = parseInt(key.slice(0, colonIndex), 10);
+        const c = parseInt(key.slice(colonIndex + 1), 10);
+        if (r < minRow || r > maxRow || c < minCol || c > maxCol) continue;
 
-          // Don't create empty cells just for style — only update existing or merge
-          const merged = mergeCellStyle(existing?.style, styleUpdate);
-          if (existing) {
-            newCells[key] = { ...existing, style: merged };
-          } else {
-            // Create a cell with empty value but with style
-            const newCell: Cell = { rawValue: '', style: merged };
-            newCells[key] = newCell;
-          }
-          cellsUpdated++;
-        }
+        const currentStyle = deriveCellStyleState(existing?.style);
+        const styleUpdate = mutate(currentStyle);
+        const merged = mergeCellStyle(existing?.style, styleUpdate);
+        newCells[key] = { ...existing, style: merged };
+        cellsUpdated++;
       }
 
       if (cellsUpdated === 0) return;
@@ -154,16 +149,17 @@ export function useCellStyles({
       const newCells = { ...sheet.cells };
       let cellsUpdated = 0;
 
-      for (let r = minRow; r <= maxRow; r++) {
-        for (let c = minCol; c <= maxCol; c++) {
-          const key = cellKey(r, c);
-          const existing = newCells[key];
-          if (existing?.style) {
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            const { style: _style, ...rest } = existing;
-            newCells[key] = rest;
-            cellsUpdated++;
-          }
+      // Sparse iteration: only visit cells that exist and fall within the selection.
+      for (const [key, existing] of Object.entries(sheet.cells)) {
+        const colonIndex = key.indexOf(':');
+        const r = parseInt(key.slice(0, colonIndex), 10);
+        const c = parseInt(key.slice(colonIndex + 1), 10);
+        if (r < minRow || r > maxRow || c < minCol || c > maxCol) continue;
+        if (existing?.style) {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          const { style: _style, ...rest } = existing;
+          newCells[key] = rest;
+          cellsUpdated++;
         }
       }
 
