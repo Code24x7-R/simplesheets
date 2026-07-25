@@ -240,7 +240,7 @@ describe('App', () => {
     render(<App />);
     fireEvent.click(screen.getByText('+'));
     expect(screen.getByText('Sheet2')).toBeInTheDocument();
-    const toggles = screen.getAllByTitle('Sheet actions');
+    const toggles = screen.getAllByTitle('Sheet actions (Rename, Copy, Delete)');
     fireEvent.click(toggles[1]);
     fireEvent.mouseDown(screen.getByText('Copy'));
     expect(screen.getByText('Sheet2 (Copy)')).toBeInTheDocument();
@@ -250,7 +250,7 @@ describe('App', () => {
     render(<App />);
     fireEvent.click(screen.getByText('+'));
     expect(screen.getByText('Sheet2')).toBeInTheDocument();
-    const toggles = screen.getAllByTitle('Sheet actions');
+    const toggles = screen.getAllByTitle('Sheet actions (Rename, Copy, Delete)');
     fireEvent.click(toggles[1]);
     fireEvent.mouseDown(screen.getByText('Delete'));
     expect(screen.queryByText('Sheet2')).toBeNull();

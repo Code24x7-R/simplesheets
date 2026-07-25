@@ -127,7 +127,7 @@ describe('SheetTabs', () => {
       const wb = createTestWorkbook(['Sheet1']);
       render(<SheetTabs workbook={wb} {...mockCallbacks} />);
       // Click the dropdown toggle button (the small triangle)
-      const toggleBtn = screen.getByTitle('Sheet actions');
+      const toggleBtn = screen.getByTitle('Sheet actions (Rename, Copy, Delete)');
       fireEvent.click(toggleBtn);
       // Menu items should be visible
       expect(screen.getByText('Rename')).toBeTruthy();
@@ -138,7 +138,7 @@ describe('SheetTabs', () => {
     it('calls onCopySheet when Copy is clicked', () => {
       const wb = createTestWorkbook(['Sheet1', 'Sheet2']);
       render(<SheetTabs workbook={wb} {...mockCallbacks} />);
-      fireEvent.click(screen.getAllByTitle('Sheet actions')[0]);
+      fireEvent.click(screen.getAllByTitle('Sheet actions (Rename, Copy, Delete)')[0]);
       fireEvent.mouseDown(screen.getByText('Copy'));
       expect(mockCallbacks.onCopySheet).toHaveBeenCalledWith(0);
     });
@@ -146,7 +146,7 @@ describe('SheetTabs', () => {
     it('calls onDeleteSheet when Delete is clicked', () => {
       const wb = createTestWorkbook(['Sheet1', 'Sheet2']);
       render(<SheetTabs workbook={wb} {...mockCallbacks} />);
-      fireEvent.click(screen.getAllByTitle('Sheet actions')[0]);
+      fireEvent.click(screen.getAllByTitle('Sheet actions (Rename, Copy, Delete)')[0]);
       fireEvent.mouseDown(screen.getByText('Delete'));
       expect(mockCallbacks.onDeleteSheet).toHaveBeenCalledWith(0);
     });
@@ -154,7 +154,7 @@ describe('SheetTabs', () => {
     it('disables Delete when only one sheet exists', () => {
       const wb = createTestWorkbook(['OnlySheet']);
       render(<SheetTabs workbook={wb} {...mockCallbacks} />);
-      fireEvent.click(screen.getByTitle('Sheet actions'));
+      fireEvent.click(screen.getByTitle('Sheet actions (Rename, Copy, Delete)'));
       const deleteBtn = screen.getByText('Delete');
       expect(deleteBtn).toBeDisabled();
     });
@@ -162,7 +162,7 @@ describe('SheetTabs', () => {
     it('enters rename mode when Rename menu item is clicked', () => {
       const wb = createTestWorkbook(['Sheet1', 'Sheet2']);
       render(<SheetTabs workbook={wb} {...mockCallbacks} />);
-      fireEvent.click(screen.getAllByTitle('Sheet actions')[0]);
+      fireEvent.click(screen.getAllByTitle('Sheet actions (Rename, Copy, Delete)')[0]);
       fireEvent.mouseDown(screen.getByText('Rename'));
       // Rename input should appear with current name
       expect(screen.getByDisplayValue('Sheet1')).toBeTruthy();

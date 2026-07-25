@@ -40,6 +40,13 @@ export function SheetTabs({
   useEffect(() => {
     if (openMenuIndex === null) return;
     const handleClickOutside = (e: MouseEvent) => {
+      // Find the toggle button for the open menu and check if the click was on it
+      const toggleButtons = document.querySelectorAll('[title="Sheet actions (Rename, Copy, Delete)"]');
+      for (const btn of toggleButtons) {
+        if (btn.contains(e.target as Node)) {
+          return; // Click was on the toggle button, don't close
+        }
+      }
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         setOpenMenuIndex(null);
       }
@@ -100,25 +107,29 @@ export function SheetTabs({
                 }`}
                 onClick={() => onSwitchSheet(idx)}
                 onDoubleClick={() => handleRenameStart(idx, sheet.name)}
-                title={`${sheet.name} — Double-click to rename`}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  handleMenuToggle(idx);
+                }}
+                title={`${sheet.name} — Double-click to rename, Right-click for actions`}
               >
                 {sheet.name}
               </button>
             )}
 
-            {/* Actions menu button (visible on hover or when menu is open) */}
+            {/* Actions menu button */}
             {!isRenaming && (
               <button
-                className={`px-1 py-1 text-xs rounded transition-opacity flex-shrink-0 ${
+                className={`px-1.5 py-1 text-xs rounded transition-colors flex-shrink-0 ${
                   openMenuIndex === idx
-                    ? 'opacity-100 text-gray-700'
-                    : 'opacity-0 group-hover:opacity-100 text-gray-400'
-                } hover:text-gray-700`}
+                    ? 'text-blue-600 bg-blue-50'
+                    : 'text-gray-400 hover:text-gray-700 hover:bg-gray-200'
+                }`}
                 onClick={(e) => {
                   e.stopPropagation();
                   handleMenuToggle(idx);
                 }}
-                title="Sheet actions"
+                title="Sheet actions (Rename, Copy, Delete)"
               >
                 ▾
               </button>
