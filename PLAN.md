@@ -1,14 +1,14 @@
-# PLAN — UI Overhaul & Test Coverage
+# PLAN — UI Overhaul & Formula Wizard
 
 ## Goal
 Achieve a clean, clutter-free UI with standardized dropdown menus, formula wizard, function bar, and R1C1 reference format.
 
 ## Current State
-- **976 tests** across **38 suites**, All passing
+- **1083 tests** across **43 suites**, All passing
 - Lint clean (0 warnings), Type-check clean (0 errors), Build clean
-- Phases 1-3 complete: Menu system, Formula bar wizard, Function bar, R1C1 toggle
-- All wired actions in dropdown menus
-- App.tsx line coverage dropped due to new menu handlers (needs test coverage)
+- Phases 1-9d complete: Menu system, Formula bar, Function bar, R1C1 toggle, Layout polish
+- Phase 10 in progress: Nested Formula Wizard
+- App.tsx line coverage at 93.39%
 
 ### New UI Architecture (2026-07-25)
 | Component | Description |
@@ -19,15 +19,10 @@ Achieve a clean, clutter-free UI with standardized dropdown menus, formula wizar
 | FunctionBar | One-line common function buttons in FormulaBar |
 | R1C1 Toggle | Click cell ref button to switch A1/R1C1 |
 | Grid | Shows numeric column headers in R1C1 mode |
-
-### Coverage by file (lines %)
-| File | Lines | Branches | Status |
-|------|-------|----------|--------|
-| App.tsx | 62.85% | 62.74% | ❌ new handlers need tests |
-| MenuBar.tsx | 100% | 100% | ✅ |
-| DropdownMenu.tsx | 90.9% | 93.54% | ⚠️ |
-| FormulaBar.tsx | ~85% | ~81% | ⚠️ |
-| Grid.tsx | ~83% | ~84% | ⚠️ |
+| FormulaWizard | Interactive step-by-step formula builder |
+| useFormulaWizard | Wizard state machine hook |
+| formulaWizardSchema | Structured function parameter definitions |
+| formulaWizardCompiler | AST-to-formula compiler |
 
 ### Coverage by file (lines %)
 | File | Lines | Branches | Status |
@@ -233,7 +228,62 @@ Achieve a clean, clutter-free UI with standardized dropdown menus, formula wizar
 
 ---
 
+## Phase 10: Nested Formula Wizard (2026-07-25)
+*Interactive step-by-step formula builder with nested function support.*
+
+### Phase 10a: Function Schema & Data Model — COMPLETE ✅
+- [x] Create TypeScript interfaces (FunctionParameter, FunctionDefinition, ParameterNodeValue, FormulaASTNode)
+- [x] Build structured function schemas for 50+ functions
+- [x] Create schemaMap with parameter definitions
+- [x] Create formulaWizardSchema.test.ts (19 tests)
+
+### Phase 10b: Wizard State Machine — COMPLETE ✅
+- [x] Create useFormulaWizard hook
+- [x] States: INACTIVE → WIZARD_ROOT → NESTED_STEP → POINT_SELECTION
+- [x] Handle state transitions and nesting stack
+- [x] Max nesting depth: 8 levels
+- [x] Create useFormulaWizard.test.ts (25 tests)
+
+### Phase 10c: Wizard UI Components — COMPLETE ✅
+- [x] Create FormulaWizard component with breadcrumb nav
+- [x] Parameter input fields with range picker icons
+- [x] Nested function buttons, live result preview
+- [x] Action buttons (Back, Apply, Cancel)
+- [x] Circular reference detection
+- [x] Type validation for parameters
+- [x] Create FormulaWizard.test.tsx (18 tests)
+
+### Phase 10d: AST Generator & Compiler — COMPLETE ✅
+- [x] Implement compileASTNodeToString
+- [x] Real-time formula string generation
+- [x] Handle nested function compilation
+- [x] Create formulaWizardCompiler.test.ts (20 tests)
+
+### Phase 10e: Integration — COMPLETE ✅
+- [x] Add Insert Function (ƒx) button to FormulaBar
+- [x] Wire wizard state into App.tsx
+- [x] Add FormulaWizard component to render tree
+- [x] Handle wizard apply (commit formula to cell)
+
+### Phase 10f: Documentation — COMPLETE ✅
+- [x] Update README.md with wizard documentation
+- [x] Update PLAN.md with Phase 10
+
+---
+
 ## Progress Log
+
+### 2026-07-25 (Phase 10: Nested Formula Wizard)
+- Created formulaWizardSchema.ts with structured parameter definitions for 50+ functions
+- Created useFormulaWizard.ts hook with state machine (INACTIVE → ROOT → NESTED → POINT)
+- Created FormulaWizard.tsx component with breadcrumb navigation and parameter inputs
+- Created formulaWizardCompiler.ts with AST-to-formula compilation
+- Added Insert Function (ƒx) button to FormulaBar
+- Integrated wizard into App.tsx with full state management
+- Added type validation and circular reference detection
+- Added nested function support (up to 8 levels deep)
+- **1083 tests, 43 suites, all passing**
+- Commit: (pending)
 
 ### 2026-07-25 (UI Overhaul - Phases 9a-9b)
 - Created DropdownMenu component with nested submenu support

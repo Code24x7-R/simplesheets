@@ -51,6 +51,8 @@ interface FormulaBarProps {
   onToggleReferenceFormat?: () => void;
   /** Callback when a function is selected from the function bar. */
   onInsertFunction?: (functionName: string) => void;
+  /** Callback when the Insert Function button is clicked (opens wizard). */
+  onOpenWizard?: () => void;
 }
 
 /**
@@ -204,6 +206,7 @@ export function FormulaBar({
   referenceFormat = 'A1',
   onToggleReferenceFormat,
   onInsertFunction,
+  onOpenWizard,
 }: FormulaBarProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [internalCursorPos, setInternalCursorPos] = useState(0);
@@ -672,6 +675,17 @@ export function FormulaBar({
 
         {/* Formula fx indicator */}
         <span className="text-gray-400 font-medium">fx</span>
+
+        {/* Insert Function button */}
+        {onOpenWizard && (
+          <button
+            className="text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-1.5 py-0.5 rounded transition-colors"
+            onClick={onOpenWizard}
+            title="Open formula wizard"
+          >
+            ƒx
+          </button>
+        )}
 
         {/* Point mode indicator */}
         {isPointMode && (

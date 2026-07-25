@@ -23,6 +23,7 @@ A lightweight, browser‑based spreadsheet for small businesses. No server, no a
 - 🎯 **Clean menu-based UI** — File, Edit, View, Insert, Format, Help dropdown menus
 - 📌 **Function bar** — one-click access to common functions (SUM, AVERAGE, COUNT, MAX, MIN, IF, etc.)
 - 🔢 **R1C1 reference format** — toggle between A1 and R1C1 notation by clicking the cell reference
+- 🧙 **Formula Wizard** — interactive step-by-step formula builder with nested function support, breadcrumb navigation, and live preview
 
 ---
 
@@ -75,6 +76,46 @@ SimpleSheet uses a clean, menu-based interface:
 
 Click the cell reference button (e.g., `A1`) in the formula bar to toggle between **A1** and **R1C1** notation. The preference is saved to localStorage.
 
+### Formula Wizard
+
+Click the **ƒx** button in the formula bar to open the interactive Formula Wizard. The wizard guides you through building complex formulas step-by-step:
+
+- **Breadcrumb navigation** — Track your position in nested functions (e.g., `f(x) ROUND > f(x) SUMIF`)
+- **Parameter inputs** — Each parameter has a labeled input with type validation
+- **Range picker** — Click the 🗗 icon to select ranges directly from the grid
+- **Nested functions** — Add functions within functions (up to 8 levels deep)
+- **Live preview** — See the compiled formula and result in real-time
+- **Type validation** — Inline warnings for parameter type mismatches
+- **Circular reference detection** — Warns when formula references its own cell
+
+#### Supported Functions
+
+The wizard supports 50+ functions organized by category:
+
+| Category | Functions |
+|----------|----------|
+| Math | SUM, AVERAGE, COUNT, COUNTA, MIN, MAX, PRODUCT, ABS, ROUND, SQRT, POWER, MOD, INT |
+| Conditional | SUMIF, COUNTIF, AVERAGEIF, SUMIFS, COUNTIFS, AVERAGEIFS |
+| Logical | IF, AND, OR, NOT, IFERROR, IFNA, SWITCH |
+| Text | CONCAT, CONCATENATE, LEFT, RIGHT, MID, LEN, LOWER, UPPER, TRIM, TEXT, VALUE |
+| Statistical | MEDIAN, MODE, STDEV, VAR, LARGE, SMALL, RANK, QUARTILE, PERCENTILE |
+| Date | NOW, TODAY, YEAR, MONTH, DAY, DATE, WEEKDAY |
+| Info | ROW, COLUMN, ROWS, COLUMNS |
+| Lookup | VLOOKUP, HLOOKUP, INDEX, MATCH, OFFSET |
+
+#### Wizard State Machine
+
+```
+INACTIVE → WIZARD_ROOT → NESTED_STEP → POINT_SELECTION
+              ↑               │
+              └──── Back ─────┘
+```
+
+1. **INACTIVE** — Spreadsheet in normal SELECT/EDIT mode
+2. **WIZARD_ROOT** — Top-level function parameters
+3. **NESTED_STEP** — Inside a nested function parameter
+4. **POINT_SELECTION** — Selecting a range on the grid for a RANGE parameter
+
 ---
 
 ## Tech Stack
@@ -126,7 +167,7 @@ npm test
 npm run cypress
 ```
 
-Current test suite: **1002 tests** across 39 suites with **~93% line coverage**.
+Current test suite: **1083 tests** across 43 suites with **~93% line coverage**.
 
 ---
 

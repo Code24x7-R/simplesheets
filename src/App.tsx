@@ -18,6 +18,8 @@ import { adjustFormulaRefs } from './utils/formulaParser';
 import { useAutosave } from './hooks/useAutosave';
 import { useCellEditing } from './hooks/useCellEditing';
 import { useReferenceFormat, toR1C1 } from './hooks/useReferenceFormat';
+import { useFormulaWizard } from './hooks/useFormulaWizard';
+import { FormulaWizard } from './components/FormulaWizard';
 import { loadAutosave } from './services/storageService';
 import type { Cell, Selection, Sheet } from './types';
 
@@ -106,6 +108,16 @@ function WorkbookView() {
   useAutosave(workbook);
   const { format: referenceFormat, toggle: toggleReferenceFormat } = useReferenceFormat();
   const [showPrintSetup, setShowPrintSetup] = useState(false);
+  const {
+    wizard: formulaWizard,
+    openWizard: openFormulaWizard,
+    closeWizard: closeFormulaWizard,
+    setParameter: setWizardParameter,
+    enterNested: enterWizardNested,
+    goBack: goWizardBack,
+    startPointSelection: startWizardPointSelection,
+    cancelPointSelection: cancelWizardPointSelection,
+  } = useFormulaWizard();
   const [statusMessage, setStatusMessage] = useState<string>('Ready');
   const [formulaBarValue, setFormulaBarValue] = useState('');
   const [highlightedRanges, setHighlightedRanges] = useState<HighlightedRange[]>([]);
@@ -438,6 +450,23 @@ function WorkbookView() {
   const handleFormulaChange = useCallback((value: string) => {
     setFormulaBarValue(value);
   }, []);
+
+  // ─── Formula Wizard ──────────────────────────────────────────────
+
+  const handleOpenWizard = useCallback(() => {
+    const cellRef = activeCell ? colToLetter(activeCell.col) + (activeCell.row + 1) : undefined;
+    openFormulaWizard('SUM', cellRef);
+  }, [activeCell, openFormulaWizard]);
+
+  const handleWizardApply = useCallback(
+    (formula: string) => {
+      if (activeCell) {
+        handleCellChange(activeCell.row, activeCell.col, formula);
+      }
+      closeFormulaWizard();
+    },
+    [activeCell, handleCellChange, closeFormulaWizard]
+  );
 
   // ─── Editing FSM Bridge ───────────────────────────────────────────
   // These callbacks connect the FormulaBar and Grid to the useCellEditing
@@ -1041,6 +1070,7 @@ function WorkbookView() {
           const template = `${fn}()`;
           setFormulaBarValue((prev) => prev + template);
         }}
+        onOpenWizard={handleOpenWizard}
       />
 
       {/* Sheet Tabs */}
@@ -1099,6 +1129,18 @@ function WorkbookView() {
 
       {/* Modals */}
       <PrintSetupModal isOpen={showPrintSetup} onClose={() => setShowPrintSetup(false)} />
+      <FormulaWizard
+        wizard={formulaWizard}
+        setParameter={setWizardParameter}
+        enterNested={enterWizardNested}
+        goBack={goWizardBack}
+        startPointSelection={startWizardPointSelection}
+        cancelPointSelection={cancelWizardPointSelection}
+        closeWizard={closeFormulaWizard}
+        onApply={handleWizardApply}
+        targetRow={activeCell?.row}
+        targetCol={activeCell?.col}
+      />
     </div>
   );
 }
