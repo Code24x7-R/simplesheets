@@ -309,14 +309,18 @@ function WorkbookView() {
         }
       }
 
-      // If cut, clear source cells
+      // If cut, clear source cells (sparse: only visit existing cells)
       if (isCut && pendingCutRange) {
-        for (let r = pendingCutRange.startRow; r <= pendingCutRange.endRow; r++) {
-          for (let c = pendingCutRange.startCol; c <= pendingCutRange.endCol; c++) {
-            const key = cellKey(r, c);
-            if (newCells[key]) {
-              delete newCells[key];
-            }
+        const cutMinRow = pendingCutRange.startRow;
+        const cutMaxRow = pendingCutRange.endRow;
+        const cutMinCol = pendingCutRange.startCol;
+        const cutMaxCol = pendingCutRange.endCol;
+        for (const key of Object.keys(newCells)) {
+          const colonIndex = key.indexOf(':');
+          const r = parseInt(key.slice(0, colonIndex), 10);
+          const c = parseInt(key.slice(colonIndex + 1), 10);
+          if (r >= cutMinRow && r <= cutMaxRow && c >= cutMinCol && c <= cutMaxCol) {
+            delete newCells[key];
           }
         }
         clearClipboard();
@@ -901,13 +905,14 @@ function WorkbookView() {
     const maxRow = Math.max(sel.startRow, sel.endRow);
     const minCol = Math.min(sel.startCol, sel.endCol);
     const maxCol = Math.max(sel.startCol, sel.endCol);
+    // Sparse iteration: only visit cells that exist within the selection bounds
     const changes: Array<{ row: number; col: number; value: string }> = [];
-    for (let r = minRow; r <= maxRow; r++) {
-      for (let c = minCol; c <= maxCol; c++) {
-        const key = cellKey(r, c);
-        if (sheet.cells[key]) {
-          changes.push({ row: r, col: c, value: '' });
-        }
+    for (const key of Object.keys(sheet.cells)) {
+      const colonIndex = key.indexOf(':');
+      const r = parseInt(key.slice(0, colonIndex), 10);
+      const c = parseInt(key.slice(colonIndex + 1), 10);
+      if (r >= minRow && r <= maxRow && c >= minCol && c <= maxCol) {
+        changes.push({ row: r, col: c, value: '' });
       }
     }
     if (changes.length > 0) {

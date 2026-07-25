@@ -922,7 +922,7 @@ describe('Grid Component', () => {
     expect(changes.length).toBe(4);
   });
 
-  it('Delete key clears all cells in a row selection', () => {
+  it('Delete key clears existing cells in a row selection (sparse)', () => {
     const onCellsChange = jest.fn();
     render(
       <Grid
@@ -941,12 +941,14 @@ describe('Grid Component', () => {
 
     expect(onCellsChange).toHaveBeenCalled();
     const changes = onCellsChange.mock.calls[0][0];
-    // Should clear all columns in the row (10 columns based on columnCount)
-    expect(changes.length).toBe(10);
+    // Only existing cells in row 0 are cleared (sparse iteration)
+    // Test sheet has cells at 0:0 and 0:1
+    expect(changes.length).toBe(2);
     expect(changes[0].row).toBe(0);
+    expect(changes[1].row).toBe(0);
   });
 
-  it('Delete key clears all cells in a column selection', () => {
+  it('Delete key clears existing cells in a column selection (sparse)', () => {
     const onCellsChange = jest.fn();
     render(
       <Grid
@@ -965,9 +967,11 @@ describe('Grid Component', () => {
 
     expect(onCellsChange).toHaveBeenCalled();
     const changes = onCellsChange.mock.calls[0][0];
-    // Should clear all rows in the column (10 rows based on rowCount)
-    expect(changes.length).toBe(10);
+    // Only existing cells in column 0 are cleared (sparse iteration)
+    // Test sheet has cells at 0:0 and 1:0
+    expect(changes.length).toBe(2);
     expect(changes[0].col).toBe(0);
+    expect(changes[1].col).toBe(0);
   });
 
   it('returns focus to grid after pressing Enter to commit edit', () => {

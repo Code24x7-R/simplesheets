@@ -834,15 +834,18 @@ export function Grid({ sheet, onCellChange, onCellsChange, onSelect, selectedCel
 
       // When a full row is selected, arrow up/down moves the row selection
       if (activeSelection.type === 'row') {
-        // Handle Delete/Backspace for bulk clear
+        // Handle Delete/Backspace for bulk clear (sparse: only existing cells)
         if ((e.key === 'Delete' || e.key === 'Backspace') && onCellsChange) {
           e.preventDefault();
           const sel = activeSelection;
           const minRow = Math.min(sel.startRow, sel.endRow);
           const maxRow = Math.max(sel.startRow, sel.endRow);
           const changes: Array<{ row: number; col: number; value: string }> = [];
-          for (let r = minRow; r <= maxRow; r++) {
-            for (let c = 0; c < columnCount; c++) {
+          for (const key of Object.keys(cells)) {
+            const colonIndex = key.indexOf(':');
+            const r = parseInt(key.slice(0, colonIndex), 10);
+            const c = parseInt(key.slice(colonIndex + 1), 10);
+            if (r >= minRow && r <= maxRow) {
               changes.push({ row: r, col: c, value: '' });
             }
           }
@@ -893,15 +896,18 @@ export function Grid({ sheet, onCellChange, onCellsChange, onSelect, selectedCel
 
       // When a full column is selected, arrow left/right moves the column selection
       if (activeSelection.type === 'col') {
-        // Handle Delete/Backspace for bulk clear
+        // Handle Delete/Backspace for bulk clear (sparse: only existing cells)
         if ((e.key === 'Delete' || e.key === 'Backspace') && onCellsChange) {
           e.preventDefault();
           const sel = activeSelection;
           const minCol = Math.min(sel.startCol, sel.endCol);
           const maxCol = Math.max(sel.startCol, sel.endCol);
           const changes: Array<{ row: number; col: number; value: string }> = [];
-          for (let c = minCol; c <= maxCol; c++) {
-            for (let r = 0; r < rowCount; r++) {
+          for (const key of Object.keys(cells)) {
+            const colonIndex = key.indexOf(':');
+            const r = parseInt(key.slice(0, colonIndex), 10);
+            const c = parseInt(key.slice(colonIndex + 1), 10);
+            if (c >= minCol && c <= maxCol) {
               changes.push({ row: r, col: c, value: '' });
             }
           }
@@ -977,7 +983,7 @@ export function Grid({ sheet, onCellChange, onCellsChange, onSelect, selectedCel
           return;
         case 'Delete':
         case 'Backspace':
-          // Clear all cells in the selection (bulk operation)
+          // Clear all cells in the selection (bulk operation, sparse iteration)
           {
             const sel = activeSelection;
             if (sel && onCellsChange) {
@@ -986,8 +992,11 @@ export function Grid({ sheet, onCellChange, onCellsChange, onSelect, selectedCel
               const minCol = Math.min(sel.startCol, sel.endCol);
               const maxCol = Math.max(sel.startCol, sel.endCol);
               const changes: Array<{ row: number; col: number; value: string }> = [];
-              for (let r = minRow; r <= maxRow; r++) {
-                for (let c = minCol; c <= maxCol; c++) {
+              for (const key of Object.keys(cells)) {
+                const colonIndex = key.indexOf(':');
+                const r = parseInt(key.slice(0, colonIndex), 10);
+                const c = parseInt(key.slice(colonIndex + 1), 10);
+                if (r >= minRow && r <= maxRow && c >= minCol && c <= maxCol) {
                   changes.push({ row: r, col: c, value: '' });
                 }
               }

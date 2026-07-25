@@ -84,9 +84,15 @@ export function importTsv(tsv: string, options: Omit<CsvImportOptions, 'delimite
 export function exportCsv(sheet: Sheet, delimiter: string = ','): string {
   const rows: string[][] = [];
 
-  for (let r = 0; r < sheet.rowCount; r++) {
+  // Use the used range to avoid iterating over millions of empty cells
+  const usedRange = findUsedRange(sheet);
+  if (!usedRange) return '';
+
+  const { minRow, maxRow, minCol, maxCol } = usedRange;
+
+  for (let r = minRow; r <= maxRow; r++) {
     const row: string[] = [];
-    for (let c = 0; c < sheet.columnCount; c++) {
+    for (let c = minCol; c <= maxCol; c++) {
       const cell = sheet.cells[cellKey(r, c)];
       const value = cell?.computedValue !== undefined && cell?.computedValue !== null
         ? String(cell.computedValue)
@@ -99,6 +105,30 @@ export function exportCsv(sheet: Sheet, delimiter: string = ','): string {
   return Papa.unparse(rows, {
     delimiter,
   });
+}
+
+/**
+ * Finds the bounding range of cells that contain data.
+ * Returns null if the sheet is empty.
+ */
+function findUsedRange(sheet: Sheet): { minRow: number; maxRow: number; minCol: number; maxCol: number } | null {
+  const keys = Object.keys(sheet.cells);
+  if (keys.length === 0) return null;
+
+  let minRow = Infinity, maxRow = -Infinity;
+  let minCol = Infinity, maxCol = -Infinity;
+
+  for (const key of keys) {
+    const [rowStr, colStr] = key.split(':');
+    const row = parseInt(rowStr, 10);
+    const col = parseInt(colStr, 10);
+    minRow = Math.min(minRow, row);
+    maxRow = Math.max(maxRow, row);
+    minCol = Math.min(minCol, col);
+    maxCol = Math.max(maxCol, col);
+  }
+
+  return { minRow, maxRow, minCol, maxCol };
 }
 
 /**
