@@ -102,3 +102,13 @@
     @apply px-2 py-0.5 text-xs font-mono rounded border border-gray-200 bg-white hover:bg-blue-50 hover:border-blue-300 transition-colors whitespace-nowrap;
   }
 }
+
+/* Marching ants — pulsing dashed border for clipboard range indicator */
+@keyframes marching-ants {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}

@@ -193,6 +193,29 @@ describe('App - Menu Handlers (Insert)', () => {
     expect(statusBar?.textContent).toContain('Inserted row');
   });
 
+  it('adjusts formula references when inserting a row above a formula cell', () => {
+    render(<App />);
+    // The demo workbook has =SUM(B2:D2) in cell E2 (row index 1, col 4).
+    // We need to select a cell in that row, then insert a row above it.
+    // First, let's select cell at row 1 (second row) by clicking it.
+    // The demo sheet renders headers in row 0, data starting row 1.
+    // Cell "Item 1" is at row 1, col 0.
+    const item1Cell = screen.getByText('Item 1');
+    fireEvent.mouseDown(item1Cell);
+
+    // Insert row above. "Item 1" is at row index 1 (1-indexed row 2).
+    fireEvent.click(screen.getByText('Insert'));
+    fireEvent.click(screen.getByText('Row Above'));
+
+    // Status message confirms the insert happened (1-indexed).
+    const statusBar = document.querySelector('footer span');
+    expect(statusBar?.textContent).toContain('Inserted row 2');
+
+    // Now undo and verify it reverts
+    fireEvent.click(screen.getByText('Edit'));
+    fireEvent.click(screen.getByText('Undo'));
+  });
+
   it('handles Insert > Row Below', () => {
     render(<App />);
     const cell = document.querySelector('.grid-cell') as HTMLElement;
@@ -323,5 +346,43 @@ describe('App - Menu Handlers (Import/Export via bridge)', () => {
     expect(screen.getByText('CSV (.csv)')).toBeTruthy();
     expect(screen.getByText('JSON (.json)')).toBeTruthy();
     expect(screen.getByText('PDF (.pdf)')).toBeTruthy();
+  });
+});
+
+describe('App - Undo/Redo keyboard shortcuts', () => {
+  it('Ctrl+Z triggers undo after an insert operation', () => {
+    render(<App />);
+    const statusBar = document.querySelector('footer span');
+
+    // Select a cell and insert a row above
+    const cell = document.querySelector('.grid-cell') as HTMLElement;
+    fireEvent.mouseDown(cell);
+    fireEvent.click(screen.getByText('Insert'));
+    fireEvent.click(screen.getByText('Row Above'));
+    expect(statusBar?.textContent).toContain('Inserted row');
+
+    // Now press Ctrl+Z globally
+    fireEvent.keyDown(window, { key: 'z', ctrlKey: true });
+    expect(statusBar?.textContent).toContain('Undo performed');
+  });
+
+  it('Ctrl+Y triggers redo after an undo', () => {
+    render(<App />);
+    const statusBar = document.querySelector('footer span');
+
+    // Select a cell and insert a column left
+    const cell = document.querySelector('.grid-cell') as HTMLElement;
+    fireEvent.mouseDown(cell);
+    fireEvent.click(screen.getByText('Insert'));
+    fireEvent.click(screen.getByText('Column Left'));
+    expect(statusBar?.textContent).toContain('Inserted column');
+
+    // Undo
+    fireEvent.keyDown(window, { key: 'z', ctrlKey: true });
+    expect(statusBar?.textContent).toContain('Undo performed');
+
+    // Redo
+    fireEvent.keyDown(window, { key: 'y', ctrlKey: true });
+    expect(statusBar?.textContent).toContain('Redo performed');
   });
 });

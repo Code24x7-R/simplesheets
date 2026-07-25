@@ -17,11 +17,13 @@ import { copyRange, cutRange as clipCutRange, getClipboard, clearClipboard } fro
 import { adjustFormulaRefs } from './utils/formulaParser';
 import { useAutosave } from './hooks/useAutosave';
 import { useCellEditing } from './hooks/useCellEditing';
+import { useCellStyles } from './hooks/useCellStyles';
 import { useReferenceFormat, toR1C1 } from './hooks/useReferenceFormat';
 import { useFormulaWizard } from './hooks/useFormulaWizard';
 import { FormulaWizard } from './components/FormulaWizard';
 import { loadAutosave } from './services/storageService';
 import type { Cell, Selection, Sheet } from './types';
+import { insertRow, deleteRow, insertCol, deleteCol } from './utils/sheetOperations';
 
 // ─── Demo Workbook ───────────────────────────────────────────────────────────
 
@@ -122,6 +124,14 @@ function WorkbookView() {
   const [formulaBarValue, setFormulaBarValue] = useState('');
   const [highlightedRanges, setHighlightedRanges] = useState<HighlightedRange[]>([]);
   const [pendingCutRange, setPendingCutRange] = useState<Selection | null>(null);
+  // Tracks the range currently on the clipboard for marching-ants visual feedback
+  const [clipboardRange, setClipboardRange] = useState<{
+    startRow: number;
+    startCol: number;
+    endRow: number;
+    endCol: number;
+    isCut: boolean;
+  } | null>(null);
 
   // Sheet reference (needed by the editing hook and everywhere else)
   const sheet = workbook.sheets[workbook.activeSheetIndex];
@@ -196,6 +206,13 @@ function WorkbookView() {
       /* istanbul ignore next - defensive null check */
       if (!detail) return;
       copyRange(sheet.cells, detail.startRow, detail.startCol, detail.endRow, detail.endCol, detail.selectionType);
+      setClipboardRange({
+        startRow: Math.min(detail.startRow, detail.endRow),
+        startCol: Math.min(detail.startCol, detail.endCol),
+        endRow: Math.max(detail.startRow, detail.endRow),
+        endCol: Math.max(detail.startCol, detail.endCol),
+        isCut: false,
+      });
       setStatusMessage(
         detail.selectionType === 'row'
           ? `Row${detail.startRow !== detail.endRow ? 's' : ''} copied`
@@ -218,6 +235,13 @@ function WorkbookView() {
         endCol: Math.max(detail.startCol, detail.endCol),
         anchorRow: detail.startRow,
         anchorCol: detail.startCol,
+      });
+      setClipboardRange({
+        startRow: Math.min(detail.startRow, detail.endRow),
+        startCol: Math.min(detail.startCol, detail.endCol),
+        endRow: Math.max(detail.startRow, detail.endRow),
+        endCol: Math.max(detail.startCol, detail.endCol),
+        isCut: true,
       });
       setStatusMessage(
         detail.selectionType === 'row'
@@ -314,6 +338,8 @@ function WorkbookView() {
           : isCut ? `Cut ${cellsUpdated} cell(s)` : `Paste ${cellsUpdated} cell(s)`;
       pushHistory(newWorkbook, actionLabel);
       setStatusMessage(`${isCut ? 'Moved' : 'Pasted'} ${cellsUpdated} cell(s)`);
+      // Clear marching ants after paste
+      setClipboardRange(null);
     };
 
     window.addEventListener('simplesheets:copy', handleCopyEvent);
@@ -577,6 +603,12 @@ function WorkbookView() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeCellKey]);
 
+  // Clears both the marching-ants range and the clipboard data (Esc / typing)
+  const handleClearClipboard = useCallback(() => {
+    setClipboardRange(null);
+    clearClipboard();
+  }, []);
+
   const handleUndo = useCallback(() => {
     const prev = undo();
     if (prev) {
@@ -591,6 +623,28 @@ function WorkbookView() {
       setStatusMessage('Redo performed');
     }
   }, [redo]);
+
+  // ─── Global Keyboard Shortcuts (Undo/Redo) ──────────────────────────────
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey) {
+        if (e.key === 'z') {
+          e.preventDefault();
+          handleUndo();
+        } else if (e.key === 'y') {
+          e.preventDefault();
+          handleRedo();
+        }
+      }
+      // Ctrl+Shift+Z also triggers redo (common alternative)
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'Z') {
+        e.preventDefault();
+        handleRedo();
+      }
+    };
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, [handleUndo, handleRedo]);
 
   const handleColumnResize = useCallback(
     (col: number, newWidth: number) => {
@@ -807,6 +861,25 @@ function WorkbookView() {
     hasSelection &&
     (selection.endRow !== selection.startRow || selection.endCol !== selection.startCol);
 
+  // ─── Cell Style System (useCellStyles hook) ───────────────────────
+  const {
+    styleState,
+    toggleBoldStyle,
+    toggleItalicStyle,
+    toggleUnderlineStyle,
+    setTextColor,
+    setBackgroundColor,
+    setTextAlign,
+    setNumberFormat,
+    clearCellStyles,
+  } = useCellStyles({
+    activeCell,
+    selection,
+    workbook,
+    pushHistory,
+    setStatusMessage,
+  });
+
   // ─── Clear Contents ────────────────────────────────────────────────────
 
   const handleClear = useCallback(() => {
@@ -874,138 +947,72 @@ function WorkbookView() {
 
   const handleInsertRowAbove = useCallback(() => {
     if (!activeCell) return;
-    const insertRow = activeCell.row;
-    const newSheets = workbook.sheets.map((s, idx) => {
-      if (idx !== workbook.activeSheetIndex) return s;
-      const newCells: typeof s.cells = {};
-      for (const [key, cell] of Object.entries(s.cells)) {
-        const row = parseInt(key.split(':')[0]);
-        const col = parseInt(key.split(':')[1]);
-        if (row >= insertRow) {
-          newCells[`${row + 1}:${col}`] = cell;
-        } else {
-          newCells[key] = cell;
-        }
-      }
-      return { ...s, cells: newCells, rowCount: s.rowCount + 1 };
-    });
+    const rowIndex = activeCell.row;
+    const newSheets = workbook.sheets.map((s, idx) =>
+      idx === workbook.activeSheetIndex ? insertRow(s, rowIndex) : s
+    );
     const newWb: Workbook = { ...workbook, sheets: newSheets, lastModified: Date.now() };
-    pushHistory(newWb, `Insert row ${insertRow + 1}`);
-    setActiveCell({ row: insertRow, col: activeCell.col });
-    setStatusMessage(`Inserted row ${insertRow + 1}`);
+    pushHistory(newWb, `Insert row ${rowIndex + 1}`);
+    setActiveCell({ row: rowIndex, col: activeCell.col });
+    setStatusMessage(`Inserted row ${rowIndex + 1}`);
   }, [workbook, pushHistory, activeCell]);
 
   const handleInsertRowBelow = useCallback(() => {
     if (!activeCell) return;
-    const insertRow = activeCell.row + 1;
-    const newSheets = workbook.sheets.map((s, idx) => {
-      if (idx !== workbook.activeSheetIndex) return s;
-      const newCells: typeof s.cells = {};
-      for (const [key, cell] of Object.entries(s.cells)) {
-        const row = parseInt(key.split(':')[0]);
-        const col = parseInt(key.split(':')[1]);
-        if (row >= insertRow) {
-          newCells[`${row + 1}:${col}`] = cell;
-        } else {
-          newCells[key] = cell;
-        }
-      }
-      return { ...s, cells: newCells, rowCount: s.rowCount + 1 };
-    });
+    const rowIndex = activeCell.row + 1;
+    const newSheets = workbook.sheets.map((s, idx) =>
+      idx === workbook.activeSheetIndex ? insertRow(s, rowIndex) : s
+    );
     const newWb: Workbook = { ...workbook, sheets: newSheets, lastModified: Date.now() };
-    pushHistory(newWb, `Insert row ${insertRow + 1}`);
-    setStatusMessage(`Inserted row ${insertRow + 1}`);
+    pushHistory(newWb, `Insert row ${rowIndex + 1}`);
+    setStatusMessage(`Inserted row ${rowIndex + 1}`);
   }, [workbook, pushHistory, activeCell]);
 
   const handleInsertColLeft = useCallback(() => {
     if (!activeCell) return;
-    const insertCol = activeCell.col;
-    const newSheets = workbook.sheets.map((s, idx) => {
-      if (idx !== workbook.activeSheetIndex) return s;
-      const newCells: typeof s.cells = {};
-      for (const [key, cell] of Object.entries(s.cells)) {
-        const row = parseInt(key.split(':')[0]);
-        const col = parseInt(key.split(':')[1]);
-        if (col >= insertCol) {
-          newCells[`${row}:${col + 1}`] = cell;
-        } else {
-          newCells[key] = cell;
-        }
-      }
-      return { ...s, cells: newCells, columnCount: s.columnCount + 1 };
-    });
+    const colIndex = activeCell.col;
+    const newSheets = workbook.sheets.map((s, idx) =>
+      idx === workbook.activeSheetIndex ? insertCol(s, colIndex) : s
+    );
     const newWb: Workbook = { ...workbook, sheets: newSheets, lastModified: Date.now() };
-    pushHistory(newWb, `Insert col ${colToLetter(insertCol)}`);
-    setActiveCell({ row: activeCell.row, col: insertCol });
-    setStatusMessage(`Inserted column ${colToLetter(insertCol)}`);
+    pushHistory(newWb, `Insert col ${colToLetter(colIndex)}`);
+    setActiveCell({ row: activeCell.row, col: colIndex });
+    setStatusMessage(`Inserted column ${colToLetter(colIndex)}`);
   }, [workbook, pushHistory, activeCell]);
 
   const handleInsertColRight = useCallback(() => {
     if (!activeCell) return;
-    const insertCol = activeCell.col + 1;
-    const newSheets = workbook.sheets.map((s, idx) => {
-      if (idx !== workbook.activeSheetIndex) return s;
-      const newCells: typeof s.cells = {};
-      for (const [key, cell] of Object.entries(s.cells)) {
-        const row = parseInt(key.split(':')[0]);
-        const col = parseInt(key.split(':')[1]);
-        if (col >= insertCol) {
-          newCells[`${row}:${col + 1}`] = cell;
-        } else {
-          newCells[key] = cell;
-        }
-      }
-      return { ...s, cells: newCells, columnCount: s.columnCount + 1 };
-    });
+    const colIndex = activeCell.col + 1;
+    const newSheets = workbook.sheets.map((s, idx) =>
+      idx === workbook.activeSheetIndex ? insertCol(s, colIndex) : s
+    );
     const newWb: Workbook = { ...workbook, sheets: newSheets, lastModified: Date.now() };
-    pushHistory(newWb, `Insert col ${colToLetter(insertCol)}`);
-    setStatusMessage(`Inserted column ${colToLetter(insertCol)}`);
+    pushHistory(newWb, `Insert col ${colToLetter(colIndex)}`);
+    setStatusMessage(`Inserted column ${colToLetter(colIndex)}`);
   }, [workbook, pushHistory, activeCell]);
 
   const handleDeleteRow = useCallback(() => {
     if (!activeCell) return;
-    const deleteRow = activeCell.row;
-    const newSheets = workbook.sheets.map((s, idx) => {
-      if (idx !== workbook.activeSheetIndex) return s;
-      const newCells: typeof s.cells = {};
-      for (const [key, cell] of Object.entries(s.cells)) {
-        const row = parseInt(key.split(':')[0]);
-        const col = parseInt(key.split(':')[1]);
-        if (row < deleteRow) {
-          newCells[key] = cell;
-        } else if (row > deleteRow) {
-          newCells[`${row - 1}:${col}`] = cell;
-        }
-      }
-      return { ...s, cells: newCells, rowCount: Math.max(1, s.rowCount - 1) };
-    });
+    const rowIndex = activeCell.row;
+    const newSheets = workbook.sheets.map((s, idx) =>
+      idx === workbook.activeSheetIndex ? deleteRow(s, rowIndex) : s
+    );
     const newWb: Workbook = { ...workbook, sheets: newSheets, lastModified: Date.now() };
-    pushHistory(newWb, `Delete row ${deleteRow + 1}`);
-    setActiveCell({ row: Math.max(0, deleteRow - 1), col: activeCell.col });
-    setStatusMessage(`Deleted row ${deleteRow + 1}`);
+    pushHistory(newWb, `Delete row ${rowIndex + 1}`);
+    setActiveCell({ row: Math.max(0, rowIndex - 1), col: activeCell.col });
+    setStatusMessage(`Deleted row ${rowIndex + 1}`);
   }, [workbook, pushHistory, activeCell]);
 
   const handleDeleteCol = useCallback(() => {
     if (!activeCell) return;
-    const deleteCol = activeCell.col;
-    const newSheets = workbook.sheets.map((s, idx) => {
-      if (idx !== workbook.activeSheetIndex) return s;
-      const newCells: typeof s.cells = {};
-      for (const [key, cell] of Object.entries(s.cells)) {
-        const row = parseInt(key.split(':')[0]);
-        const col = parseInt(key.split(':')[1]);
-        if (col < deleteCol) {
-          newCells[key] = cell;
-        } else if (col > deleteCol) {
-          newCells[`${row}:${col - 1}`] = cell;
-        }
-      }
-      return { ...s, cells: newCells, columnCount: Math.max(1, s.columnCount - 1) };
-    });
+    const colIndex = activeCell.col;
+    const newSheets = workbook.sheets.map((s, idx) =>
+      idx === workbook.activeSheetIndex ? deleteCol(s, colIndex) : s
+    );
     const newWb: Workbook = { ...workbook, sheets: newSheets, lastModified: Date.now() };
-    pushHistory(newWb, `Delete col ${colToLetter(deleteCol)}`);
-    setActiveCell({ row: activeCell.row, col: Math.max(0, deleteCol - 1) });
-    setStatusMessage(`Deleted column ${colToLetter(deleteCol)}`);
+    pushHistory(newWb, `Delete col ${colToLetter(colIndex)}`);
+    setActiveCell({ row: activeCell.row, col: Math.max(0, colIndex - 1) });
+    setStatusMessage(`Deleted column ${colToLetter(colIndex)}`);
   }, [workbook, pushHistory, activeCell]);
 
   const handleDeleteCells = useCallback(() => {
@@ -1051,6 +1058,17 @@ function WorkbookView() {
           onUnmerge={handleUnmerge}
           canMerge={hasRangeSelection}
           canUnmerge={hasSelection}
+          onToggleBold={toggleBoldStyle}
+          onToggleItalic={toggleItalicStyle}
+          onToggleUnderline={toggleUnderlineStyle}
+          onSetTextColor={setTextColor}
+          onSetBackgroundColor={setBackgroundColor}
+          onSetTextAlign={setTextAlign}
+          onSetNumberFormat={setNumberFormat}
+          onClearStyles={clearCellStyles}
+          isBold={styleState.fontWeight === 'bold'}
+          isItalic={styleState.fontStyle === 'italic'}
+          isUnderline={styleState.textDecoration === 'underline'}
           onAbout={handleAbout}
           onShortcuts={handleShortcuts}
         />
@@ -1110,6 +1128,14 @@ function WorkbookView() {
           onColumnResize={handleColumnResize}
           onRowResize={handleRowResize}
           referenceFormat={referenceFormat}
+          onInsertRowAbove={handleInsertRowAbove}
+          onInsertRowBelow={handleInsertRowBelow}
+          onDeleteRow={handleDeleteRow}
+          onInsertColLeft={handleInsertColLeft}
+          onInsertColRight={handleInsertColRight}
+          onDeleteCol={handleDeleteCol}
+          clipboardRange={clipboardRange}
+          onClearClipboard={handleClearClipboard}
         />
       </div>
 

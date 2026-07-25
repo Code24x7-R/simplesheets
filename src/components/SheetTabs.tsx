@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import type { Workbook } from '../types';
 
 interface SheetTabsProps {
@@ -25,8 +26,10 @@ export function SheetTabs({
   const [renamingIndex, setRenamingIndex] = useState<number | null>(null);
   const [renameValue, setRenameValue] = useState('');
   const [openMenuIndex, setOpenMenuIndex] = useState<number | null>(null);
+  const [menuPos, setMenuPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
   const inputRef = useRef<HTMLInputElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const toggleBtnElRef = useRef<HTMLButtonElement | null>(null);
 
   // Focus the rename input when entering rename mode
   useEffect(() => {
@@ -40,12 +43,10 @@ export function SheetTabs({
   useEffect(() => {
     if (openMenuIndex === null) return;
     const handleClickOutside = (e: MouseEvent) => {
-      // Find the toggle button for the open menu and check if the click was on it
-      const toggleButtons = document.querySelectorAll('[title="Sheet actions (Rename, Copy, Delete)"]');
-      for (const btn of toggleButtons) {
-        if (btn.contains(e.target as Node)) {
-          return; // Click was on the toggle button, don't close
-        }
+      // Don't close if the click was on the toggle button (the click handler will toggle it)
+      const toggleBtn = toggleBtnElRef.current;
+      if (toggleBtn && toggleBtn.contains(e.target as Node)) {
+        return;
       }
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         setOpenMenuIndex(null);
@@ -72,9 +73,19 @@ export function SheetTabs({
     setRenamingIndex(null);
   };
 
-  const handleMenuToggle = (idx: number) => {
-    setOpenMenuIndex(openMenuIndex === idx ? null : idx);
-  };
+  const handleMenuToggle = useCallback((idx: number, e?: React.MouseEvent) => {
+    setOpenMenuIndex((prev) => {
+      if (prev === idx) return null;
+      // Capture the toggle button's bounding rect so we can position the portal
+      const btn = e?.currentTarget as HTMLButtonElement | null;
+      if (btn) {
+        toggleBtnElRef.current = btn;
+        const rect = btn.getBoundingClientRect();
+        setMenuPos({ top: rect.bottom + 4, left: rect.left });
+      }
+      return idx;
+    });
+  }, []);
 
   return (
     <div className="flex items-end gap-0 px-2 pt-1 border-b border-gray-200 bg-gray-100 overflow-x-auto">
@@ -109,7 +120,7 @@ export function SheetTabs({
                 onDoubleClick={() => handleRenameStart(idx, sheet.name)}
                 onContextMenu={(e) => {
                   e.preventDefault();
-                  handleMenuToggle(idx);
+                  handleMenuToggle(idx, e);
                 }}
                 title={`${sheet.name} — Double-click to rename, Right-click for actions`}
               >
@@ -127,7 +138,7 @@ export function SheetTabs({
                 }`}
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleMenuToggle(idx);
+                  handleMenuToggle(idx, e);
                 }}
                 title="Sheet actions (Rename, Copy, Delete)"
               >
@@ -135,43 +146,56 @@ export function SheetTabs({
               </button>
             )}
 
-            {/* Dropdown menu */}
-            {openMenuIndex === idx && !isRenaming && (
-              <div
-                ref={menuRef}
-                className="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded shadow-lg z-50 min-w-[120px]"
-              >
-                <button
-                  className="block w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 text-gray-700"
-                  onMouseDown={() => handleRenameStart(idx, sheet.name)}
-                >
-                  Rename
-                </button>
-                <button
-                  className="block w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 text-gray-700"
-                  onMouseDown={() => {
-                    onCopySheet(idx);
-                    setOpenMenuIndex(null);
+            {/* Dropdown menu — rendered via portal to escape overflow-x:auto clip */}
+            {openMenuIndex === idx && !isRenaming &&
+              createPortal(
+                <div
+                  ref={menuRef}
+                  style={{
+                    position: 'fixed',
+                    top: menuPos.top,
+                    left: menuPos.left,
+                    zIndex: 9999,
                   }}
+                  className="bg-white border border-gray-300 rounded shadow-lg min-w-[120px]"
                 >
-                  Copy
-                </button>
-                <button
-                  className={`block w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 ${
-                    canDelete ? 'text-red-600' : 'text-gray-300 cursor-not-allowed'
-                  }`}
-                  onMouseDown={() => {
-                    if (canDelete) {
-                      onDeleteSheet(idx);
+                  <button
+                    className="block w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 text-gray-700"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      handleRenameStart(idx, sheet.name);
+                    }}
+                  >
+                    Rename
+                  </button>
+                  <button
+                    className="block w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 text-gray-700"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      onCopySheet(idx);
                       setOpenMenuIndex(null);
-                    }
-                  }}
-                  disabled={!canDelete}
-                >
-                  Delete
-                </button>
-              </div>
-            )}
+                    }}
+                  >
+                    Copy
+                  </button>
+                  <button
+                    className={`block w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 ${
+                      canDelete ? 'text-red-600' : 'text-gray-300 cursor-not-allowed'
+                    }`}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      if (canDelete) {
+                        onDeleteSheet(idx);
+                        setOpenMenuIndex(null);
+                      }
+                    }}
+                    disabled={!canDelete}
+                  >
+                    Delete
+                  </button>
+                </div>,
+                document.body,
+              )}
           </div>
         );
       })}

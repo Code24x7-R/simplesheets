@@ -70,6 +70,34 @@ describe('Grid Component', () => {
     expect(screen.getByText('42')).toBeInTheDocument();
   });
 
+  it('renders basic cell styles (backgroundColor, fontWeight, textAlign)', () => {
+    const sheet = createTestSheet();
+    sheet.cells['0:0'] = {
+      rawValue: 'Styled',
+      style: { fontWeight: 'bold', backgroundColor: '#e8f0fe', textAlign: 'center' },
+    };
+    render(<Grid sheet={sheet} />);
+    // The cell is the parent of the text span; it carries the inline styles
+    const cellEl = screen.getByText('Styled').closest('.grid-cell') as HTMLElement;
+    expect(cellEl).not.toBeNull();
+    expect(cellEl.style.fontWeight).toBe('bold');
+    expect(cellEl.style.backgroundColor).toBe('rgb(232, 240, 254)');
+    expect(cellEl.style.textAlign).toBe('center');
+  });
+
+  it('renders text color and font-style', () => {
+    const sheet = createTestSheet();
+    sheet.cells['1:1'] = {
+      rawValue: 'ItalicRed',
+      style: { fontStyle: 'italic', color: '#ff0000', textDecoration: 'underline' },
+    };
+    render(<Grid sheet={sheet} />);
+    const cellEl = screen.getByText('ItalicRed').closest('.grid-cell') as HTMLElement;
+    expect(cellEl.style.fontStyle).toBe('italic');
+    expect(cellEl.style.color).toBe('rgb(255, 0, 0)');
+    expect(cellEl.style.textDecoration).toBe('underline');
+  });
+
   it('shows computed values for formulas', () => {
     render(<Grid sheet={createTestSheet()} />);
     expect(screen.getByText('84')).toBeInTheDocument();
@@ -1110,5 +1138,191 @@ describe('Grid Component', () => {
     // Cell A1 should have highlight styling
     const cellA1 = screen.getByText('A1').closest('.grid-cell') as HTMLElement;
     expect(cellA1.style.backgroundColor).toContain('59, 130, 246');
+  });
+
+  // ─── Header Context Menu ──────────────────────────────────────────
+
+  it('shows row context menu on right-click of row header', () => {
+    const onDeleteRow = jest.fn();
+    const onInsertRowAbove = jest.fn();
+    const onInsertRowBelow = jest.fn();
+    render(
+      <Grid
+        sheet={createTestSheet()}
+        onDeleteRow={onDeleteRow}
+        onInsertRowAbove={onInsertRowAbove}
+        onInsertRowBelow={onInsertRowBelow}
+      />
+    );
+
+    // Right-click row header for row 1 (index 0)
+    const rowHeader = screen.getByText('1').closest('.grid-cell-header') as HTMLElement;
+    fireEvent.contextMenu(rowHeader);
+
+    // Context menu should show row actions
+    expect(screen.getByText('Insert Row Above')).toBeInTheDocument();
+    expect(screen.getByText('Insert Row Below')).toBeInTheDocument();
+    expect(screen.getByText('Delete Row')).toBeInTheDocument();
+  });
+
+  it('shows column context menu on right-click of column header', () => {
+    const onDeleteCol = jest.fn();
+    const onInsertColLeft = jest.fn();
+    const onInsertColRight = jest.fn();
+    render(
+      <Grid
+        sheet={createTestSheet()}
+        onDeleteCol={onDeleteCol}
+        onInsertColLeft={onInsertColLeft}
+        onInsertColRight={onInsertColRight}
+      />
+    );
+
+    // Right-click column header for column A (index 0)
+    const colHeader = screen.getByText('A').closest('.grid-cell-header') as HTMLElement;
+    fireEvent.contextMenu(colHeader);
+
+    expect(screen.getByText('Insert Column Left')).toBeInTheDocument();
+    expect(screen.getByText('Insert Column Right')).toBeInTheDocument();
+    expect(screen.getByText('Delete Column')).toBeInTheDocument();
+  });
+
+  it('calls onInsertRowAbove when Insert Row Above is clicked from context menu', () => {
+    const onInsertRowAbove = jest.fn();
+    render(
+      <Grid
+        sheet={createTestSheet()}
+        onInsertRowAbove={onInsertRowAbove}
+      />
+    );
+
+    const rowHeader = screen.getByText('2').closest('.grid-cell-header') as HTMLElement;
+    fireEvent.contextMenu(rowHeader);
+
+    fireEvent.mouseDown(screen.getByText('Insert Row Above'));
+    expect(onInsertRowAbove).toHaveBeenCalledWith(1);
+  });
+
+  it('calls onDeleteCol when Delete Column is clicked from context menu', () => {
+    const onDeleteCol = jest.fn();
+    render(
+      <Grid
+        sheet={createTestSheet()}
+        onDeleteCol={onDeleteCol}
+      />
+    );
+
+    const colHeader = screen.getByText('B').closest('.grid-cell-header') as HTMLElement;
+    fireEvent.contextMenu(colHeader);
+
+    fireEvent.mouseDown(screen.getByText('Delete Column'));
+    expect(onDeleteCol).toHaveBeenCalledWith(1);
+  });
+
+  // ─── Clipboard Range (Marching Ants) ─────────────────────────────────
+
+  it('renders marching-ants border on cells within clipboardRange', () => {
+    const sheet = createTestSheet();
+    render(
+      <Grid
+        sheet={sheet}
+        clipboardRange={{
+          startRow: 0,
+          startCol: 0,
+          endRow: 1,
+          endCol: 1,
+          isCut: false,
+        }}
+      />
+    );
+    // Top-left cell (0,0) should have dashed borders on top and left edges
+    const cellA1 = screen.getByText('A1').closest('.grid-cell') as HTMLElement;
+    expect(cellA1.style.borderTop).toContain('dashed');
+    expect(cellA1.style.borderLeft).toContain('dashed');
+    expect(cellA1.style.animation).toContain('marching-ants');
+  });
+
+  it('does not render marching-ants on cells outside clipboardRange', () => {
+    const sheet = createTestSheet();
+    render(
+      <Grid
+        sheet={sheet}
+        clipboardRange={{
+          startRow: 0,
+          startCol: 0,
+          endRow: 0,
+          endCol: 0,
+          isCut: false,
+        }}
+      />
+    );
+    // Cell at (1,0) displays '42' and is outside the single-cell range at A1
+    const cellOutside = screen.getByText('42').closest('.grid-cell') as HTMLElement;
+    expect(cellOutside.style.animation).toBe('');
+  });
+
+  it('uses red dashed border for cut range vs blue for copy', () => {
+    const sheet = createTestSheet();
+    render(
+      <Grid
+        sheet={sheet}
+        clipboardRange={{
+          startRow: 0,
+          startCol: 0,
+          endRow: 0,
+          endCol: 0,
+          isCut: true,
+        }}
+      />
+    );
+    const cellA1 = screen.getByText('A1').closest('.grid-cell') as HTMLElement;
+    expect(cellA1.style.borderTop).toContain('#dc2626');
+  });
+
+  it('calls onClearClipboard when Escape is pressed', () => {
+    const sheet = createTestSheet();
+    const onClearClipboard = jest.fn();
+    const { container } = render(
+      <Grid sheet={sheet} onClearClipboard={onClearClipboard} />
+    );
+    const grid = container.querySelector('[tabindex="0"]') as HTMLElement;
+    fireEvent.keyDown(grid, { key: 'Escape' });
+    expect(onClearClipboard).toHaveBeenCalledTimes(1);
+  });
+
+  // ─── Global Clipboard Shortcuts (work regardless of focus) ─────────
+
+  it('dispatches copy event via global window listener', () => {
+    const sheet = createTestSheet();
+    render(<Grid sheet={sheet} />);
+    // Select a cell first (sets internal selection)
+    const cell = screen.getByText('A1').closest('.grid-cell') as HTMLElement;
+    fireEvent.mouseDown(cell);
+    // Press Ctrl+C on the WINDOW (simulates Grid not having focus)
+    const handler = jest.fn();
+    window.addEventListener('simplesheets:copy', handler);
+    fireEvent.keyDown(window, { key: 'c', ctrlKey: true });
+    expect(handler).toHaveBeenCalledWith(
+      expect.objectContaining({
+        detail: expect.objectContaining({ startRow: 0, startCol: 0 }),
+      })
+    );
+    window.removeEventListener('simplesheets:copy', handler);
+  });
+
+  it('dispatches cut event via global window listener', () => {
+    const sheet = createTestSheet();
+    render(<Grid sheet={sheet} />);
+    const cell = screen.getByText('A1').closest('.grid-cell') as HTMLElement;
+    fireEvent.mouseDown(cell);
+    const handler = jest.fn();
+    window.addEventListener('simplesheets:cut', handler);
+    fireEvent.keyDown(window, { key: 'x', ctrlKey: true });
+    expect(handler).toHaveBeenCalledWith(
+      expect.objectContaining({
+        detail: expect.objectContaining({ startRow: 0, startCol: 0 }),
+      })
+    );
+    window.removeEventListener('simplesheets:cut', handler);
   });
 });

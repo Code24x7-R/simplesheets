@@ -167,5 +167,31 @@ describe('SheetTabs', () => {
       // Rename input should appear with current name
       expect(screen.getByDisplayValue('Sheet1')).toBeTruthy();
     });
+
+    it('allows typing a new name and committing via Enter after Rename from menu', () => {
+      const wb = createTestWorkbook(['Sheet1', 'Sheet2']);
+      render(<SheetTabs workbook={wb} {...mockCallbacks} />);
+      // Open actions menu and click Rename
+      fireEvent.click(screen.getAllByTitle('Sheet actions (Rename, Copy, Delete)')[0]);
+      fireEvent.mouseDown(screen.getByText('Rename'));
+      // The rename input should appear and be focused
+      const input = screen.getByDisplayValue('Sheet1') as HTMLInputElement;
+      expect(input).toBeTruthy();
+      expect(document.activeElement).toBe(input);
+      // Type a new name
+      fireEvent.change(input, { target: { value: 'RenamedSheet' } });
+      // Commit via Enter
+      fireEvent.keyDown(input, { key: 'Enter' });
+      expect(mockCallbacks.onRenameSheet).toHaveBeenCalledWith(0, 'RenamedSheet');
+    });
+
+    it('does not commit rename immediately when clicking Rename from menu', () => {
+      const wb = createTestWorkbook(['Sheet1', 'Sheet2']);
+      render(<SheetTabs workbook={wb} {...mockCallbacks} />);
+      fireEvent.click(screen.getAllByTitle('Sheet actions (Rename, Copy, Delete)')[0]);
+      fireEvent.mouseDown(screen.getByText('Rename'));
+      // onRenameSheet should NOT have been called yet — user hasn't committed
+      expect(mockCallbacks.onRenameSheet).not.toHaveBeenCalled();
+    });
   });
 });

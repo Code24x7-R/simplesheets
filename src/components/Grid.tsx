@@ -1,4 +1,5 @@
 import { useRef, useCallback, useState, useMemo, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import type { Sheet, Selection } from '../types';
 import { cellKey, colToLetter } from '../types';
@@ -47,6 +48,29 @@ interface GridProps {
   onRowResize?: (row: number, newHeight: number) => void;
   /** Reference format for column headers (A1 or R1C1). */
   referenceFormat?: ReferenceFormat;
+  // ── Context menu callbacks for row/column headers ──────────────────────
+  /** Callback to insert a row above the given index. */
+  onInsertRowAbove?: (rowIndex: number) => void;
+  /** Callback to insert a row below the given index. */
+  onInsertRowBelow?: (rowIndex: number) => void;
+  /** Callback to delete the row at the given index. */
+  onDeleteRow?: (rowIndex: number) => void;
+  /** Callback to insert a column left of the given index. */
+  onInsertColLeft?: (colIndex: number) => void;
+  /** Callback to insert a column right of the given index. */
+  onInsertColRight?: (colIndex: number) => void;
+  /** Callback to delete the column at the given index. */
+  onDeleteCol?: (colIndex: number) => void;
+  /** The range currently on the clipboard (for marching-ants visual feedback). */
+  clipboardRange?: {
+    startRow: number;
+    startCol: number;
+    endRow: number;
+    endCol: number;
+    isCut: boolean;
+  } | null;
+  /** Callback to clear the clipboard (marching ants + data) — called on Esc and typing. */
+  onClearClipboard?: () => void;
 }
 
 const ROW_WIDTH = 50; // Width of row number column
@@ -79,12 +103,11 @@ const HIGHLIGHT_BORDER_COLORS = [
  * Renders only the visible cells within the viewport using @tanstack/react-virtual.
  * Supports 10,000+ rows with smooth scrolling.
  */
-export function Grid({ sheet, onCellChange, onCellsChange, onSelect, selectedCell, highlightedRanges = [], isPointMode = false, pointSelection = null, onCellPick, onHeaderSelect, onColumnResize, onRowResize, referenceFormat = 'A1' }: GridProps) {
+export function Grid({ sheet, onCellChange, onCellsChange, onSelect, selectedCell, highlightedRanges = [], isPointMode = false, pointSelection = null, onCellPick, onHeaderSelect, onColumnResize, onRowResize, referenceFormat = 'A1', onInsertRowAbove, onInsertRowBelow, onDeleteRow, onInsertColLeft, onInsertColRight, onDeleteCol, clipboardRange, onClearClipboard }: GridProps) {
   const parentRef = useRef<HTMLDivElement>(null);
   const [selection, setSelection] = useState<Selection | null>(null);
   const [editingCell, setEditingCell] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
-
   // ─── Resize drag state ───────────────────────────────────────────────
   // Drag tracking via ref (NOT state) so mousemove never triggers re-render.
   // Live preview is done by direct DOM manipulation for zero-lag feedback.
@@ -93,6 +116,15 @@ export function Grid({ sheet, onCellChange, onCellsChange, onSelect, selectedCel
   const [isResizing, setIsResizing] = useState(false);
   // Hover tracking: which header the mouse is over (drives handle visibility).
   const [hoveredHeader, setHoveredHeader] = useState<{ type: 'col' | 'row'; index: number } | null>(null);
+
+  // ─── Header context menu state ──────────────────────────────────────────
+  const [headerContextMenu, setHeaderContextMenu] = useState<{
+    type: 'row' | 'col';
+    index: number;
+    top: number;
+    left: number;
+  } | null>(null);
+  const headerMenuRef = useRef<HTMLDivElement>(null);
 
   // Compute effective selection: prefer internal selection (set by mouse/keyboard),
   // but fall back to selectedCell prop when internal selection doesn't match.
@@ -113,6 +145,12 @@ export function Grid({ sheet, onCellChange, onCellsChange, onSelect, selectedCel
     return null;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selection, selectedCell]);
+
+  // Ref to always have the latest selection for global keydown handlers.
+  // Falls back to selectedCell prop so shortcuts work even when internal selection
+  // is null (e.g., after focus loss to menus/formula bar).
+  const selectionRef = useRef<Selection | null>(null);
+  selectionRef.current = selection ?? effectiveSelection;
 
   const { defaultRowHeight, defaultColWidth, columnWidths, rowHeights, rowCount, columnCount, cells } = sheet;
 
@@ -151,6 +189,54 @@ export function Grid({ sheet, onCellChange, onCellsChange, onSelect, selectedCel
     }, 50);
     return () => clearTimeout(timer);
   }, [isPointMode, pointSelection, rowVirtualizer, columnVirtualizer]);
+
+  // ─── Global Clipboard Shortcuts ──────────────────────────────────────────
+  // Handles Ctrl+C/X/V at the window level so they work regardless of which
+  // element has focus (formula bar, menu, etc.). Uses selectionRef to avoid
+  // stale closures.
+  useEffect(() => {
+    const handleGlobalClipboardKey = (e: KeyboardEvent) => {
+      if (!e.ctrlKey && !e.metaKey) return;
+      const sel = selectionRef.current;
+      if (!sel) return;
+      switch (e.key) {
+        case 'c':
+        case 'C':
+          e.preventDefault();
+          window.dispatchEvent(new CustomEvent('simplesheets:copy', {
+            detail: {
+              startRow: sel.startRow, startCol: sel.startCol,
+              endRow: sel.endRow, endCol: sel.endCol,
+              selectionType: sel.type,
+            },
+          }));
+          break;
+        case 'x':
+        case 'X':
+          e.preventDefault();
+          window.dispatchEvent(new CustomEvent('simplesheets:cut', {
+            detail: {
+              startRow: sel.startRow, startCol: sel.startCol,
+              endRow: sel.endRow, endCol: sel.endCol,
+              selectionType: sel.type,
+            },
+          }));
+          break;
+        case 'v':
+        case 'V':
+          e.preventDefault();
+          window.dispatchEvent(new CustomEvent('simplesheets:paste', {
+            detail: {
+              startRow: sel.startRow, startCol: sel.startCol,
+              selectionType: sel.type,
+            },
+          }));
+          break;
+      }
+    };
+    window.addEventListener('keydown', handleGlobalClipboardKey);
+    return () => window.removeEventListener('keydown', handleGlobalClipboardKey);
+  }, []);
 
   /**
    * Gets the width of a specific column, accounting for overrides.
@@ -262,6 +348,37 @@ export function Grid({ sheet, onCellChange, onCellsChange, onSelect, selectedCel
     },
     [selection, editingCell, rowCount, onSelect, onHeaderSelect]
   );
+
+  /**
+   * Opens the header context menu on right-click.
+   */
+  const handleHeaderContextMenu = useCallback(
+    (type: 'row' | 'col', index: number, e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setHeaderContextMenu({
+        type,
+        index,
+        top: e.clientY,
+        left: e.clientX,
+      });
+    },
+    []
+  );
+
+  /**
+   * Closes the header context menu when clicking outside.
+   */
+  useEffect(() => {
+    if (!headerContextMenu) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (headerMenuRef.current && !headerMenuRef.current.contains(e.target as Node)) {
+        setHeaderContextMenu(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [headerContextMenu]);
 
   /**
    * Starts editing a cell (on double-click or Enter).
@@ -637,11 +754,13 @@ export function Grid({ sheet, onCellChange, onCellsChange, onSelect, selectedCel
    */
   const handleCellEditWithChar = useCallback(
     (row: number, col: number, char: string) => {
+      // Typing in a new cell clears the clipboard (marching ants)
+      onClearClipboard?.();
       const key = cellKey(row, col);
       setEditingCell(key);
       setEditValue(char);
     },
-    []
+    [onClearClipboard]
   );
 
   /**
@@ -653,30 +772,21 @@ export function Grid({ sheet, onCellChange, onCellsChange, onSelect, selectedCel
       // If already editing, let the input field handle keys
       if (editingCell) return;
 
-      // Handle Ctrl+C, Ctrl+V, Ctrl+X
+      // Ctrl+C/V/X/Z/Y are handled by global listeners in App.tsx (works regardless of focus).
+      // Skip them here to avoid double-firing.
       if (e.ctrlKey || e.metaKey) {
         switch (e.key) {
-          case 'c':
-          case 'C':
-            handleCopy(e);
-            return;
-          case 'x':
-          case 'X':
-            handleCut(e);
-            return;
-          case 'v':
-          case 'V':
-            handlePaste(e);
-            return;
-          /* istanbul ignore next - parent handles undo/redo */
-          case 'z':
-          case 'Z':
-            return;
-          /* istanbul ignore next - parent handles undo/redo */
-          case 'y':
-          case 'Y':
+          case 'c': case 'C': case 'x': case 'X': case 'v': case 'V':
+          case 'z': case 'Z': case 'y': case 'Y':
             return;
         }
+      }
+
+      // Clear clipboard on Esc (spec: marching ants disappear when you press Esc)
+      if (e.key === 'Escape') {
+        onClearClipboard?.();
+        setEditingCell(null);
+        return;
       }
 
       const activeSelection = effectiveSelection;
@@ -898,7 +1008,7 @@ export function Grid({ sheet, onCellChange, onCellsChange, onSelect, selectedCel
       columnVirtualizer.scrollToIndex(col);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [effectiveSelection, editingCell, rowCount, columnCount, handleCellSelect, handleCellEdit, handleCellEditWithChar, handleCopy, handleCut, handlePaste, isPrintableKey, rowVirtualizer, columnVirtualizer, onSelect, onCellChange, onCellsChange]
+    [effectiveSelection, editingCell, rowCount, columnCount, handleCellSelect, handleCellEdit, handleCellEditWithChar, handleCopy, handleCut, handlePaste, isPrintableKey, rowVirtualizer, columnVirtualizer, onSelect, onCellChange, onCellsChange, onClearClipboard]
   );
 
   /**
@@ -952,6 +1062,7 @@ export function Grid({ sheet, onCellChange, onCellsChange, onSelect, selectedCel
                 if ((e.target as HTMLElement).closest('.resize-handle')) return;
                 handleColHeaderClick(col, e.shiftKey);
               }}
+              onContextMenu={(e) => handleHeaderContextMenu('col', col, e)}
             >
               {referenceFormat === 'R1C1' ? String(col + 1) : colToLetter(col)}
               {onColumnResize && (
@@ -1001,6 +1112,7 @@ export function Grid({ sheet, onCellChange, onCellsChange, onSelect, selectedCel
                 if ((e.target as HTMLElement).closest('.resize-handle')) return;
                 handleRowHeaderClick(virtualRow.index, e.shiftKey);
               }}
+              onContextMenu={(e) => handleHeaderContextMenu('row', virtualRow.index, e)}
             >
               {virtualRow.index + 1}
               {onRowResize && (
@@ -1034,6 +1146,15 @@ export function Grid({ sheet, onCellChange, onCellsChange, onSelect, selectedCel
                 height: getRowHeight(row),
                 left: ROW_WIDTH + virtualCol.start,
               };
+              // Apply basic cell formatting (font, color, fill, alignment)
+              if (cell?.style) {
+                if (cell.style.fontWeight) cellStyle.fontWeight = cell.style.fontWeight;
+                if (cell.style.fontStyle) cellStyle.fontStyle = cell.style.fontStyle;
+                if (cell.style.textDecoration) cellStyle.textDecoration = cell.style.textDecoration;
+                if (cell.style.color) cellStyle.color = cell.style.color;
+                if (cell.style.backgroundColor) cellStyle.backgroundColor = cell.style.backgroundColor;
+                if (cell.style.textAlign) cellStyle.textAlign = cell.style.textAlign;
+              }
               // Apply highlight if cell is referenced in formula
               if (highlightIdx !== null) {
                 cellStyle.backgroundColor = HIGHLIGHT_COLORS[highlightIdx % HIGHLIGHT_COLORS.length];
@@ -1046,6 +1167,27 @@ export function Grid({ sheet, onCellChange, onCellsChange, onSelect, selectedCel
                 cellStyle.outline = '2px dashed rgb(59, 130, 246)';
                 cellStyle.outlineOffset = '-2px';
                 cellStyle.backgroundColor = 'rgba(59, 130, 246, 0.10)';
+              }
+              // Highlight cells in the clipboard range with a dashed pulsing border
+              if (clipboardRange) {
+                const inRange =
+                  row >= clipboardRange.startRow &&
+                  row <= clipboardRange.endRow &&
+                  col >= clipboardRange.startCol &&
+                  col <= clipboardRange.endCol;
+                if (inRange) {
+                  const isTop = row === clipboardRange.startRow;
+                  const isBottom = row === clipboardRange.endRow;
+                  const isLeft = col === clipboardRange.startCol;
+                  const isRight = col === clipboardRange.endCol;
+                  const antColor = clipboardRange.isCut ? '#dc2626' : '#2563eb';
+                  // Dashed border on each visible edge of the clipboard range
+                  if (isTop) cellStyle.borderTop = `2px dashed ${antColor}`;
+                  if (isBottom) cellStyle.borderBottom = `2px dashed ${antColor}`;
+                  if (isLeft) cellStyle.borderLeft = `2px dashed ${antColor}`;
+                  if (isRight) cellStyle.borderRight = `2px dashed ${antColor}`;
+                  cellStyle.animation = 'marching-ants 1s ease-in-out infinite';
+                }
               }
               return (
                 <div
@@ -1083,7 +1225,7 @@ export function Grid({ sheet, onCellChange, onCellsChange, onSelect, selectedCel
                       }}
                     />
                   ) : (
-                    <span>
+                    <span className="block w-full h-full px-1 overflow-hidden text-ellipsis">
                       {cell?.computedValue !== undefined && cell?.computedValue !== null
                         ? String(cell.computedValue)
                         : cell?.rawValue ?? ''}
@@ -1113,6 +1255,92 @@ export function Grid({ sheet, onCellChange, onCellsChange, onSelect, selectedCel
           }}
         />
       )}
+
+      {/* Header context menu — rendered via portal to escape overflow clipping */}
+      {headerContextMenu &&
+        createPortal(
+          <div
+            ref={headerMenuRef}
+            style={{
+              position: 'fixed',
+              top: headerContextMenu.top,
+              left: headerContextMenu.left,
+              zIndex: 9999,
+            }}
+            className="bg-white border border-gray-300 rounded shadow-lg min-w-[160px]"
+          >
+            {headerContextMenu.type === 'row' ? (
+              <>
+                <button
+                  className="block w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 text-gray-700"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    onInsertRowAbove?.(headerContextMenu.index);
+                    setHeaderContextMenu(null);
+                  }}
+                >
+                  Insert Row Above
+                </button>
+                <button
+                  className="block w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 text-gray-700"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    onInsertRowBelow?.(headerContextMenu.index);
+                    setHeaderContextMenu(null);
+                  }}
+                >
+                  Insert Row Below
+                </button>
+                <div className="border-t border-gray-200" />
+                <button
+                  className="block w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 text-red-600"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    onDeleteRow?.(headerContextMenu.index);
+                    setHeaderContextMenu(null);
+                  }}
+                >
+                  Delete Row
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  className="block w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 text-gray-700"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    onInsertColLeft?.(headerContextMenu.index);
+                    setHeaderContextMenu(null);
+                  }}
+                >
+                  Insert Column Left
+                </button>
+                <button
+                  className="block w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 text-gray-700"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    onInsertColRight?.(headerContextMenu.index);
+                    setHeaderContextMenu(null);
+                  }}
+                >
+                  Insert Column Right
+                </button>
+                <div className="border-t border-gray-200" />
+                <button
+                  className="block w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 text-red-600"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    onDeleteCol?.(headerContextMenu.index);
+                    setHeaderContextMenu(null);
+                  }}
+                >
+                  Delete Column
+                </button>
+              </>
+            )}
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }

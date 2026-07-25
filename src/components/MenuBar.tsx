@@ -40,6 +40,17 @@ interface MenuBarProps {
   onUnmerge: () => void;
   canMerge: boolean;
   canUnmerge: boolean;
+  onToggleBold: () => void;
+  onToggleItalic: () => void;
+  onToggleUnderline: () => void;
+  onSetTextColor: (color: string) => void;
+  onSetBackgroundColor: (color: string) => void;
+  onSetTextAlign: (align: 'left' | 'center' | 'right') => void;
+  onSetNumberFormat: (format: string) => void;
+  onClearStyles: () => void;
+  isBold: boolean;
+  isItalic: boolean;
+  isUnderline: boolean;
   // Help
   onAbout: () => void;
   onShortcuts: () => void;
@@ -86,6 +97,25 @@ export function MenuBar(props: MenuBarProps) {
         // Format
         'format-merge': props.onMerge,
         'format-unmerge': props.onUnmerge,
+        'format-bold': props.onToggleBold,
+        'format-italic': props.onToggleItalic,
+        'format-underline': props.onToggleUnderline,
+        'format-align-left': () => props.onSetTextAlign('left'),
+        'format-align-center': () => props.onSetTextAlign('center'),
+        'format-align-right': () => props.onSetTextAlign('right'),
+        'format-color-black': () => props.onSetTextColor('#000000'),
+        'format-color-red': () => props.onSetTextColor('#FF0000'),
+        'format-color-blue': () => props.onSetTextColor('#0000FF'),
+        'format-color-green': () => props.onSetTextColor('#00FF00'),
+        'format-fill-yellow': () => props.onSetBackgroundColor('#FFFF00'),
+        'format-fill-red': () => props.onSetBackgroundColor('#FFCCCC'),
+        'format-fill-green': () => props.onSetBackgroundColor('#CCFFCC'),
+        'format-fill-blue': () => props.onSetBackgroundColor('#CCCCFF'),
+        'format-number-general': () => props.onSetNumberFormat('General'),
+        'format-number-number': () => props.onSetNumberFormat('0.00'),
+        'format-number-currency': () => props.onSetNumberFormat('$#,##0.00'),
+        'format-number-percent': () => props.onSetNumberFormat('0.00%'),
+        'format-clear-styles': props.onClearStyles,
         // Help
         'help-about': props.onAbout,
         'help-shortcuts': props.onShortcuts,
@@ -160,8 +190,58 @@ export function MenuBar(props: MenuBarProps) {
   ];
 
   const formatItems: MenuItem[] = [
+    { id: 'format-bold', label: 'Bold', shortcut: 'Ctrl+B', icon: 'B', disabled: false },
+    { id: 'format-italic', label: 'Italic', shortcut: 'Ctrl+I', icon: 'I', disabled: false },
+    { id: 'format-underline', label: 'Underline', shortcut: 'Ctrl+U', icon: 'U', disabled: false },
+    { id: 'sep-format-1', label: '', separator: true },
+    {
+      id: 'format-align',
+      label: 'Alignment',
+      icon: '≡',
+      submenu: [
+        { id: 'format-align-left', label: 'Left', icon: '⫷' },
+        { id: 'format-align-center', label: 'Center', icon: '⊙' },
+        { id: 'format-align-right', label: 'Right', icon: '⫸' },
+      ],
+    },
+    {
+      id: 'format-color',
+      label: 'Text Color',
+      icon: 'A',
+      submenu: [
+        { id: 'format-color-black', label: 'Black', icon: '●' },
+        { id: 'format-color-red', label: 'Red', icon: '●' },
+        { id: 'format-color-blue', label: 'Blue', icon: '●' },
+        { id: 'format-color-green', label: 'Green', icon: '●' },
+      ],
+    },
+    {
+      id: 'format-fill',
+      label: 'Fill Color',
+      icon: '▧',
+      submenu: [
+        { id: 'format-fill-yellow', label: 'Yellow', icon: '▧' },
+        { id: 'format-fill-red', label: 'Red', icon: '▧' },
+        { id: 'format-fill-green', label: 'Green', icon: '▧' },
+        { id: 'format-fill-blue', label: 'Blue', icon: '▧' },
+      ],
+    },
+    {
+      id: 'format-number',
+      label: 'Number Format',
+      icon: '#',
+      submenu: [
+        { id: 'format-number-general', label: 'General', icon: '•' },
+        { id: 'format-number-number', label: 'Number (0.00)', icon: '•' },
+        { id: 'format-number-currency', label: 'Currency', icon: '•' },
+        { id: 'format-number-percent', label: 'Percent', icon: '•' },
+      ],
+    },
+    { id: 'sep-format-2', label: '', separator: true },
     { id: 'format-merge', label: 'Merge Cells', icon: '⊞', disabled: !props.canMerge },
     { id: 'format-unmerge', label: 'Unmerge Cells', icon: '⊟', disabled: !props.canUnmerge },
+    { id: 'sep-format-3', label: '', separator: true },
+    { id: 'format-clear-styles', label: 'Clear Styles', icon: '⊡' },
   ];
 
   const helpItems: MenuItem[] = [

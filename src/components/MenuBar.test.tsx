@@ -36,6 +36,17 @@ describe('MenuBar', () => {
     onUnmerge: jest.fn(),
     canMerge: true,
     canUnmerge: true,
+    onToggleBold: jest.fn(),
+    onToggleItalic: jest.fn(),
+    onToggleUnderline: jest.fn(),
+    onSetTextColor: jest.fn(),
+    onSetBackgroundColor: jest.fn(),
+    onSetTextAlign: jest.fn(),
+    onSetNumberFormat: jest.fn(),
+    onClearStyles: jest.fn(),
+    isBold: false,
+    isItalic: false,
+    isUnderline: false,
     onAbout: jest.fn(),
     onShortcuts: jest.fn(),
   };
@@ -152,6 +163,63 @@ describe('MenuBar', () => {
     const unmergeItem = screen.getByText('Unmerge Cells').closest('.menu-item');
     expect(mergeItem?.classList.contains('menu-item-disabled')).toBe(true);
     expect(unmergeItem?.classList.contains('menu-item-disabled')).toBe(true);
+  });
+
+  it('Format menu shows Bold, Italic, Underline items', () => {
+    render(<MenuBar {...defaultProps} />);
+    fireEvent.click(screen.getByText('Format'));
+    expect(screen.getByText('Bold')).toBeTruthy();
+    expect(screen.getByText('Italic')).toBeTruthy();
+    expect(screen.getByText('Underline')).toBeTruthy();
+  });
+
+  it('Format menu shows Alignment submenu', () => {
+    render(<MenuBar {...defaultProps} />);
+    fireEvent.click(screen.getByText('Format'));
+    const alignLabel = screen.getByText('Alignment');
+    expect(alignLabel).toBeTruthy();
+    fireEvent.mouseEnter(alignLabel);
+    expect(screen.getByText('Left')).toBeTruthy();
+    expect(screen.getByText('Center')).toBeTruthy();
+    expect(screen.getByText('Right')).toBeTruthy();
+  });
+
+  it('Format menu shows Clear Styles', () => {
+    render(<MenuBar {...defaultProps} />);
+    fireEvent.click(screen.getByText('Format'));
+    expect(screen.getByText('Clear Styles')).toBeTruthy();
+  });
+
+  it('Format menu triggers bold callback', () => {
+    render(<MenuBar {...defaultProps} />);
+    fireEvent.click(screen.getByText('Format'));
+    fireEvent.click(screen.getByText('Bold'));
+    expect(defaultProps.onToggleBold).toHaveBeenCalled();
+  });
+
+  it('Format menu triggers text color callback', () => {
+    render(<MenuBar {...defaultProps} />);
+    fireEvent.click(screen.getByText('Format'));
+    const colorLabel = screen.getByText('Text Color');
+    fireEvent.mouseEnter(colorLabel);
+    fireEvent.click(screen.getByText('Red'));
+    expect(defaultProps.onSetTextColor).toHaveBeenCalledWith('#FF0000');
+  });
+
+  it('Format menu triggers alignment callback', () => {
+    render(<MenuBar {...defaultProps} />);
+    fireEvent.click(screen.getByText('Format'));
+    const alignLabel = screen.getByText('Alignment');
+    fireEvent.mouseEnter(alignLabel);
+    fireEvent.click(screen.getByText('Center'));
+    expect(defaultProps.onSetTextAlign).toHaveBeenCalledWith('center');
+  });
+
+  it('Format menu triggers clear styles callback', () => {
+    render(<MenuBar {...defaultProps} />);
+    fireEvent.click(screen.getByText('Format'));
+    fireEvent.click(screen.getByText('Clear Styles'));
+    expect(defaultProps.onClearStyles).toHaveBeenCalled();
   });
 
   it('Help menu shows About and Shortcuts', () => {

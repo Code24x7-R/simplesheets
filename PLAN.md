@@ -4,11 +4,11 @@
 Achieve a clean, clutter-free UI with standardized dropdown menus, formula wizard, function bar, and R1C1 reference format.
 
 ## Current State
-- **1083 tests** across **43 suites**, All passing
+- **1136 tests** across **45 suites**, All passing
 - Lint clean (0 warnings), Type-check clean (0 errors), Build clean
-- Phases 1-9d complete: Menu system, Formula bar, Function bar, R1C1 toggle, Layout polish
-- Phase 10 in progress: Nested Formula Wizard
-- App.tsx line coverage at 93.39%
+- Phases 1-10 complete: Menu system, Formula bar, Function bar, R1C1 toggle, Layout polish, Nested Formula Wizard
+- Phase 11 in progress: Cell Style System (Bold, Italic, Underline, Colors, Alignment)
+- Cut/paste keyboard fix applied (global clipboard handlers)
 
 ### New UI Architecture (2026-07-25)
 | Component | Description |
@@ -272,6 +272,21 @@ Achieve a clean, clutter-free UI with standardized dropdown menus, formula wizar
 ---
 
 ## Progress Log
+
+### 2026-07-25 (Phase 11: Cell Style System — IN PROGRESS)
+- Adding style application system: Bold, Italic, Underline, Text Color, Fill Color, Alignment
+- Creating useCellStyle hook for style state tracking and application
+- Adding style menu items to Format menu
+- Wiring style handlers in App.tsx with history push
+- Writing tests for style functions
+- **1136 tests, 45 suites, all passing**
+- Commit: (pending)
+
+### 2026-07-25 (Cut/Paste Keyboard Fix)
+- Fixed Ctrl+X/C/V global clipboard handling — moved from Grid div focus to window-level listeners
+- Fixed temporal dead zone bug with selectionRef assignment order
+- Fixed stale closure issue in clipboard handlers using selectionRef
+- **1131 tests, build verified**
 
 ### 2026-07-25 (Phase 10: Nested Formula Wizard)
 - Created formulaWizardSchema.ts with structured parameter definitions for 50+ functions
