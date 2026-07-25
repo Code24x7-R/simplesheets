@@ -24,6 +24,7 @@ A lightweight, browser‑based spreadsheet for small businesses. No server, no a
 - 📌 **Function bar** — one-click access to common functions (SUM, AVERAGE, COUNT, MAX, MIN, IF, etc.)
 - 🔢 **R1C1 reference format** — toggle between A1 and R1C1 notation by clicking the cell reference
 - 🧙 **Formula Wizard** — interactive step-by-step formula builder with nested function support, breadcrumb navigation, and live preview
+- 🔍 **Find & Replace** — search across cells with options for case sensitivity, exact match, formulas, and multi-sheet scope
 
 ---
 
@@ -51,7 +52,7 @@ SimpleSheet uses a clean, menu-based interface:
 | Menu | Actions |
 |------|---------|
 | **File** | New, Save, Open, Import (Excel/CSV/JSON), Export (Excel/CSV/JSON/PDF), Page Setup |
-| **Edit** | Undo, Redo, Copy, Cut, Paste, Clear Contents, Delete (Row/Column/Cells) |
+| **Edit** | Undo, Redo, Copy, Cut, Paste, Clear Contents, Find & Replace, Delete (Row/Column/Cells) |
 | **View** | Freeze Panes, Unfreeze Panes |
 | **Insert** | Row Above, Row Below, Column Left, Column Right |
 | **Format** | Merge Cells, Unmerge Cells |
@@ -66,6 +67,7 @@ SimpleSheet uses a clean, menu-based interface:
 | `Ctrl+C` | Copy |
 | `Ctrl+X` | Cut |
 | `Ctrl+V` | Paste |
+| `Ctrl+H` | Find & Replace |
 | `Delete` | Clear cell contents |
 | `F2` | Edit cell / Toggle edit mode |
 | `F4` | Cycle reference absolute/relative |

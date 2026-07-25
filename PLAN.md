@@ -4,11 +4,11 @@
 Achieve a clean, clutter-free UI with standardized dropdown menus, formula wizard, function bar, and R1C1 reference format.
 
 ## Current State
-- **1136 tests** across **45 suites**, All passing
+- **1260 tests** across **51 suites**, All passing
 - Lint clean (0 warnings), Type-check clean (0 errors), Build clean
 - Phases 1-10 complete: Menu system, Formula bar, Function bar, R1C1 toggle, Layout polish, Nested Formula Wizard
-- Phase 11 in progress: Cell Style System (Bold, Italic, Underline, Colors, Alignment)
-- Cut/paste keyboard fix applied (global clipboard handlers)
+- Phase 11 complete: Cell Style System (Bold, Italic, Underline, Colors, Alignment)
+- Phase 12 complete: Search & Replace (find/replace with case, exact match, formula scope, multi-sheet)
 
 ### New UI Architecture (2026-07-25)
 | Component | Description |
@@ -23,6 +23,8 @@ Achieve a clean, clutter-free UI with standardized dropdown menus, formula wizar
 | useFormulaWizard | Wizard state machine hook |
 | formulaWizardSchema | Structured function parameter definitions |
 | formulaWizardCompiler | AST-to-formula compiler |
+| SearchReplaceModal | Find & Replace dialog with configurable options |
+| sheetSearch | Core search and replace engine |
 
 ### Coverage by file (lines %)
 | File | Lines | Branches | Status |
@@ -40,6 +42,8 @@ Achieve a clean, clutter-free UI with standardized dropdown menus, formula wizar
 | excelExport.ts | 100% | 94.73% | ⚠️ |
 | formulaParser.ts | 100% | 93.75% | ⚠️ |
 | formulaValidation.ts | 100% | 90.9% | ⚠️ |
+| sheetSearch.ts | 100% | 100% | ✅ |
+| SearchReplaceModal.tsx | 100% | 100% | ✅ |
 | All other files | 100% | 100% | ✅ |
 
 ## Strategy: Quick Wins First, Then Phased Complex Files
@@ -271,9 +275,52 @@ Achieve a clean, clutter-free UI with standardized dropdown menus, formula wizar
 
 ---
 
+## Phase 12: Search & Replace (2026-07-26)
+*Find & Replace modal with configurable search options and multi-sheet scope.*
+
+### Phase 12a: Core Search Engine — COMPLETE ✅
+- [x] Create `src/utils/sheetSearch.ts` with searchSheets and replaceInSheets functions
+- [x] Support case-sensitive and exact-match modes
+- [x] Support formula inclusion toggle (formulas treated as text when enabled)
+- [x] Support multi-sheet scope via sheetIndices parameter
+- [x] Immutable updates — returns new workbook, never mutates original
+- [x] Create `src/utils/sheetSearch.test.ts` (16 tests)
+
+### Phase 12b: Modal UI — COMPLETE ✅
+- [x] Create `src/components/SearchReplaceModal.tsx` following PrintSetupModal pattern
+- [x] Find/Replace text inputs with Enter key support
+- [x] Four checkboxes: Match Case, Match Entire Cell, Also Search in Formulas, Search All Sheets
+- [x] Result summary display (match count or replacement confirmation)
+- [x] Search, Replace All, and Reset action buttons
+- [x] Create `src/components/SearchReplaceModal.test.tsx` (10 tests)
+
+### Phase 12c: Menu Integration — COMPLETE ✅
+- [x] Add "Find & Replace…" item to Edit menu with Ctrl+H shortcut hint
+- [x] Add `onSearchReplace` prop to MenuBar
+- [x] Wire handler in App.tsx with `pushHistory` for undo support
+- [x] Render modal in App.tsx
+- [x] Update MenuBar.test.tsx with new prop
+- [x] Add integration tests in App.menu.test.tsx (2 tests)
+
+### Phase 12d: Documentation — COMPLETE ✅
+- [x] Update README.md with Search & Replace feature
+- [x] Update PLAN.md with Phase 12
+
+---
+
 ## Progress Log
 
-### 2026-07-25 (Phase 11: Cell Style System — IN PROGRESS)
+### 2026-07-26 (Phase 12: Search & Replace — COMPLETE ✅)
+- Created `src/utils/sheetSearch.ts` — core search/replace engine with support for case sensitivity, exact match, formula inclusion, and multi-sheet scope
+- Created `src/components/SearchReplaceModal.tsx` — modal UI with find/replace inputs, four checkboxes (Match Case, Match Entire Cell, Also Search in Formulas, Search All Sheets), result summary, and Search/Replace All/Reset buttons
+- Integrated into Edit menu as "Find & Replace…" with `Ctrl+H` shortcut hint
+- Wired through App.tsx with `pushHistory` for undo support
+- Added 26 new tests (16 for sheetSearch utility, 10 for SearchReplaceModal component)
+- Added 2 integration tests in App.menu.test.tsx for menu wiring
+- **1260 tests, 51 suites, all passing**
+- Commit: (pending)
+
+### 2026-07-25 (Phase 11: Cell Style System — COMPLETE ✅)
 - Adding style application system: Bold, Italic, Underline, Text Color, Fill Color, Alignment
 - Creating useCellStyle hook for style state tracking and application
 - Adding style menu items to Format menu

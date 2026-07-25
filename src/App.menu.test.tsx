@@ -44,12 +44,36 @@ describe('App - Menu Handlers', () => {
     expect(statusBar?.textContent).toContain('SimpleSheet v0.1.0');
   });
 
-  it('shows keyboard shortcuts message from Help menu', () => {
+  it('shows keyboard shortcuts modal from Help menu', () => {
     render(<App />);
     fireEvent.click(screen.getByText('Help'));
     fireEvent.click(screen.getByText('Keyboard Shortcuts'));
-    const statusBar = document.querySelector('footer span');
-    expect(statusBar?.textContent).toContain('keyboard shortcuts');
+    expect(screen.getByText('Keyboard Shortcuts & Hints')).toBeInTheDocument();
+  });
+
+  it('closes keyboard shortcuts modal on close button click', () => {
+    render(<App />);
+    fireEvent.click(screen.getByText('Help'));
+    fireEvent.click(screen.getByText('Keyboard Shortcuts'));
+    expect(screen.getByText('Keyboard Shortcuts & Hints')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Close'));
+    expect(screen.queryByText('Keyboard Shortcuts & Hints')).not.toBeInTheDocument();
+  });
+
+  it('shows Search & Replace modal from Edit menu', () => {
+    render(<App />);
+    fireEvent.click(screen.getByText('Edit'));
+    fireEvent.click(screen.getByText(/Find & Replace/));
+    expect(screen.getByText('Find & Replace')).toBeInTheDocument();
+  });
+
+  it('closes Search & Replace modal on close button click', () => {
+    render(<App />);
+    fireEvent.click(screen.getByText('Edit'));
+    fireEvent.click(screen.getByText(/Find & Replace/));
+    expect(screen.getByText('Find & Replace')).toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText('Close'));
+    expect(screen.queryByText('Find & Replace')).not.toBeInTheDocument();
   });
 
   it('handles View > Freeze Panes', () => {

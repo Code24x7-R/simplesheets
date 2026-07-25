@@ -9,6 +9,8 @@ import type { PointModeSelection } from './components/Grid';
 import { FormulaBar } from './components/FormulaBar';
 import type { HighlightedRange } from './components/FormulaBar';
 import { PrintSetupModal } from './components/PrintSetupModal';
+import { ShortcutsModal } from './components/ShortcutsModal';
+import { SearchReplaceModal } from './components/SearchReplaceModal';
 import { SheetTabs } from './components/SheetTabs';
 import { MenuBar } from './components/MenuBar';
 import { ImportExportBridge } from './components/ImportExportBridge';
@@ -113,6 +115,8 @@ function WorkbookView() {
   useAutosave(workbook);
   const { format: referenceFormat, toggle: toggleReferenceFormat } = useReferenceFormat();
   const [showPrintSetup, setShowPrintSetup] = useState(false);
+  const [showShortcuts, setShowShortcuts] = useState(false);
+  const [showSearchReplace, setShowSearchReplace] = useState(false);
   const {
     wizard: formulaWizard,
     openWizard: openFormulaWizard,
@@ -553,15 +557,29 @@ function WorkbookView() {
     [startEditAt],
   );
 
-  // ─── Help Actions ──────────────────────────────────────────────────────
+  // ─── Help / Utility Actions ──────────────────────────────────────────
 
   const handleAbout = useCallback(() => {
     setStatusMessage('SimpleSheet v0.1.0 — A lightweight spreadsheet app');
   }, []);
 
   const handleShortcuts = useCallback(() => {
-    setStatusMessage('Press Ctrl+/ to see keyboard shortcuts');
+    setShowShortcuts(true);
   }, []);
+
+  const handleSearchReplace = useCallback(() => {
+    setShowSearchReplace(true);
+  }, []);
+
+  // Modal updater for search/replace (receives new workbook + description)
+  const handleSearchReplaceApply = useCallback(
+    (updatedWb: Workbook, description: string) => {
+      pushHistory(updatedWb, description);
+      setStatusMessage(description);
+      setShowSearchReplace(false);
+    },
+    [pushHistory],
+  );
 
   // ─── Save / Load Triggers (for menu) ──────────────────────────────────
 
@@ -1087,6 +1105,7 @@ function WorkbookView() {
           isUnderline={styleState.textDecoration === 'underline'}
           onAbout={handleAbout}
           onShortcuts={handleShortcuts}
+          onSearchReplace={handleSearchReplace}
         />
         <span className="text-sm text-gray-500">{workbook.title}</span>
       </header>
@@ -1183,6 +1202,14 @@ function WorkbookView() {
 
       {/* Modals */}
       <PrintSetupModal isOpen={showPrintSetup} onClose={() => setShowPrintSetup(false)} />
+      <ShortcutsModal isOpen={showShortcuts} onClose={() => setShowShortcuts(false)} />
+      <SearchReplaceModal
+        isOpen={showSearchReplace}
+        onClose={() => setShowSearchReplace(false)}
+        workbook={workbook}
+        activeSheetIndex={workbook.activeSheetIndex}
+        onUpdate={handleSearchReplaceApply}
+      />
       <FormulaWizard
         wizard={formulaWizard}
         setParameter={setWizardParameter}

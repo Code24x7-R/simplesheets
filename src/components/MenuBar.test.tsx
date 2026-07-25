@@ -49,6 +49,7 @@ describe('MenuBar', () => {
     isUnderline: false,
     onAbout: jest.fn(),
     onShortcuts: jest.fn(),
+    onSearchReplace: jest.fn(),
   };
 
   beforeEach(() => {

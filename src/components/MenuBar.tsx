@@ -26,6 +26,7 @@ interface MenuBarProps {
   onDeleteRow: () => void;
   onDeleteCol: () => void;
   onDeleteCells: () => void;
+  onSearchReplace: () => void;
   // View menu
   onFreeze: () => void;
   onUnfreeze: () => void;
@@ -83,6 +84,7 @@ export function MenuBar(props: MenuBarProps) {
         'edit-cut': props.onCut,
         'edit-paste': props.onPaste,
         'edit-clear': props.onClear,
+      'edit-search-replace': props.onSearchReplace,
         'edit-delete-row': props.onDeleteRow,
         'edit-delete-col': props.onDeleteCol,
         'edit-delete-cells': props.onDeleteCells,
@@ -163,6 +165,7 @@ export function MenuBar(props: MenuBarProps) {
     { id: 'edit-cut', label: 'Cut', shortcut: 'Ctrl+X', icon: '✂️' },
     { id: 'edit-paste', label: 'Paste', shortcut: 'Ctrl+V', icon: '📌' },
     { id: 'edit-clear', label: 'Clear Contents', shortcut: 'Delete', icon: '🧹' },
+    { id: 'edit-search-replace', label: 'Find & Replace…', shortcut: 'Ctrl+H', icon: '🔍' },
     { id: 'sep-edit-2', label: '', separator: true },
     {
       id: 'edit-delete',
