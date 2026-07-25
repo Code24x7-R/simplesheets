@@ -1,12 +1,33 @@
-# PLAN — 100% Test Coverage (Pre End-User Testing)
+# PLAN — UI Overhaul & Test Coverage
 
 ## Goal
-Achieve 100% line/branch/statement/function coverage on all source files before end-user testing.
+Achieve a clean, clutter-free UI with standardized dropdown menus, formula wizard, function bar, and R1C1 reference format.
 
 ## Current State
-- **95.97%** statements, **81.71%** branches, **98.39%** functions, **98.15%** lines
-- 816 tests across 33 suites, All passing
-- All phases 1-7 substantially complete; final gap closure in progress
+- **976 tests** across **38 suites**, All passing
+- Lint clean (0 warnings), Type-check clean (0 errors), Build clean
+- Phases 1-3 complete: Menu system, Formula bar wizard, Function bar, R1C1 toggle
+- All wired actions in dropdown menus
+- App.tsx line coverage dropped due to new menu handlers (needs test coverage)
+
+### New UI Architecture (2026-07-25)
+| Component | Description |
+|-----------|-------------|
+| MenuBar | File/Edit/View/Insert/Format/Help dropdown menus |
+| DropdownMenu | Reusable menu with submenus, shortcuts, separators |
+| ImportExportBridge | Connects menu events to import/export file buttons |
+| FunctionBar | One-line common function buttons in FormulaBar |
+| R1C1 Toggle | Click cell ref button to switch A1/R1C1 |
+| Grid | Shows numeric column headers in R1C1 mode |
+
+### Coverage by file (lines %)
+| File | Lines | Branches | Status |
+|------|-------|----------|--------|
+| App.tsx | 62.85% | 62.74% | ❌ new handlers need tests |
+| MenuBar.tsx | 100% | 100% | ✅ |
+| DropdownMenu.tsx | 90.9% | 93.54% | ⚠️ |
+| FormulaBar.tsx | ~85% | ~81% | ⚠️ |
+| Grid.tsx | ~83% | ~84% | ⚠️ |
 
 ### Coverage by file (lines %)
 | File | Lines | Branches | Status |
@@ -180,7 +201,56 @@ Achieve 100% line/branch/statement/function coverage on all source files before 
 
 ---
 
+## Phase 9: UI Overhaul (2026-07-25)
+*Consolidate all UI into clean dropdown menus with formula wizard and function bar.*
+
+### Phase 9a: Dropdown Menu System — COMPLETE ✅
+- [x] Create DropdownMenu component with submenus, shortcuts, separators
+- [x] Create MenuBar (File/Edit/View/Insert/Format/Help)
+- [x] Create ImportExportBridge to connect menu events to file buttons
+- [x] Wire menu actions into App.tsx handlers
+- [x] Remove dead placeholder buttons from Toolbar
+- [x] Remove old Save/Load and Import/Export toolbar rows
+- [x] Update tests for new menu-based UI
+
+### Phase 9b: Formula Bar Wizard & Function Bar — COMPLETE ✅
+- [x] Add useReferenceFormat hook with localStorage persistence
+- [x] Add toR1C1/formatCellRef helpers
+- [x] Add function bar with common functions (SUM, AVERAGE, COUNT, MAX, MIN, IF, SUMIF, COUNTIF, VLOOKUP, ROUND)
+- [x] Add R1C1 toggle button to FormulaBar cell reference display
+- [x] Update Grid for R1C1 column headers
+- [x] Update FormulaBar tests for function bar
+
+### Phase 9c: App.tsx Coverage Recovery — TODO
+- [ ] Add tests for new menu handlers (handleClear, handleInsertRowAbove, etc.)
+- [ ] Add tests for reference format integration
+- [ ] Recover App.tsx line coverage from 62.85% to >90%
+
+### Phase 9d: Layout Polish — TODO
+- [ ] Final visual review of all UI elements
+- [ ] Ensure responsive behavior
+- [ ] Update README.md with new UI documentation
+
+---
+
 ## Progress Log
+
+### 2026-07-25 (UI Overhaul - Phases 9a-9b)
+- Created DropdownMenu component with nested submenu support
+- Created MenuBar consolidating all actions into File/Edit/View/Insert/Format/Help menus
+- Created ImportExportBridge to connect menu events to hidden import/export buttons
+- Added useReferenceFormat hook for A1/R1C1 toggle with localStorage persistence
+- Added function bar to FormulaBar with 10 common functions
+- Updated Grid to show numeric column headers in R1C1 mode
+- Removed dead placeholder buttons and old toolbar rows
+- Updated App.test.tsx and App.handlers.test.tsx for menu-based UI
+- Fixed all FormulaBar tests to handle function bar buttons
+- **976 tests, 38 suites, all passing**
+- **Phase 9a (Menu System): COMPLETE ✅**
+- **Phase 9b (Formula Bar + Function Bar + R1C1): COMPLETE ✅**
+- **Phase 9c (App.tsx Coverage Recovery): TODO**
+- **Phase 9d (Layout Polish): TODO**
+- Commit: `5825a55` (Phase 1-9a), `4cc9d67` (Phase 2-3, 9b)
 
 ### 2026-07-24 (continued)
 - All phases 1-8 substantially advanced from initial 654 tests

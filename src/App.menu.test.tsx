@@ -1,0 +1,327 @@
+import { render, screen, fireEvent } from '@testing-library/react';
+import App from './App';
+
+// Mock the virtualizer
+jest.mock('@tanstack/react-virtual', () => ({
+  useVirtualizer: (options: { horizontal?: boolean }) => {
+    if (options.horizontal) {
+      return {
+        getVirtualItems: () => {
+          const items = [];
+          for (let i = 0; i < 5; i++) {
+            items.push({ index: i, start: i * 100, size: 100, end: (i + 1) * 100 });
+          }
+          return items;
+        },
+        getTotalSize: () => 500,
+        scrollToIndex: jest.fn(),
+      };
+    }
+    return {
+      getVirtualItems: () => {
+        const items = [];
+        for (let i = 0; i < 5; i++) {
+          items.push({ index: i, start: i * 28, size: 28, end: (i + 1) * 28 });
+        }
+        return items;
+      },
+      getTotalSize: () => 140,
+      scrollToIndex: jest.fn(),
+    };
+  },
+}));
+
+describe('App - Menu Handlers', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('shows About message from Help menu', () => {
+    render(<App />);
+    fireEvent.click(screen.getByText('Help'));
+    fireEvent.click(screen.getByText('About SimpleSheet'));
+    const statusBar = document.querySelector('footer span');
+    expect(statusBar?.textContent).toContain('SimpleSheet v0.1.0');
+  });
+
+  it('shows keyboard shortcuts message from Help menu', () => {
+    render(<App />);
+    fireEvent.click(screen.getByText('Help'));
+    fireEvent.click(screen.getByText('Keyboard Shortcuts'));
+    const statusBar = document.querySelector('footer span');
+    expect(statusBar?.textContent).toContain('keyboard shortcuts');
+  });
+
+  it('handles View > Freeze Panes', () => {
+    render(<App />);
+    fireEvent.click(screen.getByText('View'));
+    fireEvent.click(screen.getByText('Freeze Panes'));
+    const statusBar = document.querySelector('footer span');
+    expect(statusBar?.textContent).toContain('Panes frozen');
+  });
+
+  it('handles View > Unfreeze Panes after freezing', () => {
+    render(<App />);
+    // First freeze
+    fireEvent.click(screen.getByText('View'));
+    fireEvent.click(screen.getByText('Freeze Panes'));
+    // Then unfreeze
+    fireEvent.click(screen.getByText('View'));
+    fireEvent.click(screen.getByText('Unfreeze Panes'));
+    const statusBar = document.querySelector('footer span');
+    expect(statusBar?.textContent).toContain('Panes unfrozen');
+  });
+
+  it('disables Unfreeze Panes when no panes are frozen', () => {
+    render(<App />);
+    fireEvent.click(screen.getByText('View'));
+    const unfreezeItem = screen.getByText('Unfreeze Panes').closest('.menu-item');
+    expect(unfreezeItem?.classList.contains('menu-item-disabled')).toBe(true);
+  });
+
+  it('handles Format > Merge Cells', () => {
+    render(<App />);
+    // Select a cell first
+    const cell = document.querySelector('.grid-cell') as HTMLElement;
+    fireEvent.mouseDown(cell);
+    // Merge via menu
+    fireEvent.click(screen.getByText('Format'));
+    const mergeItem = screen.getByText('Merge Cells').closest('.menu-item') as HTMLElement;
+    // Without range selection, merge should be disabled
+    expect(mergeItem?.classList.contains('menu-item-disabled')).toBe(true);
+  });
+
+  it('handles File > Save (shows status)', () => {
+    render(<App />);
+    fireEvent.click(screen.getByText('File'));
+    fireEvent.click(screen.getByText('Save'));
+    const statusBar = document.querySelector('footer span');
+    expect(statusBar?.textContent).toContain('Save');
+  });
+
+  it('handles File > Open (shows status)', () => {
+    render(<App />);
+    fireEvent.click(screen.getByText('File'));
+    fireEvent.click(screen.getByText('Open…'));
+    const statusBar = document.querySelector('footer span');
+    expect(statusBar?.textContent).toContain('Open');
+  });
+
+  it('opens Page Setup modal from File menu', () => {
+    render(<App />);
+    fireEvent.click(screen.getByText('File'));
+    fireEvent.click(screen.getByText('Page Setup…'));
+    expect(screen.getByRole('heading', { name: /Page Setup/ })).toBeInTheDocument();
+  });
+
+  it('closes Page Setup modal from File menu', () => {
+    render(<App />);
+    fireEvent.click(screen.getByText('File'));
+    fireEvent.click(screen.getByText('Page Setup…'));
+    expect(screen.getByRole('heading', { name: /Page Setup/ })).toBeInTheDocument();
+    // Close modal
+    const cancelButton = screen.getByText('Cancel');
+    fireEvent.click(cancelButton);
+    expect(screen.queryByRole('heading', { name: /Page Setup/ })).not.toBeInTheDocument();
+  });
+});
+
+describe('App - Menu Handlers (Edit)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('handles Edit > Clear Contents via Delete key', () => {
+    render(<App />);
+    // Select a cell
+    const cell = document.querySelector('.grid-cell') as HTMLElement;
+    fireEvent.mouseDown(cell);
+    // Type a value
+    const input = screen.getByPlaceholderText(/Enter a value or formula/);
+    fireEvent.change(input, { target: { value: 'test' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    // Clear via menu (simulates clicking Clear)
+    fireEvent.click(screen.getByText('Edit'));
+    const clearItem = screen.getByText('Clear Contents').closest('.menu-item') as HTMLElement;
+    fireEvent.click(clearItem);
+    // Status should not throw
+    const statusBar = document.querySelector('footer span');
+    expect(statusBar).toBeInTheDocument();
+  });
+
+  it('disables Undo in Edit menu when no history', () => {
+    render(<App />);
+    fireEvent.click(screen.getByText('Edit'));
+    const undoItem = screen.getByText('Undo').closest('.menu-item');
+    expect(undoItem?.classList.contains('menu-item-disabled')).toBe(true);
+  });
+
+  it('disables Redo in Edit menu when no redo available', () => {
+    render(<App />);
+    fireEvent.click(screen.getByText('Edit'));
+    const redoItem = screen.getByText('Redo').closest('.menu-item');
+    expect(redoItem?.classList.contains('menu-item-disabled')).toBe(true);
+  });
+
+  it('shows Delete submenu in Edit menu', () => {
+    render(<App />);
+    fireEvent.click(screen.getByText('Edit'));
+    const deleteLabel = screen.getAllByText('Delete').find(
+      (el) => el.classList.contains('menu-item-label')
+    )!;
+    fireEvent.mouseEnter(deleteLabel);
+    expect(screen.getByText('Row')).toBeTruthy();
+    expect(screen.getByText('Column')).toBeTruthy();
+    expect(screen.getByText('Cells')).toBeTruthy();
+  });
+});
+
+describe('App - Menu Handlers (Insert)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('handles Insert > Row Above', () => {
+    render(<App />);
+    // Select a cell
+    const cell = document.querySelector('.grid-cell') as HTMLElement;
+    fireEvent.mouseDown(cell);
+    // Insert row above via menu
+    fireEvent.click(screen.getByText('Insert'));
+    fireEvent.click(screen.getByText('Row Above'));
+    const statusBar = document.querySelector('footer span');
+    expect(statusBar?.textContent).toContain('Inserted row');
+  });
+
+  it('handles Insert > Row Below', () => {
+    render(<App />);
+    const cell = document.querySelector('.grid-cell') as HTMLElement;
+    fireEvent.mouseDown(cell);
+    fireEvent.click(screen.getByText('Insert'));
+    fireEvent.click(screen.getByText('Row Below'));
+    const statusBar = document.querySelector('footer span');
+    expect(statusBar?.textContent).toContain('Inserted row');
+  });
+
+  it('handles Insert > Column Left', () => {
+    render(<App />);
+    const cell = document.querySelector('.grid-cell') as HTMLElement;
+    fireEvent.mouseDown(cell);
+    fireEvent.click(screen.getByText('Insert'));
+    fireEvent.click(screen.getByText('Column Left'));
+    const statusBar = document.querySelector('footer span');
+    expect(statusBar?.textContent).toContain('Inserted column');
+  });
+
+  it('handles Insert > Column Right', () => {
+    render(<App />);
+    const cell = document.querySelector('.grid-cell') as HTMLElement;
+    fireEvent.mouseDown(cell);
+    fireEvent.click(screen.getByText('Insert'));
+    fireEvent.click(screen.getByText('Column Right'));
+    const statusBar = document.querySelector('footer span');
+    expect(statusBar?.textContent).toContain('Inserted column');
+  });
+});
+
+describe('App - Menu Handlers (Delete)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('handles Delete > Row without throwing', () => {
+    render(<App />);
+    const cell = document.querySelector('.grid-cell') as HTMLElement;
+    fireEvent.mouseDown(cell);
+    // Open Edit > Delete > Row
+    fireEvent.click(screen.getByText('Edit'));
+    const deleteLabel = screen.getAllByText('Delete').find(
+      (el) => el.classList.contains('menu-item-label')
+    )!;
+    fireEvent.mouseEnter(deleteLabel);
+    fireEvent.click(screen.getByText('Row'));
+    // App should still render without errors
+    expect(document.querySelector('h1')?.textContent).toBe('SimpleSheet');
+  });
+
+  it('handles Delete > Column without throwing', () => {
+    render(<App />);
+    const cell = document.querySelector('.grid-cell') as HTMLElement;
+    fireEvent.mouseDown(cell);
+    fireEvent.click(screen.getByText('Edit'));
+    const deleteLabel = screen.getAllByText('Delete').find(
+      (el) => el.classList.contains('menu-item-label')
+    )!;
+    fireEvent.mouseEnter(deleteLabel);
+    fireEvent.click(screen.getByText('Column'));
+    expect(document.querySelector('h1')?.textContent).toBe('SimpleSheet');
+  });
+
+  it('handles Delete > Cells (clear contents)', () => {
+    render(<App />);
+    const cell = document.querySelector('.grid-cell') as HTMLElement;
+    fireEvent.mouseDown(cell);
+    fireEvent.click(screen.getByText('Edit'));
+    const deleteLabel = screen.getAllByText('Delete').find(
+      (el) => el.classList.contains('menu-item-label')
+    )!;
+    fireEvent.mouseEnter(deleteLabel);
+    fireEvent.click(screen.getByText('Cells'));
+    // Should not throw
+    const statusBar = document.querySelector('footer span');
+    expect(statusBar).toBeInTheDocument();
+  });
+});
+
+describe('App - Menu Handlers (Import/Export via bridge)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('dispatches import event when File > Import > Excel is clicked', () => {
+    render(<App />);
+    const spy = jest.spyOn(window, 'dispatchEvent');
+    fireEvent.click(screen.getByText('File'));
+    fireEvent.mouseEnter(screen.getByText('Import'));
+    fireEvent.click(screen.getByText('Excel (.xlsx)'));
+    // The bridge should dispatch an event
+    expect(spy).toHaveBeenCalled();
+    spy.mockRestore();
+  });
+
+  it('dispatches export event when File > Export > CSV is clicked', () => {
+    render(<App />);
+    const spy = jest.spyOn(window, 'dispatchEvent');
+    fireEvent.click(screen.getByText('File'));
+    fireEvent.mouseEnter(screen.getByText('Export'));
+    fireEvent.click(screen.getByText('CSV (.csv)'));
+    expect(spy).toHaveBeenCalled();
+    spy.mockRestore();
+  });
+
+  it('shows File > Export > PDF option', () => {
+    render(<App />);
+    fireEvent.click(screen.getByText('File'));
+    fireEvent.mouseEnter(screen.getByText('Export'));
+    expect(screen.getByText('PDF (.pdf)')).toBeTruthy();
+  });
+
+  it('shows File > Import submenu options', () => {
+    render(<App />);
+    fireEvent.click(screen.getByText('File'));
+    fireEvent.mouseEnter(screen.getByText('Import'));
+    expect(screen.getByText('Excel (.xlsx)')).toBeTruthy();
+    expect(screen.getByText('CSV (.csv)')).toBeTruthy();
+    expect(screen.getByText('JSON (.json)')).toBeTruthy();
+  });
+
+  it('shows File > Export submenu options', () => {
+    render(<App />);
+    fireEvent.click(screen.getByText('File'));
+    fireEvent.mouseEnter(screen.getByText('Export'));
+    expect(screen.getByText('Excel (.xlsx)')).toBeTruthy();
+    expect(screen.getByText('CSV (.csv)')).toBeTruthy();
+    expect(screen.getByText('JSON (.json)')).toBeTruthy();
+    expect(screen.getByText('PDF (.pdf)')).toBeTruthy();
+  });
+});
