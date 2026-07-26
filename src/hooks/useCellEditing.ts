@@ -391,12 +391,15 @@ export function useCellEditing({
     setSession((prev) => {
       if (prev.state !== 'EDIT' && prev.state !== 'ENTER') return prev;
       const clampedCaret = Math.max(0, Math.min(buffer.length, caretPos));
-      return {
+      const newSession = {
         ...prev,
         buffer,
         caretPos: clampedCaret,
         isFormula: buffer.startsWith('=') || buffer.startsWith('+') || buffer.startsWith('-'),
       };
+      // Update sessionRef immediately to avoid stale closures
+      sessionRef.current = newSession;
+      return newSession;
     });
   }, []);
 
