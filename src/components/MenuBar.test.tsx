@@ -44,10 +44,12 @@ describe('MenuBar', () => {
     onSetBackgroundColor: jest.fn(),
     onSetTextAlign: jest.fn(),
     onSetNumberFormat: jest.fn(),
+    onToggleWrapText: jest.fn(),
     onClearStyles: jest.fn(),
     isBold: false,
     isItalic: false,
     isUnderline: false,
+    isWrapText: false,
     onAbout: jest.fn(),
     onShortcuts: jest.fn(),
     onSearchReplace: jest.fn(),
@@ -173,6 +175,19 @@ describe('MenuBar', () => {
     expect(screen.getByText('Bold')).toBeTruthy();
     expect(screen.getByText('Italic')).toBeTruthy();
     expect(screen.getByText('Underline')).toBeTruthy();
+  });
+
+  it('Format menu shows Wrap Text item', () => {
+    render(<MenuBar {...defaultProps} />);
+    fireEvent.click(screen.getByText('Format'));
+    expect(screen.getByText('Wrap Text')).toBeTruthy();
+  });
+
+  it('Format menu triggers wrap text callback', () => {
+    render(<MenuBar {...defaultProps} />);
+    fireEvent.click(screen.getByText('Format'));
+    fireEvent.click(screen.getByText('Wrap Text'));
+    expect(defaultProps.onToggleWrapText).toHaveBeenCalled();
   });
 
   it('Format menu shows Alignment submenu', () => {

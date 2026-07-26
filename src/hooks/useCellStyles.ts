@@ -8,6 +8,7 @@ import {
   toggleBold,
   toggleItalic,
   toggleUnderline,
+  toggleWrapText,
 } from './useCellStyle';
 
 interface UseCellStylesParams {
@@ -35,6 +36,8 @@ interface UseCellStylesReturn {
   setTextAlign: (align: 'left' | 'center' | 'right') => void;
   /** Set number format on the selected cells. */
   setNumberFormat: (format: string) => void;
+  /** Toggle text wrapping on the selected cells. */
+  toggleWrapTextStyle: () => void;
   /** Clear all styling from the selected cells. */
   clearCellStyles: () => void;
 }
@@ -137,6 +140,11 @@ export function useCellStyles({
     [applyStyle]
   );
 
+  const toggleWrapTextStyle = useCallback(
+    () => applyStyle((s) => ({ whiteSpace: toggleWrapText(s) }), 'Wrap text'),
+    [applyStyle]
+  );
+
   const clearCellStyles = useCallback(
     () => {
       if (!selection) return;
@@ -188,6 +196,7 @@ export function useCellStyles({
     setBackgroundColor,
     setTextAlign,
     setNumberFormat,
+    toggleWrapTextStyle,
     clearCellStyles,
   };
 }

@@ -49,10 +49,12 @@ interface MenuBarProps {
   onSetBackgroundColor: (color: string) => void;
   onSetTextAlign: (align: 'left' | 'center' | 'right') => void;
   onSetNumberFormat: (format: string) => void;
+  onToggleWrapText: () => void;
   onClearStyles: () => void;
   isBold: boolean;
   isItalic: boolean;
   isUnderline: boolean;
+  isWrapText: boolean;
   // Help
   onAbout: () => void;
   onShortcuts: () => void;
@@ -104,6 +106,7 @@ export function MenuBar(props: MenuBarProps) {
         'format-bold': props.onToggleBold,
         'format-italic': props.onToggleItalic,
         'format-underline': props.onToggleUnderline,
+        'format-wrap-text': props.onToggleWrapText,
         'format-align-left': () => props.onSetTextAlign('left'),
         'format-align-center': () => props.onSetTextAlign('center'),
         'format-align-right': () => props.onSetTextAlign('right'),
@@ -199,6 +202,7 @@ export function MenuBar(props: MenuBarProps) {
     { id: 'format-bold', label: 'Bold', shortcut: 'Ctrl+B', icon: 'B', disabled: false },
     { id: 'format-italic', label: 'Italic', shortcut: 'Ctrl+I', icon: 'I', disabled: false },
     { id: 'format-underline', label: 'Underline', shortcut: 'Ctrl+U', icon: 'U', disabled: false },
+    { id: 'format-wrap-text', label: 'Wrap Text', icon: '↵', disabled: false },
     { id: 'sep-format-1', label: '', separator: true },
     {
       id: 'format-align',

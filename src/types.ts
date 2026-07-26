@@ -30,6 +30,9 @@ export interface CellStyle {
 
   /** Number format pattern (e.g., "0.00", "mm/dd/yyyy"). */
   numberFormat?: string;
+
+  /** Text wrapping behavior. 'nowrap' truncates with ellipsis (default), 'normal' wraps. */
+  whiteSpace?: 'normal' | 'nowrap' | 'pre';
 }
 
 /**

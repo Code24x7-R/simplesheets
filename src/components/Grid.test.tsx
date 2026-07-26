@@ -180,6 +180,40 @@ describe('Grid Component', () => {
     expect(cellEl.style.textDecoration).toBe('underline');
   });
 
+  it('renders wrapped text with whitespace-normal class', () => {
+    const sheet = createTestSheet();
+    sheet.cells['1:1'] = {
+      rawValue: 'Long wrapped text content',
+      style: { whiteSpace: 'normal' },
+    };
+    render(<Grid sheet={sheet} />);
+    const span = screen.getByText('Long wrapped text content');
+    expect(span.classList.contains('whitespace-normal')).toBe(true);
+    expect(span.classList.contains('break-words')).toBe(true);
+  });
+
+  it('renders pre-wrap text with whitespace-pre-wrap class', () => {
+    const sheet = createTestSheet();
+    sheet.cells['1:1'] = {
+      rawValue: 'Preformatted\nText',
+      style: { whiteSpace: 'pre' },
+    };
+    render(<Grid sheet={sheet} />);
+    const cell = screen.getByText(/Preformatted/);
+    expect(cell.classList.contains('whitespace-pre-wrap')).toBe(true);
+  });
+
+  it('renders nowrap text with truncate class (default)', () => {
+    const sheet = createTestSheet();
+    sheet.cells['1:1'] = {
+      rawValue: 'Truncated text',
+    };
+    render(<Grid sheet={sheet} />);
+    const span = screen.getByText('Truncated text');
+    expect(span.classList.contains('overflow-hidden')).toBe(true);
+    expect(span.classList.contains('text-ellipsis')).toBe(true);
+  });
+
   it('shows computed values for formulas', () => {
     render(<Grid sheet={createTestSheet()} />);
     expect(screen.getByText('84')).toBeInTheDocument();

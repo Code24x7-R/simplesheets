@@ -74,6 +74,7 @@ describe('useCellStyles', () => {
         backgroundColor: undefined,
         textAlign: 'left',
         numberFormat: undefined,
+        whiteSpace: 'nowrap',
       });
     });
 
@@ -88,6 +89,7 @@ describe('useCellStyles', () => {
         backgroundColor: undefined,
         textAlign: 'left',
         numberFormat: undefined,
+        whiteSpace: 'nowrap',
       });
     });
   });

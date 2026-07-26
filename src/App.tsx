@@ -935,6 +935,7 @@ function WorkbookView() {
     setBackgroundColor,
     setTextAlign,
     setNumberFormat,
+    toggleWrapTextStyle,
     clearCellStyles,
   } = useCellStyles({
     activeCell,
@@ -1238,10 +1239,12 @@ function WorkbookView() {
           onSetBackgroundColor={setBackgroundColor}
           onSetTextAlign={setTextAlign}
           onSetNumberFormat={setNumberFormat}
+          onToggleWrapText={toggleWrapTextStyle}
           onClearStyles={clearCellStyles}
           isBold={styleState.fontWeight === 'bold'}
           isItalic={styleState.fontStyle === 'italic'}
           isUnderline={styleState.textDecoration === 'underline'}
+          isWrapText={styleState.whiteSpace === 'normal'}
           onAbout={handleAbout}
           onShortcuts={handleShortcuts}
           onSearchReplace={handleSearchReplace}

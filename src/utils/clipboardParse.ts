@@ -99,7 +99,7 @@ export function detectNumeric(
  * column per line.
  */
 export function classifyPasteContent(
-  text: string,
+  _text: string,
   html: string | null
 ): PasteContentKind {
   // HTML table → rich grid

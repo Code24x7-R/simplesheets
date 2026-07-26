@@ -1278,7 +1278,13 @@ export function Grid({ sheet, onCellChange, onCellsChange, onSelect, selectedCel
                     />
                   ) : (
                     <span
-                      className="block w-full h-full px-1 overflow-hidden text-ellipsis"
+                      className={`block w-full h-full px-1 ${
+                        cell?.style?.whiteSpace === 'normal'
+                          ? 'whitespace-normal break-words'
+                          : cell?.style?.whiteSpace === 'pre'
+                          ? 'whitespace-pre-wrap break-words'
+                          : 'overflow-hidden text-ellipsis'
+                      }`}
                       style={cell?.style?.textAlign ? { textAlign: cell.style.textAlign } : undefined}
                     >
                       {getDisplayValue(cell)}

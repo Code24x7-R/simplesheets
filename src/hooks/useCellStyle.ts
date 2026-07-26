@@ -12,6 +12,7 @@ export interface CellStyleState {
   backgroundColor: string | undefined;
   textAlign: 'left' | 'center' | 'right';
   numberFormat: string | undefined;
+  whiteSpace: 'normal' | 'nowrap' | 'pre';
 }
 
 /** Default style for an empty/unstyled cell. */
@@ -23,6 +24,7 @@ export const DEFAULTCellStyle: CellStyleState = {
   backgroundColor: undefined,
   textAlign: 'left',
   numberFormat: undefined,
+  whiteSpace: 'nowrap',
 };
 
 /**
@@ -38,6 +40,7 @@ export function deriveCellStyleState(style: CellStyle | undefined): CellStyleSta
     backgroundColor: style?.backgroundColor,
     textAlign: style?.textAlign ?? 'left',
     numberFormat: style?.numberFormat,
+    whiteSpace: style?.whiteSpace ?? 'nowrap',
   };
 }
 
@@ -78,6 +81,14 @@ export function toggleUnderline(current: CellStyleState): 'none' | 'underline' |
     default:
       return 'underline';
   }
+}
+
+/**
+ * Toggles text wrap state: nowrap → normal → nowrap.
+ * 'pre' is an alternative wrap mode that preserves whitespace.
+ */
+export function toggleWrapText(current: CellStyleState): 'normal' | 'nowrap' {
+  return current.whiteSpace === 'normal' ? 'nowrap' : 'normal';
 }
 
 /**

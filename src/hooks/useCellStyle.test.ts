@@ -4,6 +4,7 @@ import {
   toggleBold,
   toggleItalic,
   toggleUnderline,
+  toggleWrapText,
   clearStyles,
   DEFAULTCellStyle,
   COLOR_PALETTE,
@@ -43,6 +44,7 @@ describe('deriveCellStyleState', () => {
       backgroundColor: '#FFFFFF',
       textAlign: 'center',
       numberFormat: '0.00',
+      whiteSpace: 'normal',
     };
     const result = deriveCellStyleState(style);
     expect(result).toEqual({
@@ -53,7 +55,18 @@ describe('deriveCellStyleState', () => {
       backgroundColor: '#FFFFFF',
       textAlign: 'center',
       numberFormat: '0.00',
+      whiteSpace: 'normal',
     });
+  });
+});
+
+describe('toggleWrapText', () => {
+  it('toggles nowrap to normal', () => {
+    expect(toggleWrapText(DEFAULTCellStyle)).toBe('normal');
+  });
+
+  it('toggles normal to nowrap', () => {
+    expect(toggleWrapText({ ...DEFAULTCellStyle, whiteSpace: 'normal' })).toBe('nowrap');
   });
 });
 
