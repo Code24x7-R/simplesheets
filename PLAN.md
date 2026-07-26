@@ -4,11 +4,13 @@
 Achieve a clean, clutter-free UI with standardized dropdown menus, formula wizard, function bar, and R1C1 reference format.
 
 ## Current State
-- **1260 tests** across **51 suites**, All passing
+- **1350 tests** across **55 suites**, All passing
 - Lint clean (0 warnings), Type-check clean (0 errors), Build clean
+- Coverage: **93.25% stmts, 83.38% branches, 94.03% funcs, 95.12% lines**
 - Phases 1-10 complete: Menu system, Formula bar, Function bar, R1C1 toggle, Layout polish, Nested Formula Wizard
 - Phase 11 complete: Cell Style System (Bold, Italic, Underline, Colors, Alignment)
 - Phase 12 complete: Search & Replace (find/replace with case, exact match, formula scope, multi-sheet)
+- Phase 13 complete: Coverage push — MenuBar 100%, FormulaWizard 100% lines, Grid 86%, FormulaBar 77% funcs, clipboardParse 100% funcs
 
 ### New UI Architecture (2026-07-25)
 | Component | Description |
@@ -26,25 +28,25 @@ Achieve a clean, clutter-free UI with standardized dropdown menus, formula wizar
 | SearchReplaceModal | Find & Replace dialog with configurable options |
 | sheetSearch | Core search and replace engine |
 
-### Coverage by file (lines %)
+### Coverage by file (2026-07-27)
 | File | Lines | Branches | Status |
 |------|-------|----------|--------|
-| App.tsx | 100% | 89.18% | ⚠️ branches |
-| Grid.tsx | 100% | 91.91% | ⚠️ branches |
-| FormulaBar.tsx | 95.43% | 91.66% | ⚠️ lines + functions |
-| formulaEngine.ts | 93.3% | 67.95% | ❌ major gap |
-| useCellEditing.ts | 100% | 95.32% | ⚠️ branches |
-| pdfExport.ts | 100% | 75% | ⚠️ branches |
-| HistoryContext.tsx | 100% | 66.66% | ⚠️ branches |
-| storageService.ts | 100% | 79.41% | ⚠️ branches |
-| csvService.ts | 98.18% | 84.37% | ⚠️ |
+| App.tsx | 89.57% | 70% | ⚠️ paste/edge cases |
+| Grid.tsx | 86.72% | 87.94% | ⚠️ POINT mode resize |
+| FormulaBar.tsx | 87.92% | 80.98% | ⚠️ hook integration |
+| MenuBar.tsx | 100% | 100% | ✅ |
+| FormulaWizard.tsx | 100% | 86.27% | ⚠️ branches |
+| clipboardParse.ts | 100% | 93.4% | ⚠️ branches |
+| formulaEngine.ts | 94.2% | 76.1% | ⚠️ branches |
+| SearchReplaceModal.tsx | 100% | 78.94% | ⚠️ branches |
+| useCellEditing.ts | 97.97% | 89.83% | ⚠️ branches |
+| pdfExport.ts | 95.6% | 75% | ⚠️ branches |
+| HistoryContext.tsx | 94.7% | 66.7% | ⚠️ branches |
 | excelImport.ts | 100% | 100% | ✅ |
-| excelExport.ts | 100% | 94.73% | ⚠️ |
-| formulaParser.ts | 100% | 93.75% | ⚠️ |
-| formulaValidation.ts | 100% | 90.9% | ⚠️ |
+| excelExport.ts | 98.6% | 94.7% | ⚠️ |
+| formulaParser.ts | 98.1% | 91.8% | ⚠️ |
 | sheetSearch.ts | 100% | 100% | ✅ |
-| SearchReplaceModal.tsx | 100% | 100% | ✅ |
-| All other files | 100% | 100% | ✅ |
+| DropdownMenu.tsx | 92.2% | 93.3% | ⚠️ |
 
 ## Strategy: Quick Wins First, Then Phased Complex Files
 
@@ -309,6 +311,19 @@ Achieve a clean, clutter-free UI with standardized dropdown menus, formula wizar
 ---
 
 ## Progress Log
+
+### 2026-07-27 (Coverage Push — MenuBar, FormulaWizard, Grid, FormulaBar, clipboardParse, SearchReplaceModal)
+- Fixed virtualizer.measure() cache bug causing gaps after column/row resize
+- MenuBar: 32 tests, 100% line/function coverage (added color/fill/number format action tests)
+- FormulaWizard: 21 tests, 100% line/function coverage (added nested fn picker, no-params, breadcrumb nav)
+- Grid: 89 tests (+11), added context-menu actions, row/col header keyboard nav, click-outside close
+- FormulaBar: +6 tests, function bar buttons, autocomplete Tab accept, Escape close
+- clipboardParse: 35 tests (+17), 100% lines/functions, added CSS/Excel format parsing tests
+- SearchReplaceModal: +3 tests (empty query, Enter key Find/Replace)
+- Fixed 6 App test mocks missing measure() method
+- **1350 tests, 55 suites, all passing**
+- Coverage: 93.25% stmts, 83.38% branches, 94.03% funcs, 95.12% lines
+- Commits: e9b343f, bc83a7d, 16428ef
 
 ### 2026-07-26 (Phase 12: Search & Replace — COMPLETE ✅)
 - Created `src/utils/sheetSearch.ts` — core search/replace engine with support for case sensitivity, exact match, formula inclusion, and multi-sheet scope
