@@ -1372,6 +1372,8 @@ function WorkbookView() {
           setPendingPasteHtml(null);
           setPendingPastePlain(null);
         }}
+        html={pendingPasteHtml}
+        plain={pendingPastePlain}
       />
       <FormulaWizard
         wizard={formulaWizard}
