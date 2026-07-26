@@ -701,7 +701,7 @@ export function FormulaBar({
       if (segments.length === 0) return null;
 
       return (
-        <div className="absolute inset-0 pointer-events-none font-mono text-sm flex items-center px-1 overflow-hidden whitespace-nowrap">
+        <div className="absolute inset-0 pointer-events-none font-mono text-sm flex items-center px-1 whitespace-nowrap min-w-full">
           {segments.map((seg, i) => (
             <span
               key={i}
@@ -782,17 +782,17 @@ export function FormulaBar({
         )}
 
         {/* Formula input area */}
-        <div className="flex-1 relative overflow-hidden">
+        <div className="flex-1 relative overflow-x-auto">
           {/* Colored display layer (underlay) */}
           {formulaDisplay}
           {/* Actual input — horizontal scroll for long content */}
           <input
             ref={inputRef}
             type="text"
-            className={`w-full outline-none font-mono text-sm relative bg-transparent overflow-x-auto formula-input-scroll ${
+            className={`outline-none font-mono text-sm relative bg-transparent min-w-full formula-input-scroll ${
               formulaDisplay ? 'text-transparent selection:bg-blue-200' : ''
             }`}
-            style={{ caretColor: '#000' }}
+            style={{ caretColor: '#000', minWidth: '100%' }}
             placeholder="Enter a value or formula (e.g., =SUM(A1:A10))"
             value={displayValue}
             onChange={handleChange}
