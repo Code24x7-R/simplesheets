@@ -429,6 +429,16 @@ export function FormulaBar({
       return;
     }
 
+    // ── Handle Shift+Arrow for text selection in EDIT mode ──────────
+    // Text selection is a view concern - let native input handle it
+    // But in POINT mode, Shift+Arrow extends range selection (FSM concern)
+    const isEditingText = session.state === 'EDIT' || session.state === 'ENTER';
+    if (isEditingText && e.shiftKey && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+      // Don't preventDefault - let native input create selection
+      // The cursor sync effect will preserve the selection
+      return;
+    }
+
     // ── Handle selection-based keys natively ─────────────────────────
     // If text is selected, let the native input handle Backspace/Delete/printable
     // keys. The onChange handler will sync the result to the FSM.
@@ -444,7 +454,7 @@ export function FormulaBar({
     // ── Forward all other keys to FSM ─────────────────────────────────
     e.preventDefault();
     onRawKeyDown(e);
-  }, [autoCompleteOpen, autoCompleteMatches, autoCompleteIndex, acceptAutoComplete, value, onChange, onRawCaretMove, onRawKeyDown]);
+  }, [autoCompleteOpen, autoCompleteMatches, autoCompleteIndex, acceptAutoComplete, value, onChange, onRawCaretMove, onRawKeyDown, session.state]);
 
   const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
