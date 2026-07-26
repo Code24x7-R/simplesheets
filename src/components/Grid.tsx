@@ -7,6 +7,7 @@ import type { HighlightedRange } from './FormulaBar';
 import type { ReferenceFormat } from '../hooks/useReferenceFormat';
 import { ResizeHandle } from './ResizeHandle';
 import { formatNumberValue, isNumberFormat, isNumericValue } from '../utils/numberFormat';
+import { hasClipboardData } from '../utils/clipboard';
 
 /** Point mode selection range (for visual feedback during formula editing). */
 export interface PointModeSelection {
@@ -203,6 +204,16 @@ export function Grid({ sheet, onCellChange, onCellsChange, onSelect, selectedCel
   const virtualRows = rowVirtualizer.getVirtualItems();
   const virtualColumns = columnVirtualizer.getVirtualItems();
 
+  // ─── Re-measure virtualizers when dimensions change ──────────────────
+  // The virtualizer caches measurements keyed on count/gap/etc., but NOT
+  // on estimateSize. When columnWidths or rowHeights change (resize, paste),
+  // we must bust the cache so start/size values reflect the new dimensions.
+  // Without this, stale start positions cause visual gaps between columns/rows.
+  useEffect(() => {
+    columnVirtualizer.measure();
+    rowVirtualizer.measure();
+  }, [columnWidths, rowHeights, columnVirtualizer, rowVirtualizer]);
+
   // ─── Auto-scroll during POINT mode (Spec §5) ───────────────────────────
   // When the pointed-to cell is outside the viewport, scroll it into view.
   useEffect(() => {
@@ -251,13 +262,18 @@ export function Grid({ sheet, onCellChange, onCellsChange, onSelect, selectedCel
           break;
         case 'v':
         case 'V':
-          e.preventDefault();
-          window.dispatchEvent(new CustomEvent('simplesheets:paste', {
-            detail: {
-              startRow: sel.startRow, startCol: sel.startCol,
-              selectionType: sel.type,
-            },
-          }));
+          // Only intercept if we have internal clipboard data.
+          // Otherwise let the native paste event fire so external
+          // clipboard data (from other apps) can be pasted.
+          if (hasClipboardData()) {
+            e.preventDefault();
+            window.dispatchEvent(new CustomEvent('simplesheets:paste', {
+              detail: {
+                startRow: sel.startRow, startCol: sel.startCol,
+                selectionType: sel.type,
+              },
+            }));
+          }
           break;
       }
     };

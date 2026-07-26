@@ -16,6 +16,7 @@ jest.mock('@tanstack/react-virtual', () => ({
         },
         getTotalSize: () => 500,
         scrollToIndex: jest.fn(),
+        measure: jest.fn(),
       };
     }
     return {
@@ -28,6 +29,7 @@ jest.mock('@tanstack/react-virtual', () => ({
       },
       getTotalSize: () => 140,
       scrollToIndex: jest.fn(),
+      measure: jest.fn(),
     };
   },
 }));

@@ -192,4 +192,52 @@ describe('FormulaWizard', () => {
     fireEvent.click(screen.getByText('Cancel'));
     expect(closeWizard).toHaveBeenCalled();
   });
+
+  it('shows nested function picker when f(x) button is clicked', () => {
+    const enterNested = jest.fn();
+    render(<FormulaWizard {...defaultProps} enterNested={enterNested} />);
+    // Two params allow nested functions → two f(x) buttons
+    const fxButtons = screen.getAllByTitle('Insert nested function');
+    expect(fxButtons.length).toBeGreaterThanOrEqual(1);
+    // Click the first f(x) — picker should appear with function list
+    fireEvent.click(fxButtons[0]);
+    // The picker renders available functions — verify one is shown
+    expect(screen.getByText('AVERAGE')).toBeInTheDocument();
+    // Clicking a function in the picker calls enterNested
+    fireEvent.click(screen.getByText('AVERAGE'));
+    expect(enterNested).toHaveBeenCalled();
+  });
+
+  it('shows no-parameters message for parameterless functions', () => {
+    const wizard = createWizardState({
+      activeSchema: {
+        name: 'NOW',
+        category: 'DATE',
+        description: 'Returns the current date and time',
+        returnType: 'DATE',
+        syntaxTemplate: 'NOW()',
+        parameters: [],
+      },
+    });
+    render(<FormulaWizard {...defaultProps} wizard={wizard} />);
+    expect(screen.getByText('This function takes no parameters.')).toBeInTheDocument();
+  });
+
+  it('navigates to parent when breadcrumb is clicked', () => {
+    const goBack = jest.fn();
+    const wizard = createWizardState({
+      nestingDepth: 3,
+      nodeStack: [
+        { id: 'node_1', functionName: 'IF', parameterValues: {} },
+        { id: 'node_2', parentId: 'node_1', functionName: 'ROUND', parameterValues: {} },
+        { id: 'node_3', parentId: 'node_2', functionName: 'SUM', parameterValues: {} },
+      ],
+      activeNode: { id: 'node_3', parentId: 'node_2', functionName: 'SUM', parameterValues: {} },
+    });
+    render(<FormulaWizard {...defaultProps} wizard={wizard} goBack={goBack} />);
+    // Click the IF breadcrumb (first in stack) — should call goBack twice
+    const buttons = screen.getAllByRole('button', { name: 'IF' });
+    fireEvent.click(buttons[0]);
+    expect(goBack).toHaveBeenCalledTimes(2);
+  });
 });

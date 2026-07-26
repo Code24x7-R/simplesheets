@@ -208,13 +208,126 @@ describe('MenuBar', () => {
     expect(defaultProps.onSetTextColor).toHaveBeenCalledWith('#FF0000');
   });
 
-  it('Format menu triggers alignment callback', () => {
+  it('Format menu triggers text color black callback', () => {
     render(<MenuBar {...defaultProps} />);
     fireEvent.click(screen.getByText('Format'));
-    const alignLabel = screen.getByText('Alignment');
-    fireEvent.mouseEnter(alignLabel);
+    fireEvent.mouseEnter(screen.getByText('Text Color'));
+    fireEvent.click(screen.getByText('Black'));
+    expect(defaultProps.onSetTextColor).toHaveBeenCalledWith('#000000');
+  });
+
+  it('Format menu triggers text color blue callback', () => {
+    render(<MenuBar {...defaultProps} />);
+    fireEvent.click(screen.getByText('Format'));
+    fireEvent.mouseEnter(screen.getByText('Text Color'));
+    fireEvent.click(screen.getByText('Blue'));
+    expect(defaultProps.onSetTextColor).toHaveBeenCalledWith('#0000FF');
+  });
+
+  it('Format menu triggers text color green callback', () => {
+    render(<MenuBar {...defaultProps} />);
+    fireEvent.click(screen.getByText('Format'));
+    fireEvent.mouseEnter(screen.getByText('Text Color'));
+    fireEvent.click(screen.getByText('Green'));
+    expect(defaultProps.onSetTextColor).toHaveBeenCalledWith('#00FF00');
+  });
+
+  it('Format menu triggers fill color yellow callback', () => {
+    render(<MenuBar {...defaultProps} />);
+    fireEvent.click(screen.getByText('Format'));
+    fireEvent.mouseEnter(screen.getByText('Fill Color'));
+    fireEvent.click(screen.getByText('Yellow'));
+    expect(defaultProps.onSetBackgroundColor).toHaveBeenCalledWith('#FFFF00');
+  });
+
+  it('Format menu triggers fill color red callback', () => {
+    render(<MenuBar {...defaultProps} />);
+    fireEvent.click(screen.getByText('Format'));
+    fireEvent.mouseEnter(screen.getByText('Fill Color'));
+    // 'Red' appears in both Text Color and Fill Color submenus — scope to the open submenu
+    const fillRed = screen.getAllByText('Red').find(
+      (el) => el.closest('.menu-item')?.querySelector('.menu-item-label')?.textContent === 'Red'
+    ) as HTMLElement;
+    fireEvent.click(fillRed);
+    expect(defaultProps.onSetBackgroundColor).toHaveBeenCalledWith('#FFCCCC');
+  });
+
+  it('Format menu triggers fill color green callback', () => {
+    render(<MenuBar {...defaultProps} />);
+    fireEvent.click(screen.getByText('Format'));
+    fireEvent.mouseEnter(screen.getByText('Fill Color'));
+    const fillGreen = screen.getAllByText('Green').find(
+      (el) => el.closest('.menu-item')?.querySelector('.menu-item-label')?.textContent === 'Green'
+    ) as HTMLElement;
+    fireEvent.click(fillGreen);
+    expect(defaultProps.onSetBackgroundColor).toHaveBeenCalledWith('#CCFFCC');
+  });
+
+  it('Format menu triggers fill color blue callback', () => {
+    render(<MenuBar {...defaultProps} />);
+    fireEvent.click(screen.getByText('Format'));
+    fireEvent.mouseEnter(screen.getByText('Fill Color'));
+    const fillBlue = screen.getAllByText('Blue').find(
+      (el) => el.closest('.menu-item')?.querySelector('.menu-item-label')?.textContent === 'Blue'
+    ) as HTMLElement;
+    fireEvent.click(fillBlue);
+    expect(defaultProps.onSetBackgroundColor).toHaveBeenCalledWith('#CCCCFF');
+  });
+
+  it('Format menu triggers number format general callback', () => {
+    render(<MenuBar {...defaultProps} />);
+    fireEvent.click(screen.getByText('Format'));
+    fireEvent.mouseEnter(screen.getByText('Number Format'));
+    fireEvent.click(screen.getByText('General'));
+    expect(defaultProps.onSetNumberFormat).toHaveBeenCalledWith('General');
+  });
+
+  it('Format menu triggers number format number callback', () => {
+    render(<MenuBar {...defaultProps} />);
+    fireEvent.click(screen.getByText('Format'));
+    fireEvent.mouseEnter(screen.getByText('Number Format'));
+    fireEvent.click(screen.getByText('Number (0.00)'));
+    expect(defaultProps.onSetNumberFormat).toHaveBeenCalledWith('0.00');
+  });
+
+  it('Format menu triggers number format currency callback', () => {
+    render(<MenuBar {...defaultProps} />);
+    fireEvent.click(screen.getByText('Format'));
+    fireEvent.mouseEnter(screen.getByText('Number Format'));
+    fireEvent.click(screen.getByText('Currency'));
+    expect(defaultProps.onSetNumberFormat).toHaveBeenCalledWith('$#,##0.00');
+  });
+
+  it('Format menu triggers number format percent callback', () => {
+    render(<MenuBar {...defaultProps} />);
+    fireEvent.click(screen.getByText('Format'));
+    fireEvent.mouseEnter(screen.getByText('Number Format'));
+    fireEvent.click(screen.getByText('Percent'));
+    expect(defaultProps.onSetNumberFormat).toHaveBeenCalledWith('0.00%');
+  });
+
+  it('Format menu triggers alignment left callback', () => {
+    render(<MenuBar {...defaultProps} />);
+    fireEvent.click(screen.getByText('Format'));
+    fireEvent.mouseEnter(screen.getByText('Alignment'));
+    fireEvent.click(screen.getByText('Left'));
+    expect(defaultProps.onSetTextAlign).toHaveBeenCalledWith('left');
+  });
+
+  it('Format menu triggers alignment center callback', () => {
+    render(<MenuBar {...defaultProps} />);
+    fireEvent.click(screen.getByText('Format'));
+    fireEvent.mouseEnter(screen.getByText('Alignment'));
     fireEvent.click(screen.getByText('Center'));
     expect(defaultProps.onSetTextAlign).toHaveBeenCalledWith('center');
+  });
+
+  it('Format menu triggers alignment right callback', () => {
+    render(<MenuBar {...defaultProps} />);
+    fireEvent.click(screen.getByText('Format'));
+    fireEvent.mouseEnter(screen.getByText('Alignment'));
+    fireEvent.click(screen.getByText('Right'));
+    expect(defaultProps.onSetTextAlign).toHaveBeenCalledWith('right');
   });
 
   it('Format menu triggers clear styles callback', () => {

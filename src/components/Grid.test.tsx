@@ -2,6 +2,16 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { Grid } from './Grid';
 import type { Sheet } from '../types';
 
+// Mutable flag to control hasClipboardData mock behavior in tests
+let clipboardMockHasData = false;
+jest.mock('../utils/clipboard', () => {
+  const actual = jest.requireActual('../utils/clipboard');
+  return {
+    ...actual,
+    hasClipboardData: () => clipboardMockHasData,
+  };
+});
+
 // Mock the virtualizer to render all items in test environment
 jest.mock('@tanstack/react-virtual', () => ({
   useVirtualizer: (options: { horizontal?: boolean }) => {
@@ -59,6 +69,10 @@ function createTestSheet(overrides: Partial<Sheet> = {}): Sheet {
 }
 
 describe('Grid Component', () => {
+  beforeEach(() => {
+    clipboardMockHasData = false;
+  });
+
   it('renders without crashing', () => {
     const { container } = render(<Grid sheet={createTestSheet()} />);
     expect(container.querySelector('[tabindex="0"]')).toBeInTheDocument();
@@ -687,6 +701,31 @@ describe('Grid Component', () => {
     expect(onRowResize).toHaveBeenCalledWith(0, 68);
   });
 
+  it('renders updated column width from columnWidths prop (no stale virtualizer cache)', () => {
+    const { rerender } = render(<Grid sheet={createTestSheet()} />);
+
+    // Rerender with an explicit column width override
+    const sheetWithWidths = createTestSheet({ columnWidths: { 0: 200 } });
+    rerender(<Grid sheet={sheetWithWidths} />);
+
+    // The column header must reflect the new width. Without measure() busting
+    // the virtualizer cache, stale start positions would cause visual gaps.
+    const colHeaderA = screen.getByText('A').closest('.grid-cell-header') as HTMLElement;
+    expect(colHeaderA.style.width).toBe('200px');
+  });
+
+  it('renders updated row height from rowHeights prop (no stale virtualizer cache)', () => {
+    const { rerender } = render(<Grid sheet={createTestSheet()} />);
+
+    // Rerender with an explicit row height override
+    const sheetWithHeights = createTestSheet({ rowHeights: { 0: 50 } });
+    rerender(<Grid sheet={sheetWithHeights} />);
+
+    // The row header must reflect the new height
+    const rowHeader1 = screen.getByText('1').closest('.grid-cell-header') as HTMLElement;
+    expect(rowHeader1.style.height).toBe('50px');
+  });
+
   // ─── Point Mode ────────────────────────────────────────────────────
 
   it('calls onCellPick when clicking in point mode', () => {
@@ -725,7 +764,10 @@ describe('Grid Component', () => {
     window.removeEventListener('simplesheets:cut', handler);
   });
 
-  it('dispatches paste event', () => {
+  it('dispatches paste event when internal clipboard has data', () => {
+    // Simulate internal clipboard data (from a previous copy/cut)
+    clipboardMockHasData = true;
+
     render(<Grid sheet={createTestSheet()} />);
 
     // Select cell A1
@@ -740,6 +782,28 @@ describe('Grid Component', () => {
     expect(handler).toHaveBeenCalled();
 
     window.removeEventListener('simplesheets:paste', handler);
+    clipboardMockHasData = false;
+  });
+
+  it('does not dispatch paste event when internal clipboard is empty', () => {
+    // No internal clipboard data — Ctrl+V should fall through to native paste
+    clipboardMockHasData = false;
+
+    render(<Grid sheet={createTestSheet()} />);
+
+    fireEvent.mouseDown(screen.getByText('A1'));
+
+    const handler = jest.fn();
+    window.addEventListener('simplesheets:paste', handler);
+
+    const grid = document.querySelector('[tabindex="0"]') as HTMLElement;
+    fireEvent.keyDown(grid, { key: 'v', ctrlKey: true });
+
+    // Internal paste handler should NOT fire (lets native paste handle external data)
+    expect(handler).not.toHaveBeenCalled();
+
+    window.removeEventListener('simplesheets:paste', handler);
+    jest.restoreAllMocks();
   });
 
   // ─── Keyboard Navigation ─────────────────────────────────────────
@@ -1180,6 +1244,73 @@ describe('Grid Component', () => {
     expect(onSelect).toHaveBeenCalledWith(4, 0); // rowCount=5, so lastRow=4
   });
 
+  it('extends row selection downward on ArrowDown', () => {
+    const onSelect = jest.fn();
+    render(<Grid sheet={createTestSheet()} onSelect={onSelect} />);
+
+    // Select row 0
+    const rowHeader = screen.getByText('1').closest('.grid-cell-header') as HTMLElement;
+    fireEvent.mouseDown(rowHeader);
+
+    const grid = document.querySelector('[tabindex="0"]') as HTMLElement;
+    fireEvent.keyDown(grid, { key: 'ArrowDown' });
+
+    // Should move to row 1 (still full-row selection)
+    expect(onSelect).toHaveBeenCalledWith(1, 0);
+  });
+
+  it('starts editing first cell in row on Enter key with row selected', () => {
+    const onCellChange = jest.fn();
+    render(<Grid sheet={createTestSheet()} onCellChange={onCellChange} />);
+
+    // Select row 0
+    const rowHeader = screen.getByText('1').closest('.grid-cell-header') as HTMLElement;
+    fireEvent.mouseDown(rowHeader);
+
+    const grid = document.querySelector('[tabindex="0"]') as HTMLElement;
+    fireEvent.keyDown(grid, { key: 'Enter' });
+
+    // Should show editing input for cell (0, 0)
+    const input = document.querySelector('input.border-blue-500') as HTMLInputElement;
+    expect(input).not.toBeNull();
+  });
+
+  it('starts editing first cell in column on F2 key with column selected', () => {
+    render(<Grid sheet={createTestSheet()} />);
+
+    // Select column A
+    const colHeader = screen.getByText('A').closest('.grid-cell-header') as HTMLElement;
+    fireEvent.mouseDown(colHeader);
+
+    const grid = document.querySelector('[tabindex="0"]') as HTMLElement;
+    fireEvent.keyDown(grid, { key: 'F2' });
+
+    // Should show editing input for cell (0, 0)
+    const input = document.querySelector('input.border-blue-500') as HTMLInputElement;
+    expect(input).not.toBeNull();
+  });
+
+  it('exits editing on Escape with row selected', () => {
+    const onCellChange = jest.fn();
+    render(<Grid sheet={createTestSheet()} onCellChange={onCellChange} />);
+
+    // Select row 0 and start editing
+    const rowHeader = screen.getByText('1').closest('.grid-cell-header') as HTMLElement;
+    fireEvent.mouseDown(rowHeader);
+
+    const grid = document.querySelector('[tabindex="0"]') as HTMLElement;
+    fireEvent.keyDown(grid, { key: 'Enter' });
+
+    const input = document.querySelector('input.border-blue-500') as HTMLInputElement;
+    expect(input).not.toBeNull();
+
+    // Press Escape
+    fireEvent.keyDown(input, { key: 'Escape' });
+
+    // Input should be gone
+    expect(document.querySelector('input.border-blue-500')).toBeNull();
+  });
+
   // ─── Keyboard Shortcuts ────────────────────────────────────────
 
   it('does not handle undo/redo keys (parent handles them)', () => {
@@ -1289,6 +1420,86 @@ describe('Grid Component', () => {
 
     fireEvent.mouseDown(screen.getByText('Delete Column'));
     expect(onDeleteCol).toHaveBeenCalledWith(1);
+  });
+
+  it('calls onInsertRowBelow when Insert Row Below is clicked from context menu', () => {
+    const onInsertRowBelow = jest.fn();
+    render(
+      <Grid
+        sheet={createTestSheet()}
+        onInsertRowBelow={onInsertRowBelow}
+      />
+    );
+
+    const rowHeader = screen.getByText('2').closest('.grid-cell-header') as HTMLElement;
+    fireEvent.contextMenu(rowHeader);
+
+    fireEvent.mouseDown(screen.getByText('Insert Row Below'));
+    expect(onInsertRowBelow).toHaveBeenCalledWith(1);
+  });
+
+  it('calls onInsertColLeft when Insert Column Left is clicked from context menu', () => {
+    const onInsertColLeft = jest.fn();
+    render(
+      <Grid
+        sheet={createTestSheet()}
+        onInsertColLeft={onInsertColLeft}
+      />
+    );
+
+    const colHeader = screen.getByText('B').closest('.grid-cell-header') as HTMLElement;
+    fireEvent.contextMenu(colHeader);
+
+    fireEvent.mouseDown(screen.getByText('Insert Column Left'));
+    expect(onInsertColLeft).toHaveBeenCalledWith(1);
+  });
+
+  it('calls onInsertColRight when Insert Column Right is clicked from context menu', () => {
+    const onInsertColRight = jest.fn();
+    render(
+      <Grid
+        sheet={createTestSheet()}
+        onInsertColRight={onInsertColRight}
+      />
+    );
+
+    const colHeader = screen.getByText('B').closest('.grid-cell-header') as HTMLElement;
+    fireEvent.contextMenu(colHeader);
+
+    fireEvent.mouseDown(screen.getByText('Insert Column Right'));
+    expect(onInsertColRight).toHaveBeenCalledWith(1);
+  });
+
+  it('calls onDeleteRow when Delete Row is clicked from context menu', () => {
+    const onDeleteRow = jest.fn();
+    render(
+      <Grid
+        sheet={createTestSheet()}
+        onDeleteRow={onDeleteRow}
+      />
+    );
+
+    const rowHeader = screen.getByText('2').closest('.grid-cell-header') as HTMLElement;
+    fireEvent.contextMenu(rowHeader);
+
+    fireEvent.mouseDown(screen.getByText('Delete Row'));
+    expect(onDeleteRow).toHaveBeenCalledWith(1);
+  });
+
+  it('closes header context menu when clicking outside', () => {
+    render(
+      <Grid
+        sheet={createTestSheet()}
+      />
+    );
+
+    const rowHeader = screen.getByText('1').closest('.grid-cell-header') as HTMLElement;
+    fireEvent.contextMenu(rowHeader);
+    expect(screen.getByText('Insert Row Above')).toBeInTheDocument();
+
+    // Click outside the menu — should close it
+    fireEvent.mouseDown(document.body);
+    expect(screen.queryByText('Insert Row Above')).not.toBeInTheDocument();
   });
 
   // ─── Clipboard Range (Marching Ants) ─────────────────────────────────
