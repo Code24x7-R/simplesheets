@@ -436,6 +436,8 @@ function WorkbookView() {
   const handleFormulaFocusEditing = useCallback(
     (caretPosition: number) => {
       startEditAt(caretPosition);
+      // Immediately sync cursor position so caret appears at click point
+      setFormulaCursorPos(caretPosition);
     },
     [startEditAt],
   );

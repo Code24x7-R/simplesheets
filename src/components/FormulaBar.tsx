@@ -398,6 +398,25 @@ export function FormulaBar({
     // When integrated with the editing FSM hook, delegate ALL key handling
     // to the hook — it owns the buffer, caret, and POINT mode state.
     if (onEditingKey) {
+      // Backspace/Delete: Handle native selection (from mouse)
+      // The FSM hook doesn't track native input selection, so we handle
+      // it here when there's an active selection in the input element.
+      if (e.key === 'Backspace' || e.key === 'Delete') {
+        const input = inputRef.current;
+        if (input && input.selectionStart !== input.selectionEnd) {
+          e.preventDefault();
+          const selStart = input.selectionStart ?? 0;
+          const selEnd = input.selectionEnd ?? 0;
+          const start = Math.min(selStart, selEnd);
+          const end = Math.max(selStart, selEnd);
+          const newValue = displayValue.slice(0, start) + displayValue.slice(end);
+          onChange(newValue);
+          // Set cursor to start of deleted selection
+          setInternalCursorPos(start);
+          onCursorChange?.(start);
+          return;
+        }
+      }
       // Ctrl+C: Copy selected text to clipboard
       if ((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'C')) {
         const input = inputRef.current;
