@@ -223,4 +223,52 @@ describe('SearchReplaceModal', () => {
     // Sheet1: "hello", "Hello World" = 2; Sheet2: "hello again" = 1 → total 3
     expect(screen.getByText(/Found/)).toBeTruthy();
   });
+
+  it('searching with empty query does not show results', () => {
+    render(
+      <SearchReplaceModal
+        isOpen={true}
+        onClose={jest.fn()}
+        workbook={makeWorkbook()}
+        activeSheetIndex={0}
+        onUpdate={jest.fn()}
+      />,
+    );
+    // Click Search with empty query — should not show results
+    fireEvent.click(screen.getByText('🔍 Search'));
+    expect(screen.queryByText(/Found/)).toBeNull();
+  });
+
+  it('pressing Enter in Find input triggers search', () => {
+    render(
+      <SearchReplaceModal
+        isOpen={true}
+        onClose={jest.fn()}
+        workbook={makeWorkbook()}
+        activeSheetIndex={0}
+        onUpdate={jest.fn()}
+      />,
+    );
+    const findInput = screen.getByLabelText('Find');
+    fireEvent.change(findInput, { target: { value: 'hello' } });
+    fireEvent.keyDown(findInput, { key: 'Enter' });
+    expect(screen.getByText(/Found/)).toBeTruthy();
+  });
+
+  it('pressing Enter in Replace input triggers search', () => {
+    render(
+      <SearchReplaceModal
+        isOpen={true}
+        onClose={jest.fn()}
+        workbook={makeWorkbook()}
+        activeSheetIndex={0}
+        onUpdate={jest.fn()}
+      />,
+    );
+    const findInput = screen.getByLabelText('Find');
+    fireEvent.change(findInput, { target: { value: 'hello' } });
+    const replaceInput = screen.getByLabelText('Replace with');
+    fireEvent.keyDown(replaceInput, { key: 'Enter' });
+    expect(screen.getByText(/Found/)).toBeTruthy();
+  });
 });
