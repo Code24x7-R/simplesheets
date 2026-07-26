@@ -7,7 +7,7 @@ import type { HighlightedRange } from './FormulaBar';
 import type { ReferenceFormat } from '../hooks/useReferenceFormat';
 import { ResizeHandle } from './ResizeHandle';
 import { formatNumberValue, isNumberFormat, isNumericValue } from '../utils/numberFormat';
-import { hasClipboardData } from '../utils/clipboard';
+import { hasClipboardData, getClipboard } from '../utils/clipboard';
 
 /** Point mode selection range (for visual feedback during formula editing). */
 export interface PointModeSelection {
@@ -112,6 +112,7 @@ export function Grid({ sheet, onCellChange, onCellsChange, onSelect, selectedCel
   const [selection, setSelection] = useState<Selection | null>(null);
   const [editingCell, setEditingCell] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
+  const editInputRef = useRef<HTMLInputElement>(null);
   // ─── Resize drag state ───────────────────────────────────────────────
   // Drag tracking via ref (NOT state) so mousemove never triggers re-render.
   // Live preview is done by direct DOM manipulation for zero-lag feedback.
@@ -162,6 +163,20 @@ export function Grid({ sheet, onCellChange, onCellsChange, onSelect, selectedCel
   }, [selection, onSelectionChange]);
 
   const { defaultRowHeight, defaultColWidth, columnWidths, rowHeights, rowCount, columnCount, cells } = sheet;
+
+  // ─── Insert at Cursor Helper ─────────────────────────────────────
+  // Inserts text at the cursor position in an input element, replacing
+  // any selected text. Falls back to appending at the end.
+  const insertAtCursor = useCallback((input: HTMLInputElement, text: string) => {
+    const start = input.selectionStart ?? editValue.length;
+    const end = input.selectionEnd ?? editValue.length;
+    const newValue = editValue.slice(0, start) + text + editValue.slice(end);
+    setEditValue(newValue);
+    // Move cursor after inserted text (deferred to after state update)
+    requestAnimationFrame(() => {
+      input.selectionStart = input.selectionEnd = start + text.length;
+    });
+  }, [editValue]);
 
   // ─── Display Value Helper ─────────────────────────────────────────
   // Returns the display string for a cell, applying number formatting if the cell
@@ -262,6 +277,17 @@ export function Grid({ sheet, onCellChange, onCellsChange, onSelect, selectedCel
           break;
         case 'v':
         case 'V':
+          // If editing a cell, insert clipboard content at cursor position
+          if (editingCell && editInputRef.current) {
+            e.preventDefault();
+            const internalData = getClipboard();
+            if (internalData && internalData.cells && internalData.rowCount > 0) {
+              // Insert first cell value at cursor position
+              const firstValue = internalData.cells[0]?.[0]?.rawValue ?? '';
+              insertAtCursor(editInputRef.current, firstValue);
+            }
+            return;
+          }
           // Only intercept if we have internal clipboard data.
           // Otherwise let the native paste event fire so external
           // clipboard data (from other apps) can be pasted.
@@ -1252,10 +1278,19 @@ export function Grid({ sheet, onCellChange, onCellsChange, onSelect, selectedCel
                 >
                   {isEditing ? (
                     <input
+                      ref={editInputRef}
                       autoFocus
                       className="w-full h-full outline-none bg-white border border-blue-500 px-1 font-mono text-sm"
                       value={editValue}
                       onChange={(e) => setEditValue(e.target.value)}
+                      onPaste={(e) => {
+                        // Handle native paste: insert plain text at cursor
+                        const text = e.clipboardData?.getData('text/plain');
+                        if (text && !hasClipboardData()) {
+                          e.preventDefault();
+                          insertAtCursor(e.currentTarget, text);
+                        }
+                      }}
                       onBlur={commitEdit}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') {

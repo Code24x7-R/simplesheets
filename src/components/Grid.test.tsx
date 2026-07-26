@@ -1246,6 +1246,54 @@ describe('Grid Component', () => {
     expect(input.value).toBe('N');
   });
 
+  // ─── Inline Cell Editing Paste ───────────────────────────────────
+
+  it('inserts pasted text at cursor position during cell editing', () => {
+    const onCellChange = jest.fn();
+    render(<Grid sheet={createTestSheet()} onCellChange={onCellChange} selectedCell={{ row: 0, col: 0 }} />);
+    const grid = document.querySelector('[tabindex="0"]') as HTMLElement;
+
+    // Start editing by typing
+    fireEvent.keyDown(grid, { key: 'a' });
+    const input = document.querySelector('input.border-blue-500') as HTMLInputElement;
+    expect(input).not.toBeNull();
+    expect(input.value).toBe('a');
+
+    // Move cursor to end and paste text
+    input.selectionStart = input.selectionEnd = 1;
+    fireEvent.paste(input, {
+      clipboardData: {
+        getData: () => 'INSERTED',
+      },
+    });
+
+    // Text should be inserted at cursor position
+    expect(input.value).toBe('aINSERTED');
+  });
+
+  it('replaces selected text when pasting during cell editing', () => {
+    const onCellChange = jest.fn();
+    render(<Grid sheet={createTestSheet()} onCellChange={onCellChange} selectedCell={{ row: 0, col: 0 }} />);
+    const grid = document.querySelector('[tabindex="0"]') as HTMLElement;
+
+    // Start editing and type some text
+    fireEvent.keyDown(grid, { key: 'a' });
+    const input = document.querySelector('input.border-blue-500') as HTMLInputElement;
+    fireEvent.change(input, { target: { value: 'abcdef' } });
+
+    // Select 'cd' and paste replacement
+    input.selectionStart = 2;
+    input.selectionEnd = 4;
+    fireEvent.paste(input, {
+      clipboardData: {
+        getData: () => 'XY',
+      },
+    });
+
+    // Selected text should be replaced
+    expect(input.value).toBe('abXYef');
+  });
+
   // ─── Row / Column Header Keyboard Navigation ─────────────────────
 
   it('switches from row selection to cell selection on arrow left/right', () => {
