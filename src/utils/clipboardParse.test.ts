@@ -291,5 +291,56 @@ describe('clipboardParse', () => {
       const text = 'Hello, world\nNo comma here\nOne, two, three';
       expect(classifyPasteContent(text, null)).toBe('grid');
     });
+
+    it('classifies HTML without table as grid (avoids unnecessary parsing)', () => {
+      // MathJax content has HTML but no table
+      const html = '<span class="math"><mjx-container><svg>...</svg></mjx-container></span>';
+      expect(classifyPasteContent('test', html)).toBe('grid');
+    });
+
+    it('classifies HTML with table attribute in style as grid (no false positive)', () => {
+      // display:table-cell doesn't contain '<table' substring
+      const html = '<div style="display:table-cell">test</div>';
+      expect(classifyPasteContent('test', html)).toBe('grid');
+    });
+  });
+
+  describe('parseHtmlTable safety limit', () => {
+    it('caps processing at MAX_HTML_TABLE_CELLS to prevent lockups', () => {
+      // Generate a very large table that would cause performance issues
+      let html = '<table>';
+      for (let r = 0; r < 200; r++) {
+        html += '<tr>';
+        for (let c = 0; c < 100; c++) {
+          html += `<td style="font-weight:bold;color:red;text-align:center;background-color:#f0f0f0">Cell ${r}-${c}</td>`;
+        }
+        html += '</tr>';
+      }
+      html += '</table>';
+
+      // Should complete without hanging and return at most 10000 cells
+      const result = parseHtmlTable(html);
+
+      // Total cells should be capped at 10000 (100 rows x 100 cols = 10000)
+      const totalCells = result.rowCount * result.colCount;
+      expect(totalCells).toBeLessThanOrEqual(10000);
+    });
+
+    it('processes small tables completely', () => {
+      // Small tables should be processed completely
+      let html = '<table>';
+      for (let r = 0; r < 5; r++) {
+        html += '<tr>';
+        for (let c = 0; c < 5; c++) {
+          html += `<td>Cell ${r}-${c}</td>`;
+        }
+        html += '</tr>';
+      }
+      html += '</table>';
+
+      const result = parseHtmlTable(html);
+      expect(result.rowCount).toBe(5);
+      expect(result.colCount).toBe(5);
+    });
   });
 });

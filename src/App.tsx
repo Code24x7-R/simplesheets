@@ -4,7 +4,7 @@ import { cellKey, colToLetter } from './types';
 import { HistoryProvider, useHistory } from './context/HistoryContext';
 import { PasteModal } from './components/PasteModal';
 import { PasteSpecialModal } from './components/PasteSpecialModal';
-import { parsePlainText, parseHtmlTable, type ParsedClipboardGrid } from './utils/clipboardParse';
+import { parsePlainText, parseHtmlTable, classifyPasteContent, type ParsedClipboardGrid, type PasteContentKind } from './utils/clipboardParse';
 import { FreezeProvider, useFreeze } from './context/FreezeContext';
 import { PrintSetupProvider } from './context/PrintSetupContext';
 import { Grid } from './components/Grid';
@@ -1126,9 +1126,11 @@ function WorkbookView() {
     (plain: string, html: string | null) => {
       if (!selection) return;
 
-      const parsed: ParsedClipboardGrid = html
-        ? parseHtmlTable(html)
-        : parsePlainText(plain);
+      // Use classification to avoid unnecessary HTML parsing
+      // (e.g., MathJax content has HTML but no table)
+      const kind: PasteContentKind = classifyPasteContent(plain, html);
+      const parsed: ParsedClipboardGrid =
+        kind === 'rich-grid' ? parseHtmlTable(html!) : parsePlainText(plain);
 
       if (parsed.rowCount === 0 || parsed.colCount === 0) return;
 

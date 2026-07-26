@@ -8,6 +8,12 @@ import type { CellStyle } from '../types';
 export type PasteContentKind = 'grid' | 'rich-grid';
 
 /**
+ * Maximum number of cells to parse from HTML tables.
+ * Prevents lockups from very large tables (e.g., MathJax matrices).
+ */
+const MAX_HTML_TABLE_CELLS = 10000;
+
+/**
  * Result of parsing clipboard data into a grid of cell values + styles.
  */
 export interface ParsedClipboardGrid {
@@ -242,13 +248,21 @@ export function parseHtmlTable(html: string): ParsedClipboardGrid {
   const values: string[][] = [];
   const styles: (CellStyle | null)[][] = [];
   let maxCols = 0;
+  let totalCells = 0;
 
   for (const row of rows) {
+    // Safety limit: prevent lockups from very large tables
+    if (totalCells >= MAX_HTML_TABLE_CELLS) break;
+
     const cells = row.querySelectorAll('th, td');
     const rowValues: string[] = [];
     const rowStyles: (CellStyle | null)[] = [];
 
     for (const cell of cells) {
+      // Safety limit: prevent lockups from very large tables
+      if (totalCells >= MAX_HTML_TABLE_CELLS) break;
+      totalCells++;
+
       const td = cell as HTMLElement;
       const textContent = (td.textContent ?? '').trim();
       const style = extractCellStyle(td);
