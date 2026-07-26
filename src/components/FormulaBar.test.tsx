@@ -474,7 +474,7 @@ describe('FormulaBar Focus Editing (onFocusEditing)', () => {
     editingFormula: null,
     onHighlightsChange: jest.fn(),
     onEditingKey: jest.fn(),
-    editingSession: { state: 'SELECT' as const, row: 0, col: 0, buffer: '', originalValue: '', caretPos: 0, isFormula: false },
+    editingSession: { state: 'SELECT' as const, row: 0, col: 0, buffer: '', originalValue: '', caretPos: 0, selectionStart: -1, selectionEnd: -1, isFormula: false },
   };
 
   beforeEach(() => {
@@ -508,7 +508,7 @@ describe('FormulaBar Focus Editing (onFocusEditing)', () => {
       <FormulaBar
         {...defaultProps}
         onFocusEditing={onFocusEditing}
-        editingSession={{ state: 'EDIT' as const, row: 0, col: 0, buffer: '=SUM(A1:A10)', originalValue: '', caretPos: 5, isFormula: true }}
+        editingSession={{ state: 'EDIT' as const, row: 0, col: 0, buffer: '=SUM(A1:A10)', originalValue: '', caretPos: 5, selectionStart: -1, selectionEnd: -1, isFormula: true }}
       />,
     );
     const input = screen.getByDisplayValue('=SUM(A1:A10)');

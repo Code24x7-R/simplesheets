@@ -429,6 +429,8 @@ describe('FormulaBar - Focus transitions to EDIT mode', () => {
       buffer: '',
       originalValue: 'Hello World',
       caretPos: 0,
+      selectionStart: -1,
+      selectionEnd: -1,
       isFormula: false,
     },
   });
@@ -456,6 +458,8 @@ describe('FormulaBar - Focus transitions to EDIT mode', () => {
       buffer: 'Hello',
       originalValue: 'Hello World',
       caretPos: 5,
+      selectionStart: -1,
+      selectionEnd: -1,
       isFormula: false,
     };
 

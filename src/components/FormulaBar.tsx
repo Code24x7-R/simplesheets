@@ -243,14 +243,24 @@ export function FormulaBar({
   // Compute validation
   const validation: ValidationResult = useMemo(() => validateFormula(displayValue), [displayValue]);
 
-  // Sync cursor position to input element
+  // Sync cursor/selection position to input element
   useEffect(() => {
     const input = inputRef.current;
     /* istanbul ignore next - jsdom activeElement check */
     if (input && document.activeElement === input) {
-      input.setSelectionRange(cursorPos, cursorPos);
+      const selStart = editingSession?.selectionStart ?? -1;
+      const selEnd = editingSession?.selectionEnd ?? -1;
+      if (selStart >= 0 && selEnd >= 0 && selStart !== selEnd) {
+        // Set selection range
+        const start = Math.min(selStart, selEnd);
+        const end = Math.max(selStart, selEnd);
+        input.setSelectionRange(start, end);
+      } else {
+        // Set cursor position
+        input.setSelectionRange(cursorPos, cursorPos);
+      }
     }
-  }, [cursorPos]);
+  }, [cursorPos, editingSession?.selectionStart, editingSession?.selectionEnd]);
 
   // Close auto-complete when value changes externally
   useEffect(() => {
@@ -388,6 +398,43 @@ export function FormulaBar({
     // When integrated with the editing FSM hook, delegate ALL key handling
     // to the hook — it owns the buffer, caret, and POINT mode state.
     if (onEditingKey) {
+      // Ctrl+C: Copy selected text to clipboard
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'C')) {
+        const input = inputRef.current;
+        if (input && input.selectionStart !== input.selectionEnd) {
+          const selectedText = input.value.slice(input.selectionStart ?? 0, input.selectionEnd ?? 0);
+          navigator.clipboard.writeText(selectedText).catch(() => {
+            // Fallback: use document.execCommand
+            const textArea = document.createElement('textarea');
+            textArea.value = selectedText;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+          });
+        }
+        return;
+      }
+      // Ctrl+V: Replace selected text with clipboard content
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'v' || e.key === 'V')) {
+        e.preventDefault();
+        navigator.clipboard.readText().then((clipText) => {
+          const input = inputRef.current;
+          if (input) {
+            const selStart = input.selectionStart ?? 0;
+            const selEnd = input.selectionEnd ?? 0;
+            const newValue = displayValue.slice(0, selStart) + clipText + displayValue.slice(selEnd);
+            onChange(newValue);
+            // Move cursor past pasted text
+            const newPos = selStart + clipText.length;
+            setInternalCursorPos(newPos);
+            onCursorChange?.(newPos);
+          }
+        }).catch(() => {
+          // Clipboard access denied - let native paste handle it
+        });
+        return;
+      }
       // Auto-complete navigation still takes priority when dropdown is open
       if (autoCompleteOpen && ['ArrowDown', 'ArrowUp', 'Tab', 'Enter', 'Escape'].includes(e.key)) {
         switch (e.key) {
