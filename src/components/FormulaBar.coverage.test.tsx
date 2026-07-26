@@ -42,6 +42,53 @@ describe('FormulaBar - AutoComplete Navigation', () => {
     expect(input).toBeInTheDocument();
   });
 
+  it('accepts auto-complete with Tab', () => {
+    const onChange = jest.fn();
+    render(<FormulaBar {...defaultProps} value="=S" onChange={onChange} />);
+    const input = screen.getByPlaceholderText(/Enter a value or formula/);
+
+    // Open auto-complete
+    act(() => {
+      fireEvent.focus(input);
+      fireEvent.change(input, { target: { value: '=S' } });
+    });
+
+    // Verify dropdown is open
+    expect(screen.getAllByText('SUM').length).toBeGreaterThan(0);
+
+    // Accept with Tab — should not throw and should close dropdown
+    act(() => {
+      fireEvent.keyDown(input, { key: 'Tab' });
+    });
+
+    // After Tab, auto-complete should be closed
+    const dropdowns = document.querySelectorAll('[role="menu"]');
+    expect(dropdowns.length).toBe(0);
+  });
+
+  it('closes auto-complete with Escape', () => {
+    render(<FormulaBar {...defaultProps} value="=S" onChange={jest.fn()} />);
+    const input = screen.getByPlaceholderText(/Enter a value or formula/);
+
+    // Open auto-complete
+    act(() => {
+      fireEvent.focus(input);
+      fireEvent.change(input, { target: { value: '=S' } });
+    });
+
+    // Verify dropdown is open
+    expect(screen.getAllByText('SUM').length).toBeGreaterThan(0);
+
+    // Close with Escape
+    act(() => {
+      fireEvent.keyDown(input, { key: 'Escape' });
+    });
+
+    // Auto-complete should be closed (only function bar SUM remains)
+    const dropdowns = document.querySelectorAll('[role="menu"]');
+    expect(dropdowns.length).toBe(0);
+  });
+
   it('opens auto-complete on click when editing a formula', () => {
     const onChange = jest.fn();
     render(<FormulaBar {...defaultProps} value="=S" onChange={onChange} />);
@@ -332,3 +379,34 @@ describe('FormulaBar - AutoComplete Edge Cases', () => {
     expect(dropdowns.length).toBe(0);
   });
 });
+
+describe('FormulaBar - Function Bar', () => {
+  const defaultProps = {
+    value: '',
+    onChange: jest.fn(),
+    onCommit: jest.fn(),
+    activeCellRef: 'A1',
+    editingFormula: null,
+    onHighlightsChange: jest.fn(),
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('renders function bar buttons', () => {
+    render(<FormulaBar {...defaultProps} />);
+    expect(screen.getByText('SUM')).toBeInTheDocument();
+    expect(screen.getByText('AVERAGE')).toBeInTheDocument();
+    expect(screen.getByText('IF')).toBeInTheDocument();
+  });
+
+  it('calls onInsertFunction when a function button is clicked', () => {
+    const onInsertFunction = jest.fn();
+    render(<FormulaBar {...defaultProps} onInsertFunction={onInsertFunction} />);
+    fireEvent.click(screen.getByText('SUM'));
+    expect(onInsertFunction).toHaveBeenCalledWith('SUM');
+  });
+});
+
+
