@@ -1,5 +1,5 @@
 import { useEffect, useRef, useMemo } from 'react';
-import { parseHtmlTable } from '../utils/clipboardParse';
+import { parseHtmlTable, classifyPasteContent } from '../utils/clipboardParse';
 
 interface PasteModalProps {
   isOpen: boolean;
@@ -28,8 +28,11 @@ export function PasteModal({
   const modalRef = useRef<HTMLDivElement>(null);
 
   // Compute preview data from HTML or plain text
+  // Use classifyPasteContent to avoid unnecessary HTML parsing for non-table
+  // content (e.g., MathJax), which can cause temporary lockups.
   const preview = useMemo(() => {
-    if (html) {
+    // Only parse HTML if it actually contains a table
+    if (html && classifyPasteContent(plain ?? '', html) === 'rich-grid') {
       const parsed = parseHtmlTable(html);
       return {
         rowCount: parsed.rowCount,
