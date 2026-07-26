@@ -310,6 +310,34 @@ Achieve a clean, clutter-free UI with standardized dropdown menus, formula wizar
 
 ---
 
+## Phase 14: Keyboard Shortcut Audit & Fixes (2026-07-27)
+*Review all keyboard shortcuts, identify implementation/wiring gaps, and fix them.*
+
+### Phase 14a: Global Shortcuts — COMPLETE ✅
+- [x] Added Ctrl+N (New), Ctrl+S (Save), Ctrl+O (Open) — application-wide
+- [x] Added Ctrl+H (Find & Replace) — opens search modal
+- [x] Added Ctrl+B/I/U (Bold/Italic/Underline) — toggle cell styles
+- [x] All shortcuts disabled while typing in input/textarea
+- [x] 8 new tests for global shortcuts
+- [x] Commit: 274ee1a
+
+### Phase 14b: Grid Navigation — COMPLETE ✅
+- [x] Tab/Shift+Tab: move right/left with row wrapping
+- [x] Enter: commit edit and move selection down
+- [x] Shift+Enter: commit edit and move selection up
+- [x] Tab during editing: commit and move right
+- [x] Shift+Tab during editing: commit and move left
+- [x] Added `moveSelection` helper function
+- [x] 4 new tests for Tab/Enter behavior
+- [x] Commit: 274ee1a
+
+### Phase 14c: ShortcutsModal — COMPLETE ✅
+- [x] Added Ctrl+H to Editing shortcuts group
+- [x] All shortcuts in modal now match actual implementations
+- [x] Commit: 274ee1a
+
+---
+
 ## Phase 13: Paste Experience Improvements (2026-07-27)
 *Make plain text pasting better than Excel/Sheets with bounds safety, inline editing, text wrapping, preview, and formula adjustment.*
 
