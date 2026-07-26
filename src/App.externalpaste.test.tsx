@@ -60,7 +60,7 @@ describe('App - External Clipboard Paste', () => {
     });
 
     // Status bar should show paste confirmation
-    const statusBar = document.querySelector('footer span');
+    const statusBar = screen.getByTestId('status-message');
     expect(statusBar?.textContent).toContain('Pasted');
   });
 
@@ -104,7 +104,7 @@ describe('App - External Clipboard Paste', () => {
     expect(screen.queryByText('Paste from clipboard')).not.toBeInTheDocument();
 
     // Status bar confirms paste
-    const statusBar = document.querySelector('footer span');
+    const statusBar = screen.getByTestId('status-message');
     expect(statusBar?.textContent).toContain('Pasted');
   });
 
@@ -125,7 +125,7 @@ describe('App - External Clipboard Paste', () => {
     fireEvent.click(screen.getByTestId('paste-plain'));
 
     expect(screen.queryByText('Paste from clipboard')).not.toBeInTheDocument();
-    const statusBar = document.querySelector('footer span');
+    const statusBar = screen.getByTestId('status-message');
     expect(statusBar?.textContent).toContain('Pasted');
   });
 
@@ -160,7 +160,7 @@ describe('App - External Clipboard Paste', () => {
       dispatchPaste('$1,234.56');
     });
 
-    const statusBar = document.querySelector('footer span');
+    const statusBar = screen.getByTestId('status-message');
     expect(statusBar?.textContent).toContain('Pasted');
   });
 
@@ -177,7 +177,7 @@ describe('App - External Clipboard Paste', () => {
 
     // Modal shows but pasting without selection does nothing
     // (no cells updated since there's no target)
-    const statusBar = document.querySelector('footer span');
+    const statusBar = screen.getByTestId('status-message');
     expect(statusBar?.textContent).toBe('Ready');
   });
 });
@@ -196,7 +196,7 @@ describe('App - Paste Bounds Checking', () => {
   }
 
   function getStatusText() {
-    return document.querySelector('footer span')?.textContent;
+    return screen.getByTestId('status-message')?.textContent;
   }
 
   it('pastes all data when it fits within sheet bounds', () => {
@@ -322,7 +322,7 @@ describe('App - External Paste Formula Adjustment', () => {
   }
 
   function getStatusText() {
-    return document.querySelector('footer span')?.textContent;
+    return screen.getByTestId('status-message')?.textContent;
   }
 
   it('adjusts relative formula references on paste', () => {
@@ -379,7 +379,7 @@ describe('App - Paste Range Mismatch', () => {
   }
 
   function getStatusText() {
-    return document.querySelector('footer span')?.textContent;
+    return screen.getByTestId('status-message')?.textContent;
   }
 
   it('shows error when pasting 2x2 to mismatched 3x3 range', () => {
@@ -470,7 +470,7 @@ describe('App - Paste Special (Skip Blanks)', () => {
     // This is a simplified test - the full UI flow would use the Paste Special dialog
 
     // For now, verify the paste works without error
-    const status = document.querySelector('footer span')?.textContent;
+    const status = screen.getByTestId('status-message')?.textContent;
     expect(status).toContain('copied');
   });
 });

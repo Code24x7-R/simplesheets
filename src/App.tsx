@@ -748,6 +748,54 @@ function WorkbookView() {
     };
   }, [gridSelection, activeCell]);
 
+  // ─── Status Bar: Cell Mode + Quick Calculations ──────────────────────────
+
+  /** Derive the current cell mode for the status bar (Excel-style). */
+  const cellMode = useMemo(() => {
+    if (isPointMode) return 'POINT';
+    if (editingSession.state === 'EDIT') return 'Edit';
+    if (editingSession.state === 'ENTER') return 'Enter';
+    return 'Ready';
+  }, [editingSession.state, isPointMode]);
+
+  /** Compute quick statistics for the selected range (Sum, Average, Count). */
+  const selectionStats = useMemo(() => {
+    if (!selection || selection.type !== 'cell') return null;
+    const minRow = Math.min(selection.startRow, selection.endRow);
+    const maxRow = Math.max(selection.startRow, selection.endRow);
+    const minCol = Math.min(selection.startCol, selection.endCol);
+    const maxCol = Math.max(selection.startCol, selection.endCol);
+
+    let sum = 0;
+    let count = 0;
+    let numericCount = 0;
+
+    for (let r = minRow; r <= maxRow; r++) {
+      for (let c = minCol; c <= maxCol; c++) {
+        const cell = sheet.cells[cellKey(r, c)];
+        if (cell && cell.rawValue !== '') {
+          count++;
+          const computed = cell.computedValue;
+          const valStr = typeof computed === 'number' ? String(computed) : typeof computed === 'boolean' ? '' : (computed ?? cell.rawValue);
+          const num = parseFloat(valStr);
+          if (!isNaN(num) && valStr.trim() !== '') {
+            sum += num;
+            numericCount++;
+          }
+        }
+      }
+    }
+
+    if (count === 0) return null;
+
+    return {
+      sum,
+      average: numericCount > 0 ? sum / numericCount : 0,
+      count,
+      numericCount,
+    };
+  }, [selection, sheet.cells]);
+
   // ─── Copy/Paste Event Handlers ────────────────────────────────────────────
 
   useEffect(() => {
@@ -1447,8 +1495,18 @@ function WorkbookView() {
 
       {/* Status Bar */}
       <footer className="flex items-center justify-between px-4 py-1 border-t border-gray-200 bg-gray-50 text-xs text-gray-500">
-        <span>{statusMessage}</span>
         <div className="flex items-center gap-4">
+          <span className="font-medium text-gray-700 w-16" data-testid="cell-mode">{cellMode}</span>
+          <span className="text-gray-400">|</span>
+          <span data-testid="status-message">{statusMessage}</span>
+        </div>
+        <div className="flex items-center gap-4">
+          {/* Quick calculations for selection */}
+          {selectionStats && selectionStats.numericCount > 0 && (
+            <span className="font-mono text-gray-600">
+              Sum={selectionStats.sum.toLocaleString()} Avg={selectionStats.average.toLocaleString(undefined, { maximumFractionDigits: 2 })} Count={selectionStats.count}
+            </span>
+          )}
           <span>
             {sheet.rowCount.toLocaleString()} rows × {sheet.columnCount} cols
             {frozenRows > 0 && ` | ${frozenRows} frozen row(s)`}

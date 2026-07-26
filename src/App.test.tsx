@@ -56,7 +56,9 @@ describe('App', () => {
 
   it('renders the status bar', () => {
     render(<App />);
-    expect(screen.getByText(/Ready/)).toBeInTheDocument();
+    // Status bar shows cell mode (Ready/Edit/Enter/POINT)
+    expect(screen.getByTestId('cell-mode')).toBeInTheDocument();
+    expect(screen.getByTestId('cell-mode').textContent).toBe('Ready');
   });
 
   it('renders the default workbook title', () => {
@@ -92,7 +94,8 @@ describe('App', () => {
 
   it('updates status message on cell selection', () => {
     render(<App />);
-    expect(screen.getByText(/Ready/)).toBeInTheDocument();
+    // Cell mode indicator shows Ready initially
+    expect(screen.getByTestId('cell-mode').textContent).toBe('Ready');
   });
 
   it('opens File menu and shows New item', () => {
@@ -201,7 +204,7 @@ describe('App', () => {
     fireEvent.change(input, { target: { value: '42' } });
     fireEvent.keyDown(input, { key: 'Enter' });
 
-    const statusBar = document.querySelector('footer span');
+    const statusBar = screen.getByTestId('status-message');
     expect(statusBar?.textContent).toContain('Updated');
   });
 
@@ -272,7 +275,7 @@ describe('App', () => {
     // Open View menu and click Freeze Panes
     fireEvent.click(screen.getByText('View'));
     fireEvent.click(screen.getByText('Freeze Panes'));
-    const statusBar = document.querySelector('footer span');
+    const statusBar = screen.getByTestId('status-message');
     expect(statusBar?.textContent).toContain('Panes frozen');
   });
 

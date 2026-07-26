@@ -60,8 +60,8 @@ describe('POINT mode — arrow key range selection', () => {
     // Type =SUM( — the ( should trigger POINT mode
     typeInFormulaBar(input, '=SUM(');
 
-    // The POINT indicator should appear
-    expect(screen.getByText('POINT')).toBeInTheDocument();
+    // The POINT indicator should appear (formula bar or status bar)
+    expect(screen.getAllByText('POINT').length).toBeGreaterThan(0);
   });
 
   it('arrow keys navigate the pointing range in POINT mode', () => {
@@ -76,7 +76,7 @@ describe('POINT mode — arrow key range selection', () => {
     fireEvent.keyDown(input, { key: 'ArrowRight' });
 
     // Still in POINT mode
-    expect(screen.getByText('POINT')).toBeInTheDocument();
+    expect(screen.getAllByText('POINT').length).toBeGreaterThan(0);
   });
 
   it('commits range reference with , and exits POINT mode', () => {
@@ -128,7 +128,7 @@ describe('POINT mode — arrow key range selection', () => {
     typeInFormulaBar(input, '=SUM(');
 
     // In POINT mode
-    expect(screen.getByText('POINT')).toBeInTheDocument();
+    expect(screen.getAllByText('POINT').length).toBeGreaterThan(0);
 
     // Press Escape
     fireEvent.keyDown(input, { key: 'Escape' });
@@ -147,7 +147,7 @@ describe('POINT mode — arrow key range selection', () => {
     typeInFormulaBar(input, '=SUM(');
 
     // In POINT mode
-    expect(screen.getByText('POINT')).toBeInTheDocument();
+    expect(screen.getAllByText('POINT').length).toBeGreaterThan(0);
 
     // Type a cell reference manually (like Excel allows)
     fireEvent.keyDown(input, { key: 'A' });
@@ -208,7 +208,7 @@ describe('POINT mode — arrow key range selection', () => {
     typeInFormulaBar(input, '=SUM(');
 
     // In POINT mode
-    expect(screen.getByText('POINT')).toBeInTheDocument();
+    expect(screen.getAllByText('POINT').length).toBeGreaterThan(0);
 
     // Click on a cell in the grid to set the range end
     const cells = document.querySelectorAll('.grid-cell');
@@ -216,6 +216,6 @@ describe('POINT mode — arrow key range selection', () => {
     fireEvent.mouseDown(cells[cells.length - 1]);
 
     // Still in POINT mode (clicking updates but doesn't exit)
-    expect(screen.getByText('POINT')).toBeInTheDocument();
+    expect(screen.getAllByText('POINT').length).toBeGreaterThan(0);
   });
 });

@@ -388,6 +388,31 @@ Achieve a clean, clutter-free UI with standardized dropdown menus, formula wizar
 
 ---
 
+## Phase 15: Sheet Filtering Functions (TODO)
+*Implement Excel-style auto-filtering for data analysis.*
+
+### Phase 15a: Filter State & UI — TODO
+- [ ] Add filter state to Sheet model (filter range, column filters)
+- [ ] Add filter dropdown arrows to column headers
+- [ ] Create filter dropdown UI (checkbox list of unique values, search)
+- [ ] Support text filters, number filters, date filters
+- [ ] Add "Clear Filter" and "Clear All Filters" options
+
+### Phase 15b: Filter Logic — TODO
+- [ ] Implement row hiding based on filter criteria
+- [ ] Update virtualizer to skip hidden rows
+- [ ] Status bar: show "X of Y records visible" when filter active
+- [ ] Paste behavior: skip hidden cells (don't overwrite filtered-out rows)
+- [ ] Copy behavior: option to copy visible cells only
+
+### Phase 15c: Filter Integration — TODO
+- [ ] Add "Filter" toggle button to toolbar or Data menu
+- [ ] Keyboard shortcut for toggle filter (Ctrl+Shift+L)
+- [ ] Auto-detect header row for filter range
+- [ ] Persist filter state with workbook save/load
+
+---
+
 ## Progress Log
 
 ### 2026-07-27 (Paste Improvements — Phases 1-6)

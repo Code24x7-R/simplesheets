@@ -42,7 +42,7 @@ describe('App - Menu Handlers', () => {
     render(<App />);
     fireEvent.click(screen.getByText('Help'));
     fireEvent.click(screen.getByText('About SimpleSheet'));
-    const statusBar = document.querySelector('footer span');
+    const statusBar = screen.getByTestId('status-message');
     expect(statusBar?.textContent).toContain('SimpleSheet v0.1.0');
   });
 
@@ -82,7 +82,7 @@ describe('App - Menu Handlers', () => {
     render(<App />);
     fireEvent.click(screen.getByText('View'));
     fireEvent.click(screen.getByText('Freeze Panes'));
-    const statusBar = document.querySelector('footer span');
+    const statusBar = screen.getByTestId('status-message');
     expect(statusBar?.textContent).toContain('Panes frozen');
   });
 
@@ -94,7 +94,7 @@ describe('App - Menu Handlers', () => {
     // Then unfreeze
     fireEvent.click(screen.getByText('View'));
     fireEvent.click(screen.getByText('Unfreeze Panes'));
-    const statusBar = document.querySelector('footer span');
+    const statusBar = screen.getByTestId('status-message');
     expect(statusBar?.textContent).toContain('Panes unfrozen');
   });
 
@@ -121,7 +121,7 @@ describe('App - Menu Handlers', () => {
     render(<App />);
     fireEvent.click(screen.getByText('File'));
     fireEvent.click(screen.getByText('Save'));
-    const statusBar = document.querySelector('footer span');
+    const statusBar = screen.getByTestId('status-message');
     expect(statusBar?.textContent).toContain('Save');
   });
 
@@ -129,7 +129,7 @@ describe('App - Menu Handlers', () => {
     render(<App />);
     fireEvent.click(screen.getByText('File'));
     fireEvent.click(screen.getByText('Open…'));
-    const statusBar = document.querySelector('footer span');
+    const statusBar = screen.getByTestId('status-message');
     expect(statusBar?.textContent).toContain('Open');
   });
 
@@ -171,7 +171,7 @@ describe('App - Menu Handlers (Edit)', () => {
     const clearItem = screen.getByText('Clear Contents').closest('.menu-item') as HTMLElement;
     fireEvent.click(clearItem);
     // Status should not throw
-    const statusBar = document.querySelector('footer span');
+    const statusBar = screen.getByTestId('status-message');
     expect(statusBar).toBeInTheDocument();
   });
 
@@ -215,7 +215,7 @@ describe('App - Menu Handlers (Insert)', () => {
     // Insert row above via menu
     fireEvent.click(screen.getByText('Insert'));
     fireEvent.click(screen.getByText('Row Above'));
-    const statusBar = document.querySelector('footer span');
+    const statusBar = screen.getByTestId('status-message');
     expect(statusBar?.textContent).toContain('Inserted row');
   });
 
@@ -237,7 +237,7 @@ describe('App - Menu Handlers (Insert)', () => {
     fireEvent.click(screen.getByText('Row Above'));
 
     // Status message confirms the insert happened (1-indexed).
-    const statusBar = document.querySelector('footer span');
+    const statusBar = screen.getByTestId('status-message');
     expect(statusBar?.textContent).toContain('Inserted row 2');
 
     // Now undo and verify it reverts
@@ -251,7 +251,7 @@ describe('App - Menu Handlers (Insert)', () => {
     fireEvent.mouseDown(cell);
     fireEvent.click(screen.getByText('Insert'));
     fireEvent.click(screen.getByText('Row Below'));
-    const statusBar = document.querySelector('footer span');
+    const statusBar = screen.getByTestId('status-message');
     expect(statusBar?.textContent).toContain('Inserted row');
   });
 
@@ -261,7 +261,7 @@ describe('App - Menu Handlers (Insert)', () => {
     fireEvent.mouseDown(cell);
     fireEvent.click(screen.getByText('Insert'));
     fireEvent.click(screen.getByText('Column Left'));
-    const statusBar = document.querySelector('footer span');
+    const statusBar = screen.getByTestId('status-message');
     expect(statusBar?.textContent).toContain('Inserted column');
   });
 
@@ -271,7 +271,7 @@ describe('App - Menu Handlers (Insert)', () => {
     fireEvent.mouseDown(cell);
     fireEvent.click(screen.getByText('Insert'));
     fireEvent.click(screen.getByText('Column Right'));
-    const statusBar = document.querySelector('footer span');
+    const statusBar = screen.getByTestId('status-message');
     expect(statusBar?.textContent).toContain('Inserted column');
   });
 });
@@ -320,7 +320,7 @@ describe('App - Menu Handlers (Delete)', () => {
     fireEvent.mouseEnter(deleteLabel);
     fireEvent.click(screen.getByText('Cells'));
     // Should not throw
-    const statusBar = document.querySelector('footer span');
+    const statusBar = screen.getByTestId('status-message');
     expect(statusBar).toBeInTheDocument();
   });
 });
@@ -381,7 +381,7 @@ describe('App - Menu Handlers (Import/Export via bridge)', () => {
 describe('App - Undo/Redo keyboard shortcuts', () => {
   it('Ctrl+Z triggers undo after an insert operation', () => {
     render(<App />);
-    const statusBar = document.querySelector('footer span');
+    const statusBar = screen.getByTestId('status-message');
 
     // Select a cell and insert a row above
     const cell = document.querySelector('.grid-cell') as HTMLElement;
@@ -397,7 +397,7 @@ describe('App - Undo/Redo keyboard shortcuts', () => {
 
   it('Ctrl+Y triggers redo after an undo', () => {
     render(<App />);
-    const statusBar = document.querySelector('footer span');
+    const statusBar = screen.getByTestId('status-message');
 
     // Select a cell and insert a column left
     const cell = document.querySelector('.grid-cell') as HTMLElement;
@@ -423,7 +423,7 @@ describe('App - Cell Style System (single cell & range)', () => {
 
   it('applies bold to a single selected cell via Format menu', () => {
     render(<App />);
-    const statusBar = document.querySelector('footer span');
+    const statusBar = screen.getByTestId('status-message');
 
     // Load the demo workbook so there are cells to style
     fireEvent.click(screen.getByText('File'));
@@ -443,7 +443,7 @@ describe('App - Cell Style System (single cell & range)', () => {
 
   it('applies bold to a range selection via Format menu', () => {
     render(<App />);
-    const statusBar = document.querySelector('footer span');
+    const statusBar = screen.getByTestId('status-message');
 
     // Load the demo workbook so there are cells to style
     fireEvent.click(screen.getByText('File'));
@@ -469,7 +469,7 @@ describe('App - Cell Style System (single cell & range)', () => {
 
   it('applies italic to a single cell', () => {
     render(<App />);
-    const statusBar = document.querySelector('footer span');
+    const statusBar = screen.getByTestId('status-message');
 
     // Load the demo workbook so there are cells to style
     fireEvent.click(screen.getByText('File'));
@@ -486,7 +486,7 @@ describe('App - Cell Style System (single cell & range)', () => {
 
   it('applies text alignment via Format menu', () => {
     render(<App />);
-    const statusBar = document.querySelector('footer span');
+    const statusBar = screen.getByTestId('status-message');
 
     // Load the demo workbook so there are cells to style
     fireEvent.click(screen.getByText('File'));
@@ -505,7 +505,7 @@ describe('App - Cell Style System (single cell & range)', () => {
 
   it('applies text color via Format menu', () => {
     render(<App />);
-    const statusBar = document.querySelector('footer span');
+    const statusBar = screen.getByTestId('status-message');
 
     // Load the demo workbook so there are cells to style
     fireEvent.click(screen.getByText('File'));
@@ -524,7 +524,7 @@ describe('App - Cell Style System (single cell & range)', () => {
 
   it('clears styles via Format menu', () => {
     render(<App />);
-    const statusBar = document.querySelector('footer span');
+    const statusBar = screen.getByTestId('status-message');
 
     // Load the demo workbook so there are cells to style
     fireEvent.click(screen.getByText('File'));
@@ -546,7 +546,7 @@ describe('App - Cell Style System (single cell & range)', () => {
 
   it('applies style and supports undo', () => {
     render(<App />);
-    const statusBar = document.querySelector('footer span');
+    const statusBar = screen.getByTestId('status-message');
 
     // Load the demo workbook so there are cells to style
     fireEvent.click(screen.getByText('File'));

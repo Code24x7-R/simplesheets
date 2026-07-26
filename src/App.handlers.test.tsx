@@ -49,7 +49,7 @@ describe('App - Cell Edit/Undo/Redo', () => {
     expect(undoItem).not.toHaveClass('menu-item-disabled');
     fireEvent.click(undoItem);
 
-    const statusBar = document.querySelector('footer span');
+    const statusBar = screen.getByTestId('status-message');
     expect(statusBar?.textContent).toContain('Undo performed');
   });
 
@@ -73,7 +73,7 @@ describe('App - Cell Edit/Undo/Redo', () => {
     expect(redoItem).not.toHaveClass('menu-item-disabled');
     fireEvent.click(redoItem);
 
-    const statusBar = document.querySelector('footer span');
+    const statusBar = screen.getByTestId('status-message');
     expect(statusBar?.textContent).toContain('Redo performed');
   });
 });
@@ -276,7 +276,7 @@ describe('App - Unmerge', () => {
     expect(unmergeItem).not.toHaveClass('menu-item-disabled');
     fireEvent.click(unmergeItem);
 
-    const statusBar = document.querySelector('footer span');
+    const statusBar = screen.getByTestId('status-message');
     expect(statusBar?.textContent).toContain('Unmerge');
   });
 });
@@ -322,7 +322,7 @@ describe('App - New Sheet', () => {
     fireEvent.click(screen.getByText('New'));
 
     // Status should update
-    const statusBar = document.querySelector('footer span');
+    const statusBar = screen.getByTestId('status-message');
     expect(statusBar?.textContent).toContain('Created new workbook');
   });
 });
@@ -335,7 +335,7 @@ describe('App - Save Button', () => {
     fireEvent.click(screen.getByText('Save'));
 
     // Status should update (currently just shows a message to use the Save button)
-    const statusBar = document.querySelector('footer span');
+    const statusBar = screen.getByTestId('status-message');
     expect(statusBar?.textContent).toContain('Save');
   });
 });
@@ -354,7 +354,7 @@ describe('App - Circular Reference', () => {
     fireEvent.change(input, { target: { value: '=A1' } });
     fireEvent.keyDown(input, { key: 'Enter' });
 
-    const statusBar = document.querySelector('footer span');
+    const statusBar = screen.getByTestId('status-message');
     expect(statusBar).toBeInTheDocument();
   });
 });
