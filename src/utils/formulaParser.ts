@@ -90,6 +90,7 @@ type TokenType =
   | 'RPAREN'
   | 'COMMA'
   | 'COLON'
+  | 'NAMED_VAR'
   | 'EOF';
 
 interface Token {
@@ -256,6 +257,15 @@ function tokenize(input: string): Token[] {
         continue;
       }
 
+      // Handle dots in named references (e.g., Hello.World)
+      // Consume any dots and following characters as part of the name
+      while (i < input.length && input[i] === '.') {
+        ref += input[i++]; // add the dot
+        while (i < input.length && /[A-Za-z0-9_]/.test(input[i])) {
+          ref += input[i++];
+        }
+      }
+
       // Check if followed by digits or $digit (cell ref) or not (function name)
       if (i < input.length && (/[0-9]/.test(input[i]) || (input[i] === '$' && /[0-9]/.test(input[i + 1] ?? '')))) {
         let absoluteRow = false;
@@ -289,8 +299,9 @@ function tokenize(input: string): Token[] {
         } else if (FUNCTIONS.has(upperRef)) {
           tokens.push({ type: 'FUNCTION', value: upperRef, pos: startPos });
         } else {
-          // Treat as named variable or error
-          tokens.push({ type: 'FUNCTION', value: upperRef, pos: startPos });
+          // Treat as named variable or unknown function
+          // (may contain dots, e.g., Hello.World when = is prepended to plain text)
+          tokens.push({ type: 'FUNCTION', value: ref, pos: startPos });
         }
       }
       continue;
