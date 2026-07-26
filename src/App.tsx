@@ -1128,9 +1128,19 @@ function WorkbookView() {
 
       // Use classification to avoid unnecessary HTML parsing
       // (e.g., MathJax content has HTML but no table)
-      const kind: PasteContentKind = classifyPasteContent(plain, html);
+      let kind: PasteContentKind = classifyPasteContent(plain, html);
+      let textToParse = plain;
+
+      // When plain is empty but HTML is available, extract text from HTML
+      // This handles "Paste Formatted" for non-table HTML (e.g., bulleted lists)
+      if (kind === 'grid' && !plain.trim() && html) {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+        textToParse = doc.body.textContent ?? '';
+      }
+
       const parsed: ParsedClipboardGrid =
-        kind === 'rich-grid' ? parseHtmlTable(html!) : parsePlainText(plain);
+        kind === 'rich-grid' ? parseHtmlTable(html!) : parsePlainText(textToParse);
 
       if (parsed.rowCount === 0 || parsed.colCount === 0) return;
 

@@ -149,6 +149,30 @@ describe('App - External Clipboard Paste', () => {
     expect(screen.queryByText('Paste from clipboard')).not.toBeInTheDocument();
   });
 
+  it('pastes formatted text with non-table HTML (MathJax/bullets)', () => {
+    render(<App />);
+
+    const cell = document.querySelector('.grid-cell') as HTMLElement;
+    fireEvent.mouseDown(cell);
+
+    // HTML without a table (like MathJax content or bulleted lists)
+    const htmlNoTable = '<ul><li><span>$100 × 100 text{ mm} × 2.4 text{ m}$ Posts</span></li></ul>';
+
+    act(() => {
+      dispatchPaste('', htmlNoTable);
+    });
+
+    // Choose formatted paste
+    fireEvent.click(screen.getByTestId('paste-formatted'));
+
+    // Modal closes
+    expect(screen.queryByText('Paste from clipboard')).not.toBeInTheDocument();
+
+    // Status bar confirms paste (text extracted from HTML)
+    const statusBar = screen.getByTestId('status-message');
+    expect(statusBar?.textContent).toContain('Pasted');
+  });
+
   it('auto-detects numeric values from plain text paste', () => {
     render(<App />);
 
