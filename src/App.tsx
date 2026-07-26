@@ -2,6 +2,8 @@ import { useState, useCallback, useMemo, useEffect } from 'react';
 import type { Workbook } from './types';
 import { cellKey, colToLetter } from './types';
 import { HistoryProvider, useHistory } from './context/HistoryContext';
+import { PasteModal } from './components/PasteModal';
+import { parsePlainText, parseHtmlTable, type ParsedClipboardGrid } from './utils/clipboardParse';
 import { FreezeProvider, useFreeze } from './context/FreezeContext';
 import { PrintSetupProvider } from './context/PrintSetupContext';
 import { Grid } from './components/Grid';
@@ -15,7 +17,7 @@ import { SheetTabs } from './components/SheetTabs';
 import { MenuBar } from './components/MenuBar';
 import { ImportExportBridge } from './components/ImportExportBridge';
 import { evaluateWorkbook } from './utils/formulaEngine';
-import { copyRange, cutRange as clipCutRange, getClipboard, clearClipboard } from './utils/clipboard';
+import { copyRange, cutRange as clipCutRange, getClipboard, clearClipboard, hasClipboardData } from './utils/clipboard';
 import { adjustFormulaRefs } from './utils/formulaParser';
 import { useAutosave } from './hooks/useAutosave';
 import { useCellEditing } from './hooks/useCellEditing';
@@ -143,6 +145,9 @@ function WorkbookView() {
   const [showPrintSetup, setShowPrintSetup] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [showSearchReplace, setShowSearchReplace] = useState(false);
+  const [showPasteModal, setShowPasteModal] = useState(false);
+  const [pendingPasteHtml, setPendingPasteHtml] = useState<string | null>(null);
+  const [pendingPastePlain, setPendingPastePlain] = useState<string | null>(null);
   const {
     wizard: formulaWizard,
     openWizard: openFormulaWizard,
@@ -1003,6 +1008,112 @@ function WorkbookView() {
     }));
   }, [selection]);
 
+  // ─── External Paste Application ────────────────────────────────────────
+  // Writes a parsed clipboard grid into the workbook starting at the
+  // current selection. Used by both formatted and plain external paste.
+  // Includes bounds checking: clips data that would exceed sheet boundaries
+  // and reports how many rows/cols were clipped in the status message.
+  const handleExternalPaste = useCallback(
+    (plain: string, html: string | null) => {
+      if (!selection) return;
+
+      const parsed: ParsedClipboardGrid = html
+        ? parseHtmlTable(html)
+        : parsePlainText(plain);
+
+      if (parsed.rowCount === 0 || parsed.colCount === 0) return;
+
+      const targetRow = selection.startRow;
+      const targetCol = selection.startCol;
+      const maxRow = sheet.rowCount;
+      const maxCol = sheet.columnCount;
+
+      // Bounds checking: clip to sheet boundaries
+      const rowsToPaste = Math.min(parsed.rowCount, maxRow - targetRow);
+      const colsToPaste = Math.min(parsed.colCount, maxCol - targetCol);
+      const rowsClipped = parsed.rowCount - rowsToPaste;
+      const colsClipped = parsed.colCount - colsToPaste;
+
+      // If target is completely outside bounds, abort
+      if (rowsToPaste <= 0 || colsToPaste <= 0) {
+        setStatusMessage('Paste failed: selection is outside sheet bounds');
+        return;
+      }
+
+      const newCells = { ...sheet.cells };
+      let cellsUpdated = 0;
+
+      for (let r = 0; r < rowsToPaste; r++) {
+        for (let c = 0; c < colsToPaste; c++) {
+          const value = parsed.values[r][c];
+          if (value === '') continue;
+          const destRow = targetRow + r;
+          const destCol = targetCol + c;
+          const destKey = cellKey(destRow, destCol);
+          const style = parsed.styles[r][c];
+          newCells[destKey] = { rawValue: value, ...(style ? { style } : {}) };
+          cellsUpdated++;
+        }
+      }
+
+      if (cellsUpdated === 0) return;
+
+      const newSheets = workbook.sheets.map((s, idx) =>
+        idx === workbook.activeSheetIndex ? { ...s, cells: newCells } : s
+      );
+      const newWorkbook: Workbook = {
+        ...workbook,
+        sheets: newSheets,
+        lastModified: Date.now(),
+      };
+      pushHistory(newWorkbook, `Paste ${cellsUpdated} cell(s)`);
+
+      // Build status message with clipping info if applicable
+      let statusMsg = `Pasted ${cellsUpdated} cell(s)`;
+      if (rowsClipped > 0 || colsClipped > 0) {
+        const parts: string[] = [];
+        if (rowsClipped > 0) parts.push(`${rowsClipped} row(s) clipped`);
+        if (colsClipped > 0) parts.push(`${colsClipped} col(s) clipped`);
+        statusMsg += ` (${parts.join(', ')} — sheet boundary)`;
+      }
+      setStatusMessage(statusMsg);
+    },
+    [selection, sheet, workbook, pushHistory]
+  );
+
+  // ─── External Clipboard Paste ──────────────────────────────────────────
+  // Intercepts the browser paste event to capture data from external sources
+  // (other apps, web pages, etc.). If the clipboard contains HTML (formatted),
+  // shows a modal letting the user choose formatted vs plain paste. Otherwise
+  // pastes as plain text directly.
+  useEffect(() => {
+    const handleNativePaste = (e: ClipboardEvent) => {
+      // If our internal clipboard has data, the Ctrl+V keydown handler in
+      // Grid.tsx already dispatched simplesheets:paste — don't double-handle.
+      if (hasClipboardData()) return;
+
+      const html = e.clipboardData?.getData('text/html') ?? '';
+      const plain = e.clipboardData?.getData('text/plain') ?? '';
+
+      if (!html && !plain) return;
+
+      e.preventDefault();
+
+      if (html) {
+        // Formatted content available — ask the user
+        setPendingPasteHtml(html);
+        setPendingPastePlain(plain);
+        setShowPasteModal(true);
+      } else {
+        // Plain text only — paste directly
+        handleExternalPaste(plain, null);
+      }
+    };
+
+    window.addEventListener('paste', handleNativePaste);
+    return () => window.removeEventListener('paste', handleNativePaste);
+  }, [handleExternalPaste]);
+
   // ─── Insert / Delete Row / Column ───────────────────────────────────────
 
   const handleInsertRowAbove = useCallback(() => {
@@ -1236,6 +1347,27 @@ function WorkbookView() {
         workbook={workbook}
         activeSheetIndex={workbook.activeSheetIndex}
         onUpdate={handleSearchReplaceApply}
+      />
+      <PasteModal
+        isOpen={showPasteModal}
+        onClose={() => {
+          setShowPasteModal(false);
+          setPendingPasteHtml(null);
+          setPendingPastePlain(null);
+        }}
+        onPasteFormatted={() => {
+          if (pendingPasteHtml) handleExternalPaste('', pendingPasteHtml);
+          setShowPasteModal(false);
+          setPendingPasteHtml(null);
+          setPendingPastePlain(null);
+        }}
+        onPastePlainText={() => {
+          const text = pendingPastePlain ?? pendingPasteHtml ?? '';
+          handleExternalPaste(text, null);
+          setShowPasteModal(false);
+          setPendingPasteHtml(null);
+          setPendingPastePlain(null);
+        }}
       />
       <FormulaWizard
         wizard={formulaWizard}
