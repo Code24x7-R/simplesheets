@@ -59,6 +59,10 @@ export interface FormulaBarProps {
   onSetCaret?: (caretPosition: number) => void;
   /** Callback to set selection range (for mouse selection sync). */
   onSetSelection?: (start: number, end: number) => void;
+  /** Callback to cancel editing (restore original value). */
+  onCancelEditing?: () => void;
+  /** Callback to set buffer content (for paste operations). */
+  onSetBuffer?: (buffer: string, caretPos: number) => void;
 }
 
 /**
@@ -212,6 +216,8 @@ export function FormulaBar({
   onFocusEditing,
   onSetCaret,
   onSetSelection,
+  onCancelEditing,
+  onSetBuffer,
   referenceFormat = 'A1',
   onToggleReferenceFormat,
   onInsertFunction,
@@ -441,6 +447,25 @@ export function FormulaBar({
           }
         }
       }
+      // Escape: Cancel edit mode and restore original value
+      if (e.key === 'Escape') {
+        const hookState = editingSession?.state;
+        if (hookState === 'EDIT' || hookState === 'ENTER') {
+          e.preventDefault();
+          // Cancel editing (restore original value)
+          onCancelEditing?.();
+          return;
+        }
+      }
+      // F2: Toggle edit mode (exit to SELECT with commit)
+      if (e.key === 'F2') {
+        const hookState = editingSession?.state;
+        if (hookState === 'EDIT' || hookState === 'ENTER') {
+          e.preventDefault();
+          inputRef.current?.blur();
+          return;
+        }
+      }
       // Ctrl+C: Copy selected text to clipboard
       if ((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'C')) {
         const input = inputRef.current;
@@ -472,6 +497,10 @@ export function FormulaBar({
             const newPos = selStart + clipText.length;
             setInternalCursorPos(newPos);
             onCursorChange?.(newPos);
+            // Sync buffer to FSM hook so POINT mode detection works correctly
+            if (onSetBuffer && editingSession && (editingSession.state === 'EDIT' || editingSession.state === 'ENTER')) {
+              onSetBuffer(newValue, newPos);
+            }
           }
         }).catch(() => {
           // Clipboard access denied - let native paste handle it
@@ -621,7 +650,7 @@ export function FormulaBar({
         }
         break;
     }
-  }, [onEditingKey, autoCompleteOpen, autoCompleteMatches, autoCompleteIndex, isPointMode, displayValue, editingSession, onCommit, onCellPick, onExitPointMode, onChange, onCursorChange, acceptAutoComplete, updateCursorPos, onSetSelection]);
+  }, [onEditingKey, autoCompleteOpen, autoCompleteMatches, autoCompleteIndex, isPointMode, displayValue, editingSession, onCommit, onCellPick, onExitPointMode, onChange, onCursorChange, acceptAutoComplete, updateCursorPos, onSetSelection, onCancelEditing, onSetBuffer]);
 
   const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
@@ -629,16 +658,21 @@ export function FormulaBar({
     // When integrated with the hook, the hook owns the buffer during active
     // editing (we preventDefault on keydown so the native input doesn't
     // change from typing).  Paste/autofill can still change the input
-    // natively — update the displayed value and reset the hook so the
-    // committed value matches what the user pasted.
+    // natively — update the displayed value AND sync the hook buffer so
+    // POINT mode detection works correctly with pasted trigger characters.
     if (onEditingKey && editingSession) {
       if (editingSession.state === 'SELECT') {
         onChange(newValue);
         return;
       }
-      // Paste during active editing: update display, hook buffer will resync
-      // on the next keypress or commit.
+      // Paste during active editing: update display and sync hook buffer
       onChange(newValue);
+      const rawPos = e.target.selectionStart;
+      const newPos = rawPos !== null && rawPos !== undefined ? rawPos : newValue.length;
+      // Sync buffer to FSM hook so POINT mode detection uses correct content
+      if (onSetBuffer) {
+        onSetBuffer(newValue, newPos);
+      }
       return;
     }
 
@@ -667,7 +701,7 @@ export function FormulaBar({
       }
     }
     setAutoCompleteOpen(false);
-  }, [onEditingKey, editingSession, onChange, onCursorChange, findFunctionToken]);
+  }, [onEditingKey, editingSession, onChange, onCursorChange, findFunctionToken, onSetBuffer]);
 
   const handleClick = useCallback(() => {
     updateCursorPos();

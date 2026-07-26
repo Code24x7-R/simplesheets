@@ -199,7 +199,9 @@ function WorkbookView() {
     startEditAt,
     setCaretPos,
     setSelection,
+    setBuffer,
     commit: commitEditing,
+    cancel: cancelEditing,
     reset: resetEditing,
   } = useCellEditing({
     activeRow: activeCell?.row ?? 0,
@@ -432,6 +434,11 @@ function WorkbookView() {
   const handleFormulaBlurEditing = useCallback(() => {
     commitEditing();
   }, [commitEditing]);
+
+  // Cancel editing and restore original value (used when Escape is pressed)
+  const handleFormulaCancelEditing = useCallback(() => {
+    cancelEditing();
+  }, [cancelEditing]);
 
   // When the formula bar is focused, enter EDIT mode at the caret position
   // so the user can edit the existing formula in-place (instead of replacing it)
@@ -1468,6 +1475,8 @@ function WorkbookView() {
         onFocusEditing={handleFormulaFocusEditing}
         onSetCaret={setCaretPos}
         onSetSelection={setSelection}
+        onSetBuffer={setBuffer}
+        onCancelEditing={handleFormulaCancelEditing}
         referenceFormat={referenceFormat}
         onToggleReferenceFormat={toggleReferenceFormat}
         onInsertFunction={(fn) => {
