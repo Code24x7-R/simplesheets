@@ -54,18 +54,6 @@ export interface Cell {
 
   /** Visual style for this cell. */
   style?: CellStyle;
-
-  /** Number of rows this cell spans (for merged cells). Default 1. */
-  rowSpan?: number;
-
-  /** Number of columns this cell spans (for merged cells). Default 1. */
-  colSpan?: number;
-
-  /**
-   * True if this cell is the "anchor" of a merged region.
-   * Merged cells that are not the anchor are hidden during rendering.
-   */
-  isMergeAnchor?: boolean;
 }
 
 /**

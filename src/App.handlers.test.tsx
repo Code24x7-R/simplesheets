@@ -268,23 +268,6 @@ describe('App - Paste with Formula Adjustment', () => {
   });
 });
 
-describe('App - Unmerge', () => {
-  it('shows unmerge status message after selecting a cell', () => {
-    render(<App />);
-    const cell = document.querySelector('.grid-cell') as HTMLElement;
-    fireEvent.mouseDown(cell);
-
-    // Use Format menu to unmerge
-    fireEvent.click(screen.getByText('Format'));
-    const unmergeItem = screen.getByText('Unmerge Cells').closest('.menu-item') as HTMLElement;
-    expect(unmergeItem).not.toHaveClass('menu-item-disabled');
-    fireEvent.click(unmergeItem);
-
-    const statusBar = screen.getByTestId('status-message');
-    expect(statusBar?.textContent).toContain('Unmerge');
-  });
-});
-
 describe('App - Resize', () => {
   it('handles column resize via ResizeHandle', () => {
     render(<App />);

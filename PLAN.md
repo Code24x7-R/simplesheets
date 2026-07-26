@@ -4,9 +4,9 @@
 Achieve a clean, clutter-free UI with standardized dropdown menus, formula wizard, function bar, and R1C1 reference format.
 
 ## Current State
-- **1388 tests** across **58 suites**, All passing
-- Lint clean (0 warnings), Type-check clean (0 errors), Build clean
-- Coverage: **93.25% stmts, 83.38% branches, 94.03% funcs, 95.12% lines**
+- **1347 tests** across **51 suites**, All passing
+- Lint clean (0 warnings), Build clean
+- Coverage: **90.48% stmts, 80.38% branches, 90.92% funcs, 92.38% lines**
 - Phases 1-10 complete: Menu system, Formula bar, Function bar, R1C1 toggle, Layout polish, Nested Formula Wizard
 - Phase 11 complete: Cell Style System (Bold, Italic, Underline, Colors, Alignment)
 - Phase 12 complete: Search & Replace (find/replace with case, exact match, formula scope, multi-sheet)
@@ -31,25 +31,26 @@ Achieve a clean, clutter-free UI with standardized dropdown menus, formula wizar
 | SearchReplaceModal | Find & Replace dialog with configurable options |
 | sheetSearch | Core search and replace engine |
 
-### Coverage by file (2026-07-27)
+### Coverage by file (2026-07-27 post-cleanup)
 | File | Lines | Branches | Status |
 |------|-------|----------|--------|
-| App.tsx | 89.57% | 70% | ⚠️ paste/edge cases |
-| Grid.tsx | 86.72% | 87.94% | ⚠️ POINT mode resize |
-| FormulaBar.tsx | 87.92% | 80.98% | ⚠️ hook integration |
+| App.tsx | 87.43% | 72% | ⚠️ paste/edge cases |
+| Grid.tsx | 84.99% | 85.3% | ⚠️ POINT mode resize |
+| FormulaBar.tsx | 75.11% | 61.21% | ⚠️ autocomplete/point |
 | MenuBar.tsx | 100% | 100% | ✅ |
 | FormulaWizard.tsx | 100% | 86.27% | ⚠️ branches |
-| clipboardParse.ts | 100% | 93.4% | ⚠️ branches |
-| formulaEngine.ts | 94.2% | 76.1% | ⚠️ branches |
+| clipboardParse.ts | 100% | 91.66% | ⚠️ branches |
+| formulaEngine.ts | 94.24% | 76.1% | ⚠️ branches |
 | SearchReplaceModal.tsx | 100% | 78.94% | ⚠️ branches |
-| useCellEditing.ts | 97.97% | 89.83% | ⚠️ branches |
-| pdfExport.ts | 95.6% | 75% | ⚠️ branches |
-| HistoryContext.tsx | 94.7% | 66.7% | ⚠️ branches |
+| useCellEditing.ts | 83.84% | 75.81% | ⚠️ FSM branches |
+| pdfExport.ts | 95.55% | 75% | ⚠️ branches |
+| HistoryContext.tsx | 92.3% | 66.7% | ⚠️ branches |
 | excelImport.ts | 100% | 100% | ✅ |
-| excelExport.ts | 98.6% | 94.7% | ⚠️ |
-| formulaParser.ts | 98.1% | 91.8% | ⚠️ |
+| excelExport.ts | 100% | 94.73% | ⚠️ |
+| formulaParser.ts | 97.4% | 90.8% | ⚠️ |
 | sheetSearch.ts | 100% | 100% | ✅ |
-| DropdownMenu.tsx | 92.2% | 93.3% | ⚠️ |
+| useFormulaWizard.ts | 100% | 52.38% | ⚠️ branches |
+| highlightColors.ts | 100% | 100% | ✅ |
 
 ## Strategy: Quick Wins First, Then Phased Complex Files
 

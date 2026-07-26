@@ -2,7 +2,7 @@
  * JSON Import / Export Service
  *
  * Serializes and deserializes the full Workbook model including
- * all sheets, cells, styles, merges, frozen panes, and column/row dimensions.
+ * all sheets, cells, styles, frozen panes, and column/row dimensions.
  */
 
 import type { Workbook } from '../types';

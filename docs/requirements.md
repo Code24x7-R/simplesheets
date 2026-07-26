@@ -14,8 +14,6 @@
 
 3. **Undo / redo stack** — At least 50 levels of undo with toolbar buttons and Ctrl+Z/Y shortcuts. *Rationale:* Confidence to experiment; prevents data loss from accidental edits.
 
-4. **Cell merging** — Merge/unmerge selected ranges into a single cell for headers and layouts. *Rationale:* Required for invoices, reports, and any printable document.
-
 ## Formulas
 
 5. **Core formula engine** — Arithmetic (+, −, ×, ÷) plus SUM, AVERAGE, COUNT, MIN, MAX, IF. *Rationale:* Covers 90 % of small‑business calculations; keeps engine simple and fast.

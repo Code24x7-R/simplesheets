@@ -25,16 +25,6 @@ describe('Core Data Model', () => {
       expect(cell.style?.color).toBe('#FF0000');
     });
 
-    it('can represent a merged cell', () => {
-      const cell: Cell = {
-        rawValue: 'Merged Header',
-        rowSpan: 1,
-        colSpan: 3,
-        isMergeAnchor: true,
-      };
-      expect(cell.colSpan).toBe(3);
-      expect(cell.isMergeAnchor).toBe(true);
-    });
   });
 
   describe('Sheet', () => {

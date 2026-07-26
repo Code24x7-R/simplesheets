@@ -39,10 +39,6 @@ interface MenuBarProps {
   onInsertColLeft: () => void;
   onInsertColRight: () => void;
   // Format menu
-  onMerge: () => void;
-  onUnmerge: () => void;
-  canMerge: boolean;
-  canUnmerge: boolean;
   onToggleBold: () => void;
   onToggleItalic: () => void;
   onToggleUnderline: () => void;
@@ -103,8 +99,7 @@ export function MenuBar(props: MenuBarProps) {
         'insert-col-left': props.onInsertColLeft,
         'insert-col-right': props.onInsertColRight,
         // Format
-        'format-merge': props.onMerge,
-        'format-unmerge': props.onUnmerge,
+
         'format-bold': props.onToggleBold,
         'format-italic': props.onToggleItalic,
         'format-underline': props.onToggleUnderline,
@@ -251,9 +246,6 @@ export function MenuBar(props: MenuBarProps) {
       ],
     },
     { id: 'sep-format-2', label: '', separator: true },
-    { id: 'format-merge', label: 'Merge Cells', icon: '⊞', disabled: !props.canMerge },
-    { id: 'format-unmerge', label: 'Unmerge Cells', icon: '⊟', disabled: !props.canUnmerge },
-    { id: 'sep-format-3', label: '', separator: true },
     { id: 'format-clear-styles', label: 'Clear Styles', icon: '⊡' },
   ];
 

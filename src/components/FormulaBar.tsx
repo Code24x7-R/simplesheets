@@ -5,6 +5,7 @@ import { searchFunctions, type FunctionInfo } from '../utils/formulaAutocomplete
 import type { EditingSession, PointSession } from '../hooks/useCellEditing';
 import type { ReferenceFormat } from '../hooks/useReferenceFormat';
 import { colToLetter } from '../types';
+import { HIGHLIGHT_COLORS, HIGHLIGHT_BORDER_COLORS } from '../utils/highlightColors';
 
 /** Represents a highlighted range with a color index. */
 export interface HighlightedRange {
@@ -56,31 +57,6 @@ export interface FormulaBarProps {
   /** Callback when formula highlights change. */
   onHighlightsChange?: (ranges: HighlightedRange[]) => void;
 }
-
-/**
- * Colors for highlighting different references in a formula.
- */
-const HIGHLIGHT_COLORS = [
-  'rgba(59, 130, 246, 0.10)',  // blue
-  'rgba(239, 68, 68, 0.10)',   // red
-  'rgba(34, 197, 94, 0.10)',   // green
-  'rgba(234, 179, 8, 0.10)',   // yellow
-  'rgba(168, 85, 247, 0.10)',  // purple
-  'rgba(236, 72, 153, 0.10)',  // pink
-  'rgba(249, 115, 22, 0.10)',  // orange
-  'rgba(6, 182, 212, 0.10)',   // cyan
-];
-
-const HIGHLIGHT_BORDER_COLORS = [
-  'rgb(59, 130, 246)',
-  'rgb(239, 68, 68)',
-  'rgb(34, 197, 94)',
-  'rgb(234, 179, 8)',
-  'rgb(168, 85, 247)',
-  'rgb(236, 72, 153)',
-  'rgb(249, 115, 22)',
-  'rgb(6, 182, 212)',
-];
 
 /**
  * Walks the AST to extract ranges for highlighting.
@@ -189,16 +165,16 @@ function AutoCompleteDropdown({
  */
 export function FormulaBar({
   session,
-  pointSession,
+  pointSession: _pointSession,
   value,
   cursorPos,
-  statusMessage,
+  statusMessage: _statusMessage,
   onRawKeyDown,
   onRawChange,
   onRawFocus,
   onRawBlur,
   onRawCaretMove,
-  onCellPick,
+  onCellPick: _onCellPick,
   referenceFormat = 'A1',
   onToggleReferenceFormat,
   onInsertFunction,

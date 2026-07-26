@@ -1,6 +1,6 @@
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import App from './App';
-import { clearClipboard, hasClipboardData } from './utils/clipboard';
+import { clearClipboard } from './utils/clipboard';
 
 // Mock the virtualizer
 jest.mock('@tanstack/react-virtual', () => ({

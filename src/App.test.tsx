@@ -126,13 +126,6 @@ describe('App', () => {
     expect(screen.getByText('Column Right')).toBeTruthy();
   });
 
-  it('opens Format menu and shows Merge/Unmerge items', () => {
-    render(<App />);
-    fireEvent.click(screen.getByText('Format'));
-    expect(screen.getByText('Merge Cells')).toBeTruthy();
-    expect(screen.getByText('Unmerge Cells')).toBeTruthy();
-  });
-
   it('opens Help menu and shows About item', () => {
     render(<App />);
     fireEvent.click(screen.getByText('Help'));
@@ -279,14 +272,6 @@ describe('App', () => {
     expect(statusBar?.textContent).toContain('Panes frozen');
   });
 
-  it('shows Format menu with Merge Cells item', () => {
-    render(<App />);
-    // Open Format menu
-    fireEvent.click(screen.getByText('Format'));
-    // Merge Cells should be visible (may be disabled without range selection)
-    expect(screen.getByText('Merge Cells')).toBeTruthy();
-    expect(screen.getByText('Unmerge Cells')).toBeTruthy();
-  });
 });
 
 describe('App - Global Keyboard Shortcuts', () => {

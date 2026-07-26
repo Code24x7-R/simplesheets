@@ -10,7 +10,6 @@ A lightweight, browser‑based spreadsheet for small businesses. No server, no a
 - 📊 **Formulas** — 50+ functions (SUM, AVERAGE, IF, date, math, string, logical) + arithmetic
 - 📋 **Copy / paste & drag‑fill** series extension
 - ↩️ **Undo / redo** — 50 levels
-- 📐 **Cell merging** for headers and layouts
 - ↔️ **Column & row resizing** + freeze panes
 - 📥 **Import** — .xlsx, .csv, .tsv, .json
 - 📤 **Export** — .xlsx, .csv, .tsv, .json, .pdf
@@ -53,7 +52,7 @@ SimpleSheet uses a clean, menu-based interface:
 | **Edit** | Undo, Redo, Copy, Cut, Paste, Clear Contents, Find & Replace, Delete (Row/Column/Cells) |
 | **View** | Freeze Panes, Unfreeze Panes |
 | **Insert** | Row Above, Row Below, Column Left, Column Right |
-| **Format** | Merge Cells, Unmerge Cells |
+| **Format** | Bold, Italic, Underline, Wrap Text, Alignment, Colors, Number Format, Clear Styles |
 | **Help** | Keyboard Shortcuts, About |
 
 ### Keyboard Shortcuts
@@ -129,8 +128,7 @@ INACTIVE → WIZARD_ROOT → NESTED_STEP → POINT_SELECTION
 | Excel | SheetJS (xlsx) |
 | CSV/TSV | PapaParse |
 | PDF | html2pdf.js |
-| Icons | Lucide React |
-| Testing | Jest + Cypress |
+| Testing | Jest |
 
 ---
 
@@ -162,12 +160,9 @@ npm run preview
 ```bash
 # Unit tests (Jest) with coverage
 npm test
-
-# E2E tests (Cypress)
-npm run cypress
 ```
 
-Current test suite: **1083 tests** across 43 suites with **~93% line coverage**.
+Current test suite: **1347 tests** across 51 suites with **~92% line coverage**.
 
 ---
 

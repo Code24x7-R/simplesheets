@@ -33,10 +33,6 @@ describe('MenuBar', () => {
     onInsertRowBelow: jest.fn(),
     onInsertColLeft: jest.fn(),
     onInsertColRight: jest.fn(),
-    onMerge: jest.fn(),
-    onUnmerge: jest.fn(),
-    canMerge: true,
-    canUnmerge: true,
     onToggleBold: jest.fn(),
     onToggleItalic: jest.fn(),
     onToggleUnderline: jest.fn(),
@@ -152,22 +148,6 @@ describe('MenuBar', () => {
     expect(screen.getByText('Row Below')).toBeTruthy();
     expect(screen.getByText('Column Left')).toBeTruthy();
     expect(screen.getByText('Column Right')).toBeTruthy();
-  });
-
-  it('Format menu shows Merge and Unmerge', () => {
-    render(<MenuBar {...defaultProps} />);
-    fireEvent.click(screen.getByText('Format'));
-    expect(screen.getByText('Merge Cells')).toBeTruthy();
-    expect(screen.getByText('Unmerge Cells')).toBeTruthy();
-  });
-
-  it('Format menu disables Merge when cannot merge', () => {
-    render(<MenuBar {...defaultProps} canMerge={false} canUnmerge={false} />);
-    fireEvent.click(screen.getByText('Format'));
-    const mergeItem = screen.getByText('Merge Cells').closest('.menu-item');
-    const unmergeItem = screen.getByText('Unmerge Cells').closest('.menu-item');
-    expect(mergeItem?.classList.contains('menu-item-disabled')).toBe(true);
-    expect(unmergeItem?.classList.contains('menu-item-disabled')).toBe(true);
   });
 
   it('Format menu shows Bold, Italic, Underline items', () => {

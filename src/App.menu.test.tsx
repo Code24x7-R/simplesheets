@@ -105,18 +105,6 @@ describe('App - Menu Handlers', () => {
     expect(unfreezeItem?.classList.contains('menu-item-disabled')).toBe(true);
   });
 
-  it('handles Format > Merge Cells', () => {
-    render(<App />);
-    // Select a cell first
-    const cell = document.querySelector('.grid-cell') as HTMLElement;
-    fireEvent.mouseDown(cell);
-    // Merge via menu
-    fireEvent.click(screen.getByText('Format'));
-    const mergeItem = screen.getByText('Merge Cells').closest('.menu-item') as HTMLElement;
-    // Without range selection, merge should be disabled
-    expect(mergeItem?.classList.contains('menu-item-disabled')).toBe(true);
-  });
-
   it('handles File > Save (shows status)', () => {
     render(<App />);
     fireEvent.click(screen.getByText('File'));

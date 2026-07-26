@@ -288,9 +288,6 @@ function WorkbookView() {
         const newCell: Cell = {
           rawValue: value,
           style: existingCell?.style,
-          rowSpan: existingCell?.rowSpan,
-          colSpan: existingCell?.colSpan,
-          isMergeAnchor: existingCell?.isMergeAnchor,
         };
         return {
           ...s,
@@ -326,9 +323,6 @@ function WorkbookView() {
             newCells[key] = {
               rawValue: change.value,
               style: existingCell?.style,
-              rowSpan: existingCell?.rowSpan,
-              colSpan: existingCell?.colSpan,
-              isMergeAnchor: existingCell?.isMergeAnchor,
             };
           }
         }
@@ -568,15 +562,7 @@ function WorkbookView() {
     [workbook, pushHistory]
   );
 
-  /* istanbul ignore next - merge button disabled without range selection (requires shift+click) */
-  const handleMerge = useCallback(() => {
-    // In a full implementation, merge selected cells and push history
-    setStatusMessage('Merge: select a range first');
-  }, []);
 
-  const handleUnmerge = useCallback(() => {
-    setStatusMessage('Unmerge: select a merged cell first');
-  }, []);
 
   const handleFreeze = useCallback(() => {
     freeze(1, 1);
@@ -919,9 +905,6 @@ function WorkbookView() {
           const destCell: Cell = {
             rawValue: newValue,
             style: cell?.style,
-            rowSpan: cell?.rowSpan ?? 1,
-            colSpan: cell?.colSpan ?? 1,
-            isMergeAnchor: cell?.isMergeAnchor ?? false,
           };
           newCells[destKey] = destCell;
           cellsUpdated++;
@@ -984,11 +967,6 @@ function WorkbookView() {
       window.removeEventListener('simplesheets:paste', handlePasteEvent);
     };
   }, [sheet, workbook, pushHistory, pendingCutRange, pasteSkipBlanks, selection]);
-
-  const hasSelection = selection !== null;
-  const hasRangeSelection =
-    hasSelection &&
-    (selection.endRow !== selection.startRow || selection.endCol !== selection.startCol);
 
   // ─── Cell Style System (useCellStyles hook) ───────────────────────
   const {
@@ -1414,10 +1392,6 @@ function WorkbookView() {
           onInsertRowBelow={handleInsertRowBelow}
           onInsertColLeft={handleInsertColLeft}
           onInsertColRight={handleInsertColRight}
-          onMerge={handleMerge}
-          onUnmerge={handleUnmerge}
-          canMerge={hasRangeSelection}
-          canUnmerge={hasSelection}
           onToggleBold={toggleBoldStyle}
           onToggleItalic={toggleItalicStyle}
           onToggleUnderline={toggleUnderlineStyle}
