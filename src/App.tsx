@@ -291,7 +291,7 @@ function WorkbookView() {
       };
       const cellRef = `${colToLetter(col)}${row + 1}`;
       pushHistory(newWorkbook, `Edit ${cellRef}`);
-      setStatusMessage(`Updated ${cellRef} = ${value}`);
+      setStatusMessage(`Updated ${cellRef}`);
     },
     [workbook, pushHistory]
   );
