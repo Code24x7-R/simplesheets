@@ -128,8 +128,11 @@ export function classifyPasteContent(
 export function parsePlainText(text: string): ParsedClipboardGrid {
   // Normalize line endings
   const normalized = text.replace(/\r\n?/g, '\n');
-  // Split into rows, drop trailing empty line
+  // Split into rows, drop leading/trailing empty lines
   const lines = normalized.split('\n');
+  while (lines.length > 0 && lines[0].trim() === '') {
+    lines.shift();
+  }
   while (lines.length > 0 && lines[lines.length - 1].trim() === '') {
     lines.pop();
   }

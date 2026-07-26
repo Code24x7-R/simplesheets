@@ -1,4 +1,4 @@
-import { useRef, useCallback, useState, useMemo, useEffect } from 'react';
+import { useRef, useCallback, useState, useMemo, useEffect, useImperativeHandle, forwardRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import type { Sheet, Selection } from '../types';
@@ -101,13 +101,21 @@ const HIGHLIGHT_BORDER_COLORS = [
   'rgb(6, 182, 212)',
 ];
 
+/** Imperative handle for parent to call focus() after paste operations. */
+export interface GridHandle {
+  focus: () => void;
+}
+
 /**
  * Virtualized spreadsheet grid.
  *
  * Renders only the visible cells within the viewport using @tanstack/react-virtual.
  * Supports 10,000+ rows with smooth scrolling.
  */
-export function Grid({ sheet, onCellChange, onCellsChange, onSelect, selectedCell, highlightedRanges = [], isPointMode = false, pointSelection = null, onCellPick, onHeaderSelect, onSelectionChange, onColumnResize, onRowResize, referenceFormat = 'A1', onInsertRowAbove, onInsertRowBelow, onDeleteRow, onInsertColLeft, onInsertColRight, onDeleteCol, clipboardRange, onClearClipboard }: GridProps) {
+export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
+  { sheet, onCellChange, onCellsChange, onSelect, selectedCell, highlightedRanges = [], isPointMode = false, pointSelection = null, onCellPick, onHeaderSelect, onSelectionChange, onColumnResize, onRowResize, referenceFormat = 'A1', onInsertRowAbove, onInsertRowBelow, onDeleteRow, onInsertColLeft, onInsertColRight, onDeleteCol, clipboardRange, onClearClipboard },
+  ref
+) {
   const parentRef = useRef<HTMLDivElement>(null);
   const [selection, setSelection] = useState<Selection | null>(null);
   const [editingCell, setEditingCell] = useState<string | null>(null);
@@ -115,6 +123,14 @@ export function Grid({ sheet, onCellChange, onCellsChange, onSelect, selectedCel
   const editInputRef = useRef<HTMLInputElement>(null);
   const editingCellRef = useRef<string | null>(null);
   editingCellRef.current = editingCell;
+
+  // Expose focus() to parent for restoring keyboard navigation after paste
+  useImperativeHandle(ref, () => ({
+    focus: () => {
+      parentRef.current?.focus();
+    },
+  }), [parentRef]);
+
   // ─── Resize drag state ───────────────────────────────────────────────
   // Drag tracking via ref (NOT state) so mousemove never triggers re-render.
   // Live preview is done by direct DOM manipulation for zero-lag feedback.
@@ -1553,7 +1569,7 @@ export function Grid({ sheet, onCellChange, onCellsChange, onSelect, selectedCel
         )}
     </div>
   );
-}
+});
 
 // ─── POINT Mode Range Resize Handles ──────────────────────────────────────
 

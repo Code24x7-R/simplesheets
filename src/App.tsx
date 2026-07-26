@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import type { Workbook } from './types';
 import { cellKey, colToLetter } from './types';
 import { HistoryProvider, useHistory } from './context/HistoryContext';
@@ -7,7 +7,7 @@ import { PasteSpecialModal } from './components/PasteSpecialModal';
 import { parsePlainText, parseHtmlTable, classifyPasteContent, type ParsedClipboardGrid, type PasteContentKind } from './utils/clipboardParse';
 import { FreezeProvider, useFreeze } from './context/FreezeContext';
 import { PrintSetupProvider } from './context/PrintSetupContext';
-import { Grid } from './components/Grid';
+import { Grid, type GridHandle } from './components/Grid';
 import type { PointModeSelection } from './components/Grid';
 import { FormulaBar } from './components/FormulaBar';
 import type { HighlightedRange } from './components/FormulaBar';
@@ -171,6 +171,8 @@ function WorkbookView() {
     endCol: number;
     isCut: boolean;
   } | null>(null);
+  // Ref to restore focus to grid after paste operations
+  const gridRef = useRef<GridHandle>(null);
 
   // Paste Special options
   const [pasteSkipBlanks, setPasteSkipBlanks] = useState(false);
@@ -1128,7 +1130,7 @@ function WorkbookView() {
 
       // Use classification to avoid unnecessary HTML parsing
       // (e.g., MathJax content has HTML but no table)
-      let kind: PasteContentKind = classifyPasteContent(plain, html);
+      const kind: PasteContentKind = classifyPasteContent(plain, html);
       let textToParse = plain;
 
       // When plain is empty but HTML is available, extract text from HTML
@@ -1204,8 +1206,11 @@ function WorkbookView() {
         statusMsg += ` (${parts.join(', ')} — sheet boundary)`;
       }
       setStatusMessage(statusMsg);
+
+      // Restore focus to grid so keyboard navigation works
+      gridRef.current?.focus();
     },
-    [selection, sheet, workbook, pushHistory]
+    [selection, sheet, workbook, pushHistory, gridRef]
   );
 
   // ─── External Clipboard Paste ──────────────────────────────────────────
@@ -1480,6 +1485,7 @@ function WorkbookView() {
       {/* Grid */}
       <div className="flex-1 overflow-hidden">
         <Grid
+          ref={gridRef}
           sheet={updatedSheet}
           onCellChange={handleCellChange}
           onCellsChange={handleCellsChange}
