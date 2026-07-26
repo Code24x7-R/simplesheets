@@ -426,12 +426,13 @@ export function FormulaBar({
     if (onEditingKey) {
       // Sync native selection to FSM hook before processing any key
       // This ensures the hook knows about mouse selections
-      // Skip when Shift is pressed (FSM hook handles Shift+Arrow selection)
-      if (!e.shiftKey) {
-        const input = inputRef.current;
-        if (input && document.activeElement === input && onSetSelection) {
-          const nativeSelStart = input.selectionStart ?? 0;
-          const nativeSelEnd = input.selectionEnd ?? 0;
+      // Only sync if the key being pressed is NOT a Shift+Arrow (FSM handles those)
+      const isShiftArrow = e.shiftKey && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key);
+      if (!isShiftArrow) {
+        const inputForSync = inputRef.current;
+        if (inputForSync && document.activeElement === inputForSync && onSetSelection) {
+          const nativeSelStart = inputForSync.selectionStart ?? 0;
+          const nativeSelEnd = inputForSync.selectionEnd ?? 0;
           const hookSelStart = editingSession?.selectionStart ?? -1;
           const hookSelEnd = editingSession?.selectionEnd ?? -1;
           // If native selection differs from hook selection, sync it
