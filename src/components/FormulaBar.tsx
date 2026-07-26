@@ -249,7 +249,7 @@ export function FormulaBar({
   // Compute validation
   const validation: ValidationResult = useMemo(() => validateFormula(displayValue), [displayValue]);
 
-  // Sync cursor/selection position to input element
+  // Sync cursor/selection position to input element and scroll to keep cursor visible
   useEffect(() => {
     const input = inputRef.current;
     /* istanbul ignore next - jsdom activeElement check */
@@ -261,12 +261,32 @@ export function FormulaBar({
         const start = Math.min(selStart, selEnd);
         const end = Math.max(selStart, selEnd);
         input.setSelectionRange(start, end);
+        // Scroll to show the end of selection (cursor position)
+        input.scrollLeft = Math.max(0, input.scrollWidth - input.clientWidth);
       } else {
         // Set cursor position
         input.setSelectionRange(cursorPos, cursorPos);
+        // Scroll to keep cursor visible
+        // Create a temporary span to measure text width up to cursor
+        const textBeforeCursor = displayValue.slice(0, cursorPos);
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          const computedStyle = window.getComputedStyle(input);
+          ctx.font = `${computedStyle.fontSize} ${computedStyle.fontFamily}`;
+          const textWidth = ctx.measureText(textBeforeCursor).width;
+          const padding = parseInt(computedStyle.paddingLeft) || 0;
+          const cursorX = padding + textWidth;
+          // Scroll if cursor is beyond visible area
+          if (cursorX > input.scrollLeft + input.clientWidth) {
+            input.scrollLeft = cursorX - input.clientWidth + 20;
+          } else if (cursorX < input.scrollLeft) {
+            input.scrollLeft = Math.max(0, cursorX - 20);
+          }
+        }
       }
     }
-  }, [cursorPos, editingSession?.selectionStart, editingSession?.selectionEnd]);
+  }, [cursorPos, editingSession?.selectionStart, editingSession?.selectionEnd, displayValue]);
 
   // Close auto-complete when value changes externally
   useEffect(() => {
