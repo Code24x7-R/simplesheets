@@ -15,38 +15,35 @@ export interface HighlightedRange {
 }
 
 export interface FormulaBarProps {
+  // ── Read-only state from FSM ─────────────────────────────────────────
+  /** Current editing session state. */
+  session: EditingSession;
+  /** Current POINT session (null if not in POINT mode). */
+  pointSession: PointSession | null;
+  /** Current display value (formula buffer or cell value). */
   value: string;
-  onChange: (value: string) => void;
-  onCommit: (value: string) => void;
-  activeCellRef: string;
-  /** Current formula being edited (for live highlighting). */
-  editingFormula: string | null;
-  /** Callback when formula highlights change. */
-  onHighlightsChange?: (ranges: HighlightedRange[]) => void;
-  /** Current cursor position in the formula. */
-  cursorPos?: number;
-  /** Callback when cursor position changes. */
-  onCursorChange?: (pos: number) => void;
-  /** Whether we're in point mode (selecting cells). */
-  isPointMode?: boolean;
-  /** The current point mode selection for visual feedback. */
-  pointSelection?: { startRow: number; startCol: number; endRow: number; endCol: number } | null;
-  /** Callback to request entering point mode. */
-  onRequestPointMode?: () => void;
-  /** Callback when a cell is picked during point mode. */
-  onCellPick?: (row: number, col: number, shiftKey: boolean) => void;
-  /** Callback to exit point mode. */
-  onExitPointMode?: () => void;
-  /** The editing session from useCellEditing hook (when integrated). */
-  editingSession?: EditingSession | null;
-  /** The point session from useCellEditing hook (when integrated). */
-  editingPointSession?: PointSession | null;
-  /** Callback to handle a key press via the editing FSM. */
-  onEditingKey?: (key: string, shiftKey: boolean, ctrlKey: boolean, altKey?: boolean) => void;
-  /** Callback to commit the edit (e.g., on blur) via the editing FSM. */
-  onBlurEditing?: () => void;
-  /** Callback when the formula bar is focused (to enter EDIT mode at caret position). */
-  onFocusEditing?: (caretPosition: number) => void;
+  /** Current cursor position within the buffer. */
+  cursorPos: number;
+  /** Status message derived from FSM state. */
+  statusMessage: string;
+
+  // ── Raw event handlers (FSM decides what to do) ─────────────────────
+  /** Raw key down event - FSM processes based on current state. */
+  onRawKeyDown: (e: React.KeyboardEvent) => void;
+  /** Raw change event - FSM updates buffer. */
+  onRawChange: (value: string, caretPos: number) => void;
+  /** Raw focus event - FSM enters EDIT mode. */
+  onRawFocus: (caretPos: number) => void;
+  /** Raw blur event - FSM commits or cancels. */
+  onRawBlur: () => void;
+  /** Caret moved (click) - FSM updates caret position. */
+  onRawCaretMove: (caretPos: number) => void;
+
+  // ── Grid interaction for POINT mode ─────────────────────────────────
+  /** Cell clicked during POINT mode - FSM updates selection. */
+  onCellPick: (row: number, col: number, shiftKey: boolean) => void;
+
+  // ── UI callbacks (non-editing) ──────────────────────────────────────
   /** Reference format (A1 or R1C1). */
   referenceFormat?: ReferenceFormat;
   /** Callback when the reference format toggle is clicked. */
@@ -55,12 +52,8 @@ export interface FormulaBarProps {
   onInsertFunction?: (functionName: string) => void;
   /** Callback when the Insert Function button is clicked (opens wizard). */
   onOpenWizard?: () => void;
-  /** Callback to set caret position (for click handling). */
-  onSetCaret?: (caretPosition: number) => void;
-  /** Callback to cancel editing (restore original value). */
-  onCancelEditing?: () => void;
-  /** Callback to set buffer content (for paste operations). */
-  onSetBuffer?: (buffer: string, caretPos: number) => void;
+  /** Callback when formula highlights change. */
+  onHighlightsChange?: (ranges: HighlightedRange[]) => void;
 }
 
 /**
@@ -194,55 +187,47 @@ function AutoCompleteDropdown({
  * Formula bar with live range highlighting, auto-complete, validation, and point mode.
  */
 export function FormulaBar({
+  session,
+  pointSession,
   value,
-  onChange,
-  onCommit,
-  activeCellRef,
-  editingFormula,
-  onHighlightsChange,
-  cursorPos: externalCursorPos,
-  onCursorChange,
-  isPointMode = false,
-  pointSelection: _pointSelection,
-  onRequestPointMode: _onRequestPointMode,
+  cursorPos,
+  statusMessage,
+  onRawKeyDown,
+  onRawChange,
+  onRawFocus,
+  onRawBlur,
+  onRawCaretMove,
   onCellPick,
-  onExitPointMode,
-  editingSession,
-  editingPointSession: _editingPointSession,
-  onEditingKey,
-  onBlurEditing,
-  onFocusEditing,
-  onSetCaret,
-  onCancelEditing,
-  onSetBuffer,
   referenceFormat = 'A1',
   onToggleReferenceFormat,
   onInsertFunction,
   onOpenWizard,
+  onHighlightsChange,
 }: FormulaBarProps) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [internalCursorPos, setInternalCursorPos] = useState(0);
   const [autoCompleteOpen, setAutoCompleteOpen] = useState(false);
   const [autoCompleteMatches, setAutoCompleteMatches] = useState<FunctionInfo[]>([]);
   const [autoCompleteIndex, setAutoCompleteIndex] = useState(0);
   const [autoCompleteTokenStart, setAutoCompleteTokenStart] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const cursorPos = externalCursorPos ?? internalCursorPos;
+  // Derive editing mode from FSM session state
+  const isEditing = session.state !== 'SELECT';
+  const isPointMode = session.state === 'POINT';
 
-  // When integrated with the editing FSM hook, the hook owns the buffer
-  const hookBuffer = editingSession?.buffer;
-  const isHookEditing = onEditingKey != null && editingSession != null && editingSession.state !== 'SELECT';
-  const displayValue = isHookEditing ? (hookBuffer ?? '') : value;
+  // Wrapper to update value and caret position
+  const onChange = useCallback((newValue: string) => {
+    const input = inputRef.current;
+    const caretPos = input ? (input.selectionStart ?? newValue.length) : newValue.length;
+    onRawChange(newValue, caretPos);
+  }, [onRawChange]);
 
   // Compute highlights when formula changes
   const highlights = useMemo(() => {
-    const formulaToParse = isEditing ? displayValue : editingFormula;
-    if (formulaToParse) {
-      return extractHighlights(formulaToParse);
+    if (value && isEditing) {
+      return extractHighlights(value);
     }
     return [];
-  }, [displayValue, isEditing, editingFormula]);
+  }, [value, isEditing]);
 
   // Emit highlights to parent
   useEffect(() => {
@@ -250,7 +235,7 @@ export function FormulaBar({
   }, [highlights, onHighlightsChange]);
 
   // Compute validation
-  const validation: ValidationResult = useMemo(() => validateFormula(displayValue), [displayValue]);
+  const validation: ValidationResult = useMemo(() => validateFormula(value), [value]);
 
   // Sync cursor/selection position to input element and scroll to keep cursor visible
   useEffect(() => {
@@ -260,7 +245,7 @@ export function FormulaBar({
       // Set cursor position
       input.setSelectionRange(cursorPos, cursorPos);
       // Scroll to keep cursor visible
-      const textBeforeCursor = displayValue.slice(0, cursorPos);
+      const textBeforeCursor = value.slice(0, cursorPos);
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       if (ctx) {
@@ -277,7 +262,7 @@ export function FormulaBar({
         }
       }
     }
-  }, [cursorPos, displayValue]);
+  }, [cursorPos, value]);
 
   // Close auto-complete when value changes externally
   useEffect(() => {
@@ -285,18 +270,6 @@ export function FormulaBar({
       setAutoCompleteOpen(false);
     }
   }, [isEditing]);
-
-  const updateCursorPos = useCallback(() => {
-    const input = inputRef.current;
-    if (input) {
-      const pos = input.selectionStart ?? 0;
-      setInternalCursorPos(pos);
-      onCursorChange?.(pos);
-      return pos;
-    }
-    /* istanbul ignore next - input ref is null */
-    return cursorPos;
-  }, [cursorPos, onCursorChange]);
 
   // Find function token at cursor position for auto-complete
   const findFunctionToken = useCallback((text: string, pos: number): { token: string; start: number } | null => {
@@ -353,54 +326,29 @@ export function FormulaBar({
   }, [value, cursorPos, findFunctionToken]);
 
   const handleFocus = useCallback(() => {
-    setIsEditing(true);
-    // When integrated with the editing FSM hook, entering the formula bar
-    // should transition to EDIT mode (preserving the existing formula buffer)
-    // with the caret at the click position, so the user can edit in-place.
-    if (onFocusEditing && onEditingKey && editingSession && editingSession.state === 'SELECT') {
-      const input = inputRef.current;
-      const caretPos = input ? (input.selectionStart ?? 0) : displayValue.length;
-      onFocusEditing(caretPos);
-    }
-  }, [onFocusEditing, onEditingKey, editingSession, displayValue]);
+    const input = inputRef.current;
+    const caretPos = input ? (input.selectionStart ?? 0) : value.length;
+    onRawFocus(caretPos);
+  }, [onRawFocus, value.length]);
 
   const handleBlur = useCallback(() => {
-    setIsEditing(false);
-    setAutoCompleteOpen(false);
-    // When integrated with the hook, commit via the hook so the FSM
-    // transitions back to SELECT cleanly.
-    if (onEditingKey && editingSession && editingSession.state !== 'SELECT') {
-      onBlurEditing?.();
-      return;
-    }
-    onCommit(displayValue);
-  }, [displayValue, onCommit, onEditingKey, editingSession, onBlurEditing]);
+    onRawBlur();
+  }, [onRawBlur]);
 
   const acceptAutoComplete = useCallback((index: number) => {
     const selected = autoCompleteMatches[index];
     if (!selected) return;
 
-    const before = displayValue.slice(0, autoCompleteTokenStart);
-    const after = displayValue.slice(autoCompleteTokenStart + (findFunctionToken(displayValue, cursorPos)?.token.length ?? 0));
+    const before = value.slice(0, autoCompleteTokenStart);
+    const after = value.slice(autoCompleteTokenStart + (findFunctionToken(value, cursorPos)?.token.length ?? 0));
     const newValue = before + selected.name + '()' + after;
 
-    // When integrated with the hook, feed the accepted function via keys
-    if (onEditingKey && editingSession) {
-      // The hook already has the token typed; we need to replace it with NAME()
-      // Feed: Backspace * tokenLen, then type NAME()
-      const tokenLen = findFunctionToken(displayValue, cursorPos)?.token.length ?? 0;
-      for (let i = 0; i < tokenLen; i++) onEditingKey('Backspace', false, false);
-      for (const ch of selected.name + '()') onEditingKey(ch, false, false);
-      setAutoCompleteOpen(false);
-      return;
-    }
-
+    // Update display value
     onChange(newValue);
 
     // Position cursor inside the parens
     const newPos = autoCompleteTokenStart + selected.name.length + 2;
-    setInternalCursorPos(newPos);
-    onCursorChange?.(newPos);
+    onRawCaretMove(newPos);
     setAutoCompleteOpen(false);
 
     // Focus back on input
@@ -409,114 +357,11 @@ export function FormulaBar({
       inputRef.current?.focus();
       inputRef.current?.setSelectionRange(newPos, newPos);
     });
-  }, [autoCompleteMatches, displayValue, autoCompleteTokenStart, cursorPos, onEditingKey, editingSession, onChange, onCursorChange, findFunctionToken]);
+  }, [autoCompleteMatches, value, autoCompleteTokenStart, cursorPos, onRawCaretMove, onChange, findFunctionToken]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    // When integrated with the editing FSM hook, delegate ALL key handling
-    // to the hook — it owns the buffer, caret, and POINT mode state.
-    if (onEditingKey) {
-      // Escape: Cancel edit mode and restore original value
-      if (e.key === 'Escape') {
-        const hookState = editingSession?.state;
-        if (hookState === 'EDIT' || hookState === 'ENTER') {
-          e.preventDefault();
-          // Cancel editing (restore original value)
-          onCancelEditing?.();
-          return;
-        }
-      }
-      // F2: Toggle edit mode (exit to SELECT with commit)
-      if (e.key === 'F2') {
-        const hookState = editingSession?.state;
-        if (hookState === 'EDIT' || hookState === 'ENTER') {
-          e.preventDefault();
-          inputRef.current?.blur();
-          return;
-        }
-      }
-      // Ctrl+C: Copy selected text to clipboard
-      if ((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'C')) {
-        const input = inputRef.current;
-        if (input && input.selectionStart !== input.selectionEnd) {
-          const selectedText = input.value.slice(input.selectionStart ?? 0, input.selectionEnd ?? 0);
-          navigator.clipboard.writeText(selectedText).catch(() => {
-            // Fallback: use document.execCommand
-            const textArea = document.createElement('textarea');
-            textArea.value = selectedText;
-            document.body.appendChild(textArea);
-            textArea.select();
-            document.execCommand('copy');
-            document.body.removeChild(textArea);
-          });
-        }
-        return;
-      }
-      // Ctrl+V: Replace selected text with clipboard content
-      if ((e.ctrlKey || e.metaKey) && (e.key === 'v' || e.key === 'V')) {
-        e.preventDefault();
-        navigator.clipboard.readText().then((clipText) => {
-          const input = inputRef.current;
-          if (input) {
-            const selStart = input.selectionStart ?? 0;
-            const selEnd = input.selectionEnd ?? 0;
-            const newValue = displayValue.slice(0, selStart) + clipText + displayValue.slice(selEnd);
-            onChange(newValue);
-            // Move cursor past pasted text
-            const newPos = selStart + clipText.length;
-            setInternalCursorPos(newPos);
-            onCursorChange?.(newPos);
-            // Sync buffer to FSM hook so POINT mode detection works correctly
-            if (onSetBuffer && editingSession && (editingSession.state === 'EDIT' || editingSession.state === 'ENTER')) {
-              onSetBuffer(newValue, newPos);
-            }
-          }
-        }).catch(() => {
-          // Clipboard access denied - let native paste handle it
-        });
-        return;
-      }
-      // Auto-complete navigation still takes priority when dropdown is open
-      if (autoCompleteOpen && ['ArrowDown', 'ArrowUp', 'Tab', 'Enter', 'Escape'].includes(e.key)) {
-        switch (e.key) {
-          case 'ArrowDown':
-            e.preventDefault();
-            setAutoCompleteIndex((prev) => (prev + 1) % autoCompleteMatches.length);
-            return;
-          case 'ArrowUp':
-            e.preventDefault();
-            setAutoCompleteIndex((prev) => (prev - 1 + autoCompleteMatches.length) % autoCompleteMatches.length);
-            return;
-          case 'Tab':
-          case 'Enter':
-            e.preventDefault();
-            acceptAutoComplete(autoCompleteIndex);
-            return;
-          case 'Escape':
-            e.preventDefault();
-            setAutoCompleteOpen(false);
-            return;
-        }
-      }
-      // Feed every key to the FSM hook — it decides what to do.
-      // But if the hook is in SELECT state it may ignore keys like Enter/Tab
-      // that arrive natively (e.g. via paste + Enter).  In that case skip
-      // the hook and let the legacy commit logic below handle it.
-      {
-        const hookState = editingSession?.state;
-        const isSelecting = hookState === 'SELECT';
-        const isNavOrCommitKey = ['Enter', 'Tab', 'Escape'].includes(e.key);
-        if (!(isSelecting && isNavOrCommitKey)) {
-          e.preventDefault();
-          onEditingKey(e.key, e.shiftKey, e.ctrlKey, e.altKey);
-          return;
-        }
-      }
-    }
-
-    // ── Legacy standalone mode (no hook) ──────────────────────────────
-
-    // Handle auto-complete navigation
-    if (autoCompleteOpen) {
+    // ── Auto-complete navigation (takes priority when dropdown is open) ──
+    if (autoCompleteOpen && ['ArrowDown', 'ArrowUp', 'Tab', 'Enter', 'Escape'].includes(e.key)) {
       switch (e.key) {
         case 'ArrowDown':
           e.preventDefault();
@@ -538,123 +383,58 @@ export function FormulaBar({
       }
     }
 
-    // Handle point mode
-    if (isPointMode) {
-      switch (e.key) {
-        case 'ArrowUp':
-          e.preventDefault();
-          onCellPick?.(-1, 0, e.shiftKey);
-          return;
-        case 'ArrowDown':
-          e.preventDefault();
-          onCellPick?.(1, 0, e.shiftKey);
-          return;
-        case 'ArrowLeft':
-          e.preventDefault();
-          onCellPick?.(0, -1, e.shiftKey);
-          return;
-        case 'ArrowRight':
-          e.preventDefault();
-          onCellPick?.(0, 1, e.shiftKey);
-          return;
-        case 'Enter':
-        case 'Tab':
-          e.preventDefault();
-          onExitPointMode?.();
-          return;
-        case 'Escape':
-          e.preventDefault();
-          onExitPointMode?.();
-          return;
-      }
-    }
-
-    // Normal editing keys
-    switch (e.key) {
-      case 'Enter':
-        onCommit(displayValue);
-        setIsEditing(false);
-        setAutoCompleteOpen(false);
-        inputRef.current?.blur();
-        break;
-      case 'Escape':
-        setIsEditing(false);
-        setAutoCompleteOpen(false);
-        inputRef.current?.blur();
-        break;
-      case 'Tab':
-        // Let Tab navigate to next field
-        setAutoCompleteOpen(false);
-        break;
-      case '(':
-        if (displayValue.startsWith('=')) {
-          e.preventDefault();
-          const pos = updateCursorPos();
-          const before = displayValue.slice(0, pos);
-          const after = displayValue.slice(pos);
-          onChange(before + '()' + after);
-          const newPos = pos + 1;
-          setInternalCursorPos(newPos);
-          onCursorChange?.(newPos);
-          /* istanbul ignore next - requestAnimationFrame in jsdom */
-          requestAnimationFrame(() => {
-            inputRef.current?.setSelectionRange(newPos, newPos);
-          });
-        }
-        break;
-      case ')':
-        if (displayValue.startsWith('=')) {
-          const pos = updateCursorPos();
-          /* istanbul ignore next - skip over existing closing paren */
-          if (displayValue[pos] === ')') {
-            e.preventDefault();
-            setInternalCursorPos(pos + 1);
-            onCursorChange?.(pos + 1);
-            /* istanbul ignore next - requestAnimationFrame in jsdom */
-            requestAnimationFrame(() => {
-              inputRef.current?.setSelectionRange(pos + 1, pos + 1);
-            });
-          }
-        }
-        break;
-    }
-  }, [onEditingKey, autoCompleteOpen, autoCompleteMatches, autoCompleteIndex, isPointMode, displayValue, editingSession, onCommit, onCellPick, onExitPointMode, onChange, onCursorChange, acceptAutoComplete, updateCursorPos, onCancelEditing, onSetBuffer]);
-
-  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = e.target.value;
-
-    // When integrated with the hook, the hook owns the buffer during active
-    // editing (we preventDefault on keydown so the native input doesn't
-    // change from typing).  Paste/autofill can still change the input
-    // natively — update the displayed value AND sync the hook buffer so
-    // POINT mode detection works correctly with pasted trigger characters.
-    if (onEditingKey && editingSession) {
-      if (editingSession.state === 'SELECT') {
-        onChange(newValue);
-        return;
-      }
-      // Paste during active editing: update display and sync hook buffer
-      onChange(newValue);
-      const rawPos = e.target.selectionStart;
-      const newPos = rawPos !== null && rawPos !== undefined ? rawPos : newValue.length;
-      // Sync buffer to FSM hook so POINT mode detection uses correct content
-      if (onSetBuffer) {
-        onSetBuffer(newValue, newPos);
+    // ── Ctrl+C: Copy selected text ────────────────────────────────────
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'C')) {
+      const input = inputRef.current;
+      if (input && input.selectionStart !== input.selectionEnd) {
+        const selectedText = input.value.slice(input.selectionStart ?? 0, input.selectionEnd ?? 0);
+        navigator.clipboard.writeText(selectedText).catch(() => {
+          // Fallback: use document.execCommand
+          const textArea = document.createElement('textarea');
+          textArea.value = selectedText;
+          document.body.appendChild(textArea);
+          textArea.select();
+          document.execCommand('copy');
+          document.body.removeChild(textArea);
+        });
       }
       return;
     }
 
-    onChange(newValue);
+    // ── Ctrl+V: Paste and sync buffer ─────────────────────────────────
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'v' || e.key === 'V')) {
+      e.preventDefault();
+      navigator.clipboard.readText().then((clipText) => {
+        const input = inputRef.current;
+        if (input) {
+          const selStart = input.selectionStart ?? 0;
+          const selEnd = input.selectionEnd ?? 0;
+          const newValue = value.slice(0, selStart) + clipText + value.slice(selEnd);
+          const newPos = selStart + clipText.length;
+          onChange(newValue);
+          onRawCaretMove(newPos);
+        }
+      }).catch(() => {
+        // Clipboard access denied - let native paste handle it
+      });
+      return;
+    }
 
-    // Update cursor position — default to end of input (jsdom doesn't set selectionStart on change)
+    // ── Forward all other keys to FSM ─────────────────────────────────
+    e.preventDefault();
+    onRawKeyDown(e);
+  }, [autoCompleteOpen, autoCompleteMatches, autoCompleteIndex, acceptAutoComplete, value, onChange, onRawCaretMove, onRawKeyDown]);
+
+  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
     const rawPos = e.target.selectionStart;
     const newPos = rawPos !== null && rawPos !== undefined ? rawPos : newValue.length;
-    setInternalCursorPos(newPos);
-    onCursorChange?.(newPos);
+
+    // Forward to FSM
+    onRawChange(newValue, newPos);
 
     // Check if we should show auto-complete
     if (newValue.startsWith('=')) {
-      // Use end of body for token finding (jsdom doesn't update selectionStart on change)
       const searchPos = Math.max(newPos, 1);
       const result = findFunctionToken(newValue, searchPos);
       if (result && result.token.length >= 1) {
@@ -669,36 +449,30 @@ export function FormulaBar({
       }
     }
     setAutoCompleteOpen(false);
-  }, [onEditingKey, editingSession, onChange, onCursorChange, findFunctionToken, onSetBuffer]);
+  }, [onRawChange, findFunctionToken]);
 
   const handleClick = useCallback(() => {
-    updateCursorPos();
-    // When integrated with FSM hook, sync click caret position to hook
-    // This handles the case where focus event read a stale selectionStart
-    if (onSetCaret && onEditingKey && editingSession && editingSession.state === 'EDIT') {
-      const input = inputRef.current;
-      const caretPos = input ? (input.selectionStart ?? 0) : displayValue.length;
-      // Only update if different from hook's current caret
-      if (caretPos !== editingSession.caretPos) {
-        onSetCaret(caretPos);
-      }
-    }
-    if (isEditing && displayValue.startsWith('=')) {
+    const input = inputRef.current;
+    const caretPos = input ? (input.selectionStart ?? 0) : value.length;
+    onRawCaretMove(caretPos);
+    if (isEditing && value.startsWith('=')) {
       openAutoComplete();
     }
-  }, [updateCursorPos, onSetCaret, onEditingKey, editingSession, displayValue, isEditing, openAutoComplete]);
+  }, [onRawCaretMove, isEditing, value, openAutoComplete]);
 
   const handleSelect = useCallback(() => {
-    updateCursorPos();
-  }, [updateCursorPos]);
+    const input = inputRef.current;
+    const caretPos = input ? (input.selectionStart ?? 0) : value.length;
+    onRawCaretMove(caretPos);
+  }, [onRawCaretMove, value.length]);
 
   // Build the colored reference display overlay
   const formulaDisplay = useMemo(() => {
-    if (!isEditing || !displayValue) return null;
-    if (!displayValue.startsWith('=')) return null;
+    if (!isEditing || !value) return null;
+    if (!value.startsWith('=')) return null;
 
     try {
-      const formula = displayValue.slice(1);
+      const formula = value.slice(1);
       const segments: Array<{ text: string; colorIndex: number | null }> = [];
       let colorIdx = 0;
 
@@ -752,7 +526,7 @@ export function FormulaBar({
     } catch {
       return null;
     }
-  }, [isEditing, displayValue]);
+  }, [isEditing, value]);
 
   // Build error display
   const errorDisplay = useMemo(() => {
@@ -820,7 +594,7 @@ export function FormulaBar({
             }`}
             style={{ caretColor: '#000', minWidth: '100%' }}
             placeholder="Enter a value or formula (e.g., =SUM(A1:A10))"
-            value={displayValue}
+            value={value}
             onChange={handleChange}
             onFocus={handleFocus}
             onBlur={handleBlur}

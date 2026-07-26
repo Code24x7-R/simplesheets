@@ -1,16 +1,31 @@
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { FormulaBar } from './FormulaBar';
 import type { FormulaBarProps } from './FormulaBar';
+import type { EditingSession } from '../hooks/useCellEditing';
+
+const defaultSession: EditingSession = {
+  state: 'SELECT',
+  row: 0,
+  col: 0,
+  buffer: '',
+  originalValue: '',
+  caretPos: 0,
+  isFormula: false,
+};
 
 describe('FormulaBar - AutoComplete Navigation', () => {
-  const defaultProps = {
+  const defaultProps: FormulaBarProps = {
+    session: { ...defaultSession, state: 'EDIT', buffer: '=S', isFormula: true },
+    pointSession: null,
     value: '=S',
-    onChange: jest.fn(),
-    onCommit: jest.fn(),
-    activeCellRef: 'A1',
-    editingFormula: '=S',
-    onHighlightsChange: jest.fn(),
-    onCursorChange: jest.fn(),
+    cursorPos: 2,
+    statusMessage: 'Edit',
+    onRawKeyDown: jest.fn(),
+    onRawChange: jest.fn(),
+    onRawFocus: jest.fn(),
+    onRawBlur: jest.fn(),
+    onRawCaretMove: jest.fn(),
+    onCellPick: jest.fn(),
   };
 
   beforeEach(() => {
