@@ -43,12 +43,27 @@ export interface EditingSession {
   originalValue: string;
   /** Caret position within the buffer (for EDIT/POINT states). */
   caretPos: number;
-  /** Selection start position (for text selection with Shift+Arrow). -1 = no selection. */
-  selectionStart: number;
-  /** Selection end position (for text selection with Shift+Arrow). -1 = no selection. */
-  selectionEnd: number;
   /** Whether a formula is being constructed (buffer starts with '='). */
   isFormula: boolean;
+}
+
+/** Derive status message from FSM state. */
+export function getStatusMessage(session: EditingSession): string {
+  switch (session.state) {
+    case 'SELECT': return 'Ready';
+    case 'ENTER': return 'Enter';
+    case 'EDIT': return 'Edit';
+    case 'POINT': return 'Point';
+    default: return 'Ready';
+  }
+}
+
+/** Determine if arrow keys should trigger POINT mode. */
+export function shouldEnterPointMode(session: EditingSession): boolean {
+  if (!session.isFormula) return false;
+  if (session.caretPos < 1) return false;
+  const charBefore = session.buffer.slice(0, session.caretPos).trim().slice(-1);
+  return POINT_TRIGGER_CHARS.has(charBefore);
 }
 
 /** POINT mode session tracking. */
@@ -277,8 +292,6 @@ interface UseCellEditingReturn {
   startEditAt: (caretPosition: number) => void;
   /** Set caret position without changing state (for click handling). */
   setCaretPos: (caretPosition: number) => void;
-  /** Set selection range (for mouse selection sync). */
-  setSelection: (start: number, end: number) => void;
   /** Set buffer content and caret position (for paste operations). */
   setBuffer: (buffer: string, caretPos: number) => void;
   /** Commit the current buffer and transition to SELECT. */
@@ -309,8 +322,6 @@ export function useCellEditing({
     buffer: '',
     originalValue: cellValue,
     caretPos: 0,
-    selectionStart: -1,
-    selectionEnd: -1,
     isFormula: false,
   });
 
@@ -334,8 +345,6 @@ export function useCellEditing({
       buffer: newBuffer,
       originalValue: cellValue,
       caretPos: newBuffer.length,
-      selectionStart: -1,
-      selectionEnd: -1,
       isFormula,
     });
     setPointSession(null);
@@ -350,8 +359,6 @@ export function useCellEditing({
       buffer,
       originalValue: cellValue,
       caretPos: buffer.length,
-      selectionStart: -1,
-      selectionEnd: -1,
       isFormula: buffer.startsWith('='),
     });
     setPointSession(null);
@@ -367,8 +374,6 @@ export function useCellEditing({
       buffer,
       originalValue: cellValue,
       caretPos: clampedCaret,
-      selectionStart: -1,
-      selectionEnd: -1,
       isFormula: buffer.startsWith('='),
     });
     setPointSession(null);
@@ -378,17 +383,7 @@ export function useCellEditing({
     setSession((prev) => {
       if (prev.state !== 'EDIT') return prev;
       const clampedCaret = Math.max(0, Math.min(prev.buffer.length, caretPosition));
-      return { ...prev, caretPos: clampedCaret, selectionStart: -1, selectionEnd: -1 };
-    });
-  }, []);
-
-  const setSelection = useCallback((start: number, end: number) => {
-    setSession((prev) => {
-      if (prev.state !== 'EDIT') return prev;
-      const len = prev.buffer.length;
-      const clampedStart = Math.max(0, Math.min(len, start));
-      const clampedEnd = Math.max(0, Math.min(len, end));
-      return { ...prev, selectionStart: clampedStart, selectionEnd: clampedEnd };
+      return { ...prev, caretPos: clampedCaret };
     });
   }, []);
 
@@ -400,8 +395,6 @@ export function useCellEditing({
         ...prev,
         buffer,
         caretPos: clampedCaret,
-        selectionStart: -1,
-        selectionEnd: -1,
         isFormula: buffer.startsWith('=') || buffer.startsWith('+') || buffer.startsWith('-'),
       };
     });
@@ -417,7 +410,7 @@ export function useCellEditing({
       onNavigate(newRow, newCol);
     }
 
-    setSession((prev) => ({ ...prev, state: 'SELECT', buffer: '', caretPos: 0, selectionStart: -1, selectionEnd: -1, isFormula: false }));
+    setSession((prev) => ({ ...prev, state: 'SELECT', buffer: '', caretPos: 0, isFormula: false }));
     setPointSession(null);
   }, [onCommit, onNavigate, rowCount, colCount]);
 
@@ -427,8 +420,6 @@ export function useCellEditing({
       state: 'SELECT',
       buffer: '',
       caretPos: 0,
-      selectionStart: -1,
-      selectionEnd: -1,
       isFormula: false,
     }));
     setPointSession(null);
@@ -442,8 +433,6 @@ export function useCellEditing({
       buffer: '',
       originalValue: cellValue,
       caretPos: 0,
-      selectionStart: -1,
-      selectionEnd: -1,
       isFormula: false,
     });
     setPointSession(null);
@@ -485,14 +474,14 @@ export function useCellEditing({
       if (isPrintableChar(key)) {
         startEnter(key);
         const isFormula = key === '=' || key === '+' || key === '-';
-        result.session = { ...s, state: 'ENTER', buffer: key, caretPos: 1, selectionStart: -1, selectionEnd: -1, isFormula };
+        result.session = { ...s, state: 'ENTER', buffer: key, caretPos: 1, isFormula };
         return result;
       }
 
       if (key === 'F2') {
         startEdit();
         const isFormula = cellValue.startsWith('=') || cellValue.startsWith('+') || cellValue.startsWith('-');
-        result.session = { ...s, state: 'EDIT', buffer: cellValue, caretPos: cellValue.length, selectionStart: -1, selectionEnd: -1, isFormula };
+        result.session = { ...s, state: 'EDIT', buffer: cellValue, caretPos: cellValue.length, isFormula };
         return result;
       }
 
@@ -636,31 +625,17 @@ export function useCellEditing({
         return result;
       }
 
-      // Arrow key handling with optional selection (Shift)
+      // Arrow keys - move caret (text selection handled by native input)
       if (key === 'ArrowLeft' && !ctrlKey) {
         const newCaret = Math.max(0, s.caretPos - 1);
-        if (shiftKey) {
-          // Extend selection left
-          const selStart = s.selectionStart >= 0 ? s.selectionStart : s.caretPos;
-          setSession((prev) => ({ ...prev, caretPos: newCaret, selectionStart: selStart, selectionEnd: newCaret }));
-          result.session = { ...s, caretPos: newCaret, selectionStart: selStart, selectionEnd: newCaret };
-        } else {
-          setSession((prev) => ({ ...prev, caretPos: newCaret, selectionStart: -1, selectionEnd: -1 }));
-          result.session = { ...s, caretPos: newCaret, selectionStart: -1, selectionEnd: -1 };
-        }
+        setSession((prev) => ({ ...prev, caretPos: newCaret }));
+        result.session = { ...s, caretPos: newCaret };
         return result;
       }
       if (key === 'ArrowRight' && !ctrlKey) {
         const newCaret = Math.min(s.buffer.length, s.caretPos + 1);
-        if (shiftKey) {
-          // Extend selection right
-          const selStart = s.selectionStart >= 0 ? s.selectionStart : s.caretPos;
-          setSession((prev) => ({ ...prev, caretPos: newCaret, selectionStart: selStart, selectionEnd: newCaret }));
-          result.session = { ...s, caretPos: newCaret, selectionStart: selStart, selectionEnd: newCaret };
-        } else {
-          setSession((prev) => ({ ...prev, caretPos: newCaret, selectionStart: -1, selectionEnd: -1 }));
-          result.session = { ...s, caretPos: newCaret, selectionStart: -1, selectionEnd: -1 };
-        }
+        setSession((prev) => ({ ...prev, caretPos: newCaret }));
+        result.session = { ...s, caretPos: newCaret };
         return result;
       }
       // Ctrl+Left/Right — move caret by word (Spec §2)
@@ -810,29 +785,17 @@ export function useCellEditing({
         result.session = { ...s, caretPos: s.buffer.length };
         return result;
       }
-      // Arrow key handling with optional selection (Shift)
+      // Arrow keys - move caret (text selection handled by native input)
       if (key === 'ArrowLeft' && !ctrlKey) {
         const newCaret = Math.max(0, s.caretPos - 1);
-        if (shiftKey) {
-          const selStart = s.selectionStart >= 0 ? s.selectionStart : s.caretPos;
-          setSession((prev) => ({ ...prev, caretPos: newCaret, selectionStart: selStart, selectionEnd: newCaret }));
-          result.session = { ...s, caretPos: newCaret, selectionStart: selStart, selectionEnd: newCaret };
-        } else {
-          setSession((prev) => ({ ...prev, caretPos: newCaret, selectionStart: -1, selectionEnd: -1 }));
-          result.session = { ...s, caretPos: newCaret, selectionStart: -1, selectionEnd: -1 };
-        }
+        setSession((prev) => ({ ...prev, caretPos: newCaret }));
+        result.session = { ...s, caretPos: newCaret };
         return result;
       }
       if (key === 'ArrowRight' && !ctrlKey) {
         const newCaret = Math.min(s.buffer.length, s.caretPos + 1);
-        if (shiftKey) {
-          const selStart = s.selectionStart >= 0 ? s.selectionStart : s.caretPos;
-          setSession((prev) => ({ ...prev, caretPos: newCaret, selectionStart: selStart, selectionEnd: newCaret }));
-          result.session = { ...s, caretPos: newCaret, selectionStart: selStart, selectionEnd: newCaret };
-        } else {
-          setSession((prev) => ({ ...prev, caretPos: newCaret, selectionStart: -1, selectionEnd: -1 }));
-          result.session = { ...s, caretPos: newCaret, selectionStart: -1, selectionEnd: -1 };
-        }
+        setSession((prev) => ({ ...prev, caretPos: newCaret }));
+        result.session = { ...s, caretPos: newCaret };
         return result;
       }
       // Ctrl+Arrow keys - move caret by word boundary
@@ -873,72 +836,36 @@ export function useCellEditing({
           return result;
         }
 
-        // Insert at caret, replacing any selection
-        const selStart = s.selectionStart;
-        const selEnd = s.selectionEnd;
-        const hasSelection = selStart >= 0 && selEnd >= 0 && selStart !== selEnd;
-        const insertStart = hasSelection ? Math.min(selStart, selEnd) : s.caretPos;
-        const insertEnd = hasSelection ? Math.max(selStart, selEnd) : s.caretPos;
-        const newBuffer = s.buffer.slice(0, insertStart) + key + s.buffer.slice(insertEnd);
+        // Insert at caret
+        const newBuffer = s.buffer.slice(0, s.caretPos) + key + s.buffer.slice(s.caretPos);
         const isFormula = newBuffer.startsWith('=') || newBuffer.startsWith('+') || newBuffer.startsWith('-');
-        const newCaret = insertStart + 1;
+        const newCaret = s.caretPos + 1;
         setSession((prev) => ({
           ...prev,
           buffer: newBuffer,
           caretPos: newCaret,
-          selectionStart: -1,
-          selectionEnd: -1,
           isFormula,
         }));
-        result.session = { ...s, buffer: newBuffer, caretPos: newCaret, selectionStart: -1, selectionEnd: -1, isFormula };
+        result.session = { ...s, buffer: newBuffer, caretPos: newCaret, isFormula };
         return result;
       }
 
       if (key === 'Backspace') {
-        const selStart = s.selectionStart;
-        const selEnd = s.selectionEnd;
-        const hasSelection = selStart >= 0 && selEnd >= 0 && selStart !== selEnd;
-        let newBuffer: string;
-        let newCaret: number;
-        if (hasSelection) {
-          // Delete selected text
-          const start = Math.min(selStart, selEnd);
-          const end = Math.max(selStart, selEnd);
-          newBuffer = s.buffer.slice(0, start) + s.buffer.slice(end);
-          newCaret = start;
-        } else if (s.caretPos > 0) {
-          // Delete character before caret
-          newBuffer = s.buffer.slice(0, s.caretPos - 1) + s.buffer.slice(s.caretPos);
-          newCaret = s.caretPos - 1;
-        } else {
-          return result;
+        if (s.caretPos > 0) {
+          const newBuffer = s.buffer.slice(0, s.caretPos - 1) + s.buffer.slice(s.caretPos);
+          const newCaret = s.caretPos - 1;
+          setSession((prev) => ({ ...prev, buffer: newBuffer, caretPos: newCaret }));
+          result.session = { ...s, buffer: newBuffer, caretPos: newCaret };
         }
-        setSession((prev) => ({ ...prev, buffer: newBuffer, caretPos: newCaret, selectionStart: -1, selectionEnd: -1 }));
-        result.session = { ...s, buffer: newBuffer, caretPos: newCaret, selectionStart: -1, selectionEnd: -1 };
         return result;
       }
 
       if (key === 'Delete') {
-        const selStart = s.selectionStart;
-        const selEnd = s.selectionEnd;
-        const hasSelection = selStart >= 0 && selEnd >= 0 && selStart !== selEnd;
-        let newBuffer: string;
-        let newCaret: number;
-        if (hasSelection) {
-          // Delete selected text
-          const start = Math.min(selStart, selEnd);
-          const end = Math.max(selStart, selEnd);
-          newBuffer = s.buffer.slice(0, start) + s.buffer.slice(end);
-          newCaret = start;
-        } else if (s.caretPos < s.buffer.length) {
-          // Delete character after caret
-          newBuffer = s.buffer.slice(0, s.caretPos) + s.buffer.slice(s.caretPos + 1);
-          newCaret = s.caretPos;
-        } else {
-          return result;
+        if (s.caretPos < s.buffer.length) {
+          const newBuffer = s.buffer.slice(0, s.caretPos) + s.buffer.slice(s.caretPos + 1);
+          setSession((prev) => ({ ...prev, buffer: newBuffer }));
+          result.session = { ...s, buffer: newBuffer };
         }
-        setSession((prev) => ({ ...prev, buffer: newBuffer, caretPos: newCaret, selectionStart: -1, selectionEnd: -1 }));
-        result.session = { ...s, buffer: newBuffer, caretPos: newCaret, selectionStart: -1, selectionEnd: -1 };
         return result;
       }
 
@@ -1197,7 +1124,6 @@ export function useCellEditing({
     startEdit,
     startEditAt,
     setCaretPos,
-    setSelection,
     setBuffer,
     commit,
     cancel,

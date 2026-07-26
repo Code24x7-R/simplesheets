@@ -508,7 +508,7 @@ describe('FormulaBar Focus Editing (onFocusEditing)', () => {
       <FormulaBar
         {...defaultProps}
         onFocusEditing={onFocusEditing}
-        editingSession={{ state: 'EDIT' as const, row: 0, col: 0, buffer: '=SUM(A1:A10)', originalValue: '', caretPos: 5, selectionStart: -1, selectionEnd: -1, isFormula: true }}
+        editingSession={{ state: 'EDIT' as const, row: 0, col: 0, buffer: '=SUM(A1:A10)', originalValue: '', caretPos: 5, isFormula: true }}
       />,
     );
     const input = screen.getByDisplayValue('=SUM(A1:A10)');

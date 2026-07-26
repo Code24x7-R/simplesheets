@@ -198,7 +198,6 @@ function WorkbookView() {
     handleCellClick: handleEditingCellClick,
     startEditAt,
     setCaretPos,
-    setSelection,
     setBuffer,
     commit: commitEditing,
     cancel: cancelEditing,
@@ -1474,7 +1473,6 @@ function WorkbookView() {
         onBlurEditing={handleFormulaBlurEditing}
         onFocusEditing={handleFormulaFocusEditing}
         onSetCaret={setCaretPos}
-        onSetSelection={setSelection}
         onSetBuffer={setBuffer}
         onCancelEditing={handleFormulaCancelEditing}
         referenceFormat={referenceFormat}

@@ -57,8 +57,6 @@ export interface FormulaBarProps {
   onOpenWizard?: () => void;
   /** Callback to set caret position (for click handling). */
   onSetCaret?: (caretPosition: number) => void;
-  /** Callback to set selection range (for mouse selection sync). */
-  onSetSelection?: (start: number, end: number) => void;
   /** Callback to cancel editing (restore original value). */
   onCancelEditing?: () => void;
   /** Callback to set buffer content (for paste operations). */
@@ -215,7 +213,6 @@ export function FormulaBar({
   onBlurEditing,
   onFocusEditing,
   onSetCaret,
-  onSetSelection,
   onCancelEditing,
   onSetBuffer,
   referenceFormat = 'A1',
@@ -260,39 +257,27 @@ export function FormulaBar({
     const input = inputRef.current;
     /* istanbul ignore next - jsdom activeElement check */
     if (input && document.activeElement === input) {
-      const selStart = editingSession?.selectionStart ?? -1;
-      const selEnd = editingSession?.selectionEnd ?? -1;
-      if (selStart >= 0 && selEnd >= 0 && selStart !== selEnd) {
-        // Set selection range
-        const start = Math.min(selStart, selEnd);
-        const end = Math.max(selStart, selEnd);
-        input.setSelectionRange(start, end);
-        // Scroll to show the end of selection (cursor position)
-        input.scrollLeft = Math.max(0, input.scrollWidth - input.clientWidth);
-      } else {
-        // Set cursor position
-        input.setSelectionRange(cursorPos, cursorPos);
-        // Scroll to keep cursor visible
-        // Create a temporary span to measure text width up to cursor
-        const textBeforeCursor = displayValue.slice(0, cursorPos);
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          const computedStyle = window.getComputedStyle(input);
-          ctx.font = `${computedStyle.fontSize} ${computedStyle.fontFamily}`;
-          const textWidth = ctx.measureText(textBeforeCursor).width;
-          const padding = parseInt(computedStyle.paddingLeft) || 0;
-          const cursorX = padding + textWidth;
-          // Scroll if cursor is beyond visible area
-          if (cursorX > input.scrollLeft + input.clientWidth) {
-            input.scrollLeft = cursorX - input.clientWidth + 20;
-          } else if (cursorX < input.scrollLeft) {
-            input.scrollLeft = Math.max(0, cursorX - 20);
-          }
+      // Set cursor position
+      input.setSelectionRange(cursorPos, cursorPos);
+      // Scroll to keep cursor visible
+      const textBeforeCursor = displayValue.slice(0, cursorPos);
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        const computedStyle = window.getComputedStyle(input);
+        ctx.font = `${computedStyle.fontSize} ${computedStyle.fontFamily}`;
+        const textWidth = ctx.measureText(textBeforeCursor).width;
+        const padding = parseInt(computedStyle.paddingLeft) || 0;
+        const cursorX = padding + textWidth;
+        // Scroll if cursor is beyond visible area
+        if (cursorX > input.scrollLeft + input.clientWidth) {
+          input.scrollLeft = cursorX - input.clientWidth + 20;
+        } else if (cursorX < input.scrollLeft) {
+          input.scrollLeft = Math.max(0, cursorX - 20);
         }
       }
     }
-  }, [cursorPos, editingSession?.selectionStart, editingSession?.selectionEnd, displayValue]);
+  }, [cursorPos, displayValue]);
 
   // Close auto-complete when value changes externally
   useEffect(() => {
@@ -430,23 +415,6 @@ export function FormulaBar({
     // When integrated with the editing FSM hook, delegate ALL key handling
     // to the hook — it owns the buffer, caret, and POINT mode state.
     if (onEditingKey) {
-      // Sync native selection to FSM hook before processing any key
-      // This ensures the hook knows about mouse selections
-      // Only sync if the key being pressed is NOT a Shift+Arrow (FSM handles those)
-      const isShiftArrow = e.shiftKey && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key);
-      if (!isShiftArrow) {
-        const inputForSync = inputRef.current;
-        if (inputForSync && document.activeElement === inputForSync && onSetSelection) {
-          const nativeSelStart = inputForSync.selectionStart ?? 0;
-          const nativeSelEnd = inputForSync.selectionEnd ?? 0;
-          const hookSelStart = editingSession?.selectionStart ?? -1;
-          const hookSelEnd = editingSession?.selectionEnd ?? -1;
-          // If native selection differs from hook selection, sync it
-          if (nativeSelStart !== nativeSelEnd && (nativeSelStart !== hookSelStart || nativeSelEnd !== hookSelEnd)) {
-            onSetSelection(nativeSelStart, nativeSelEnd);
-          }
-        }
-      }
       // Escape: Cancel edit mode and restore original value
       if (e.key === 'Escape') {
         const hookState = editingSession?.state;
@@ -650,7 +618,7 @@ export function FormulaBar({
         }
         break;
     }
-  }, [onEditingKey, autoCompleteOpen, autoCompleteMatches, autoCompleteIndex, isPointMode, displayValue, editingSession, onCommit, onCellPick, onExitPointMode, onChange, onCursorChange, acceptAutoComplete, updateCursorPos, onSetSelection, onCancelEditing, onSetBuffer]);
+  }, [onEditingKey, autoCompleteOpen, autoCompleteMatches, autoCompleteIndex, isPointMode, displayValue, editingSession, onCommit, onCellPick, onExitPointMode, onChange, onCursorChange, acceptAutoComplete, updateCursorPos, onCancelEditing, onSetBuffer]);
 
   const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
