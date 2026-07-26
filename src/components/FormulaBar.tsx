@@ -439,11 +439,20 @@ export function FormulaBar({
       return;
     }
 
+    // ── Clear selection on Arrow keys (no Shift) ────────────────────
+    // When user has selection and presses Arrow without Shift, collapse
+    // the selection to the caret position before FSM processes the key
+    const input = inputRef.current;
+    const hasSelection = input ? input.selectionStart !== input.selectionEnd : false;
+    if (!e.shiftKey && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key) && hasSelection) {
+      // Collapse selection to caret (keep the side cursor is moving toward)
+      const caretPos = e.key === 'ArrowLeft' ? (input?.selectionStart ?? 0) : (input?.selectionEnd ?? 0);
+      input?.setSelectionRange(caretPos, caretPos);
+    }
+
     // ── Handle selection-based keys natively ─────────────────────────
     // If text is selected, let the native input handle Backspace/Delete/printable
     // keys. The onChange handler will sync the result to the FSM.
-    const input = inputRef.current;
-    const hasSelection = input ? input.selectionStart !== input.selectionEnd : false;
     const isSelectionKey = e.key === 'Backspace' || e.key === 'Delete' || (e.key.length === 1 && !e.ctrlKey && !e.metaKey);
 
     if (hasSelection && isSelectionKey) {
