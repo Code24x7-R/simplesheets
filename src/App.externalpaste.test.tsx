@@ -1,5 +1,6 @@
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import App from './App';
+import { clearClipboard, hasClipboardData } from './utils/clipboard';
 
 // Mock the virtualizer
 jest.mock('@tanstack/react-virtual', () => ({
@@ -47,6 +48,11 @@ function dispatchPaste(text?: string, html?: string) {
 }
 
 describe('App - External Clipboard Paste', () => {
+  beforeEach(() => {
+    // Clear the internal clipboard between tests
+    clearClipboard();
+  });
+
   it('pastes plain text directly when clipboard has no HTML', () => {
     render(<App />);
 
@@ -496,6 +502,50 @@ describe('App - Paste Special (Skip Blanks)', () => {
     // For now, verify the paste works without error
     const status = screen.getByTestId('status-message')?.textContent;
     expect(status).toContain('copied');
+  });
+
+  it('pastes text starting with = as plain text (prefixed with single quote)', () => {
+    clearClipboard(); // Ensure clipboard is clear
+    render(<App />);
+
+    // Select A1
+    const cellA1 = document.querySelector('.grid-cell') as HTMLElement;
+    fireEvent.mouseDown(cellA1);
+
+    // Paste text starting with =
+    act(() => {
+      dispatchPaste('=Hello.World');
+    });
+
+    // The cell should contain the plain text (prefixed with single quote)
+    // which displays as =Hello.World but is not a formula
+    const status = screen.getByTestId('status-message')?.textContent;
+    expect(status).toContain('Pasted');
+
+    // Verify the cell value - it should be prefixed with '
+    const cellA1After = document.querySelector('.grid-cell') as HTMLElement;
+    // The cell displays =Hello.World but the raw value is '=Hello.World
+    expect(cellA1After.textContent).toBe('=Hello.World');
+  });
+
+  it('pastes text without = prefix as-is', () => {
+    render(<App />);
+
+    // Select A1
+    const cellA1 = document.querySelector('.grid-cell') as HTMLElement;
+    fireEvent.mouseDown(cellA1);
+
+    // Paste normal text
+    act(() => {
+      dispatchPaste('Hello World');
+    });
+
+    const status = screen.getByTestId('status-message')?.textContent;
+    expect(status).toContain('Pasted');
+
+    // The cell should display the text as-is
+    const cellA1After = document.querySelector('.grid-cell') as HTMLElement;
+    expect(cellA1After.textContent).toBe('Hello World');
   });
 });
 

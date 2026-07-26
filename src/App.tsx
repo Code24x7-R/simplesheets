@@ -1149,9 +1149,10 @@ function WorkbookView() {
           const destKey = cellKey(destRow, destCol);
           const style = parsed.styles[r][c];
 
-          // Adjust relative formula references (e.g., =A1 pasted at C3 becomes =C3)
+          // If pasted text starts with '=', prefix with single quote to make it plain text
+          // (e.g., "=Hello" becomes "'=Hello" which displays as "=Hello")
           if (value.startsWith('=')) {
-            value = '=' + adjustFormulaRefs(value.slice(1), r, c);
+            value = "'" + value;
           }
 
           newCells[destKey] = { rawValue: value, ...(style ? { style } : {}) };

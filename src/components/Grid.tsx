@@ -199,12 +199,17 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
   // ─── Display Value Helper ─────────────────────────────────────────
   // Returns the display string for a cell, applying number formatting if the cell
   // has a numberFormat style and the value is numeric.
+  // Strips leading single quote (text marker) per Excel behavior.
   const getDisplayValue = useCallback(
     (cell: { rawValue: string; computedValue?: string | number | boolean | null; style?: { numberFormat?: string } } | undefined): string => {
       if (!cell) return '';
-      const rawDisplay = cell.computedValue !== undefined && cell.computedValue !== null
+      let rawDisplay = cell.computedValue !== undefined && cell.computedValue !== null
         ? String(cell.computedValue)
         : cell.rawValue ?? '';
+      // Strip leading single quote (text marker) - Excel displays text without the quote
+      if (rawDisplay.startsWith("'")) {
+        rawDisplay = rawDisplay.slice(1);
+      }
       // Apply number format if present and value is numeric
       const format = cell.style?.numberFormat;
       if (format && format !== 'General' && isNumberFormat(format) && isNumericValue(cell.computedValue ?? cell.rawValue)) {
