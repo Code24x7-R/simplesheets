@@ -214,7 +214,7 @@ describe('FormulaWizard', () => {
         name: 'NOW',
         category: 'DATE',
         description: 'Returns the current date and time',
-        returnType: 'DATE',
+        returnType: 'ANY',
         syntaxTemplate: 'NOW()',
         parameters: [],
       },
