@@ -120,8 +120,10 @@ export function classifyPasteContent(
 /**
  * Parses plain text (from clipboard) into a grid of cell values + styles.
  *
- * Supports both TSV (tabs — from spreadsheet copy) and CSV (commas — from
- * text files). Auto-detects numeric values and applies sensible formats.
+ * Only tab characters are treated as column delimiters (matching Excel
+ * paste behavior). Each line becomes a row. Commas are NOT treated as
+ * delimiters because pasting plain text should preserve the text as-is.
+ * Auto-detects numeric values and applies sensible formats.
  */
 export function parsePlainText(text: string): ParsedClipboardGrid {
   // Normalize line endings
@@ -136,17 +138,16 @@ export function parsePlainText(text: string): ParsedClipboardGrid {
     return { values: [], styles: [], rowCount: 0, colCount: 0 };
   }
 
-  // Detect delimiter: tabs take priority (spreadsheet copy), else comma
+  // Only tabs are treated as column delimiters (Excel paste behavior)
   const hasTabs = lines.some((line) => line.includes('\t'));
-  const delimiter = hasTabs ? '\t' : ',';
 
   const values: string[][] = [];
   const styles: (CellStyle | null)[][] = [];
   let maxCols = 0;
 
   for (const line of lines) {
-    // For CSV, do basic quote handling
-    const cells = delimiter === ',' ? splitCsvLine(line) : line.split(delimiter);
+    // Split by tab if present, otherwise treat as single cell
+    const cells = hasTabs ? line.split('\t') : [line];
     const rowValues: string[] = [];
     const rowStyles: (CellStyle | null)[] = [];
 
@@ -181,42 +182,6 @@ export function parsePlainText(text: string): ParsedClipboardGrid {
     rowCount: values.length,
     colCount: maxCols,
   };
-}
-
-/**
- * Basic CSV line splitter that respects double-quoted fields.
- */
-function splitCsvLine(line: string): string[] {
-  const result: string[] = [];
-  let current = '';
-  let inQuotes = false;
-
-  for (let i = 0; i < line.length; i++) {
-    const ch = line[i];
-    if (inQuotes) {
-      if (ch === '"') {
-        if (i + 1 < line.length && line[i + 1] === '"') {
-          current += '"';
-          i++;
-        } else {
-          inQuotes = false;
-        }
-      } else {
-        current += ch;
-      }
-    } else {
-      if (ch === '"') {
-        inQuotes = true;
-      } else if (ch === ',') {
-        result.push(current);
-        current = '';
-      } else {
-        current += ch;
-      }
-    }
-  }
-  result.push(current);
-  return result;
 }
 
 /**

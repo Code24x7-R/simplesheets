@@ -43,9 +43,10 @@ export function PasteModal({
     }
     if (plain) {
       const lines = plain.split(/\r?\n/).filter((l) => l.trim() !== '');
+      // Only tabs are delimiters (matches parsePlainText behavior)
+      const hasTabs = lines.some((line) => line.includes('\t'));
       const sample = lines.slice(0, 3).map((line) => {
-        if (line.includes('\t')) return line.split('\t').slice(0, 3);
-        if (line.includes(',')) return line.split(',').slice(0, 3);
+        if (hasTabs) return line.split('\t').slice(0, 3);
         return [line];
       });
       const colCount = Math.max(...sample.map((r) => r.length), 1);

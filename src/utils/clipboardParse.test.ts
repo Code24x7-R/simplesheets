@@ -58,20 +58,28 @@ describe('clipboardParse', () => {
       expect(result.values[1]).toEqual(['1', '2', '3']);
     });
 
-    it('parses CSV (comma-separated) data', () => {
+    it('treats comma-separated text as single cell (Excel paste behavior)', () => {
+      // Commas are NOT delimiters - each line is a single cell
       const result = parsePlainText('Name,Age,City\nAlice,30,NYC');
       expect(result.rowCount).toBe(2);
-      expect(result.colCount).toBe(3);
-      expect(result.values[0]).toEqual(['Name', 'Age', 'City']);
-      expect(result.values[1]).toEqual(['Alice', '30', 'NYC']);
+      expect(result.colCount).toBe(1);
+      expect(result.values[0]).toEqual(['Name,Age,City']);
+      expect(result.values[1]).toEqual(['Alice,30,NYC']);
     });
 
-    it('auto-detects numeric values and applies styles', () => {
-      const result = parsePlainText('Item,Price\nApple,$1.50');
-      expect(result.values[1][1]).toBe('1.5');
-      expect(result.styles[1][1]).toEqual({ numberFormat: '$#,##0.00' });
+    it('auto-detects numeric values in single-cell lines', () => {
+      const result = parsePlainText('Item\n$1.50');
+      expect(result.values[1][0]).toBe('1.5');
+      expect(result.styles[1][0]).toEqual({ numberFormat: '$#,##0.00' });
       // Non-numeric cells have no style
-      expect(result.styles[0][1]).toBeNull();
+      expect(result.styles[0][0]).toBeNull();
+    });
+
+    it('handles commas in text without splitting', () => {
+      // Text with commas is preserved as-is in a single cell
+      const result = parsePlainText('Smith, John\nHas a, comma here');
+      expect(result.values[0]).toEqual(['Smith, John']);
+      expect(result.values[1]).toEqual(['Has a, comma here']);
     });
 
     it('handles empty trailing newline', () => {
@@ -96,17 +104,7 @@ describe('clipboardParse', () => {
       expect(result.rowCount).toBe(2);
     });
 
-    it('handles quoted CSV fields', () => {
-      const result = parsePlainText('Name,Description\n"Smith, John","Has a, comma"');
-      expect(result.values[1][0]).toBe('Smith, John');
-      expect(result.values[1][1]).toBe('Has a, comma');
-    });
 
-    it('handles escaped quotes in CSV (double-double-quote)', () => {
-      const result = parsePlainText('Name,Quote\n"He said ""hello""","""Hi"""');
-      expect(result.values[1][0]).toBe('He said "hello"');
-      expect(result.values[1][1]).toBe('"Hi"');
-    });
   });
 
   describe('parseHtmlTable', () => {
