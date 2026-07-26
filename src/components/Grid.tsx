@@ -113,6 +113,8 @@ export function Grid({ sheet, onCellChange, onCellsChange, onSelect, selectedCel
   const [editingCell, setEditingCell] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
   const editInputRef = useRef<HTMLInputElement>(null);
+  const editingCellRef = useRef<string | null>(null);
+  editingCellRef.current = editingCell;
   // ─── Resize drag state ───────────────────────────────────────────────
   // Drag tracking via ref (NOT state) so mousemove never triggers re-render.
   // Live preview is done by direct DOM manipulation for zero-lag feedback.
@@ -278,7 +280,7 @@ export function Grid({ sheet, onCellChange, onCellsChange, onSelect, selectedCel
         case 'v':
         case 'V':
           // If editing a cell, insert clipboard content at cursor position
-          if (editingCell && editInputRef.current) {
+          if (editingCellRef.current && editInputRef.current) {
             e.preventDefault();
             const internalData = getClipboard();
             if (internalData && internalData.cells && internalData.rowCount > 0) {
@@ -1376,9 +1378,10 @@ export function Grid({ sheet, onCellChange, onCellsChange, onSelect, selectedCel
                       value={editValue}
                       onChange={(e) => setEditValue(e.target.value)}
                       onPaste={(e) => {
-                        // Handle native paste: insert plain text at cursor
+                        // When editing, always intercept paste and insert at cursor
+                        // to prevent the native behavior of replacing all text
                         const text = e.clipboardData?.getData('text/plain');
-                        if (text && !hasClipboardData()) {
+                        if (text) {
                           e.preventDefault();
                           insertAtCursor(e.currentTarget, text);
                         }

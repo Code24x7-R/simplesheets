@@ -1401,6 +1401,60 @@ describe('Grid Component', () => {
     expect(input.value).toBe('abXYef');
   });
 
+  // ─── Paste at Cursor (not replace all) ─────────────────────────
+
+  it('pastes at cursor position without replacing all text', () => {
+    const onCellChange = jest.fn();
+    render(<Grid sheet={createTestSheet()} onCellChange={onCellChange} selectedCell={{ row: 0, col: 0 }} />);
+    const grid = document.querySelector('[tabindex="0"]') as HTMLElement;
+
+    // Enter edit mode and type some content
+    fireEvent.keyDown(grid, { key: 'F2' });
+    const input = document.querySelector('input.border-blue-500') as HTMLInputElement;
+    expect(input).not.toBeNull();
+    fireEvent.change(input, { target: { value: 'Hello World' } });
+
+    // Move cursor to end
+    input.selectionStart = input.selectionEnd = input.value.length;
+
+    // Paste at cursor position
+    fireEvent.paste(input, {
+      clipboardData: {
+        getData: () => ' Pasted',
+      },
+    });
+
+    // Text should be inserted at cursor, not replace all
+    expect(input.value).toBe('Hello World Pasted');
+  });
+
+  it('paste after Ctrl+A does not replace all text', () => {
+    const onCellChange = jest.fn();
+    render(<Grid sheet={createTestSheet()} onCellChange={onCellChange} selectedCell={{ row: 0, col: 0 }} />);
+    const grid = document.querySelector('[tabindex="0"]') as HTMLElement;
+
+    // Enter edit mode
+    fireEvent.keyDown(grid, { key: 'F2' });
+    const input = document.querySelector('input.border-blue-500') as HTMLInputElement;
+    expect(input).not.toBeNull();
+    fireEvent.change(input, { target: { value: 'Hello' } });
+
+    // Ctrl+A to select all text
+    fireEvent.keyDown(input, { key: 'a', ctrlKey: true });
+    expect(input.selectionStart).toBe(0);
+    expect(input.selectionEnd).toBe(5);
+
+    // Paste should replace the selected text (standard behavior)
+    fireEvent.paste(input, {
+      clipboardData: {
+        getData: () => 'World',
+      },
+    });
+
+    // Selected text should be replaced
+    expect(input.value).toBe('World');
+  });
+
   // ─── Row / Column Header Keyboard Navigation ─────────────────────
 
   it('switches from row selection to cell selection on arrow left/right', () => {
