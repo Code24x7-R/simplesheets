@@ -42,7 +42,7 @@ interface FormulaBarProps {
   /** The point session from useCellEditing hook (when integrated). */
   editingPointSession?: PointSession | null;
   /** Callback to handle a key press via the editing FSM. */
-  onEditingKey?: (key: string, shiftKey: boolean, ctrlKey: boolean) => void;
+  onEditingKey?: (key: string, shiftKey: boolean, ctrlKey: boolean, altKey?: boolean) => void;
   /** Callback to commit the edit (e.g., on blur) via the editing FSM. */
   onBlurEditing?: () => void;
   /** Callback when the formula bar is focused (to enter EDIT mode at caret position). */
@@ -420,7 +420,7 @@ export function FormulaBar({
         const isNavOrCommitKey = ['Enter', 'Tab', 'Escape'].includes(e.key);
         if (!(isSelecting && isNavOrCommitKey)) {
           e.preventDefault();
-          onEditingKey(e.key, e.shiftKey, e.ctrlKey);
+          onEditingKey(e.key, e.shiftKey, e.ctrlKey, e.altKey);
           return;
         }
       }

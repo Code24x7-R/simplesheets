@@ -395,8 +395,8 @@ function WorkbookView() {
   // We use the returned session to keep formulaCursorPos in sync, and the
   // navigate delta to move the active cell when the hook requests it.
   const handleFormulaEditingKey = useCallback(
-    (key: string, shiftKey: boolean, ctrlKey: boolean) => {
-      const result = handleEditingKey(key, shiftKey, ctrlKey);
+    (key: string, shiftKey: boolean, ctrlKey: boolean, altKey?: boolean) => {
+      const result = handleEditingKey(key, shiftKey, ctrlKey, altKey);
       // Keep the FormulaBar cursor synced with the hook's caret position
       if (result.session.caretPos !== editingSession.caretPos) {
         setFormulaCursorPos(result.session.caretPos);

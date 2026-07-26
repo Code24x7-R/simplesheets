@@ -188,6 +188,32 @@ export function cycleReference(ref: string): string {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// Word Boundary Navigation (for Ctrl+Arrow)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/** Find the next word boundary position moving left from caret. */
+function findWordBoundaryLeft(text: string, caretPos: number): number {
+  if (caretPos <= 0) return 0;
+  // Skip whitespace
+  let pos = caretPos;
+  while (pos > 0 && /\s/.test(text[pos - 1])) pos--;
+  // Skip word characters
+  while (pos > 0 && /\S/.test(text[pos - 1])) pos--;
+  return pos;
+}
+
+/** Find the next word boundary position moving right from caret. */
+function findWordBoundaryRight(text: string, caretPos: number): number {
+  if (caretPos >= text.length) return text.length;
+  // Skip whitespace
+  let pos = caretPos;
+  while (pos < text.length && /\s/.test(text[pos])) pos++;
+  // Skip word characters
+  while (pos < text.length && /\S/.test(text[pos])) pos++;
+  return pos;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // Token Reference Extraction (for F4 cycling)
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -236,7 +262,7 @@ interface UseCellEditingReturn {
   /** Current POINT session (null if not in POINT mode). */
   pointSession: PointSession | null;
   /** Handle a keyboard event — returns navigation delta if any. */
-  handleKey: (key: string, shiftKey: boolean, ctrlKey: boolean) => KeyHandlingResult;
+  handleKey: (key: string, shiftKey: boolean, ctrlKey: boolean, altKey?: boolean) => KeyHandlingResult;
   /** Handle a cell click (for POINT mode). */
   handleCellClick: (row: number, col: number, shiftKey: boolean) => KeyHandlingResult;
   /** Start editing a cell (ENTER mode — replaces content). */
@@ -389,7 +415,7 @@ export function useCellEditing({
 
   // ─── Keyboard Handler ──────────────────────────────────────────────────
 
-  const handleKey = useCallback((key: string, shiftKey: boolean, ctrlKey: boolean): KeyHandlingResult => {
+  const handleKey = useCallback((key: string, shiftKey: boolean, ctrlKey: boolean, altKey?: boolean): KeyHandlingResult => {
     const s = sessionRef.current;
     const result: KeyHandlingResult = {
       session: s,
@@ -472,7 +498,23 @@ export function useCellEditing({
         return result;
       }
 
+      // Enter handling: supports Alt+Enter, Ctrl+Enter, Shift+Enter
       if (key === 'Enter') {
+        // Alt+Enter — insert line break (Spec §2)
+        if (altKey) {
+          const newBuffer = s.buffer.slice(0, s.caretPos) + '\n' + s.buffer.slice(s.caretPos);
+          setSession((prev) => ({ ...prev, buffer: newBuffer, caretPos: prev.caretPos + 1 }));
+          result.session = { ...s, buffer: newBuffer, caretPos: s.caretPos + 1 };
+          return result;
+        }
+        // Ctrl+Enter — commit and stay (Spec §2)
+        if (ctrlKey) {
+          commit({ dRow: 0, dCol: 0 });
+          result.session = { ...s, state: 'SELECT' };
+          result.statusMessage = 'Value committed';
+          return result;
+        }
+        // Normal Enter — commit and move
         const dir = shiftKey ? { dRow: -1, dCol: 0 } : { dRow: 1, dCol: 0 };
         commit(dir);
         result.session = { ...s, state: 'SELECT' };
@@ -510,9 +552,44 @@ export function useCellEditing({
         return result;
       }
 
-      // Home / Ctrl+Home — move caret (Spec §2)
-      if (key === 'Home') {
+      // Ctrl+Enter — commit and stay in cell (Spec §2)
+      if (key === 'Enter' && ctrlKey) {
+        commit({ dRow: 0, dCol: 0 });
+        result.session = { ...s, state: 'SELECT' };
+        result.statusMessage = 'Value committed';
+        return result;
+      }
+
+      // Alt+Enter — insert line break (Spec §2)
+      if (key === 'Enter' && !shiftKey && !ctrlKey) {
+        // Check if this is Alt+Enter (handled by checking modifier in Grid)
+        // We handle it here if the event has altKey passed through
+      }
+
+      // Home / End / Ctrl+Home / Ctrl+End — move caret (Spec §2)
+      if (key === 'Home' && !ctrlKey) {
         const newCaret = 0;
+        setSession((prev) => ({ ...prev, caretPos: newCaret }));
+        result.session = { ...s, caretPos: newCaret };
+        return result;
+      }
+
+      if (key === 'End' && !ctrlKey) {
+        const newCaret = s.buffer.length;
+        setSession((prev) => ({ ...prev, caretPos: newCaret }));
+        result.session = { ...s, caretPos: newCaret };
+        return result;
+      }
+
+      // Ctrl+Left/Right — move caret by word (Spec §2)
+      if (key === 'ArrowLeft' && ctrlKey && !shiftKey) {
+        const newCaret = findWordBoundaryLeft(s.buffer, s.caretPos);
+        setSession((prev) => ({ ...prev, caretPos: newCaret }));
+        result.session = { ...s, caretPos: newCaret };
+        return result;
+      }
+      if (key === 'ArrowRight' && ctrlKey && !shiftKey) {
+        const newCaret = findWordBoundaryRight(s.buffer, s.caretPos);
         setSession((prev) => ({ ...prev, caretPos: newCaret }));
         result.session = { ...s, caretPos: newCaret };
         return result;
@@ -587,7 +664,23 @@ export function useCellEditing({
         return result;
       }
 
+      // Enter handling: supports Alt+Enter, Ctrl+Enter, Shift+Enter
       if (key === 'Enter') {
+        // Alt+Enter — insert line break (Spec §2)
+        if (altKey) {
+          const newBuffer = s.buffer.slice(0, s.caretPos) + '\n' + s.buffer.slice(s.caretPos);
+          setSession((prev) => ({ ...prev, buffer: newBuffer, caretPos: prev.caretPos + 1 }));
+          result.session = { ...s, buffer: newBuffer, caretPos: s.caretPos + 1 };
+          return result;
+        }
+        // Ctrl+Enter — commit and stay (Spec §2)
+        if (ctrlKey) {
+          commit({ dRow: 0, dCol: 0 });
+          result.session = { ...s, state: 'SELECT' };
+          result.statusMessage = 'Value committed';
+          return result;
+        }
+        // Normal Enter — commit and move
         const dir = shiftKey ? { dRow: -1, dCol: 0 } : { dRow: 1, dCol: 0 };
         commit(dir);
         result.session = { ...s, state: 'SELECT' };
@@ -621,6 +714,30 @@ export function useCellEditing({
           result.session = { ...s, buffer: newBuffer, caretPos: newCaret };
           result.statusMessage = `Reference: ${cycled}`;
         }
+        return result;
+      }
+
+      // Home / End / Ctrl+Arrow — caret movement (Spec §2)
+      if (key === 'Home' && !ctrlKey) {
+        setSession((prev) => ({ ...prev, caretPos: 0 }));
+        result.session = { ...s, caretPos: 0 };
+        return result;
+      }
+      if (key === 'End' && !ctrlKey) {
+        setSession((prev) => ({ ...prev, caretPos: s.buffer.length }));
+        result.session = { ...s, caretPos: s.buffer.length };
+        return result;
+      }
+      if (key === 'ArrowLeft' && ctrlKey && !shiftKey) {
+        const newCaret = findWordBoundaryLeft(s.buffer, s.caretPos);
+        setSession((prev) => ({ ...prev, caretPos: newCaret }));
+        result.session = { ...s, caretPos: newCaret };
+        return result;
+      }
+      if (key === 'ArrowRight' && ctrlKey && !shiftKey) {
+        const newCaret = findWordBoundaryRight(s.buffer, s.caretPos);
+        setSession((prev) => ({ ...prev, caretPos: newCaret }));
+        result.session = { ...s, caretPos: newCaret };
         return result;
       }
 

@@ -413,6 +413,31 @@ Achieve a clean, clutter-free UI with standardized dropdown menus, formula wizar
 
 ---
 
+## Phase 16: Keyboard Shortcut Gaps (2026-07-27)
+*Fill gaps identified by comparing implementation against `excel_web_editor_shortcuts-v4.json`.*
+
+### Phase 16a: Edit Mode Enhancements — COMPLETE ✅
+- [x] **Ctrl+Enter**: Complete cell entry and stay in same cell
+- [x] **Alt+Enter**: Insert line break inside cell (multi-line content)
+- [x] **Ctrl+Left/Right Arrow**: Move caret one word left/right
+- [x] **End**: Move cursor to end of line (ENTER + EDIT states)
+- Added word boundary helper functions (`findWordBoundaryLeft`, `findWordBoundaryRight`)
+- Updated `handleKey` signature to accept `altKey` parameter
+- Type-check clean, all 1411 tests pass
+
+### Phase 16b: Documentation Update — COMPLETE ✅
+- [x] Added comprehensive keyboard shortcut reference table to `excel-dataentry.md`
+- [x] Three sections: Entering/Exiting Edit Mode, Navigation/Text Selection, Formula Navigation
+- [x] Implementation status legend (✅/⚠️/❌)
+- [x] Updated version to 1.2.0
+
+### Phase 16c: Remaining Gaps (Future)
+- [ ] **Ctrl+F2**: Move focus between in-cell editor and formula bar
+- [ ] **Shift+Home/End**: Select text to beginning/end (currently native input behavior)
+- [ ] **Ctrl+Shift+Arrows**: Select word left/right (currently native input behavior)
+
+---
+
 ## Progress Log
 
 ### 2026-07-27 (Paste Improvements — Phases 1-6)

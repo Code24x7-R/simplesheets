@@ -168,7 +168,64 @@ Text Color: Matches the corresponding target grid bounding box color.
 └───────────────────────────────┴──────────────────────────────────────────────────────────┘
 
 
-## 6. Verification & Implementation Checklist
+## 6. Keyboard Shortcut Reference
+
+The following table documents all keyboard shortcuts for cell editing and navigation, based on the Excel Web Editor specification (`excel_web_editor_shortcuts-v4.json`).
+
+### 6.1 Entering & Exiting Edit Mode
+
+| Key | Action | In Formula Bar | Implemented |
+| :--- | :--- | :--- | :--- |
+| F2 | Edit active cell, place cursor at end; toggle Point mode for formulas | ✅ | ✅ |
+| Ctrl + F2 | Move focus between in-cell editor and formula bar | ✅ | ❌ Planned |
+| Enter | Complete cell entry and move down | ✅ | ✅ |
+| Ctrl + Enter | Complete cell entry and stay in same cell | ✅ | ✅ |
+| Shift + Enter | Complete cell entry and move up | ✅ | ✅ |
+| Tab | Complete cell entry and move right | ✅ | ✅ |
+| Shift + Tab | Complete cell entry and move left | ✅ | ✅ |
+| Esc | Cancel editing and discard changes | ✅ | ✅ |
+
+### 6.2 Navigation & Text Selection
+
+| Key | Action | In Formula Bar | Implemented |
+| :--- | :--- | :--- | :--- |
+| Backspace | Delete one character to the left | ✅ | ✅ (native) |
+| Delete | Delete one character to the right | ✅ | ✅ (native) |
+| Left Arrow | Move cursor one character left | ✅ | ✅ (native) |
+| Right Arrow | Move cursor one character right | ✅ | ✅ (native) |
+| Ctrl + Left Arrow | Move cursor one word to the left | ✅ | ✅ |
+| Ctrl + Right Arrow | Move cursor one word to the right | ✅ | ✅ |
+| Home | Move cursor to beginning of line | ✅ | ✅ |
+| End | Move cursor to end of line | ✅ | ✅ |
+| Shift + Left Arrow | Select text one character left | ✅ | ✅ (native) |
+| Shift + Right Arrow | Select text one character right | ✅ | ✅ (native) |
+| Ctrl + Shift + Left Arrow | Select text one word left | ✅ | ✅ (native) |
+| Ctrl + Shift + Right Arrow | Select text one word right | ✅ | ✅ (native) |
+| Shift + Home | Select text from cursor to beginning | ✅ | ✅ (native) |
+| Shift + End | Select text from cursor to end | ✅ | ✅ (native) |
+| Alt + Enter | Insert line break inside cell | ❌ | ✅ |
+
+### 6.3 Formula Navigation & Building
+
+| Key | Action | Requires Selection | Implemented |
+| :--- | :--- | :--- | :--- |
+| F4 | Cycle absolute/relative/mixed references | ❌ | ✅ |
+| Tab | Accept highlighted autocomplete item | ✅ | ✅ |
+| Up Arrow | Navigate up in autocomplete dropdown | ✅ | ✅ |
+| Down Arrow | Navigate down in autocomplete dropdown | ✅ | ✅ |
+
+### 6.4 Implementation Status Legend
+
+| Symbol | Meaning |
+| :--- | :--- |
+| ✅ | Fully implemented and tested |
+| ⚠️ | Partially implemented |
+| ❌ | Not yet implemented |
+| (native) | Handled by browser input behavior |
+
+---
+
+## 7. Verification & Implementation Checklist
 When integrating this specification into an AI agent or UI engine:
 
 [ ] Core state machine enforces deterministic transitions between ST_SEL, ST_ENT, ST_EDT, and ST_PNT.
