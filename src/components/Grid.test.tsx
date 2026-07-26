@@ -1968,4 +1968,29 @@ describe('Grid Component', () => {
     );
     window.removeEventListener('simplesheets:cut', handler);
   });
+
+  // ─── Plain Text with = Prefix ──────────────────────────────────
+
+  it('editing plain text starting with = does not activate POINT mode', () => {
+    const onCellChange = jest.fn();
+    // Create a sheet with a cell containing plain text starting with =
+    const sheet = createTestSheet();
+    sheet.cells['0:0'] = { rawValue: '=Hello.World' };
+    render(<Grid sheet={sheet} onCellChange={onCellChange} selectedCell={{ row: 0, col: 0 }} />);
+    const grid = document.querySelector('[tabindex="0"]') as HTMLElement;
+
+    // Enter edit mode with F2
+    fireEvent.keyDown(grid, { key: 'F2' });
+    const input = document.querySelector('input.border-blue-500') as HTMLInputElement;
+    expect(input).not.toBeNull();
+    expect(input.value).toBe('=Hello.World');
+
+    // Position caret after = and press ArrowRight
+    input.setSelectionRange(1, 1);
+    fireEvent.keyDown(input, { key: 'ArrowRight' });
+
+    // Should NOT activate POINT mode - input should still be focused
+    // and value should not have changed
+    expect(input.value).toBe('=Hello.World');
+  });
 });

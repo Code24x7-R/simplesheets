@@ -144,4 +144,25 @@ describe('FormulaBar - Formula Editing', () => {
     // onRawFocus should be called with the caret position
     expect(onRawFocus).toHaveBeenCalled();
   });
+
+  it('does not enter POINT mode for plain text starting with =', () => {
+    const onRawKeyDown = jest.fn();
+    render(
+      <FormulaBar
+        {...defaultProps}
+        session={{ ...defaultSession, state: 'EDIT', buffer: '=Hello.World', isFormula: false }}
+        value="=Hello.World"
+        cursorPos={1}
+        onRawKeyDown={onRawKeyDown}
+      />,
+    );
+    const input = screen.getByDisplayValue('=Hello.World') as HTMLInputElement;
+    // Position caret after = and press ArrowRight
+    input.setSelectionRange(1, 1);
+    act(() => {
+      fireEvent.keyDown(input, { key: 'ArrowRight' });
+    });
+    // Should forward to FSM (which will not activate POINT mode because isFormula is false)
+    expect(onRawKeyDown).toHaveBeenCalledWith(expect.objectContaining({ key: 'ArrowRight' }));
+  });
 });

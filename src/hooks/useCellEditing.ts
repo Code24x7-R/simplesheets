@@ -141,6 +141,24 @@ export function shouldActivatePointMode(buffer: string, caretPos: number): boole
 }
 
 /**
+ * Determines if buffer content actually looks like a formula.
+ * A formula must start with =, +, or - AND contain at least one
+ * formula element (cell reference, function name, or operator).
+ * Plain text like "=Hello.World" is NOT a formula.
+ */
+export function looksLikeFormula(buffer: string): boolean {
+  if (!buffer.startsWith('=') && !buffer.startsWith('+') && !buffer.startsWith('-')) return false;
+  const body = buffer.slice(1).trim();
+  if (body.length === 0) return false;
+  // Check for formula indicators: cell refs (A1, $A$1), function names (SUM,), operators, parens
+  const hasCellRef = /\$?[A-Za-z]+\$?\d+/.test(body);
+  const hasFunction = /[A-Za-z_][A-Za-z0-9_]*\s*\(/.test(body);
+  const hasOperator = /[+\-*/^&<>=]/.test(body);
+  const hasParen = /[()]/.test(body);
+  return hasCellRef || hasFunction || hasOperator || hasParen;
+}
+
+/**
  * Determines if a character auto-commits the current POINT reference
  * and exits back to EDIT mode (Spec §3.3).
  */
@@ -359,7 +377,7 @@ export function useCellEditing({
       buffer,
       originalValue: cellValue,
       caretPos: buffer.length,
-      isFormula: buffer.startsWith('='),
+      isFormula: looksLikeFormula(buffer),
     });
     setPointSession(null);
   }, [activeRow, activeCol, cellValue]);
@@ -374,7 +392,7 @@ export function useCellEditing({
       buffer,
       originalValue: cellValue,
       caretPos: clampedCaret,
-      isFormula: buffer.startsWith('='),
+      isFormula: looksLikeFormula(buffer),
     });
     setPointSession(null);
   }, [activeRow, activeCol, cellValue]);
@@ -395,7 +413,7 @@ export function useCellEditing({
         ...prev,
         buffer,
         caretPos: clampedCaret,
-        isFormula: buffer.startsWith('=') || buffer.startsWith('+') || buffer.startsWith('-'),
+        isFormula: looksLikeFormula(buffer),
       };
     });
   }, []);
@@ -480,7 +498,7 @@ export function useCellEditing({
 
       if (key === 'F2') {
         startEdit();
-        const isFormula = cellValue.startsWith('=') || cellValue.startsWith('+') || cellValue.startsWith('-');
+        const isFormula = looksLikeFormula(cellValue);
         result.session = { ...s, state: 'EDIT', buffer: cellValue, caretPos: cellValue.length, isFormula };
         return result;
       }
@@ -655,7 +673,7 @@ export function useCellEditing({
       if (isPrintableChar(key)) {
         const newBuffer = s.buffer + key;
         const newCaret = newBuffer.length;
-        const isFormula = newBuffer.startsWith('=') || newBuffer.startsWith('+') || newBuffer.startsWith('-');
+        const isFormula = looksLikeFormula(newBuffer);
 
         // Check if this should trigger POINT mode (e.g., typing = or separator after =)
         if (shouldActivatePointMode(newBuffer, newCaret)) {
@@ -838,7 +856,7 @@ export function useCellEditing({
 
         // Insert at caret
         const newBuffer = s.buffer.slice(0, s.caretPos) + key + s.buffer.slice(s.caretPos);
-        const isFormula = newBuffer.startsWith('=') || newBuffer.startsWith('+') || newBuffer.startsWith('-');
+        const isFormula = looksLikeFormula(newBuffer);
         const newCaret = s.caretPos + 1;
         setSession((prev) => ({
           ...prev,

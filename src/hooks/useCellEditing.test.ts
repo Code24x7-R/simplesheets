@@ -4,6 +4,7 @@ import {
   shouldActivatePointMode,
   isOperatorChar,
   cycleReference,
+  looksLikeFormula,
   MODE_CODES,
   type KeyHandlingResult,
 } from './useCellEditing';
@@ -88,6 +89,58 @@ describe('shouldActivatePointMode', () => {
 
   it('trims whitespace before checking separator', () => {
     expect(shouldActivatePointMode('=SUM( ', 6)).toBe(true);
+  });
+});
+
+describe('looksLikeFormula', () => {
+  it('returns false for plain text without = prefix', () => {
+    expect(looksLikeFormula('Hello World')).toBe(false);
+    expect(looksLikeFormula('Hello.World')).toBe(false);
+    expect(looksLikeFormula('The quick brown fox')).toBe(false);
+  });
+
+  it('returns false for empty buffer', () => {
+    expect(looksLikeFormula('')).toBe(false);
+  });
+
+  it('returns false for just = with no content', () => {
+    expect(looksLikeFormula('=')).toBe(false);
+  });
+
+  it('returns false for plain text starting with =', () => {
+    expect(looksLikeFormula('=Hello.World')).toBe(false);
+    expect(looksLikeFormula('=The quick brown fox')).toBe(false);
+    expect(looksLikeFormula('=Just some text')).toBe(false);
+  });
+
+  it('returns true for formulas with cell references', () => {
+    expect(looksLikeFormula('=A1')).toBe(true);
+    expect(looksLikeFormula('=H1')).toBe(true);
+    expect(looksLikeFormula('=$A$1')).toBe(true);
+    expect(looksLikeFormula('=A1+B2')).toBe(true);
+  });
+
+  it('returns true for formulas with function calls', () => {
+    expect(looksLikeFormula('=SUM(A1:A10)')).toBe(true);
+    expect(looksLikeFormula('=AVERAGE(B1:B5)')).toBe(true);
+    expect(looksLikeFormula('=IF(A1>0, 1, 0)')).toBe(true);
+  });
+
+  it('returns true for formulas with operators', () => {
+    expect(looksLikeFormula('=1+2')).toBe(true);
+    expect(looksLikeFormula('=A1*2')).toBe(true);
+    expect(looksLikeFormula('=10/5')).toBe(true);
+  });
+
+  it('returns true for formulas with parentheses', () => {
+    expect(looksLikeFormula('=(1+2)')).toBe(true);
+    expect(looksLikeFormula('=((1+2)*3)')).toBe(true);
+  });
+
+  it('returns true for formulas starting with + or -', () => {
+    expect(looksLikeFormula('+A1')).toBe(true);
+    expect(looksLikeFormula('-A1')).toBe(true);
+    expect(looksLikeFormula('+SUM(A1:A10)')).toBe(true);
   });
 });
 
@@ -879,6 +932,27 @@ describe('useCellEditing - POINT state', () => {
     expect(result.current.session.state).toBe('EDIT');
     expect(result.current.pointSession).toBeNull();
     expect(result.current.session.buffer).toContain('C3');
+  });
+
+  it('does not enter POINT mode for plain text starting with =', () => {
+    // Simulate a cell containing "=Hello.World" (plain text, not a formula)
+    const { result } = createHook({ cellValue: '=Hello.World' });
+    // Start editing the cell
+    act(() => {
+      result.current.handleKey('F2', false, false);
+    });
+    expect(result.current.session.state).toBe('EDIT');
+    expect(result.current.session.isFormula).toBe(false);
+    // Position caret after = and press arrow key
+    act(() => {
+      result.current.setCaretPos(1);
+    });
+    act(() => {
+      result.current.handleKey('ArrowRight', false, false);
+    });
+    // Should NOT enter POINT mode because "=Hello.World" is not a formula
+    expect(result.current.session.state).toBe('EDIT');
+    expect(result.current.pointSession).toBeNull();
   });
 
   it('Enter commits reference and commits cell value', () => {
