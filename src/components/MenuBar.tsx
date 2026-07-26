@@ -23,6 +23,7 @@ interface MenuBarProps {
   onCopy: () => void;
   onCut: () => void;
   onPaste: () => void;
+  onPasteSpecial: () => void;
   onClear: () => void;
   onDeleteRow: () => void;
   onDeleteCol: () => void;
@@ -87,6 +88,7 @@ export function MenuBar(props: MenuBarProps) {
         'edit-copy': props.onCopy,
         'edit-cut': props.onCut,
         'edit-paste': props.onPaste,
+        'edit-paste-special': props.onPasteSpecial,
         'edit-clear': props.onClear,
       'edit-search-replace': props.onSearchReplace,
         'edit-delete-row': props.onDeleteRow,
@@ -170,6 +172,7 @@ export function MenuBar(props: MenuBarProps) {
     { id: 'edit-copy', label: 'Copy', shortcut: 'Ctrl+C', icon: '📋' },
     { id: 'edit-cut', label: 'Cut', shortcut: 'Ctrl+X', icon: '✂️' },
     { id: 'edit-paste', label: 'Paste', shortcut: 'Ctrl+V', icon: '📌' },
+    { id: 'edit-paste-special', label: 'Paste Special…', icon: '📋' },
     { id: 'edit-clear', label: 'Clear Contents', shortcut: 'Delete', icon: '🧹' },
     { id: 'edit-search-replace', label: 'Find & Replace…', shortcut: 'Ctrl+H', icon: '🔍' },
     { id: 'sep-edit-2', label: '', separator: true },

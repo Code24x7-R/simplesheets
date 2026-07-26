@@ -53,6 +53,7 @@ describe('MenuBar', () => {
     onAbout: jest.fn(),
     onShortcuts: jest.fn(),
     onSearchReplace: jest.fn(),
+    onPasteSpecial: jest.fn(),
   };
 
   beforeEach(() => {

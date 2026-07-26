@@ -3,6 +3,7 @@ import type { Workbook } from './types';
 import { cellKey, colToLetter } from './types';
 import { HistoryProvider, useHistory } from './context/HistoryContext';
 import { PasteModal } from './components/PasteModal';
+import { PasteSpecialModal } from './components/PasteSpecialModal';
 import { parsePlainText, parseHtmlTable, type ParsedClipboardGrid } from './utils/clipboardParse';
 import { FreezeProvider, useFreeze } from './context/FreezeContext';
 import { PrintSetupProvider } from './context/PrintSetupContext';
@@ -171,6 +172,14 @@ function WorkbookView() {
     isCut: boolean;
   } | null>(null);
 
+  // Paste Special options
+  const [pasteSkipBlanks, setPasteSkipBlanks] = useState(false);
+  const [showPasteSpecial, setShowPasteSpecial] = useState(false);
+  const [pendingPasteDetail, setPendingPasteDetail] = useState<{
+    targetRow: number;
+    targetCol: number;
+  } | null>(null);
+
   // Sheet reference (needed by the editing hook and everywhere else)
   const sheet = workbook.sheets[workbook.activeSheetIndex];
 
@@ -235,165 +244,6 @@ function WorkbookView() {
       setStatusMessage(`Warning: ${result.circularRefs.length} circular reference(s) detected`);
     }
   }, [workbook, updatedSheet]);
-
-  // ─── Copy/Paste Event Handlers ────────────────────────────────────────────
-
-  useEffect(() => {
-    const handleCopyEvent = (e: Event) => {
-      const detail = (e as CustomEvent).detail;
-      /* istanbul ignore next - defensive null check */
-      if (!detail) return;
-      copyRange(sheet.cells, detail.startRow, detail.startCol, detail.endRow, detail.endCol, detail.selectionType);
-      setClipboardRange({
-        startRow: Math.min(detail.startRow, detail.endRow),
-        startCol: Math.min(detail.startCol, detail.endCol),
-        endRow: Math.max(detail.startRow, detail.endRow),
-        endCol: Math.max(detail.startCol, detail.endCol),
-        isCut: false,
-      });
-      setStatusMessage(
-        detail.selectionType === 'row'
-          ? `Row${detail.startRow !== detail.endRow ? 's' : ''} copied`
-          : detail.selectionType === 'col'
-          ? `Column${detail.startCol !== detail.endCol ? 's' : ''} copied`
-          : 'Selection copied'
-      );
-    };
-
-    const handleCutEvent = (e: Event) => {
-      const detail = (e as CustomEvent).detail;
-      /* istanbul ignore next - defensive null check */
-      if (!detail) return;
-      clipCutRange(sheet.cells, detail.startRow, detail.startCol, detail.endRow, detail.endCol, detail.selectionType);
-      setPendingCutRange({
-        type: detail.selectionType ?? 'cell',
-        startRow: Math.min(detail.startRow, detail.endRow),
-        startCol: Math.min(detail.startCol, detail.endCol),
-        endRow: Math.max(detail.startRow, detail.endRow),
-        endCol: Math.max(detail.startCol, detail.endCol),
-        anchorRow: detail.startRow,
-        anchorCol: detail.startCol,
-      });
-      setClipboardRange({
-        startRow: Math.min(detail.startRow, detail.endRow),
-        startCol: Math.min(detail.startCol, detail.endCol),
-        endRow: Math.max(detail.startRow, detail.endRow),
-        endCol: Math.max(detail.startCol, detail.endCol),
-        isCut: true,
-      });
-      setStatusMessage(
-        detail.selectionType === 'row'
-          ? `Row${detail.startRow !== detail.endRow ? 's' : ''} cut`
-          : detail.selectionType === 'col'
-          ? `Column${detail.startCol !== detail.endCol ? 's' : ''} cut`
-          : 'Selection cut'
-      );
-    };
-
-    const handlePasteEvent = (e: Event) => {
-      const detail = (e as CustomEvent).detail;
-      const clipboard = getClipboard();
-      /* istanbul ignore next - defensive null check */
-      if (!clipboard || !detail) return;
-
-      const targetRow = detail.startRow;
-      const targetCol = detail.startCol;
-      const isCut = clipboard.isCut;
-      const selType = clipboard.selectionType ?? 'cell';
-
-      // Calculate source origin (top-left of copied range)
-      /* istanbul ignore next - pendingCutRange null fallback */
-      const srcRow = isCut ? pendingCutRange?.startRow ?? 0 : 0;
-      /* istanbul ignore next - pendingCutRange null fallback */
-      const srcCol = isCut ? pendingCutRange?.startCol ?? 0 : 0;
-
-      // For row selections, only offset rows (columns stay fixed).
-      // For column selections, only offset columns (rows stay fixed).
-      const rowOffset = selType === 'col' ? 0 : targetRow - srcRow;
-      const colOffset = selType === 'row' ? 0 : targetCol - srcCol;
-
-      // Create updated cells
-      const newCells = { ...sheet.cells };
-      let cellsUpdated = 0;
-
-      for (let r = 0; r < clipboard.rowCount; r++) {
-        for (let c = 0; c < clipboard.colCount; c++) {
-          const cell = clipboard.cells[r][c];
-          /* istanbul ignore next - defensive null check */
-          if (!cell) continue;
-
-          const destRow = r + rowOffset;
-          const destCol = c + colOffset;
-          const destKey = cellKey(destRow, destCol);
-
-          // Adjust formulas if pasting
-          let newValue = cell.rawValue;
-          if (cell.rawValue.startsWith('=') && (rowOffset !== 0 || colOffset !== 0)) {
-            newValue = '=' + adjustFormulaRefs(cell.rawValue.slice(1), rowOffset, colOffset);
-          }
-
-          const destCell: Cell = {
-            rawValue: newValue,
-            style: cell.style,
-            rowSpan: cell.rowSpan,
-            colSpan: cell.colSpan,
-            isMergeAnchor: cell.isMergeAnchor,
-          };
-          newCells[destKey] = destCell;
-          cellsUpdated++;
-        }
-      }
-
-      // If cut, clear source cells (sparse: only visit existing cells)
-      if (isCut && pendingCutRange) {
-        const cutMinRow = pendingCutRange.startRow;
-        const cutMaxRow = pendingCutRange.endRow;
-        const cutMinCol = pendingCutRange.startCol;
-        const cutMaxCol = pendingCutRange.endCol;
-        for (const key of Object.keys(newCells)) {
-          const colonIndex = key.indexOf(':');
-          const r = parseInt(key.slice(0, colonIndex), 10);
-          const c = parseInt(key.slice(colonIndex + 1), 10);
-          if (r >= cutMinRow && r <= cutMaxRow && c >= cutMinCol && c <= cutMaxCol) {
-            delete newCells[key];
-          }
-        }
-        clearClipboard();
-        setPendingCutRange(null);
-      }
-
-      // Update workbook
-      const newSheets = workbook.sheets.map((s, idx) => {
-        if (idx !== workbook.activeSheetIndex) return s;
-        return { ...s, cells: newCells };
-      });
-      const newWorkbook: Workbook = {
-        ...workbook,
-        sheets: newSheets,
-        lastModified: Date.now(),
-      };
-      const actionLabel =
-        selType === 'row'
-          ? isCut ? 'Moved row(s)' : 'Pasted row(s)'
-          : selType === 'col'
-          ? isCut ? 'Moved column(s)' : 'Pasted column(s)'
-          : isCut ? `Cut ${cellsUpdated} cell(s)` : `Paste ${cellsUpdated} cell(s)`;
-      pushHistory(newWorkbook, actionLabel);
-      setStatusMessage(`${isCut ? 'Moved' : 'Pasted'} ${cellsUpdated} cell(s)`);
-      // Clear marching ants after paste
-      setClipboardRange(null);
-    };
-
-    window.addEventListener('simplesheets:copy', handleCopyEvent);
-    window.addEventListener('simplesheets:cut', handleCutEvent);
-    window.addEventListener('simplesheets:paste', handlePasteEvent);
-
-    return () => {
-      window.removeEventListener('simplesheets:copy', handleCopyEvent);
-      window.removeEventListener('simplesheets:cut', handleCutEvent);
-      window.removeEventListener('simplesheets:paste', handlePasteEvent);
-    };
-  }, [sheet, workbook, pushHistory, pendingCutRange]);
 
   // ─── Window Blur Handler (Spec §5) ──────────────────────────────────────
   // Commit any active edit when the window loses focus, clear pointing overlays,
@@ -898,6 +748,206 @@ function WorkbookView() {
     };
   }, [gridSelection, activeCell]);
 
+  // ─── Copy/Paste Event Handlers ────────────────────────────────────────────
+
+  useEffect(() => {
+    const handleCopyEvent = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      /* istanbul ignore next - defensive null check */
+      if (!detail) return;
+      copyRange(sheet.cells, detail.startRow, detail.startCol, detail.endRow, detail.endCol, detail.selectionType);
+      setClipboardRange({
+        startRow: Math.min(detail.startRow, detail.endRow),
+        startCol: Math.min(detail.startCol, detail.endCol),
+        endRow: Math.max(detail.startRow, detail.endRow),
+        endCol: Math.max(detail.startCol, detail.endCol),
+        isCut: false,
+      });
+      setStatusMessage(
+        detail.selectionType === 'row'
+          ? `Row${detail.startRow !== detail.endRow ? 's' : ''} copied`
+          : detail.selectionType === 'col'
+          ? `Column${detail.startCol !== detail.endCol ? 's' : ''} copied`
+          : 'Selection copied'
+      );
+    };
+
+    const handleCutEvent = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      /* istanbul ignore next - defensive null check */
+      if (!detail) return;
+      clipCutRange(sheet.cells, detail.startRow, detail.startCol, detail.endRow, detail.endCol, detail.selectionType);
+      setPendingCutRange({
+        type: detail.selectionType ?? 'cell',
+        startRow: Math.min(detail.startRow, detail.endRow),
+        startCol: Math.min(detail.startCol, detail.endCol),
+        endRow: Math.max(detail.startRow, detail.endRow),
+        endCol: Math.max(detail.startCol, detail.endCol),
+        anchorRow: detail.startRow,
+        anchorCol: detail.startCol,
+      });
+      setClipboardRange({
+        startRow: Math.min(detail.startRow, detail.endRow),
+        startCol: Math.min(detail.startCol, detail.endCol),
+        endRow: Math.max(detail.startRow, detail.endRow),
+        endCol: Math.max(detail.startCol, detail.endCol),
+        isCut: true,
+      });
+      setStatusMessage(
+        detail.selectionType === 'row'
+          ? `Row${detail.startRow !== detail.endRow ? 's' : ''} cut`
+          : detail.selectionType === 'col'
+          ? `Column${detail.startCol !== detail.endCol ? 's' : ''} cut`
+          : 'Selection cut'
+      );
+    };
+
+    const handlePasteEvent = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      const clipboard = getClipboard();
+      /* istanbul ignore next - defensive null check */
+      if (!clipboard || !detail) return;
+
+      const targetRow = detail.startRow;
+      const targetCol = detail.startCol;
+      const isCut = clipboard.isCut;
+      const selType = clipboard.selectionType ?? 'cell';
+      // Skip blanks can be passed via event detail (from Paste Special dialog)
+      const skipBlanks = detail.skipBlanks ?? pasteSkipBlanks;
+
+      // Calculate source origin (top-left of copied range)
+      /* istanbul ignore next - pendingCutRange null fallback */
+      const srcRow = isCut ? pendingCutRange?.startRow ?? 0 : 0;
+      /* istanbul ignore next - pendingCutRange null fallback */
+      const srcCol = isCut ? pendingCutRange?.startCol ?? 0 : 0;
+
+      // For row selections, only offset rows (columns stay fixed).
+      // For column selections, only offset columns (rows stay fixed).
+      const rowOffset = selType === 'col' ? 0 : targetRow - srcRow;
+      const colOffset = selType === 'row' ? 0 : targetCol - srcCol;
+
+      // Check for destination range mismatch (Excel behavior)
+      // If user selected a range (not single cell), validate it matches clipboard
+      const destSel = selection;
+      const isSingleCellTarget = !destSel || (destSel.startRow === destSel.endRow && destSel.startCol === destSel.endCol);
+
+      if (!isSingleCellTarget && selType === 'cell' && destSel) {
+        const destRowCount = Math.abs(destSel.endRow - destSel.startRow) + 1;
+        const destColCount = Math.abs(destSel.endCol - destSel.startCol) + 1;
+        const srcRowCount = clipboard.rowCount;
+        const srcColCount = clipboard.colCount;
+
+        // Allow if destination exactly matches source
+        const exactMatch = destRowCount === srcRowCount && destColCount === srcColCount;
+        // Allow if destination evenly divides into source (tiled paste)
+        const tilesHorizontally = destColCount % srcColCount === 0;
+        const tilesVertically = destRowCount % srcRowCount === 0;
+        const canTile = tilesHorizontally && tilesVertically;
+
+        if (!exactMatch && !canTile) {
+          setStatusMessage(
+            `Paste error: destination range (${destRowCount}×${destColCount}) does not match copied range (${srcRowCount}×${srcColCount})`
+          );
+          return;
+        }
+      }
+
+      // Create updated cells
+      const newCells = { ...sheet.cells };
+      let cellsUpdated = 0;
+      let cellsSkipped = 0;
+
+      for (let r = 0; r < clipboard.rowCount; r++) {
+        for (let c = 0; c < clipboard.colCount; c++) {
+          const cell = clipboard.cells[r][c];
+          /* istanbul ignore next - defensive null check */
+          const isEmptySource = !cell || !cell.rawValue;
+
+          // Skip blanks: don't overwrite existing data with empty source
+          if (skipBlanks && isEmptySource) {
+            cellsSkipped++;
+            continue;
+          }
+
+          const destRow = r + rowOffset;
+          const destCol = c + colOffset;
+          const destKey = cellKey(destRow, destCol);
+
+          // Adjust formulas if pasting
+          let newValue = cell?.rawValue ?? '';
+          if (newValue.startsWith('=') && (rowOffset !== 0 || colOffset !== 0)) {
+            newValue = '=' + adjustFormulaRefs(newValue.slice(1), rowOffset, colOffset);
+          }
+
+          const destCell: Cell = {
+            rawValue: newValue,
+            style: cell?.style,
+            rowSpan: cell?.rowSpan ?? 1,
+            colSpan: cell?.colSpan ?? 1,
+            isMergeAnchor: cell?.isMergeAnchor ?? false,
+          };
+          newCells[destKey] = destCell;
+          cellsUpdated++;
+        }
+      }
+
+      // If cut, clear source cells (sparse: only visit existing cells)
+      if (isCut && pendingCutRange) {
+        const cutMinRow = pendingCutRange.startRow;
+        const cutMaxRow = pendingCutRange.endRow;
+        const cutMinCol = pendingCutRange.startCol;
+        const cutMaxCol = pendingCutRange.endCol;
+        for (const key of Object.keys(newCells)) {
+          const colonIndex = key.indexOf(':');
+          const r = parseInt(key.slice(0, colonIndex), 10);
+          const c = parseInt(key.slice(colonIndex + 1), 10);
+          if (r >= cutMinRow && r <= cutMaxRow && c >= cutMinCol && c <= cutMaxCol) {
+            delete newCells[key];
+          }
+        }
+        clearClipboard();
+        setPendingCutRange(null);
+      }
+
+      // Update workbook
+      const newSheets = workbook.sheets.map((s, idx) => {
+        if (idx !== workbook.activeSheetIndex) return s;
+        return { ...s, cells: newCells };
+      });
+      const newWorkbook: Workbook = {
+        ...workbook,
+        sheets: newSheets,
+        lastModified: Date.now(),
+      };
+      const actionLabel =
+        selType === 'row'
+          ? isCut ? 'Moved row(s)' : 'Pasted row(s)'
+          : selType === 'col'
+          ? isCut ? 'Moved column(s)' : 'Pasted column(s)'
+          : isCut ? `Cut ${cellsUpdated} cell(s)` : `Paste ${cellsUpdated} cell(s)`;
+      pushHistory(newWorkbook, actionLabel);
+
+      // Build status message with skip blanks info
+      let statusMsg = `${isCut ? 'Moved' : 'Pasted'} ${cellsUpdated} cell(s)`;
+      if (skipBlanks && cellsSkipped > 0) {
+        statusMsg += ` (${cellsSkipped} blank(s) skipped)`;
+      }
+      setStatusMessage(statusMsg);
+      // Clear marching ants after paste
+      setClipboardRange(null);
+    };
+
+    window.addEventListener('simplesheets:copy', handleCopyEvent);
+    window.addEventListener('simplesheets:cut', handleCutEvent);
+    window.addEventListener('simplesheets:paste', handlePasteEvent);
+
+    return () => {
+      window.removeEventListener('simplesheets:copy', handleCopyEvent);
+      window.removeEventListener('simplesheets:cut', handleCutEvent);
+      window.removeEventListener('simplesheets:paste', handlePasteEvent);
+    };
+  }, [sheet, workbook, pushHistory, pendingCutRange, pasteSkipBlanks, selection]);
+
   const hasSelection = selection !== null;
   const hasRangeSelection =
     hasSelection &&
@@ -986,6 +1036,37 @@ function WorkbookView() {
       },
     }));
   }, [selection]);
+
+  // ─── Paste Special ──────────────────────────────────────────────────────
+  const handlePasteSpecial = useCallback(() => {
+    if (!selection) return;
+    if (!hasClipboardData()) {
+      setStatusMessage('Nothing to paste — copy or cut cells first');
+      return;
+    }
+    setPendingPasteDetail({
+      targetRow: selection.startRow,
+      targetCol: selection.startCol,
+    });
+    setShowPasteSpecial(true);
+  }, [selection]);
+
+  const handlePasteSpecialApply = useCallback(
+    (options: { skipBlanks: boolean }) => {
+      if (!selection || !pendingPasteDetail) return;
+      // Pass skipBlanks through event detail so handler uses it directly
+      window.dispatchEvent(new CustomEvent('simplesheets:paste', {
+        detail: {
+          startRow: pendingPasteDetail.targetRow,
+          startCol: pendingPasteDetail.targetCol,
+          selectionType: selection.type,
+          skipBlanks: options.skipBlanks,
+        },
+      }));
+      setPendingPasteDetail(null);
+    },
+    [selection, pendingPasteDetail]
+  );
 
   // ─── External Paste Application ────────────────────────────────────────
   // Writes a parsed clipboard grid into the workbook starting at the
@@ -1263,6 +1344,7 @@ function WorkbookView() {
           onCopy={handleCopyMenu}
           onCut={handleCutMenu}
           onPaste={handlePasteMenu}
+          onPasteSpecial={handlePasteSpecial}
           onClear={handleClear}
           onDeleteRow={handleDeleteRow}
           onDeleteCol={handleDeleteCol}
@@ -1420,6 +1502,16 @@ function WorkbookView() {
         }}
         html={pendingPasteHtml}
         plain={pendingPastePlain}
+      />
+      <PasteSpecialModal
+        isOpen={showPasteSpecial}
+        onClose={() => {
+          setShowPasteSpecial(false);
+          setPendingPasteDetail(null);
+        }}
+        onApply={handlePasteSpecialApply}
+        skipBlanks={pasteSkipBlanks}
+        onSkipBlanksChange={setPasteSkipBlanks}
       />
       <FormulaWizard
         wizard={formulaWizard}
