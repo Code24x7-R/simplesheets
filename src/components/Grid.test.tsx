@@ -1455,6 +1455,83 @@ describe('Grid Component', () => {
     expect(input.value).toBe('World');
   });
 
+  // ─── In-Cell Editing Copy/Paste Workflow ────────────────────────
+
+  it('Ctrl+C while editing does NOT dispatch cell copy event', () => {
+    const onCellChange = jest.fn();
+    render(<Grid sheet={createTestSheet()} onCellChange={onCellChange} selectedCell={{ row: 0, col: 0 }} />);
+    const grid = document.querySelector('[tabindex="0"]') as HTMLElement;
+
+    // Enter edit mode
+    fireEvent.keyDown(grid, { key: 'F2' });
+    const input = document.querySelector('input.border-blue-500') as HTMLInputElement;
+    expect(input).not.toBeNull();
+
+    // Listen for the cell copy event
+    const copyHandler = jest.fn();
+    window.addEventListener('simplesheets:copy', copyHandler);
+
+    // Ctrl+C while editing should NOT trigger cell copy
+    fireEvent.keyDown(input, { key: 'c', ctrlKey: true });
+
+    // The cell copy event should NOT have been dispatched
+    expect(copyHandler).not.toHaveBeenCalled();
+
+    window.removeEventListener('simplesheets:copy', copyHandler);
+  });
+
+  it('full workflow: edit → Ctrl+A → Ctrl+C (text) → F2 → navigate → F2 → Ctrl+V (paste at cursor)', () => {
+    const onCellChange = jest.fn();
+    const onSelect = jest.fn();
+    render(
+      <Grid
+        sheet={createTestSheet()}
+        onCellChange={onCellChange}
+        onSelect={onSelect}
+        selectedCell={{ row: 0, col: 0 }}
+      />
+    );
+    const grid = document.querySelector('[tabindex="0"]') as HTMLElement;
+
+    // Step 1: Enter edit mode
+    fireEvent.keyDown(grid, { key: 'F2' });
+    let input = document.querySelector('input.border-blue-500') as HTMLInputElement;
+    expect(input).not.toBeNull();
+    fireEvent.change(input, { target: { value: 'Source' } });
+
+    // Step 2: Ctrl+A to select all text
+    fireEvent.keyDown(input, { key: 'a', ctrlKey: true });
+    expect(input.selectionStart).toBe(0);
+    expect(input.selectionEnd).toBe(6);
+
+    // Step 3: Exit edit mode with F2
+    fireEvent.keyDown(input, { key: 'F2' });
+    expect(document.querySelector('input.border-blue-500')).toBeNull();
+
+    // Step 4: Navigate to a different cell (row 1, col 1)
+    fireEvent.keyDown(grid, { key: 'ArrowDown' });
+    fireEvent.keyDown(grid, { key: 'ArrowRight' });
+
+    // Step 5: Enter edit mode in new cell
+    fireEvent.keyDown(grid, { key: 'F2' });
+    input = document.querySelector('input.border-blue-500') as HTMLInputElement;
+    expect(input).not.toBeNull();
+    fireEvent.change(input, { target: { value: 'Target' } });
+
+    // Step 6: Move cursor to end
+    input.selectionStart = input.selectionEnd = input.value.length;
+
+    // Step 7: Paste at cursor position
+    fireEvent.paste(input, {
+      clipboardData: {
+        getData: () => ' Pasted',
+      },
+    });
+
+    // Should paste at cursor, NOT replace all
+    expect(input.value).toBe('Target Pasted');
+  });
+
   // ─── Row / Column Header Keyboard Navigation ─────────────────────
 
   it('switches from row selection to cell selection on arrow left/right', () => {

@@ -7,7 +7,7 @@ import type { HighlightedRange } from './FormulaBar';
 import type { ReferenceFormat } from '../hooks/useReferenceFormat';
 import { ResizeHandle } from './ResizeHandle';
 import { formatNumberValue, isNumberFormat, isNumericValue } from '../utils/numberFormat';
-import { hasClipboardData, getClipboard } from '../utils/clipboard';
+import { hasClipboardData } from '../utils/clipboard';
 
 /** Point mode selection range (for visual feedback during formula editing). */
 export interface PointModeSelection {
@@ -249,9 +249,19 @@ export function Grid({ sheet, onCellChange, onCellsChange, onSelect, selectedCel
   // Handles Ctrl+C/X/V at the window level so they work regardless of which
   // element has focus (formula bar, menu, etc.). Uses selectionRef to avoid
   // stale closures.
+  //
+  // IMPORTANT: When editing a cell, these shortcuts are NOT intercepted here.
+  // The native input handles Ctrl+C/X/V for text-level operations (copy/cut/paste
+  // within the cell). This prevents the "copy cell" behavior from activating
+  // when the user wants to copy text within the cell.
   useEffect(() => {
     const handleGlobalClipboardKey = (e: KeyboardEvent) => {
       if (!e.ctrlKey && !e.metaKey) return;
+
+      // When editing a cell, let the native input handle clipboard keys
+      // for text-level operations (copy/cut/paste within the cell)
+      if (editingCellRef.current) return;
+
       const sel = selectionRef.current;
       if (!sel) return;
       switch (e.key) {
@@ -279,17 +289,6 @@ export function Grid({ sheet, onCellChange, onCellsChange, onSelect, selectedCel
           break;
         case 'v':
         case 'V':
-          // If editing a cell, insert clipboard content at cursor position
-          if (editingCellRef.current && editInputRef.current) {
-            e.preventDefault();
-            const internalData = getClipboard();
-            if (internalData && internalData.cells && internalData.rowCount > 0) {
-              // Insert first cell value at cursor position
-              const firstValue = internalData.cells[0]?.[0]?.rawValue ?? '';
-              insertAtCursor(editInputRef.current, firstValue);
-            }
-            return;
-          }
           // Only intercept if we have internal clipboard data.
           // Otherwise let the native paste event fire so external
           // clipboard data (from other apps) can be pasted.
