@@ -35,6 +35,7 @@ const SHORTCUT_GROUPS: ShortcutGroup[] = [
   {
     title: 'Clipboard',
     shortcuts: [
+      { keys: 'Ctrl + A', description: 'Select all cells (or all text when editing)' },
       { keys: 'Ctrl + C', description: 'Copy selection' },
       { keys: 'Ctrl + X', description: 'Cut selection' },
       { keys: 'Ctrl + V', description: 'Paste to selection' },

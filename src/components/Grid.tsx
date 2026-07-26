@@ -901,6 +901,20 @@ export function Grid({ sheet, onCellChange, onCellsChange, onSelect, selectedCel
           case 'c': case 'C': case 'x': case 'X': case 'v': case 'V':
           case 'z': case 'Z': case 'y': case 'Y':
             return;
+          case 'a': case 'A':
+            // Ctrl+A: select all cells in the sheet
+            e.preventDefault();
+            setSelection({
+              type: 'cell',
+              startRow: 0,
+              startCol: 0,
+              endRow: rowCount - 1,
+              endCol: columnCount - 1,
+              anchorRow: 0,
+              anchorCol: 0,
+            });
+            onSelect?.(0, 0);
+            return;
         }
       }
 
@@ -1371,7 +1385,11 @@ export function Grid({ sheet, onCellChange, onCellsChange, onSelect, selectedCel
                       }}
                       onBlur={commitEdit}
                       onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
+                        if ((e.ctrlKey || e.metaKey) && (e.key === 'a' || e.key === 'A')) {
+                          // Ctrl+A: select all text in the cell
+                          e.preventDefault();
+                          e.currentTarget.select();
+                        } else if (e.key === 'Enter') {
                           e.preventDefault();
                           commitEdit();
                           // Move selection down (or up with Shift+Enter)

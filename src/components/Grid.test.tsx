@@ -1320,6 +1320,39 @@ describe('Grid Component', () => {
     expect(onCellChange).toHaveBeenCalledWith(1, 0, 'y');
   });
 
+  // ─── Ctrl+A Selection ──────────────────────────────────────────
+
+  it('Ctrl+A selects all cells in the sheet', () => {
+    const onSelect = jest.fn();
+    render(<Grid sheet={createTestSheet()} onSelect={onSelect} selectedCell={{ row: 0, col: 0 }} />);
+    const grid = document.querySelector('[tabindex="0"]') as HTMLElement;
+
+    // Press Ctrl+A to select all
+    fireEvent.keyDown(grid, { key: 'a', ctrlKey: true });
+
+    // Should trigger selection callback
+    expect(onSelect).toHaveBeenCalled();
+  });
+
+  it('Ctrl+A during editing selects all text in the cell', () => {
+    const onCellChange = jest.fn();
+    render(<Grid sheet={createTestSheet()} onCellChange={onCellChange} selectedCell={{ row: 0, col: 0 }} />);
+    const grid = document.querySelector('[tabindex="0"]') as HTMLElement;
+
+    // Start editing
+    fireEvent.keyDown(grid, { key: 'a' });
+    const input = document.querySelector('input.border-blue-500') as HTMLInputElement;
+    expect(input).not.toBeNull();
+    expect(input.value).toBe('a');
+
+    // Press Ctrl+A to select all text
+    fireEvent.keyDown(input, { key: 'a', ctrlKey: true });
+
+    // Selection should cover the entire text
+    expect(input.selectionStart).toBe(0);
+    expect(input.selectionEnd).toBe(1);
+  });
+
   // ─── Inline Cell Editing Paste ───────────────────────────────────
 
   it('inserts pasted text at cursor position during cell editing', () => {
