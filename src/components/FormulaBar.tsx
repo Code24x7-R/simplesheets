@@ -4,6 +4,7 @@ import { validateFormula, type ValidationResult } from '../utils/formulaValidati
 import { searchFunctions, type FunctionInfo } from '../utils/formulaAutocomplete';
 import type { EditingSession, PointSession } from '../hooks/useCellEditing';
 import type { ReferenceFormat } from '../hooks/useReferenceFormat';
+import { colToLetter } from '../types';
 
 /** Represents a highlighted range with a color index. */
 export interface HighlightedRange {
@@ -214,6 +215,9 @@ export function FormulaBar({
   const isEditing = session.state !== 'SELECT';
   const isPointMode = session.state === 'POINT';
 
+  // Compute active cell reference from session
+  const activeCellRef = `${colToLetter(session.col)}${session.row + 1}`;
+
   // Wrapper to update value and caret position
   const onChange = useCallback((newValue: string) => {
     const input = inputRef.current;
@@ -417,6 +421,18 @@ export function FormulaBar({
       }).catch(() => {
         // Clipboard access denied - let native paste handle it
       });
+      return;
+    }
+
+    // ── Handle selection-based keys natively ─────────────────────────
+    // If text is selected, let the native input handle Backspace/Delete/printable
+    // keys. The onChange handler will sync the result to the FSM.
+    const input = inputRef.current;
+    const hasSelection = input ? input.selectionStart !== input.selectionEnd : false;
+    const isSelectionKey = e.key === 'Backspace' || e.key === 'Delete' || (e.key.length === 1 && !e.ctrlKey && !e.metaKey);
+
+    if (hasSelection && isSelectionKey) {
+      // Let native input handle it - onChange will sync to FSM
       return;
     }
 
