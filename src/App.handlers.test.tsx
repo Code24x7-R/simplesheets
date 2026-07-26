@@ -40,6 +40,8 @@ describe('App - Cell Edit/Undo/Redo', () => {
     fireEvent.mouseDown(cell);
 
     const input = screen.getByPlaceholderText(/Enter a value or formula/);
+    // Focus to enter EDIT mode
+    fireEvent.focus(input);
     fireEvent.change(input, { target: { value: '42' } });
     fireEvent.keyDown(input, { key: 'Enter' });
 
@@ -59,6 +61,8 @@ describe('App - Cell Edit/Undo/Redo', () => {
     fireEvent.mouseDown(cell);
 
     const input = screen.getByPlaceholderText(/Enter a value or formula/);
+    // Focus to enter EDIT mode
+    fireEvent.focus(input);
     fireEvent.change(input, { target: { value: '42' } });
     fireEvent.keyDown(input, { key: 'Enter' });
 
