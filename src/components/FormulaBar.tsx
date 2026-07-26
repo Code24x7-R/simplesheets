@@ -55,6 +55,8 @@ export interface FormulaBarProps {
   onInsertFunction?: (functionName: string) => void;
   /** Callback when the Insert Function button is clicked (opens wizard). */
   onOpenWizard?: () => void;
+  /** Callback to set caret position (for click handling). */
+  onSetCaret?: (caretPosition: number) => void;
 }
 
 /**
@@ -206,6 +208,7 @@ export function FormulaBar({
   onEditingKey,
   onBlurEditing,
   onFocusEditing,
+  onSetCaret,
   referenceFormat = 'A1',
   onToggleReferenceFormat,
   onInsertFunction,
@@ -647,10 +650,20 @@ export function FormulaBar({
 
   const handleClick = useCallback(() => {
     updateCursorPos();
+    // When integrated with FSM hook, sync click caret position to hook
+    // This handles the case where focus event read a stale selectionStart
+    if (onSetCaret && onEditingKey && editingSession && editingSession.state === 'EDIT') {
+      const input = inputRef.current;
+      const caretPos = input ? (input.selectionStart ?? 0) : displayValue.length;
+      // Only update if different from hook's current caret
+      if (caretPos !== editingSession.caretPos) {
+        onSetCaret(caretPos);
+      }
+    }
     if (isEditing && displayValue.startsWith('=')) {
       openAutoComplete();
     }
-  }, [updateCursorPos, isEditing, displayValue, openAutoComplete]);
+  }, [updateCursorPos, onSetCaret, onEditingKey, editingSession, displayValue, isEditing, openAutoComplete]);
 
   const handleSelect = useCallback(() => {
     updateCursorPos();

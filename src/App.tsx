@@ -197,6 +197,7 @@ function WorkbookView() {
     handleKey: handleEditingKey,
     handleCellClick: handleEditingCellClick,
     startEditAt,
+    setCaretPos,
     commit: commitEditing,
     reset: resetEditing,
   } = useCellEditing({
@@ -1464,6 +1465,7 @@ function WorkbookView() {
         onEditingKey={handleFormulaEditingKey}
         onBlurEditing={handleFormulaBlurEditing}
         onFocusEditing={handleFormulaFocusEditing}
+        onSetCaret={setCaretPos}
         referenceFormat={referenceFormat}
         onToggleReferenceFormat={toggleReferenceFormat}
         onInsertFunction={(fn) => {
