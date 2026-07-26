@@ -3,6 +3,11 @@
   "version": "0.1.0",
   "description": "A lightweight, browser-based spreadsheet for small businesses",
   "private": true,
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -13,7 +18,10 @@
     "test": "jest --coverage",
     "test:watch": "jest --watch",
     "cypress": "cypress run",
-    "cypress:open": "cypress open"
+    "cypress:open": "cypress open",
+    "prepack-offline": "node scripts/prepack-offline.mjs",
+    "postpack": "node scripts/postpack-offline.mjs",
+    "release:offline": "npm run build && npm run prepack-offline && npm pack"
   },
   "dependencies": {
     "@tanstack/react-virtual": "^3.10.8",

@@ -270,7 +270,7 @@ interface UseCellEditingOptions {
   /** Total column count (for bounds checking). */
   colCount: number;
   /** Callback when a cell value is committed. */
-  onCommit: (row: number, col: number, value: string) => void;
+  onCommit: (row: number, col: number, value: string, batch?: boolean) => void;
   /** Callback when navigation occurs (returns whether it was handled). */
   onNavigate?: (row: number, col: number) => void;
 }
@@ -403,9 +403,9 @@ export function useCellEditing({
     });
   }, []);
 
-  const commit = useCallback((moveDirection?: { dRow: number; dCol: number }) => {
+  const commit = useCallback((moveDirection?: { dRow: number; dCol: number }, batch?: boolean) => {
     const s = sessionRef.current;
-    onCommit(s.row, s.col, s.buffer);
+    onCommit(s.row, s.col, s.buffer, batch);
 
     if (moveDirection && onNavigate) {
       const newRow = Math.max(0, Math.min(rowCount - 1, s.row + moveDirection.dRow));
@@ -527,7 +527,7 @@ export function useCellEditing({
 
       // Delete/Backspace clears cell
       if (key === 'Backspace' || key === 'Delete') {
-        onCommit(s.row, s.col, '');
+        onCommit(s.row, s.col, '', false);
         result.shouldCommit = true;
         result.statusMessage = 'Cell cleared';
         return result;
@@ -556,7 +556,7 @@ export function useCellEditing({
         }
         // Ctrl+Enter — commit and stay (Spec §2)
         if (ctrlKey) {
-          commit({ dRow: 0, dCol: 0 });
+          commit({ dRow: 0, dCol: 0 }, true);
           result.session = { ...s, state: 'SELECT' };
           result.statusMessage = 'Value committed';
           return result;
@@ -601,7 +601,7 @@ export function useCellEditing({
 
       // Ctrl+Enter — commit and stay in cell (Spec §2)
       if (key === 'Enter' && ctrlKey) {
-        commit({ dRow: 0, dCol: 0 });
+        commit({ dRow: 0, dCol: 0 }, true);
         result.session = { ...s, state: 'SELECT' };
         result.statusMessage = 'Value committed';
         return result;
@@ -735,7 +735,7 @@ export function useCellEditing({
         }
         // Ctrl+Enter — commit and stay (Spec §2)
         if (ctrlKey) {
-          commit({ dRow: 0, dCol: 0 });
+          commit({ dRow: 0, dCol: 0 }, true);
           result.session = { ...s, state: 'SELECT' };
           result.statusMessage = 'Value committed';
           return result;

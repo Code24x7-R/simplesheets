@@ -1,0 +1,170 @@
+{
+    "entering_and_exiting_edit_mode": [
+        {
+            "key": "F2",
+            "action": "Edit active cell and place cursor at the end; toggle Point mode if writing formula.",
+            "works_in_formula_bar": true,
+            "requires_selection": false
+        },
+        {
+            "key": "Ctrl + F2",
+            "action": "Move focus between the in-cell editor and the formula bar.",
+            "works_in_formula_bar": true,
+            "requires_selection": false
+        },
+        {
+            "key": "Enter",
+            "action": "Complete cell entry and move down to the next cell.",
+            "works_in_formula_bar": true,
+            "requires_selection": false
+        },
+        {
+            "key": "Ctrl + Enter",
+            "action": "Complete cell entry and stay in the same cell.",
+            "works_in_formula_bar": true,
+            "requires_selection": false
+        },
+        {
+            "key": "Shift + Enter",
+            "action": "Complete cell entry and move up to the previous cell.",
+            "works_in_formula_bar": true,
+            "requires_selection": false
+        },
+        {
+            "key": "Tab",
+            "action": "Complete cell entry and move one cell to the right.",
+            "works_in_formula_bar": true,
+            "requires_selection": false
+        },
+        {
+            "key": "Shift + Tab",
+            "action": "Complete cell entry and move one cell to the left.",
+            "works_in_formula_bar": true,
+            "requires_selection": false
+        },
+        {
+            "key": "Esc",
+            "action": "Cancel editing and discard changes in the cell or formula bar.",
+            "works_in_formula_bar": true,
+            "requires_selection": false
+        }
+    ],
+    "navigation_and_text_selection": [
+        {
+            "key": "Backspace",
+            "action": "Delete one character to the left of the cursor.",
+            "works_in_formula_bar": true,
+            "requires_selection": false
+        },
+        {
+            "key": "Delete",
+            "action": "Delete one character to the right of the cursor.",
+            "works_in_formula_bar": true,
+            "requires_selection": false
+        },
+        {
+            "key": "Left Arrow",
+            "action": "Move cursor one character to the left inside the text.",
+            "works_in_formula_bar": true,
+            "requires_selection": false
+        },
+        {
+            "key": "Right Arrow",
+            "action": "Move cursor one character to the right inside the text.",
+            "works_in_formula_bar": true,
+            "requires_selection": false
+        },
+        {
+            "key": "Ctrl + Left Arrow",
+            "action": "Move cursor one word to the left.",
+            "works_in_formula_bar": true,
+            "requires_selection": false
+        },
+        {
+            "key": "Ctrl + Right Arrow",
+            "action": "Move cursor one word to the right.",
+            "works_in_formula_bar": true,
+            "requires_selection": false
+        },
+        {
+            "key": "Home",
+            "action": "Move cursor to the beginning of the line.",
+            "works_in_formula_bar": true,
+            "requires_selection": false
+        },
+        {
+            "key": "End",
+            "action": "Move cursor to the end of the line.",
+            "works_in_formula_bar": true,
+            "requires_selection": false
+        },
+        {
+            "key": "Shift + Left Arrow",
+            "action": "Select or deselect text one character to the left.",
+            "works_in_formula_bar": true,
+            "requires_selection": false
+        },
+        {
+            "key": "Shift + Right Arrow",
+            "action": "Select or deselect text one character to the right.",
+            "works_in_formula_bar": true,
+            "requires_selection": false
+        },
+        {
+            "key": "Ctrl + Shift + Left Arrow",
+            "action": "Select or deselect text one word to the left.",
+            "works_in_formula_bar": true,
+            "requires_selection": false
+        },
+        {
+            "key": "Ctrl + Shift + Right Arrow",
+            "action": "Select or deselect text one word to the right.",
+            "works_in_formula_bar": true,
+            "requires_selection": false
+        },
+        {
+            "key": "Shift + Home",
+            "action": "Select text from the cursor position to the beginning of the line.",
+            "works_in_formula_bar": true,
+            "requires_selection": false
+        },
+        {
+            "key": "Shift + End",
+            "action": "Select text from the cursor position to the end of the line.",
+            "works_in_formula_bar": true,
+            "requires_selection": false
+        },
+        {
+            "key": "Alt + Enter",
+            "action": "Insert a line break (new line) inside the current cell.",
+            "works_in_formula_bar": false,
+            "requires_selection": false
+        }
+    ],
+    "formula_navigation_and_building": [
+        {
+            "key": "F4",
+            "action": "Cycle through absolute, relative, and mixed reference combinations (e.g., $A$1, A$1, $A1, A1).",
+            "works_in_formula_bar": true,
+            "requires_selection": false
+        },
+        {
+            "key": "Tab",
+            "action": "Accept the highlighted function in the autocomplete / IntelliSense menu list.",
+            "works_in_formula_bar": true,
+            "requires_selection": true
+        },
+        {
+            "key": "Up Arrow",
+            "action": "Navigate upward through the active autocomplete / IntelliSense dropdown menu items.",
+            "works_in_formula_bar": false,
+            "requires_selection": true
+        },
+        {
+            "key": "Down Arrow",
+            "action": "Navigate downward through the active autocomplete / IntelliSense dropdown menu items.",
+            "works_in_formula_bar": false,
+            "requires_selection": true
+        }
+    ]
+}

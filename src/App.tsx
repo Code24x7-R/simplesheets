@@ -212,8 +212,19 @@ function WorkbookView() {
       : '',
     rowCount: sheet.rowCount,
     colCount: sheet.columnCount,
-    onCommit: (row, col, value) => {
-      handleCellChange(row, col, value);
+    onCommit: (row, col, value, batch) => {
+      if (batch && selection && (selection.startRow !== selection.endRow || selection.startCol !== selection.endCol)) {
+        // Batch entry: apply value to all cells in selection
+        const changes: Array<{ row: number; col: number; value: string }> = [];
+        for (let r = selection.startRow; r <= selection.endRow; r++) {
+          for (let c = selection.startCol; c <= selection.endCol; c++) {
+            changes.push({ row: r, col: c, value });
+          }
+        }
+        handleCellsChange(changes);
+      } else {
+        handleCellChange(row, col, value);
+      }
     },
     onNavigate: (row, col) => {
       setActiveCell({ row, col });

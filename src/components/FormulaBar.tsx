@@ -209,6 +209,7 @@ export function FormulaBar({
   const [autoCompleteMatches, setAutoCompleteMatches] = useState<FunctionInfo[]>([]);
   const [autoCompleteIndex, setAutoCompleteIndex] = useState(0);
   const [autoCompleteTokenStart, setAutoCompleteTokenStart] = useState(0);
+  const [expanded, setExpanded] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Derive editing mode from FSM session state
@@ -369,6 +370,13 @@ export function FormulaBar({
   }, [autoCompleteMatches, value, autoCompleteTokenStart, cursorPos, onRawCaretMove, onChange, findFunctionToken]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    // ── Expand/Collapse Formula Bar (Ctrl + Shift + U) ────────────────
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'u' || e.key === 'U')) {
+      e.preventDefault();
+      setExpanded((prev) => !prev);
+      return;
+    }
+
     // ── Auto-complete navigation (takes priority when dropdown is open) ──
     if (autoCompleteOpen && ['ArrowDown', 'ArrowUp', 'Tab', 'Enter', 'Escape'].includes(e.key)) {
       switch (e.key) {
@@ -621,27 +629,54 @@ export function FormulaBar({
           </span>
         )}
 
+        {/* Expand/Collapse button */}
+        <button
+          className="text-xs text-gray-500 hover:text-gray-700 hover:bg-gray-100 px-1 py-0.5 rounded transition-colors"
+          onClick={() => setExpanded((prev) => !prev)}
+          title={expanded ? 'Collapse formula bar (Ctrl+Shift+U)' : 'Expand formula bar (Ctrl+Shift+U)'}
+        >
+          {expanded ? '▼' : '▲'}
+        </button>
+
         {/* Formula input area */}
-        <div className="flex-1 relative overflow-x-auto">
+        <div className={`flex-1 relative ${expanded ? 'min-h-[80px]' : ''} overflow-x-auto`}>
           {/* Colored display layer (underlay) */}
           {formulaDisplay}
           {/* Actual input — horizontal scroll for long content */}
-          <input
-            ref={inputRef}
-            type="text"
-            className={`outline-none font-mono text-sm relative bg-transparent min-w-full formula-input-scroll ${
-              formulaDisplay ? 'text-transparent selection:bg-blue-200' : ''
-            }`}
-            style={{ caretColor: '#000', minWidth: '100%' }}
-            placeholder="Enter a value or formula (e.g., =SUM(A1:A10))"
-            value={value}
-            onChange={handleChange}
-            onFocus={handleFocus}
-            onBlur={handleBlur}
-            onKeyDown={handleKeyDown}
-            onClick={handleClick}
-            onSelect={handleSelect}
-          />
+          {expanded ? (
+            <textarea
+              ref={inputRef as unknown as React.RefObject<HTMLTextAreaElement>}
+              className={`outline-none font-mono text-sm relative bg-transparent min-w-full formula-input-scroll resize-y ${
+                formulaDisplay ? 'text-transparent selection:bg-blue-200' : ''
+              }`}
+              style={{ caretColor: '#000', minWidth: '100%', minHeight: '80px' }}
+              placeholder="Enter a value or formula (e.g., =SUM(A1:A10))"
+              value={value}
+              onChange={handleChange}
+              onFocus={handleFocus}
+              onBlur={handleBlur}
+              onKeyDown={handleKeyDown}
+              onClick={handleClick}
+              onSelect={handleSelect}
+            />
+          ) : (
+            <input
+              ref={inputRef}
+              type="text"
+              className={`outline-none font-mono text-sm relative bg-transparent min-w-full formula-input-scroll ${
+                formulaDisplay ? 'text-transparent selection:bg-blue-200' : ''
+              }`}
+              style={{ caretColor: '#000', minWidth: '100%' }}
+              placeholder="Enter a value or formula (e.g., =SUM(A1:A10))"
+              value={value}
+              onChange={handleChange}
+              onFocus={handleFocus}
+              onBlur={handleBlur}
+              onKeyDown={handleKeyDown}
+              onClick={handleClick}
+              onSelect={handleSelect}
+            />
+          )}
         </div>
       </div>
 

@@ -316,7 +316,7 @@ describe('useCellEditing - SELECT state', () => {
     act(() => {
       result.current.handleKey('Backspace', false, false);
     });
-    expect(onCommit).toHaveBeenCalledWith(0, 0, '');
+    expect(onCommit).toHaveBeenCalledWith(0, 0, '', false);
   });
 
   it('clears cell on Delete in SELECT state', () => {
@@ -325,7 +325,7 @@ describe('useCellEditing - SELECT state', () => {
     act(() => {
       result.current.handleKey('Delete', false, false);
     });
-    expect(onCommit).toHaveBeenCalledWith(0, 0, '');
+    expect(onCommit).toHaveBeenCalledWith(0, 0, '', false);
   });
 
   it('ignores non-printable keys in SELECT state', () => {
@@ -407,7 +407,7 @@ describe('useCellEditing - ENTER state', () => {
     act(() => {
       keyResult = result.current.handleKey('Enter', false, false);
     });
-    expect(onCommit).toHaveBeenCalledWith(0, 0, 'H');
+    expect(onCommit).toHaveBeenCalledWith(0, 0, 'H', undefined);
     expect(keyResult.navigate).toEqual({ dRow: 1, dCol: 0 });
   });
 
@@ -421,7 +421,7 @@ describe('useCellEditing - ENTER state', () => {
     act(() => {
       keyResult = result.current.handleKey('Tab', false, false);
     });
-    expect(onCommit).toHaveBeenCalledWith(0, 0, 'H');
+    expect(onCommit).toHaveBeenCalledWith(0, 0, 'H', undefined);
     expect(keyResult.navigate).toEqual({ dRow: 0, dCol: 1 });
   });
 
@@ -435,7 +435,7 @@ describe('useCellEditing - ENTER state', () => {
     act(() => {
       keyResult = result.current.handleKey('Enter', true, false);
     });
-    expect(onCommit).toHaveBeenCalledWith(5, 0, 'H');
+    expect(onCommit).toHaveBeenCalledWith(5, 0, 'H', undefined);
     expect(keyResult.navigate).toEqual({ dRow: -1, dCol: 0 });
   });
 
@@ -449,7 +449,7 @@ describe('useCellEditing - ENTER state', () => {
     act(() => {
       keyResult = result.current.handleKey('Tab', true, false);
     });
-    expect(onCommit).toHaveBeenCalledWith(0, 3, 'H');
+    expect(onCommit).toHaveBeenCalledWith(0, 3, 'H', undefined);
     expect(keyResult.navigate).toEqual({ dRow: 0, dCol: -1 });
   });
 
@@ -499,7 +499,7 @@ describe('useCellEditing - ENTER state', () => {
     act(() => {
       keyResult = result.current.handleKey('ArrowDown', false, false);
     });
-    expect(onCommit).toHaveBeenCalledWith(0, 0, 'H');
+    expect(onCommit).toHaveBeenCalledWith(0, 0, 'H', undefined);
     expect(keyResult.navigate).toEqual({ dRow: 1, dCol: 0 });
   });
 
@@ -615,7 +615,7 @@ describe('useCellEditing - EDIT state', () => {
     act(() => {
       keyResult = result.current.handleKey('ArrowDown', false, false);
     });
-    expect(onCommit).toHaveBeenCalledWith(0, 0, 'Hello');
+    expect(onCommit).toHaveBeenCalledWith(0, 0, 'Hello', undefined);
     expect(keyResult.navigate).toEqual({ dRow: 1, dCol: 0 });
   });
 
@@ -627,7 +627,7 @@ describe('useCellEditing - EDIT state', () => {
     act(() => {
       keyResult = result.current.handleKey('Enter', true, false);
     });
-    expect(onCommit).toHaveBeenCalledWith(5, 0, 'Hello');
+    expect(onCommit).toHaveBeenCalledWith(5, 0, 'Hello', undefined);
     expect(keyResult.navigate).toEqual({ dRow: -1, dCol: 0 });
   });
 
@@ -639,7 +639,7 @@ describe('useCellEditing - EDIT state', () => {
     act(() => {
       keyResult = result.current.handleKey('Tab', true, false);
     });
-    expect(onCommit).toHaveBeenCalledWith(0, 3, 'Hello');
+    expect(onCommit).toHaveBeenCalledWith(0, 3, 'Hello', undefined);
     expect(keyResult.navigate).toEqual({ dRow: 0, dCol: -1 });
   });
 
@@ -651,7 +651,7 @@ describe('useCellEditing - EDIT state', () => {
     act(() => {
       keyResult = result.current.handleKey('Tab', false, false);
     });
-    expect(onCommit).toHaveBeenCalledWith(0, 0, 'Hello');
+    expect(onCommit).toHaveBeenCalledWith(0, 0, 'Hello', undefined);
     expect(keyResult.navigate).toEqual({ dRow: 0, dCol: 1 });
   });
 
@@ -726,7 +726,7 @@ describe('useCellEditing - EDIT state', () => {
     act(() => {
       result.current.handleKey('Enter', false, false);
     });
-    expect(onCommit).toHaveBeenCalledWith(0, 0, 'Hello');
+    expect(onCommit).toHaveBeenCalledWith(0, 0, 'Hello', undefined);
   });
 
   it('cancels on Escape in EDIT mode', () => {
@@ -1050,7 +1050,7 @@ describe('useCellEditing - direct actions', () => {
     act(() => {
       result.current.commit();
     });
-    expect(onCommit).toHaveBeenCalledWith(0, 0, 'V');
+    expect(onCommit).toHaveBeenCalledWith(0, 0, 'V', undefined);
     expect(result.current.session.state).toBe('SELECT');
   });
 
