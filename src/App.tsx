@@ -1013,6 +1013,7 @@ function WorkbookView() {
   // current selection. Used by both formatted and plain external paste.
   // Includes bounds checking: clips data that would exceed sheet boundaries
   // and reports how many rows/cols were clipped in the status message.
+  // Uses smart classification: single-value content goes into one cell.
   const handleExternalPaste = useCallback(
     (plain: string, html: string | null) => {
       if (!selection) return;

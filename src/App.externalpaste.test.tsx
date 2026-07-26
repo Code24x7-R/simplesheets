@@ -307,3 +307,5 @@ describe('App - Paste Bounds Checking', () => {
     expect(getStatusText()).toBe('Pasted 1 cell(s)');
   });
 });
+
+

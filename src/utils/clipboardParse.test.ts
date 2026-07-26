@@ -2,6 +2,7 @@ import {
   detectNumeric,
   parsePlainText,
   parseHtmlTable,
+  classifyPasteContent,
 } from './clipboardParse';
 
 describe('clipboardParse', () => {
@@ -254,6 +255,41 @@ describe('clipboardParse', () => {
       const result = parseHtmlTable(html);
       // hsl is not supported, returns trimmed as-is
       expect(result.styles[0][0]?.color).toBe('hsl(120, 100%, 50%)');
+    });
+  });
+
+  describe('classifyPasteContent', () => {
+    it('classifies plain text as grid', () => {
+      expect(classifyPasteContent('Hello world', null)).toBe('grid');
+    });
+
+    it('classifies empty string as grid', () => {
+      expect(classifyPasteContent('', null)).toBe('grid');
+    });
+
+    it('classifies multi-line text as grid', () => {
+      const text = 'Line 1\nLine 2\nLine 3';
+      expect(classifyPasteContent(text, null)).toBe('grid');
+    });
+
+    it('classifies tab-delimited data as grid', () => {
+      const text = 'A\tB\tC\n1\t2\t3';
+      expect(classifyPasteContent(text, null)).toBe('grid');
+    });
+
+    it('classifies CSV data as grid', () => {
+      const text = 'Name,Age,City\nAlice,30,NYC\nBob,25,LA';
+      expect(classifyPasteContent(text, null)).toBe('grid');
+    });
+
+    it('classifies HTML table as rich-grid', () => {
+      const html = '<table><tr><td>A</td></tr></table>';
+      expect(classifyPasteContent('A', html)).toBe('rich-grid');
+    });
+
+    it('classifies multi-line with inconsistent commas as grid', () => {
+      const text = 'Hello, world\nNo comma here\nOne, two, three';
+      expect(classifyPasteContent(text, null)).toBe('grid');
     });
   });
 });
