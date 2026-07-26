@@ -181,6 +181,8 @@ function WorkbookView() {
     targetRow: number;
     targetCol: number;
   } | null>(null);
+  // Toggle formula view (Ctrl + `) - show formulas instead of values
+  const [showFormulas, setShowFormulas] = useState(false);
 
   // Sheet reference (needed by the editing hook and everywhere else)
   const sheet = workbook.sheets[workbook.activeSheetIndex];
@@ -1315,6 +1317,11 @@ function WorkbookView() {
           e.preventDefault();
           handleRedo();
           return;
+        } else if (e.key === '`') {
+          // Toggle formula view (Ctrl + `)
+          e.preventDefault();
+          setShowFormulas((prev) => !prev);
+          return;
         } else if (!isEditing) {
           // These shortcuts should not fire while typing in inputs
           switch (e.key) {
@@ -1480,6 +1487,7 @@ function WorkbookView() {
           onDeleteCol={handleDeleteCol}
           clipboardRange={clipboardRange}
           onClearClipboard={handleClearClipboard}
+          showFormulas={showFormulas}
         />
       </div>
 
@@ -1488,7 +1496,7 @@ function WorkbookView() {
         <div className="flex items-center gap-4">
           <span className="font-medium text-gray-700 w-16" data-testid="cell-mode">{cellMode}</span>
           <span className="text-gray-400">|</span>
-          <span data-testid="status-message">{statusMessage}</span>
+          <span data-testid="status-message">{showFormulas ? 'Formulas' : statusMessage}</span>
         </div>
         <div className="flex items-center gap-4">
           {/* Quick calculations for selection */}

@@ -65,6 +65,12 @@ const SHORTCUT_GROUPS: ShortcutGroup[] = [
       { keys: 'Ctrl + O', description: 'Open workbook' },
     ],
   },
+  {
+    title: 'View',
+    shortcuts: [
+      { keys: 'Ctrl + `', description: 'Toggle formula view (show formulas vs values)' },
+    ],
+  },
 ];
 
 const HINTS: string[] = [

@@ -398,4 +398,45 @@ describe('App - Global Keyboard Shortcuts', () => {
     // Workbook title should still be there (not reset)
     expect(screen.getByText('Untitled')).toBeInTheDocument();
   });
+
+  it('toggles formula view with Ctrl + `', () => {
+    render(<App />);
+    const cell = document.querySelector('.grid-cell') as HTMLElement;
+    // Enter a formula in A1
+    fireEvent.mouseDown(cell);
+    const input = screen.getByPlaceholderText(/Enter a value or formula/);
+    
+    // Focus the formula bar first
+    act(() => {
+      input.focus();
+    });
+    
+    act(() => {
+      fireEvent.change(input, { target: { value: '=1+1' } });
+      fireEvent.keyDown(input, { key: 'Enter' });
+    });
+
+    // Cell should show computed value (2)
+    expect(cell.textContent).toBe('2');
+
+    // Press Ctrl + ` to toggle formula view
+    act(() => {
+      fireGlobalKeyDown('`');
+    });
+
+    // Cell should now show the formula
+    expect(cell.textContent).toBe('=1+1');
+
+    // Status bar should indicate formula view
+    const status = screen.getByTestId('status-message');
+    expect(status.textContent).toBe('Formulas');
+
+    // Press Ctrl + ` again to toggle back
+    act(() => {
+      fireGlobalKeyDown('`');
+    });
+
+    // Cell should show computed value again
+    expect(cell.textContent).toBe('2');
+  });
 });

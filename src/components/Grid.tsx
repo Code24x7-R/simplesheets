@@ -75,6 +75,8 @@ interface GridProps {
   } | null;
   /** Callback to clear the clipboard (marching ants + data) — called on Esc and typing. */
   onClearClipboard?: () => void;
+  /** When true, display formulas instead of computed values (Ctrl + `). */
+  showFormulas?: boolean;
 }
 
 const ROW_WIDTH = 50; // Width of row number column
@@ -113,7 +115,7 @@ export interface GridHandle {
  * Supports 10,000+ rows with smooth scrolling.
  */
 export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
-  { sheet, onCellChange, onCellsChange, onSelect, selectedCell, highlightedRanges = [], isPointMode = false, pointSelection = null, onCellPick, onHeaderSelect, onSelectionChange, onColumnResize, onRowResize, referenceFormat = 'A1', onInsertRowAbove, onInsertRowBelow, onDeleteRow, onInsertColLeft, onInsertColRight, onDeleteCol, clipboardRange, onClearClipboard },
+  { sheet, onCellChange, onCellsChange, onSelect, selectedCell, highlightedRanges = [], isPointMode = false, pointSelection = null, onCellPick, onHeaderSelect, onSelectionChange, onColumnResize, onRowResize, referenceFormat = 'A1', onInsertRowAbove, onInsertRowBelow, onDeleteRow, onInsertColLeft, onInsertColRight, onDeleteCol, clipboardRange, onClearClipboard, showFormulas = false },
   ref
 ) {
   const parentRef = useRef<HTMLDivElement>(null);
@@ -200,9 +202,14 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
   // Returns the display string for a cell, applying number formatting if the cell
   // has a numberFormat style and the value is numeric.
   // Strips leading single quote (text marker) per Excel behavior.
+  // When showFormulas is true, displays the raw formula instead of computed value.
   const getDisplayValue = useCallback(
     (cell: { rawValue: string; computedValue?: string | number | boolean | null; style?: { numberFormat?: string } } | undefined): string => {
       if (!cell) return '';
+      // Show formula if showFormulas is enabled and cell starts with =
+      if (showFormulas && cell.rawValue.startsWith('=')) {
+        return cell.rawValue;
+      }
       let rawDisplay = cell.computedValue !== undefined && cell.computedValue !== null
         ? String(cell.computedValue)
         : cell.rawValue ?? '';
@@ -217,7 +224,7 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
       }
       return rawDisplay;
     },
-    []
+    [showFormulas]
   );
 
   // Row virtualizer — handles vertical scrolling
