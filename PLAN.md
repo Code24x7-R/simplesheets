@@ -4,13 +4,16 @@
 Achieve a clean, clutter-free UI with standardized dropdown menus, formula wizard, function bar, and R1C1 reference format.
 
 ## Current State
-- **1350 tests** across **55 suites**, All passing
+- **1388 tests** across **58 suites**, All passing
 - Lint clean (0 warnings), Type-check clean (0 errors), Build clean
 - Coverage: **93.25% stmts, 83.38% branches, 94.03% funcs, 95.12% lines**
 - Phases 1-10 complete: Menu system, Formula bar, Function bar, R1C1 toggle, Layout polish, Nested Formula Wizard
 - Phase 11 complete: Cell Style System (Bold, Italic, Underline, Colors, Alignment)
 - Phase 12 complete: Search & Replace (find/replace with case, exact match, formula scope, multi-sheet)
-- Phase 13 complete: Coverage push — MenuBar 100%, FormulaWizard 100% lines, Grid 86%, FormulaBar 77% funcs, clipboardParse 100% funcs
+- Phase 13 complete: Paste Experience Improvements (bounds checking, classification, wrapping, inline editing, preview, formula adjustment)
+- Phase 14 complete: Keyboard Shortcut Audit & Fixes (global shortcuts, grid navigation, shortcuts modal)
+- Phase 16 complete: Keyboard Shortcut Gaps (Ctrl+Enter, Alt+Enter, Ctrl+Left/Right, End key)
+- Phase 17 complete: Cell Editing Workflows (F2 toggle, Ctrl+Shift+U expand, batch entry, formula view toggle)
 
 ### New UI Architecture (2026-07-25)
 | Component | Description |
@@ -438,7 +441,103 @@ Achieve a clean, clutter-free UI with standardized dropdown menus, formula wizar
 
 ---
 
+## Phase 17: Cell Editing Workflows (2026-07-27)
+*Implement Excel-compatible cell editing workflows per specification.*
+
+### Phase 17a: Formula View Toggle — COMPLETE ✅
+- [x] **Ctrl + `**: Toggle between displaying cell values and underlying formulas
+- [x] Added `showFormulas` state to App.tsx
+- [x] Grid displays formula text when `showFormulas` is true and cell starts with =
+- [x] Status bar shows 'Formulas' indicator when formula view is active
+- [x] Added View group to ShortcutsModal with the new shortcut
+- [x] 1 new test for toggle behavior
+- [x] Commit: 5524213
+
+### Phase 17b: Expand Formula Bar — COMPLETE ✅
+- [x] **Ctrl+Shift+U**: Expand/collapse formula bar for multi-line editing
+- [x] Toggle button added to formula bar header
+- [x] Textarea replaces input when expanded (80px min height)
+- [x] Focus transfers to textarea when expanded
+- [x] `stopPropagation` prevents event bubbling to global handlers
+- [x] 1 new test for expand behavior
+- [x] Commit: a9dc6bf, 651c98a
+
+### Phase 17c: Batch Entry Across Multiple Cells — COMPLETE ✅
+- [x] **Ctrl+Enter** on range selection: Apply value to ALL cells in selection
+- [x] Single cell selection: Behaves as before (commit and stay)
+- [x] Updated `onCommit` callback to accept `batch` parameter
+- [x] Updated `commit` function in useCellEditing to pass batch flag
+- [x] Updated Backspace/Delete in SELECT state to pass `false` for batch
+- [x] 11 existing tests updated to expect new batch parameter
+- [x] Commit: a9dc6bf
+
+### Phase 17d: Formula Bar Commit Fix — COMPLETE ✅
+- [x] Fixed stale closure: `sessionRef.current` updated immediately in `setBuffer`
+- [x] Formula bar edits now commit correctly after typing
+- [x] Commit: 9b4db50
+
+### Phase 17e: Status Bar Cleanup — COMPLETE ✅
+- [x] Status bar no longer shows cell contents after edit
+- [x] Changed from 'Updated A1 = [value]' to 'Updated A1'
+- [x] Commit: ac93c2a
+
+### Phase 17f: Paste Text Starting with = as Plain Text — COMPLETE ✅
+- [x] When pasted text starts with '=', prefix with single quote to make it plain text
+- [x] Single quote not displayed in cell (Excel behavior)
+- [x] Single quote preserved in raw value for editing
+- [x] Updated Grid `getDisplayValue` to strip leading single quote
+- [x] 2 new tests for paste behavior
+- [x] Commit: 5d035cf
+
+---
+
 ## Progress Log
+
+### 2026-07-27 (Phase 17: Cell Editing Workflows)
+
+**Phase 17a: Formula View Toggle (Ctrl + `)**
+- Added `showFormulas` state to App.tsx
+- Grid displays formula text when `showFormulas` is true and cell starts with =
+- Status bar shows 'Formulas' indicator when formula view is active
+- Added View group to ShortcutsModal with the new shortcut
+- 1 new test for toggle behavior
+- Commit: 5524213
+
+**Phase 17b: Expand Formula Bar (Ctrl+Shift+U)**
+- Added expand/collapse toggle button to formula bar header
+- Textarea replaces input when expanded (80px min height)
+- Focus transfers to textarea when expanded
+- `stopPropagation` prevents event bubbling to global handlers
+- 1 new test for expand behavior
+- Commit: a9dc6bf, 651c98a
+
+**Phase 17c: Batch Entry Across Multiple Cells (Ctrl+Enter on range)**
+- When range is selected and Ctrl+Enter is pressed, value applies to ALL cells
+- Single cell selection behaves as before (commit and stay)
+- Updated `onCommit` callback to accept `batch` parameter
+- Updated `commit` function in useCellEditing to pass batch flag
+- 11 existing tests updated to expect new batch parameter
+- Commit: a9dc6bf
+
+**Phase 17d: Formula Bar Commit Fix**
+- Fixed stale closure: `sessionRef.current` updated immediately in `setBuffer`
+- Formula bar edits now commit correctly after typing
+- Commit: 9b4db50
+
+**Phase 17e: Status Bar Cleanup**
+- Status bar no longer shows cell contents after edit
+- Changed from 'Updated A1 = [value]' to 'Updated A1'
+- Commit: ac93c2a
+
+**Phase 17f: Paste Text Starting with = as Plain Text**
+- When pasted text starts with '=', prefix with single quote to make it plain text
+- Single quote not displayed in cell (Excel behavior)
+- Single quote preserved in raw value for editing
+- Updated Grid `getDisplayValue` to strip leading single quote
+- 2 new tests for paste behavior
+- Commit: 5d035cf
+
+**Results:** 1388 tests, 58 suites, all passing. Lint clean, type-check clean, build verified.
 
 ### 2026-07-27 (Paste Improvements — Phases 1-6)
 
