@@ -310,7 +310,105 @@ Achieve a clean, clutter-free UI with standardized dropdown menus, formula wizar
 
 ---
 
+## Phase 13: Paste Experience Improvements (2026-07-27)
+*Make plain text pasting better than Excel/Sheets with bounds safety, inline editing, text wrapping, preview, and formula adjustment.*
+
+### Phase 13a: Bounds Checking — COMPLETE ✅
+- [x] Add bounds checking to `handleExternalPaste` — clips data exceeding sheet boundaries
+- [x] Report clipped rows/columns in status message ("3 row(s) clipped — sheet boundary")
+- [x] Abort paste if target is completely outside bounds
+- [x] Add 5 tests for bounds checking scenarios
+- [x] Commit: b5871cf
+
+### Phase 13b: Paste Content Classification — COMPLETE ✅
+- [x] Add `classifyPasteContent()` to `clipboardParse.ts` for grid vs rich-grid detection
+- [x] Plain text → grid, HTML table → rich-grid
+- [x] Add 7 tests for content classification
+- [x] Commit: f98c7d6
+
+### Phase 13c: Text Wrapping & Display — COMPLETE ✅
+- [x] Add `whiteSpace` property to `CellStyle` ('normal' | 'nowrap' | 'pre')
+- [x] Add `toggleWrapText` to `useCellStyle` utilities
+- [x] Add `toggleWrapTextStyle` to `useCellStyles` hook
+- [x] Add "Wrap Text" item to Format menu
+- [x] Update Grid rendering: `whitespace-normal`, `break-words`, `whitespace-pre-wrap`
+- [x] Add 3 Grid tests + 2 toggleWrapText tests
+- [x] Commit: 204bf90
+
+### Phase 13d: Inline Cell Editing Paste — COMPLETE ✅
+- [x] Add `editInputRef` to track the editing input element
+- [x] Add `insertAtCursor` helper to insert text at cursor position
+- [x] Handle Ctrl+V during editing: insert first clipboard cell at cursor
+- [x] Handle native paste during editing: insert plain text at cursor
+- [x] Add 2 tests for inline paste behavior
+- [x] Commit: 73fdfef
+
+### Phase 13e: Paste Preview & UX Polish — COMPLETE ✅
+- [x] Enhance PasteModal with preview grid showing sample data
+- [x] Display row × column dimensions in preview
+- [x] Show "formatted" indicator when styles detected
+- [x] Pass html/plain content to modal for preview rendering
+- [x] Add 3 tests for preview functionality
+- [x] Commit: fceb3a6
+
+### Phase 13f: Formula Adjustment for External Paste — COMPLETE ✅
+- [x] Apply `adjustFormulaRefs` to external paste formulas
+- [x] Relative references (e.g., =A1) adjusted based on paste position
+- [x] Absolute references (e.g., $A$1) preserved
+- [x] Add 3 tests for formula adjustment on external paste
+- [x] Commit: cb6f50d
+
+---
+
 ## Progress Log
+
+### 2026-07-27 (Paste Improvements — Phases 1-6)
+
+**Phase 1: Bounds Checking**
+- Added bounds checking to `handleExternalPaste` — clips data exceeding sheet boundaries
+- Reports clipped rows/columns in status message
+- 5 new tests for bounds checking scenarios
+- Commit: b5871cf
+
+**Phase 2: Smart Paste Classification**
+- Added `classifyPasteContent()` to distinguish grid vs rich-grid content
+- Simplified: all plain text → grid (Excel-compatible default)
+- HTML tables → rich-grid (with formatting)
+- 7 new tests for content classification
+- Commit: f98c7d6
+
+**Phase 3: Text Wrapping & Display**
+- Added `whiteSpace` property to CellStyle ('normal' | 'nowrap' | 'pre')
+- Added `toggleWrapText` to useCellStyle utilities
+- Added `toggleWrapTextStyle` to useCellStyles hook
+- Added Wrap Text menu item to Format menu
+- Updated Grid rendering to support wrapped text (whitespace-normal, break-words)
+- 3 Grid tests + 2 toggleWrapText tests for wrap text rendering
+- Commit: 204bf90
+
+**Phase 4: Inline Cell Editing Paste**
+- Added `editInputRef` to track the editing input element
+- Added `insertAtCursor` helper to insert text at cursor position
+- Handle Ctrl+V during editing: insert first clipboard cell at cursor
+- Handle native paste during editing: insert plain text at cursor
+- 2 new tests for inline paste behavior
+- Commit: 73fdfef
+
+**Phase 5: Paste Preview & UX Polish**
+- Enhanced PasteModal with preview grid showing sample data
+- Display row × column dimensions in preview
+- Show "formatted" indicator when styles detected
+- 3 new tests for preview functionality
+- Commit: fceb3a6
+
+**Phase 6: Formula Adjustment for External Paste**
+- Applied `adjustFormulaRefs` to external paste formulas
+- Relative references (e.g., =A1) adjusted based on paste position
+- Absolute references (e.g., $A$1) preserved
+- 3 new tests for formula adjustment on external paste
+- Commit: cb6f50d
+
+**Results:** 1377 tests, all passing. Lint clean, type-check clean, build verified.
 
 ### 2026-07-27 (Coverage Push — MenuBar, FormulaWizard, Grid, FormulaBar, clipboardParse, SearchReplaceModal)
 - Fixed virtualizer.measure() cache bug causing gaps after column/row resize
