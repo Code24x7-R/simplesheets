@@ -1047,12 +1047,18 @@ function WorkbookView() {
 
       for (let r = 0; r < rowsToPaste; r++) {
         for (let c = 0; c < colsToPaste; c++) {
-          const value = parsed.values[r][c];
+          let value = parsed.values[r][c];
           if (value === '') continue;
           const destRow = targetRow + r;
           const destCol = targetCol + c;
           const destKey = cellKey(destRow, destCol);
           const style = parsed.styles[r][c];
+
+          // Adjust relative formula references (e.g., =A1 pasted at C3 becomes =C3)
+          if (value.startsWith('=')) {
+            value = '=' + adjustFormulaRefs(value.slice(1), r, c);
+          }
+
           newCells[destKey] = { rawValue: value, ...(style ? { style } : {}) };
           cellsUpdated++;
         }

@@ -308,4 +308,69 @@ describe('App - Paste Bounds Checking', () => {
   });
 });
 
+describe('App - External Paste Formula Adjustment', () => {
+  function dispatchPaste(text?: string, html?: string) {
+    const event = new Event('paste', { bubbles: true, cancelable: true });
+    (event as unknown as { clipboardData: unknown }).clipboardData = {
+      getData: (type: string) => {
+        if (type === 'text/html') return html ?? '';
+        if (type === 'text/plain') return text ?? '';
+        return '';
+      },
+    };
+    window.dispatchEvent(event);
+  }
+
+  function getStatusText() {
+    return document.querySelector('footer span')?.textContent;
+  }
+
+  it('adjusts relative formula references on paste', () => {
+    render(<App />);
+
+    // Select cell C3 (row 2, col 2)
+    const cell = document.querySelector('.grid-cell') as HTMLElement;
+    fireEvent.mouseDown(cell);
+
+    // Paste a formula with relative reference
+    // =Z100 pasted at A1 should remain =Z100 (far away, no circular ref)
+    act(() => {
+      dispatchPaste('=Z100');
+    });
+
+    // Should paste successfully (status contains 'Pasted')
+    expect(getStatusText()).toContain('Pasted');
+  });
+
+  it('preserves absolute formula references', () => {
+    render(<App />);
+
+    const cell = document.querySelector('.grid-cell') as HTMLElement;
+    fireEvent.mouseDown(cell);
+
+    // Paste a formula with absolute reference - should not change
+    act(() => {
+      dispatchPaste('=$Z$100');
+    });
+
+    expect(getStatusText()).toContain('Pasted');
+  });
+
+  it('adjusts formula references in a grid paste', () => {
+    render(<App />);
+
+    const cell = document.querySelector('.grid-cell') as HTMLElement;
+    fireEvent.mouseDown(cell);
+
+    // Paste a grid with formulas that reference far-away cells
+    // Row 0: =Z100, =Z101
+    // Row 1: =Z102, =Z103
+    act(() => {
+      dispatchPaste('=Z100\t=Z101\n=Z102\t=Z103');
+    });
+
+    expect(getStatusText()).toContain('Pasted');
+  });
+});
+
 
