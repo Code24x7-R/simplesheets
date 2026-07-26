@@ -241,13 +241,18 @@ export function FormulaBar({
   // Compute validation
   const validation: ValidationResult = useMemo(() => validateFormula(value), [value]);
 
-  // Sync cursor/selection position to input element and scroll to keep cursor visible
+  // Sync cursor position to input element and scroll to keep cursor visible
+  // IMPORTANT: Only sync when there's no active selection to avoid clearing
+  // the user's text selection
   useEffect(() => {
     const input = inputRef.current;
     /* istanbul ignore next - jsdom activeElement check */
     if (input && document.activeElement === input) {
-      // Set cursor position
-      input.setSelectionRange(cursorPos, cursorPos);
+      // Don't override if user has an active selection
+      const hasSelection = input.selectionStart !== input.selectionEnd;
+      if (!hasSelection) {
+        input.setSelectionRange(cursorPos, cursorPos);
+      }
       // Scroll to keep cursor visible
       const textBeforeCursor = value.slice(0, cursorPos);
       const canvas = document.createElement('canvas');
