@@ -274,6 +274,13 @@ export function FormulaBar({
     }
   }, [cursorPos, value]);
 
+  // Transfer focus to textarea when expanded
+  useEffect(() => {
+    if (expanded && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [expanded]);
+
   // Close auto-complete when value changes externally
   useEffect(() => {
     if (!isEditing) {
@@ -373,6 +380,7 @@ export function FormulaBar({
     // ── Expand/Collapse Formula Bar (Ctrl + Shift + U) ────────────────
     if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'u' || e.key === 'U')) {
       e.preventDefault();
+      e.stopPropagation();
       setExpanded((prev) => !prev);
       return;
     }
