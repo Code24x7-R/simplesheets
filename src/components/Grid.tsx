@@ -895,12 +895,15 @@ export function Grid({ sheet, onCellChange, onCellsChange, onSelect, selectedCel
       // If already editing, let the input field handle keys
       if (editingCell) return;
 
-      // Ctrl+C/V/X/Z/Y are handled by global listeners in App.tsx (works regardless of focus).
-      // Skip them here to avoid double-firing.
+      // Ctrl+ shortcuts handled by global listeners in App.tsx (works regardless of focus).
+      // Skip them here to avoid double-firing (e.g., Ctrl+B toggling bold AND typing 'b').
       if (e.ctrlKey || e.metaKey) {
         switch (e.key) {
           case 'c': case 'C': case 'x': case 'X': case 'v': case 'V':
           case 'z': case 'Z': case 'y': case 'Y':
+          case 'b': case 'B': case 'i': case 'I': case 'u': case 'U':
+          case 'h': case 'H': case 'n': case 'N': case 's': case 'S':
+          case 'o': case 'O':
             return;
           case 'a': case 'A':
             // Ctrl+A: select all cells in the sheet

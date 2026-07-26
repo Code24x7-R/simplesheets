@@ -1480,6 +1480,46 @@ describe('Grid Component', () => {
     window.removeEventListener('simplesheets:copy', copyHandler);
   });
 
+  it('Ctrl+B does not type the letter b in the cell', () => {
+    const onCellChange = jest.fn();
+    render(<Grid sheet={createTestSheet()} onCellChange={onCellChange} selectedCell={{ row: 0, col: 0 }} />);
+    const grid = document.querySelector('[tabindex="0"]') as HTMLElement;
+
+    // Press Ctrl+B (toggle bold shortcut)
+    fireEvent.keyDown(grid, { key: 'b', ctrlKey: true });
+
+    // Should NOT start editing with 'b'
+    expect(document.querySelector('input.border-blue-500')).toBeNull();
+    // Should NOT have triggered a cell change
+    expect(onCellChange).not.toHaveBeenCalled();
+  });
+
+  it('Ctrl+I does not type the letter i in the cell', () => {
+    const onCellChange = jest.fn();
+    render(<Grid sheet={createTestSheet()} onCellChange={onCellChange} selectedCell={{ row: 0, col: 0 }} />);
+    const grid = document.querySelector('[tabindex="0"]') as HTMLElement;
+
+    // Press Ctrl+I (toggle italic shortcut)
+    fireEvent.keyDown(grid, { key: 'i', ctrlKey: true });
+
+    // Should NOT start editing with 'i'
+    expect(document.querySelector('input.border-blue-500')).toBeNull();
+    expect(onCellChange).not.toHaveBeenCalled();
+  });
+
+  it('Ctrl+U does not type the letter u in the cell', () => {
+    const onCellChange = jest.fn();
+    render(<Grid sheet={createTestSheet()} onCellChange={onCellChange} selectedCell={{ row: 0, col: 0 }} />);
+    const grid = document.querySelector('[tabindex="0"]') as HTMLElement;
+
+    // Press Ctrl+U (toggle underline shortcut)
+    fireEvent.keyDown(grid, { key: 'u', ctrlKey: true });
+
+    // Should NOT start editing with 'u'
+    expect(document.querySelector('input.border-blue-500')).toBeNull();
+    expect(onCellChange).not.toHaveBeenCalled();
+  });
+
   it('full workflow: edit → Ctrl+A → Ctrl+C (text) → F2 → navigate → F2 → Ctrl+V (paste at cursor)', () => {
     const onCellChange = jest.fn();
     const onSelect = jest.fn();
