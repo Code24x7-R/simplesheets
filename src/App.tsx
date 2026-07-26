@@ -685,28 +685,6 @@ function WorkbookView() {
     }
   }, [redo]);
 
-  // ─── Global Keyboard Shortcuts (Undo/Redo) ──────────────────────────────
-  useEffect(() => {
-    const handleGlobalKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && !e.shiftKey) {
-        if (e.key === 'z') {
-          e.preventDefault();
-          handleUndo();
-        } else if (e.key === 'y') {
-          e.preventDefault();
-          handleRedo();
-        }
-      }
-      // Ctrl+Shift+Z also triggers redo (common alternative)
-      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'Z') {
-        e.preventDefault();
-        handleRedo();
-      }
-    };
-    window.addEventListener('keydown', handleGlobalKeyDown);
-    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-  }, [handleUndo, handleRedo]);
-
   const handleColumnResize = useCallback(
     (col: number, newWidth: number) => {
       const newSheets = workbook.sheets.map((s, idx) => {
@@ -1197,6 +1175,68 @@ function WorkbookView() {
   const handleDeleteCells = useCallback(() => {
     handleClear();
   }, [handleClear]);
+
+  // ─── Global Keyboard Shortcuts ──────────────────────────────────────────
+  // Handles application-wide shortcuts that should work regardless of focus.
+  // Placed after all handlers are defined so closures capture valid references.
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      // Ignore shortcuts while typing in an input/textarea (formula bar, modals)
+      const target = e.target as HTMLElement;
+      const isEditing = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA';
+
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey) {
+        if (e.key === 'z') {
+          e.preventDefault();
+          handleUndo();
+          return;
+        } else if (e.key === 'y') {
+          e.preventDefault();
+          handleRedo();
+          return;
+        } else if (!isEditing) {
+          // These shortcuts should not fire while typing in inputs
+          switch (e.key) {
+            case 'n':
+              e.preventDefault();
+              handleNewSheet(createEmptyWorkbook());
+              return;
+            case 's':
+              e.preventDefault();
+              handleSaveMenu();
+              return;
+            case 'o':
+              e.preventDefault();
+              handleLoadMenu();
+              return;
+            case 'h':
+              e.preventDefault();
+              handleSearchReplace();
+              return;
+            case 'b':
+              e.preventDefault();
+              toggleBoldStyle();
+              return;
+            case 'i':
+              e.preventDefault();
+              toggleItalicStyle();
+              return;
+            case 'u':
+              e.preventDefault();
+              toggleUnderlineStyle();
+              return;
+          }
+        }
+      }
+      // Ctrl+Shift+Z also triggers redo (common alternative)
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'Z') {
+        e.preventDefault();
+        handleRedo();
+      }
+    };
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, [handleUndo, handleRedo, handleNewSheet, handleSaveMenu, handleLoadMenu, handleSearchReplace, toggleBoldStyle, toggleItalicStyle, toggleUnderlineStyle]);
 
   return (
     <div className="h-screen flex flex-col">

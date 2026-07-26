@@ -29,6 +29,7 @@ const SHORTCUT_GROUPS: ShortcutGroup[] = [
       { keys: 'Escape', description: 'Cancel edit, restore value' },
       { keys: 'Backspace / Delete', description: 'Clear cell contents' },
       { keys: 'F4', description: 'Cycle reference style ($A$1 → A$1 → $A1 → A1)' },
+      { keys: 'Ctrl + H', description: 'Find & Replace' },
     ],
   },
   {

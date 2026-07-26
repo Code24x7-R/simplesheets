@@ -305,6 +305,7 @@ export function Grid({ sheet, onCellChange, onCellsChange, onSelect, selectedCel
     };
     window.addEventListener('keydown', handleGlobalClipboardKey);
     return () => window.removeEventListener('keydown', handleGlobalClipboardKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /**
@@ -641,6 +642,58 @@ export function Grid({ sheet, onCellChange, onCellsChange, onSelect, selectedCel
     }
     setEditingCell(null);
   }, [editingCell, editValue, onCellChange]);
+
+  /**
+   * Moves the selection in the specified direction after committing an edit.
+   * Wraps around row boundaries (e.g., moving right from last column goes to
+   * first column of next row).
+   */
+  const moveSelection = useCallback(
+    (direction: 'up' | 'down' | 'left' | 'right') => {
+      const sel = selectionRef.current;
+      if (!sel) return;
+      let row = sel.endRow;
+      let col = sel.endCol;
+      switch (direction) {
+        case 'up':
+          row = Math.max(0, row - 1);
+          break;
+        case 'down':
+          row = Math.min(rowCount - 1, row + 1);
+          break;
+        case 'left':
+          if (col > 0) {
+            col = col - 1;
+          } else if (row > 0) {
+            row = row - 1;
+            col = columnCount - 1;
+          }
+          break;
+        case 'right':
+          if (col < columnCount - 1) {
+            col = col + 1;
+          } else if (row < rowCount - 1) {
+            row = row + 1;
+            col = 0;
+          }
+          break;
+      }
+      setSelection({
+        type: 'cell',
+        startRow: row,
+        startCol: col,
+        endRow: row,
+        endCol: col,
+        anchorRow: row,
+        anchorCol: col,
+      });
+      onSelect?.(row, col);
+      // Scroll the new cell into view
+      rowVirtualizer.scrollToIndex(row);
+      columnVirtualizer.scrollToIndex(col);
+    },
+    [rowCount, columnCount, onSelect, rowVirtualizer, columnVirtualizer]
+  );
 
   /**
    * Starts a resize drag — records original size in a ref (not state) and
@@ -1020,6 +1073,31 @@ export function Grid({ sheet, onCellChange, onCellsChange, onSelect, selectedCel
           handleCellSelect(row, col);
           handleCellEdit(row, col);
           return;
+        case 'Tab':
+          // Tab moves right, wrapping to next row; Shift+Tab moves left
+          if (e.shiftKey) {
+            if (col > 0) {
+              col = col - 1;
+            } else if (row > 0) {
+              row = row - 1;
+              col = columnCount - 1;
+            }
+          } else {
+            if (col < columnCount - 1) {
+              col = col + 1;
+            } else if (row < rowCount - 1) {
+              row = row + 1;
+              col = 0;
+            }
+          }
+          break;
+        case 'Shift':
+          // Ignore standalone Shift key
+          return;
+        case 'F4':
+          // Cycle reference style: $A$1 → A$1 → $A1 → A1
+          // This requires the formula bar context — handled by FormulaBar
+          return;
         case 'Escape':
           setEditingCell(null);
           return;
@@ -1296,7 +1374,22 @@ export function Grid({ sheet, onCellChange, onCellsChange, onSelect, selectedCel
                         if (e.key === 'Enter') {
                           e.preventDefault();
                           commitEdit();
-                          // Return focus to the grid so arrow keys work
+                          // Move selection down (or up with Shift+Enter)
+                          if (e.shiftKey) {
+                            moveSelection('up');
+                          } else {
+                            moveSelection('down');
+                          }
+                          parentRef.current?.focus();
+                        } else if (e.key === 'Tab') {
+                          e.preventDefault();
+                          commitEdit();
+                          // Move selection right (or left with Shift+Tab)
+                          if (e.shiftKey) {
+                            moveSelection('left');
+                          } else {
+                            moveSelection('right');
+                          }
                           parentRef.current?.focus();
                         } else if (e.key === 'F2') {
                           // F2 toggles edit mode off (Excel behavior)

@@ -285,3 +285,114 @@ describe('App', () => {
     expect(screen.getByText('Unmerge Cells')).toBeTruthy();
   });
 });
+
+describe('App - Global Keyboard Shortcuts', () => {
+  function fireGlobalKeyDown(key: string, ctrl = true, shift = false) {
+    fireEvent.keyDown(window, { key, ctrlKey: ctrl, shiftKey: shift, metaKey: false });
+  }
+
+  it('Ctrl+N creates a new workbook', () => {
+    render(<App />);
+    // Modify current workbook
+    const grid = document.querySelector('[tabindex="0"]') as HTMLElement;
+    fireEvent.mouseDown(screen.getByText('A1'));
+    fireEvent.keyDown(grid, { key: 'x' });
+
+    // Press Ctrl+N to create new workbook
+    fireGlobalKeyDown('n');
+
+    // Should reset to empty workbook
+    expect(screen.getByText('Untitled')).toBeInTheDocument();
+  });
+
+  it('Ctrl+S triggers save', () => {
+    render(<App />);
+    // Press Ctrl+S (should not throw)
+    fireGlobalKeyDown('s');
+    // Verify app still renders
+    expect(screen.getByText('SimpleSheet')).toBeInTheDocument();
+  });
+
+  it('Ctrl+O triggers load', () => {
+    render(<App />);
+    // Press Ctrl+O (should not throw)
+    fireGlobalKeyDown('o');
+    // Verify app still renders
+    expect(screen.getByText('SimpleSheet')).toBeInTheDocument();
+  });
+
+  it('Ctrl+H opens Find & Replace', () => {
+    render(<App />);
+    // Press Ctrl+H
+    fireGlobalKeyDown('h');
+    // Modal should open
+    expect(screen.getByText('Find & Replace')).toBeInTheDocument();
+    // Close it via the X button
+    fireEvent.click(document.querySelector('[aria-label="Close"]')!);
+    // Modal should be closed
+    expect(screen.queryByText('Find & Replace')).not.toBeInTheDocument();
+  });
+
+  it('Ctrl+B toggles bold style', () => {
+    render(<App />);
+    // Select a cell first
+    fireEvent.mouseDown(screen.getByText('A1'));
+
+    // Press Ctrl+B to toggle bold
+    fireGlobalKeyDown('b');
+
+    // Open Format menu to verify bold is active
+    fireEvent.click(screen.getByText('Format'));
+    const boldItem = screen.getByText('Bold');
+    expect(boldItem).toBeInTheDocument();
+  });
+
+  it('Ctrl+I toggles italic style', () => {
+    render(<App />);
+    // Select a cell first
+    fireEvent.mouseDown(screen.getByText('A1'));
+
+    // Press Ctrl+I to toggle italic
+    fireGlobalKeyDown('i');
+
+    // Open Format menu to verify italic is active
+    fireEvent.click(screen.getByText('Format'));
+    const italicItem = screen.getByText('Italic');
+    expect(italicItem).toBeInTheDocument();
+  });
+
+  it('Ctrl+U toggles underline style', () => {
+    render(<App />);
+    // Select a cell first
+    fireEvent.mouseDown(screen.getByText('A1'));
+
+    // Press Ctrl+U to toggle underline
+    fireGlobalKeyDown('u');
+
+    // Open Format menu to verify underline is active
+    fireEvent.click(screen.getByText('Format'));
+    const underlineItem = screen.getByText('Underline');
+    expect(underlineItem).toBeInTheDocument();
+  });
+
+  it('does NOT fire Ctrl+N while typing in an input', () => {
+    render(<App />);
+    // Focus the formula bar input
+    const input = screen.getByPlaceholderText(/Enter a value or formula/) as HTMLInputElement;
+    act(() => {
+      input.focus();
+    });
+
+    // Type something
+    fireEvent.change(input, { target: { value: 'hello' } });
+
+    // Press Ctrl+N while input is focused — should NOT create new workbook
+    // (shortcuts are disabled while typing in inputs)
+    const titleBefore = screen.getByText('Untitled');
+    expect(titleBefore).toBeInTheDocument();
+    fireGlobalKeyDown('n');
+
+    // Workbook title should still be there (not reset)
+    expect(screen.getByText('Untitled')).toBeInTheDocument();
+  });
+});

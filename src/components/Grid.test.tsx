@@ -1246,6 +1246,80 @@ describe('Grid Component', () => {
     expect(input.value).toBe('N');
   });
 
+  // ─── Keyboard Navigation: Tab / Enter ───────────────────────────
+
+  it('Tab moves selection right', () => {
+    const onSelect = jest.fn();
+    render(<Grid sheet={createTestSheet()} onSelect={onSelect} selectedCell={{ row: 0, col: 0 }} />);
+    const grid = document.querySelector('[tabindex="0"]') as HTMLElement;
+
+    // Start editing and commit with Tab
+    fireEvent.keyDown(grid, { key: 'a' });
+    const input = document.querySelector('input.border-blue-500') as HTMLInputElement;
+    expect(input).not.toBeNull();
+
+    // Press Tab to commit and move right
+    fireEvent.keyDown(input, { key: 'Tab' });
+
+    // Should commit the value and move to column 1
+    expect(document.querySelector('input.border-blue-500')).toBeNull();
+  });
+
+  it('Shift+Tab moves selection left', () => {
+    const onSelect = jest.fn();
+    // Start at column 1 so we can move left
+    render(<Grid sheet={createTestSheet()} onSelect={onSelect} selectedCell={{ row: 0, col: 1 }} />);
+    const grid = document.querySelector('[tabindex="0"]') as HTMLElement;
+
+    // Start editing and commit with Shift+Tab
+    fireEvent.keyDown(grid, { key: 'b' });
+    const input = document.querySelector('input.border-blue-500') as HTMLInputElement;
+    expect(input).not.toBeNull();
+
+    // Press Shift+Tab to commit and move left
+    fireEvent.keyDown(input, { key: 'Tab', shiftKey: true });
+
+    // Should commit the value
+    expect(document.querySelector('input.border-blue-500')).toBeNull();
+  });
+
+  it('Enter commits and moves selection down', () => {
+    const onCellChange = jest.fn();
+    const onSelect = jest.fn();
+    render(<Grid sheet={createTestSheet()} onCellChange={onCellChange} onSelect={onSelect} selectedCell={{ row: 0, col: 0 }} />);
+    const grid = document.querySelector('[tabindex="0"]') as HTMLElement;
+
+    // Start editing
+    fireEvent.keyDown(grid, { key: 'x' });
+    const input = document.querySelector('input.border-blue-500') as HTMLInputElement;
+    expect(input).not.toBeNull();
+
+    // Press Enter to commit
+    fireEvent.keyDown(input, { key: 'Enter' });
+
+    // Should commit the value
+    expect(onCellChange).toHaveBeenCalledWith(0, 0, 'x');
+  });
+
+  it('Shift+Enter commits and moves selection up', () => {
+    const onCellChange = jest.fn();
+    const onSelect = jest.fn();
+    // Start at row 1 so we can move up
+    render(<Grid sheet={createTestSheet()} onCellChange={onCellChange} onSelect={onSelect} selectedCell={{ row: 1, col: 0 }} />);
+    const grid = document.querySelector('[tabindex="0"]') as HTMLElement;
+
+    // Start editing
+    fireEvent.keyDown(grid, { key: 'y' });
+    const input = document.querySelector('input.border-blue-500') as HTMLInputElement;
+    expect(input).not.toBeNull();
+
+    // Press Shift+Enter to commit
+    fireEvent.keyDown(input, { key: 'Enter', shiftKey: true });
+
+    // Should commit the value
+    expect(onCellChange).toHaveBeenCalledWith(1, 0, 'y');
+  });
+
   // ─── Inline Cell Editing Paste ───────────────────────────────────
 
   it('inserts pasted text at cursor position during cell editing', () => {
