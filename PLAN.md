@@ -494,6 +494,41 @@ Achieve a clean, clutter-free UI with standardized dropdown menus, formula wizar
 
 ## Progress Log
 
+### 2026-07-27 (Stage 1: Cleanup — Remove Merge Scope + Dead Code)
+
+**Merge scope removed entirely:**
+- Removed `rowSpan`, `colSpan`, `isMergeAnchor` fields from `Cell` interface (`types.ts`)
+- Removed `handleMerge`/`handleUnmerge` handlers from `App.tsx` (were stubs)
+- Removed Merge/Unmerge menu items from `MenuBar.tsx`
+- Removed merge-related tests from `App.test.tsx`, `App.menu.test.tsx`, `App.handlers.test.tsx`, `MenuBar.test.tsx`, `types.test.ts`
+- Removed `onMerge`/`onUnmerge`/`canMerge`/`canUnmerge` props from `MenuBar`
+
+**Dead code removed:**
+- Deleted `Toolbar.tsx` + `Toolbar.test.tsx` (replaced by MenuBar in Phase 9)
+- Deleted `SaveButton.tsx` + `SaveButton.test.tsx` (replaced by menu system)
+- Deleted `LoadButton.tsx` + `LoadButton.test.tsx` (replaced by menu system)
+- Deleted `NewSheetButton.tsx` + `NewSheetButton.test.tsx` (replaced by menu system)
+- Removed dead `handleCopy`/`handleCut`/`handlePaste` functions from `Grid.tsx`
+
+**Deduplication:**
+- Extracted `HIGHLIGHT_COLORS`/`HIGHLIGHT_BORDER_COLORS` → new `src/utils/highlightColors.ts`
+- Removed duplicate `colToLetterInternal` from `formulaParser.ts`, now imports `colToLetter` from types
+
+**Dependencies cleaned:**
+- Removed unused `lucide-react` from dependencies
+- Removed unused `cypress` from devDependencies and cypress scripts
+
+**Docs updated:**
+- README.md: test count corrected to 1346/51, removed Cypress refs, removed merge from features/menu
+- PLAN.md: coverage numbers updated, file coverage table updated
+- `jsonService.ts` comment updated (removed "merges")
+
+**Lint fixes:**
+- Fixed 4 pre-existing warnings (unused destructured vars in FormulaBar, unused import in test)
+
+**Results:** 1346 tests (-41), 51 suites (-7), lint clean (0 warnings), type errors reduced 6→2
+- Commit: (pending)
+
 ### 2026-07-27 (Phase 17: Cell Editing Workflows)
 
 **Phase 17a: Formula View Toggle (Ctrl + `)**

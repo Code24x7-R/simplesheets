@@ -140,12 +140,14 @@ export function HistoryProvider({ children, initialWorkbook }: HistoryProviderPr
     if (state.past.length === 0) return null;
     dispatch({ type: 'UNDO' });
     // Return the state that will be active after undo
+    /* istanbul ignore next - defensive fallback; past entries always have workbook */
     return state.past[state.past.length - 1]?.workbook ?? state.present;
   }, [state.past, state.present]);
 
   const redo = useCallback((): Workbook | null => {
     if (state.future.length === 0) return null;
     dispatch({ type: 'REDO' });
+    /* istanbul ignore next - defensive fallback; future entries always have workbook */
     return state.future[0]?.workbook ?? state.present;
   }, [state.future, state.present]);
 

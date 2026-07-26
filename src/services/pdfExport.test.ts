@@ -101,6 +101,39 @@ describe('pdfExport', () => {
         })
       );
     });
+
+    it('applies all cell formatting variants (italic, color, textAlign)', async () => {
+      // Need cells in non-header positions (not row 0 or col 0) to hit the data cell branch
+      const sheet: Sheet = {
+        ...createTestSheet(),
+        cells: {
+          '0:0': { rawValue: 'H1' },  // header
+          '0:1': { rawValue: 'H2' },  // header
+          '1:0': { rawValue: 'R1' },  // row header
+          '2:2': {
+            rawValue: '=1+1',
+            computedValue: 2,
+            style: {
+              fontStyle: 'italic',
+              color: '#FF0000',
+              textAlign: 'center',
+              backgroundColor: '#EEEEEE',
+            },
+          },
+        },
+      };
+
+      const result = await generatePdf(sheet, {
+        setup: {
+          orientation: 'portrait',
+          pageSize: 'A4',
+          scaling: 'fit-to-page',
+          margins: { top: 10, right: 10, bottom: 10, left: 10 },
+        },
+      });
+
+      expect(result).toBeInstanceOf(Blob);
+    });
   });
 
   describe('downloadPdf', () => {

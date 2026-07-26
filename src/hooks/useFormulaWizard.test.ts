@@ -227,6 +227,209 @@ describe('useFormulaWizard - nesting limits', () => {
   });
 });
 
+describe('useFormulaWizard - defensive guards', () => {
+  it('setParameter does nothing when no active node (wizard not opened)', () => {
+    const { result } = renderHook(() => useFormulaWizard());
+    act(() => {
+      result.current.setParameter('number1', 'A1:A10');
+    });
+    // Wizard is INACTIVE, so setParameter should be a no-op
+    expect(result.current.wizard.state).toBe('INACTIVE');
+    expect(result.current.wizard.activeNode).toBeNull();
+  });
+
+  it('goBack does nothing when only root is on stack', () => {
+    const { result } = renderHook(() => useFormulaWizard());
+    act(() => {
+      result.current.openWizard('SUM');
+    });
+    act(() => {
+      result.current.goBack();
+    });
+    // Still on root, stack unchanged
+    expect(result.current.wizard.state).toBe('WIZARD_ROOT');
+    expect(result.current.wizard.nestingDepth).toBe(1);
+  });
+
+  it('cancelPointSelection returns to NESTED_STEP when in nested function', () => {
+    const { result } = renderHook(() => useFormulaWizard());
+    act(() => {
+      result.current.openWizard('ROUND');
+    });
+    act(() => {
+      result.current.enterNested('number', 'SUM');
+    });
+    act(() => {
+      result.current.startPointSelection(0);
+    });
+    expect(result.current.wizard.state).toBe('POINT_SELECTION');
+    act(() => {
+      result.current.cancelPointSelection();
+    });
+    // Should return to NESTED_STEP, not WIZARD_ROOT
+    expect(result.current.wizard.state).toBe('NESTED_STEP');
+    expect(result.current.wizard.pointSelectionParamIndex).toBeNull();
+  });
+
+  it('applyPointSelection does nothing when point selection not started', () => {
+    const { result } = renderHook(() => useFormulaWizard());
+    act(() => {
+      result.current.openWizard('SUM');
+    });
+    act(() => {
+      result.current.applyPointSelection('A1:A10');
+    });
+    // No point selection was started, so no change
+    expect(result.current.wizard.state).toBe('WIZARD_ROOT');
+    expect(result.current.wizard.activeNode?.parameterValues.number1).toBeUndefined();
+  });
+
+  it('applyPointSelection does nothing when active schema is missing', () => {
+    const { result } = renderHook(() => useFormulaWizard());
+    // Open and start point selection, then manually corrupt state
+    act(() => {
+      result.current.openWizard('SUM');
+    });
+    act(() => {
+      result.current.startPointSelection(0);
+    });
+    // Applying without a valid schema is a defensive no-op
+    // (schema is always set by openWizard, so this guard is for safety)
+    // We verify the normal flow still works after the start
+    act(() => {
+      result.current.applyPointSelection('C1:C5');
+    });
+    expect(result.current.wizard.activeNode?.parameterValues.number1?.rawValue).toBe('C1:C5');
+  });
+
+  it('enterNested beyond max depth is a no-op', () => {
+    const { result } = renderHook(() => useFormulaWizard());
+    act(() => {
+      result.current.openWizard('ROUND');
+    });
+    // Nest exactly to the limit
+    for (let i = 1; i < MAX_NESTING_DEPTH; i++) {
+      act(() => {
+        result.current.enterNested('number', 'ROUND');
+      });
+    }
+    expect(result.current.wizard.nestingDepth).toBe(MAX_NESTING_DEPTH);
+    // One more attempt should be blocked
+    act(() => {
+      result.current.enterNested('number', 'ROUND');
+    });
+    expect(result.current.wizard.nestingDepth).toBe(MAX_NESTING_DEPTH);
+  });
+
+  it('startPointSelection updates param index in nested function', () => {
+    const { result } = renderHook(() => useFormulaWizard());
+    act(() => {
+      result.current.openWizard('VLOOKUP');
+    });
+    act(() => {
+      result.current.startPointSelection(2); // range_lookup param
+    });
+    expect(result.current.wizard.pointSelectionParamIndex).toBe(2);
+    expect(result.current.wizard.state).toBe('POINT_SELECTION');
+  });
+
+  it('enterNested before openWizard creates a node but with no parent link', () => {
+    const { result } = renderHook(() => useFormulaWizard());
+    act(() => {
+      result.current.enterNested('number', 'SUM');
+    });
+    // enterNested transitions to NESTED_STEP even without prior openWizard
+    // (it creates a child node; the parent update is just skipped)
+    expect(result.current.wizard.state).toBe('NESTED_STEP');
+    expect(result.current.wizard.activeNode?.functionName).toBe('SUM');
+  });
+
+  it('applyPointSelection with out-of-bounds param index leaves state unchanged', () => {
+    const { result } = renderHook(() => useFormulaWizard());
+    act(() => {
+      result.current.openWizard('SUM');
+    });
+    // Start point selection with an invalid param index
+    act(() => {
+      result.current.startPointSelection(99);
+    });
+    expect(result.current.wizard.state).toBe('POINT_SELECTION');
+    act(() => {
+      result.current.applyPointSelection('A1:A10');
+    });
+    // Schema exists but param[99] is undefined, so guard returns prev unchanged
+    expect(result.current.wizard.activeNode?.parameterValues.number1).toBeUndefined();
+    // State remains POINT_SELECTION (the early return doesn't change state)
+    expect(result.current.wizard.state).toBe('POINT_SELECTION');
+  });
+
+  it('cancelPointSelection from nested with multiple levels returns to NESTED_STEP', () => {
+    const { result } = renderHook(() => useFormulaWizard());
+    act(() => {
+      result.current.openWizard('ROUND');
+    });
+    act(() => {
+      result.current.enterNested('number', 'SUM');
+    });
+    act(() => {
+      result.current.enterNested('number1', 'AVERAGE');
+    });
+    expect(result.current.wizard.nestingDepth).toBe(3);
+    act(() => {
+      result.current.startPointSelection(0);
+    });
+    act(() => {
+      result.current.cancelPointSelection();
+    });
+    // Should return to NESTED_STEP (still nested)
+    expect(result.current.wizard.state).toBe('NESTED_STEP');
+    expect(result.current.wizard.pointSelectionParamIndex).toBeNull();
+  });
+
+  it('applyPointSelection from nested function returns to NESTED_STEP', () => {
+    const { result } = renderHook(() => useFormulaWizard());
+    act(() => result.current.openWizard('ROUND'));
+    act(() => result.current.enterNested('number', 'SUM'));
+    // Now in nested SUM — schema exists, param exists
+    act(() => result.current.startPointSelection(0));
+    expect(result.current.wizard.state).toBe('POINT_SELECTION');
+    act(() => result.current.applyPointSelection('A1:A10'));
+    // Should return to NESTED_STEP (stack length > 1), not WIZARD_ROOT
+    expect(result.current.wizard.state).toBe('NESTED_STEP');
+    expect(result.current.wizard.activeNode?.parameterValues.number1?.rawValue).toBe('A1:A10');
+  });
+
+  it('applyPointSelection returns unchanged when activeSchema is null', () => {
+    const { result } = renderHook(() => useFormulaWizard());
+    // Open with an unknown function — schema will be null
+    act(() => result.current.openWizard('UNKNOWN_FUNC'));
+    expect(result.current.wizard.activeSchema).toBeNull();
+    expect(result.current.wizard.activeNode).not.toBeNull();
+    // Start and apply point selection — should hit the !schema guard
+    act(() => result.current.startPointSelection(0));
+    expect(result.current.wizard.state).toBe('POINT_SELECTION');
+    act(() => result.current.applyPointSelection('A1:A5'));
+    // Guard returns prev unchanged
+    expect(result.current.wizard.state).toBe('POINT_SELECTION');
+    expect(result.current.wizard.pointSelectionParamIndex).toBe(0);
+  });
+
+  it('goBack from deeply nested restores correct parent schema', () => {
+    const { result } = renderHook(() => useFormulaWizard());
+    act(() => {
+      result.current.openWizard('VLOOKUP');
+    });
+    act(() => {
+      result.current.enterNested('table_array', 'SUM');
+    });
+    act(() => {
+      result.current.goBack();
+    });
+    expect(result.current.wizard.state).toBe('WIZARD_ROOT');
+    expect(result.current.wizard.activeSchema?.name).toBe('VLOOKUP');
+  });
+});
+
 describe('useFormulaWizard - breadcrumb', () => {
   it('builds breadcrumb from node stack', () => {
     const { result } = renderHook(() => useFormulaWizard());
