@@ -1,7 +1,5 @@
 # SimpleSheet
 
-[![CI](https:///github.com/simplesheets/simplesheets/actions/workflows/ci.yml/badge.svg)](./actions/workflows/ci.yml)
-
 A lightweight, browser‑based spreadsheet for small businesses. No server, no account, no bloat — just a fast, offline‑capable grid that reads and writes Excel files.
 
 ---
@@ -34,16 +32,16 @@ SimpleSheet uses a clean, menu-based interface:
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
-│  SimpleSheet                                 File  Edit  View  Help│  Menu bar
+│  SimpleSheet                              File  Edit  View  Help │  Menu bar
 ├──────────────────────────────────────────────────────────────────┤
-│  [A1 ▾]  fx  [═══════════════════════════════════════]          │  Formula bar
-│          SUM  AVERAGE  COUNT  MAX  MIN  IF  ...                 │  Function bar
+│  [A1 ▾]  fx  [═══════════════════════════════════════]           │  Formula bar
+│          SUM  AVERAGE  COUNT  MAX  MIN  IF  ...                  │  Function bar
 ├──────────────────────────────────────────────────────────────────┤
-│  [Sheet1] [Sheet2] [+]                                         │  Sheet tabs
+│  [Sheet1] [Sheet2] [+]                                           │  Sheet tabs
 ├──────────────────────────────────────────────────────────────────┤
-│  │ A │ B │ C │ D │ E │                                         │  Grid
-│  └──────────────────────────────────────────────────────────── │
-│  Ready                                          100,000 × 26   │  Status bar
+│  │ A │ B │ C │ D │ E │                                           │  Grid
+│  └────────────────────────────────────────────────────────────   │
+│  Ready                                          100,000 × 26     │  Status bar
 └──────────────────────────────────────────────────────────────────┘
 ```
 
@@ -170,6 +168,59 @@ npm run cypress
 ```
 
 Current test suite: **1083 tests** across 43 suites with **~93% line coverage**.
+
+---
+
+## Offline Release
+
+SimpleSheet can be packaged into a self-contained `.tgz` that bundles the production build **and** all dependencies — no internet required to install or run it.
+
+### Create the package
+
+```bash
+npm run release:offline
+```
+
+This runs three steps in sequence:
+
+1. **`npm run build`** — TypeScript compiles and Vite produces the static `dist/` bundle.
+2. **`prepack-offline`** — temporarily prepares `package.json` for packing (flips `private`, sets `bundledDependencies`, includes `node_modules`).
+3. **`npm pack`** — produces `simplesheets-<version>.tgz` in the project root.
+
+After packing, a `postpack` hook automatically restores `package.json` to its original state, so your working tree stays clean.
+
+### Output
+
+| Detail | Value |
+|--------|-------|
+| File | `simplesheets-0.1.0.tgz` |
+| Compressed size | ~18 MB |
+| Unpacked size | ~105 MB |
+| Total files | ~8,800 (includes bundled deps) |
+
+### Install offline
+
+```bash
+# Install from the tarball (no registry access needed)
+npm install ./simplesheets-0.1.0.tgz
+
+# Or install globally to run from anywhere
+npm install -g ./simplesheets-0.1.0.tgz
+```
+
+### Serve the static build
+
+The tarball also contains the full `dist/` folder — a static site you can host anywhere:
+
+```bash
+# Unpack the tarball
+tar -xzf simplesheets-0.1.0.tgz
+
+# Serve with any static file server
+npx serve package/dist
+# or
+cd package/dist && python -m http.server 8080
+```
 
 ---
 
