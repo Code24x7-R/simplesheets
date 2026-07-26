@@ -277,6 +277,8 @@ interface UseCellEditingReturn {
   startEditAt: (caretPosition: number) => void;
   /** Set caret position without changing state (for click handling). */
   setCaretPos: (caretPosition: number) => void;
+  /** Set selection range (for mouse selection sync). */
+  setSelection: (start: number, end: number) => void;
   /** Commit the current buffer and transition to SELECT. */
   commit: (moveDirection?: { dRow: number; dCol: number }) => void;
   /** Cancel editing and restore original value. */
@@ -375,6 +377,16 @@ export function useCellEditing({
       if (prev.state !== 'EDIT') return prev;
       const clampedCaret = Math.max(0, Math.min(prev.buffer.length, caretPosition));
       return { ...prev, caretPos: clampedCaret, selectionStart: -1, selectionEnd: -1 };
+    });
+  }, []);
+
+  const setSelection = useCallback((start: number, end: number) => {
+    setSession((prev) => {
+      if (prev.state !== 'EDIT') return prev;
+      const len = prev.buffer.length;
+      const clampedStart = Math.max(0, Math.min(len, start));
+      const clampedEnd = Math.max(0, Math.min(len, end));
+      return { ...prev, selectionStart: clampedStart, selectionEnd: clampedEnd };
     });
   }, []);
 
@@ -1168,6 +1180,7 @@ export function useCellEditing({
     startEdit,
     startEditAt,
     setCaretPos,
+    setSelection,
     commit,
     cancel,
     reset,

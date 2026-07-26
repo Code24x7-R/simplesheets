@@ -57,6 +57,8 @@ export interface FormulaBarProps {
   onOpenWizard?: () => void;
   /** Callback to set caret position (for click handling). */
   onSetCaret?: (caretPosition: number) => void;
+  /** Callback to set selection range (for mouse selection sync). */
+  onSetSelection?: (start: number, end: number) => void;
 }
 
 /**
@@ -209,6 +211,7 @@ export function FormulaBar({
   onBlurEditing,
   onFocusEditing,
   onSetCaret,
+  onSetSelection,
   referenceFormat = 'A1',
   onToggleReferenceFormat,
   onInsertFunction,
@@ -401,23 +404,17 @@ export function FormulaBar({
     // When integrated with the editing FSM hook, delegate ALL key handling
     // to the hook — it owns the buffer, caret, and POINT mode state.
     if (onEditingKey) {
-      // Backspace/Delete: Handle native selection (from mouse)
-      // The FSM hook doesn't track native input selection, so we handle
-      // it here when there's an active selection in the input element.
-      if (e.key === 'Backspace' || e.key === 'Delete') {
-        const input = inputRef.current;
-        if (input && input.selectionStart !== input.selectionEnd) {
-          e.preventDefault();
-          const selStart = input.selectionStart ?? 0;
-          const selEnd = input.selectionEnd ?? 0;
-          const start = Math.min(selStart, selEnd);
-          const end = Math.max(selStart, selEnd);
-          const newValue = displayValue.slice(0, start) + displayValue.slice(end);
-          onChange(newValue);
-          // Set cursor to start of deleted selection
-          setInternalCursorPos(start);
-          onCursorChange?.(start);
-          return;
+      // Sync native selection to FSM hook before processing any key
+      // This ensures the hook knows about mouse selections
+      const input = inputRef.current;
+      if (input && document.activeElement === input && onSetSelection) {
+        const nativeSelStart = input.selectionStart ?? 0;
+        const nativeSelEnd = input.selectionEnd ?? 0;
+        const hookSelStart = editingSession?.selectionStart ?? -1;
+        const hookSelEnd = editingSession?.selectionEnd ?? -1;
+        // If native selection differs from hook selection, sync it
+        if (nativeSelStart !== nativeSelEnd && (nativeSelStart !== hookSelStart || nativeSelEnd !== hookSelEnd)) {
+          onSetSelection(nativeSelStart, nativeSelEnd);
         }
       }
       // Ctrl+C: Copy selected text to clipboard
@@ -600,7 +597,7 @@ export function FormulaBar({
         }
         break;
     }
-  }, [onEditingKey, autoCompleteOpen, autoCompleteMatches, autoCompleteIndex, isPointMode, displayValue, editingSession, onCommit, onCellPick, onExitPointMode, onChange, onCursorChange, acceptAutoComplete, updateCursorPos]);
+  }, [onEditingKey, autoCompleteOpen, autoCompleteMatches, autoCompleteIndex, isPointMode, displayValue, editingSession, onCommit, onCellPick, onExitPointMode, onChange, onCursorChange, acceptAutoComplete, updateCursorPos, onSetSelection]);
 
   const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
