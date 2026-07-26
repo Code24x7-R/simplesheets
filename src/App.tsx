@@ -1449,11 +1449,6 @@ function WorkbookView() {
       <footer className="flex items-center justify-between px-4 py-1 border-t border-gray-200 bg-gray-50 text-xs text-gray-500">
         <span>{statusMessage}</span>
         <div className="flex items-center gap-4">
-          {activeCell && sheet.cells[cellKey(activeCell.row, activeCell.col)]?.computedValue !== undefined && (
-            <span className="font-mono text-gray-600">
-              {String(sheet.cells[cellKey(activeCell.row, activeCell.col)]?.computedValue)}
-            </span>
-          )}
           <span>
             {sheet.rowCount.toLocaleString()} rows × {sheet.columnCount} cols
             {frozenRows > 0 && ` | ${frozenRows} frozen row(s)`}

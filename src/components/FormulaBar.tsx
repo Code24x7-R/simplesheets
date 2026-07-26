@@ -706,14 +706,14 @@ export function FormulaBar({
         )}
 
         {/* Formula input area */}
-        <div className="flex-1 relative">
+        <div className="flex-1 relative overflow-hidden">
           {/* Colored display layer (underlay) */}
           {formulaDisplay}
-          {/* Actual input */}
+          {/* Actual input — horizontal scroll for long content */}
           <input
             ref={inputRef}
             type="text"
-            className={`w-full outline-none font-mono text-sm relative bg-transparent ${
+            className={`w-full outline-none font-mono text-sm relative bg-transparent overflow-x-auto formula-input-scroll ${
               formulaDisplay ? 'text-transparent selection:bg-blue-200' : ''
             }`}
             style={{ caretColor: '#000' }}
