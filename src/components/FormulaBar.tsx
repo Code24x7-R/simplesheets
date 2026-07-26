@@ -14,7 +14,7 @@ export interface HighlightedRange {
   colorIndex: number;
 }
 
-interface FormulaBarProps {
+export interface FormulaBarProps {
   value: string;
   onChange: (value: string) => void;
   onCommit: (value: string) => void;

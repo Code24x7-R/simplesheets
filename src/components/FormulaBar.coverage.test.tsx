@@ -1,5 +1,6 @@
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { FormulaBar } from './FormulaBar';
+import type { FormulaBarProps } from './FormulaBar';
 
 describe('FormulaBar - AutoComplete Navigation', () => {
   const defaultProps = {
@@ -406,6 +407,63 @@ describe('FormulaBar - Function Bar', () => {
     render(<FormulaBar {...defaultProps} onInsertFunction={onInsertFunction} />);
     fireEvent.click(screen.getByText('SUM'));
     expect(onInsertFunction).toHaveBeenCalledWith('SUM');
+  });
+});
+
+describe('FormulaBar - Focus transitions to EDIT mode', () => {
+  const makeProps = (): FormulaBarProps => ({
+    value: 'Hello World',
+    onChange: jest.fn(),
+    onCommit: jest.fn(),
+    activeCellRef: 'A1',
+    editingFormula: null,
+    onHighlightsChange: jest.fn(),
+    onCursorChange: jest.fn(),
+    onFocusEditing: jest.fn(),
+    onBlurEditing: jest.fn(),
+    onEditingKey: jest.fn(),
+    editingSession: {
+      state: 'SELECT' as const,
+      row: 0,
+      col: 0,
+      buffer: '',
+      originalValue: 'Hello World',
+      caretPos: 0,
+      isFormula: false,
+    },
+  });
+
+  it('calls onFocusEditing when clicked in SELECT state', () => {
+    const props = makeProps();
+    render(<FormulaBar {...props} />);
+    const input = screen.getByPlaceholderText(/Enter a value or formula/);
+
+    act(() => {
+      fireEvent.focus(input);
+    });
+
+    expect(props.onFocusEditing).toHaveBeenCalled();
+  });
+
+  it('arrow keys move caret in EDIT mode', () => {
+    const onEditingKey = jest.fn();
+    const props = makeProps();
+    props.onEditingKey = onEditingKey;
+    props.editingSession = {
+      state: 'EDIT' as const,
+      row: 0,
+      col: 0,
+      buffer: 'Hello',
+      originalValue: 'Hello World',
+      caretPos: 5,
+      isFormula: false,
+    };
+
+    render(<FormulaBar {...props} />);
+    const input = screen.getByPlaceholderText(/Enter a value or formula/);
+
+    fireEvent.keyDown(input, { key: 'ArrowLeft' });
+    expect(onEditingKey).toHaveBeenCalledWith('ArrowLeft', false, false, false);
   });
 });
 

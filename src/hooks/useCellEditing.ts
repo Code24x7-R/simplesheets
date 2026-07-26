@@ -581,6 +581,19 @@ export function useCellEditing({
         return result;
       }
 
+      // Plain arrow keys - move caret by 1 character
+      if (key === 'ArrowLeft' && !ctrlKey && !shiftKey) {
+        const newCaret = Math.max(0, s.caretPos - 1);
+        setSession((prev) => ({ ...prev, caretPos: newCaret }));
+        result.session = { ...s, caretPos: newCaret };
+        return result;
+      }
+      if (key === 'ArrowRight' && !ctrlKey && !shiftKey) {
+        const newCaret = Math.min(s.buffer.length, s.caretPos + 1);
+        setSession((prev) => ({ ...prev, caretPos: newCaret }));
+        result.session = { ...s, caretPos: newCaret };
+        return result;
+      }
       // Ctrl+Left/Right — move caret by word (Spec §2)
       if (key === 'ArrowLeft' && ctrlKey && !shiftKey) {
         const newCaret = findWordBoundaryLeft(s.buffer, s.caretPos);
@@ -717,7 +730,7 @@ export function useCellEditing({
         return result;
       }
 
-      // Home / End / Ctrl+Arrow — caret movement (Spec §2)
+      // Home / End — caret movement (Spec §2)
       if (key === 'Home' && !ctrlKey) {
         setSession((prev) => ({ ...prev, caretPos: 0 }));
         result.session = { ...s, caretPos: 0 };
@@ -728,6 +741,20 @@ export function useCellEditing({
         result.session = { ...s, caretPos: s.buffer.length };
         return result;
       }
+      // Plain arrow keys - move caret by 1 character
+      if (key === 'ArrowLeft' && !ctrlKey && !shiftKey) {
+        const newCaret = Math.max(0, s.caretPos - 1);
+        setSession((prev) => ({ ...prev, caretPos: newCaret }));
+        result.session = { ...s, caretPos: newCaret };
+        return result;
+      }
+      if (key === 'ArrowRight' && !ctrlKey && !shiftKey) {
+        const newCaret = Math.min(s.buffer.length, s.caretPos + 1);
+        setSession((prev) => ({ ...prev, caretPos: newCaret }));
+        result.session = { ...s, caretPos: newCaret };
+        return result;
+      }
+      // Ctrl+Arrow keys - move caret by word boundary
       if (key === 'ArrowLeft' && ctrlKey && !shiftKey) {
         const newCaret = findWordBoundaryLeft(s.buffer, s.caretPos);
         setSession((prev) => ({ ...prev, caretPos: newCaret }));
