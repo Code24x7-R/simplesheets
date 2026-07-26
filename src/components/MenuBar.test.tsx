@@ -4,6 +4,7 @@ import { MenuBar } from './MenuBar';
 describe('MenuBar', () => {
   const defaultProps = {
     onNew: jest.fn(),
+    onLoadDemo: jest.fn(),
     onSave: jest.fn(),
     onLoad: jest.fn(),
     onImportExcel: jest.fn(),

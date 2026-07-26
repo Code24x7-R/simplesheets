@@ -57,8 +57,16 @@ describe('App', () => {
     expect(screen.getByText(/Ready/)).toBeInTheDocument();
   });
 
-  it('renders the demo workbook title', () => {
+  it('renders the default workbook title', () => {
     render(<App />);
+    expect(screen.getByText('Untitled')).toBeInTheDocument();
+  });
+
+  it('renders the demo workbook title when Load Demo is triggered', () => {
+    render(<App />);
+    // Click "File" menu, then "Load Demo"
+    fireEvent.click(screen.getByText('File'));
+    fireEvent.click(screen.getByText('Load Demo'));
     expect(screen.getByText('SimpleSheet Demo')).toBeInTheDocument();
   });
 
@@ -70,7 +78,7 @@ describe('App', () => {
 
   it('shows row and column count in status bar', () => {
     render(<App />);
-    expect(screen.getByText(/100,000 rows/)).toBeInTheDocument();
+    expect(screen.getByText(/1,000 rows/)).toBeInTheDocument();
   });
 
   it('handles formula bar input', () => {

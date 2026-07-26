@@ -219,6 +219,9 @@ describe('App - Menu Handlers (Insert)', () => {
 
   it('adjusts formula references when inserting a row above a formula cell', () => {
     render(<App />);
+    // Load the demo workbook for this test
+    fireEvent.click(screen.getByText('File'));
+    fireEvent.click(screen.getByText('Load Demo'));
     // The demo workbook has =SUM(B2:D2) in cell E2 (row index 1, col 4).
     // We need to select a cell in that row, then insert a row above it.
     // First, let's select cell at row 1 (second row) by clicking it.
@@ -420,6 +423,10 @@ describe('App - Cell Style System (single cell & range)', () => {
     render(<App />);
     const statusBar = document.querySelector('footer span');
 
+    // Load the demo workbook so there are cells to style
+    fireEvent.click(screen.getByText('File'));
+    fireEvent.click(screen.getByText('Load Demo'));
+
     // Select a single cell
     const cell = document.querySelector('.grid-cell') as HTMLElement;
     fireEvent.mouseDown(cell);
@@ -435,6 +442,10 @@ describe('App - Cell Style System (single cell & range)', () => {
   it('applies bold to a range selection via Format menu', () => {
     render(<App />);
     const statusBar = document.querySelector('footer span');
+
+    // Load the demo workbook so there are cells to style
+    fireEvent.click(screen.getByText('File'));
+    fireEvent.click(screen.getByText('Load Demo'));
 
     // Select a cell, then shift+click to create a range
     const cells = document.querySelectorAll('.grid-cell');
@@ -458,6 +469,10 @@ describe('App - Cell Style System (single cell & range)', () => {
     render(<App />);
     const statusBar = document.querySelector('footer span');
 
+    // Load the demo workbook so there are cells to style
+    fireEvent.click(screen.getByText('File'));
+    fireEvent.click(screen.getByText('Load Demo'));
+
     const cell = document.querySelector('.grid-cell') as HTMLElement;
     fireEvent.mouseDown(cell);
 
@@ -470,6 +485,10 @@ describe('App - Cell Style System (single cell & range)', () => {
   it('applies text alignment via Format menu', () => {
     render(<App />);
     const statusBar = document.querySelector('footer span');
+
+    // Load the demo workbook so there are cells to style
+    fireEvent.click(screen.getByText('File'));
+    fireEvent.click(screen.getByText('Load Demo'));
 
     const cell = document.querySelector('.grid-cell') as HTMLElement;
     fireEvent.mouseDown(cell);
@@ -486,6 +505,10 @@ describe('App - Cell Style System (single cell & range)', () => {
     render(<App />);
     const statusBar = document.querySelector('footer span');
 
+    // Load the demo workbook so there are cells to style
+    fireEvent.click(screen.getByText('File'));
+    fireEvent.click(screen.getByText('Load Demo'));
+
     const cell = document.querySelector('.grid-cell') as HTMLElement;
     fireEvent.mouseDown(cell);
 
@@ -500,6 +523,10 @@ describe('App - Cell Style System (single cell & range)', () => {
   it('clears styles via Format menu', () => {
     render(<App />);
     const statusBar = document.querySelector('footer span');
+
+    // Load the demo workbook so there are cells to style
+    fireEvent.click(screen.getByText('File'));
+    fireEvent.click(screen.getByText('Load Demo'));
 
     const cell = document.querySelector('.grid-cell') as HTMLElement;
     fireEvent.mouseDown(cell);
@@ -518,6 +545,10 @@ describe('App - Cell Style System (single cell & range)', () => {
   it('applies style and supports undo', () => {
     render(<App />);
     const statusBar = document.querySelector('footer span');
+
+    // Load the demo workbook so there are cells to style
+    fireEvent.click(screen.getByText('File'));
+    fireEvent.click(screen.getByText('Load Demo'));
 
     const cell = document.querySelector('.grid-cell') as HTMLElement;
     fireEvent.mouseDown(cell);

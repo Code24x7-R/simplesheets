@@ -4,6 +4,7 @@ import { DropdownMenu, type MenuItem } from './DropdownMenu';
 interface MenuBarProps {
   // File menu
   onNew: () => void;
+  onLoadDemo: () => void;
   onSave: () => void;
   onLoad: () => void;
   onImportExcel: () => void;
@@ -67,6 +68,7 @@ export function MenuBar(props: MenuBarProps) {
       const actions: Record<string, () => void> = {
         // File
         'file-new': props.onNew,
+        'file-load-demo': props.onLoadDemo,
         'file-save': props.onSave,
         'file-load': props.onLoad,
         'file-import-excel': props.onImportExcel,
@@ -129,6 +131,7 @@ export function MenuBar(props: MenuBarProps) {
 
   const fileItems: MenuItem[] = [
     { id: 'file-new', label: 'New', shortcut: 'Ctrl+N', icon: '📄' },
+    { id: 'file-load-demo', label: 'Load Demo', icon: '🧪' },
     { id: 'file-save', label: 'Save', shortcut: 'Ctrl+S', icon: '💾' },
     { id: 'file-load', label: 'Open…', shortcut: 'Ctrl+O', icon: '📂' },
     { id: 'sep-file-1', label: '', separator: true },

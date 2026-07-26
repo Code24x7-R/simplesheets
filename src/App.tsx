@@ -27,6 +27,32 @@ import { loadAutosave } from './services/storageService';
 import type { Cell, Selection, Sheet } from './types';
 import { insertRow, deleteRow, insertCol, deleteCol } from './utils/sheetOperations';
 
+// ─── Empty Workbook ──────────────────────────────────────────────────────────
+
+function createEmptyWorkbook(): Workbook {
+  return {
+    id: 'new-wb',
+    title: 'Untitled',
+    sheets: [
+      {
+        id: 'sheet-1',
+        name: 'Sheet1',
+        cells: {},
+        defaultColWidth: 100,
+        defaultRowHeight: 28,
+        columnWidths: {},
+        rowHeights: {},
+        columnCount: 26,
+        rowCount: 1000,
+        frozenColumns: 0,
+        frozenRows: 0,
+      },
+    ],
+    activeSheetIndex: 0,
+    lastModified: Date.now(),
+  };
+}
+
 // ─── Demo Workbook ───────────────────────────────────────────────────────────
 
 function createDemoWorkbook(): Workbook {
@@ -85,9 +111,9 @@ function createDemoWorkbook(): Workbook {
 
 export default function App() {
   const [initialWorkbook] = useState<Workbook>(() => {
-    // Restore from auto-save if available, otherwise use demo workbook
+    // Restore from auto-save if available, otherwise start with a blank workbook
     const saved = loadAutosave();
-    return saved ?? createDemoWorkbook();
+    return saved ?? createEmptyWorkbook();
   });
 
   return (
@@ -1059,7 +1085,8 @@ function WorkbookView() {
       <header className="flex items-center justify-between px-4 py-1.5 border-b border-gray-200 bg-white">
         <h1 className="text-lg font-bold text-blue-700">SimpleSheet</h1>
         <MenuBar
-          onNew={() => handleNewSheet(createDemoWorkbook())}
+          onNew={() => handleNewSheet(createEmptyWorkbook())}
+          onLoadDemo={() => handleNewSheet(createDemoWorkbook())}
           onSave={handleSaveMenu}
           onLoad={handleLoadMenu}
           onImportExcel={handleImportExcelMenu}
