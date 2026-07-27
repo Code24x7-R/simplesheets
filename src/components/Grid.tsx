@@ -161,7 +161,14 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
     onSelectionChange?.(selection);
   }, [selection, onSelectionChange]);
 
-  const { defaultRowHeight, defaultColWidth, columnWidths, rowHeights, rowCount, columnCount, cells } = sheet;
+  const { defaultRowHeight, defaultColWidth, columnWidths, rowHeights, rowCount, columnCount, cells, frozenColumns, frozenRows } = sheet;
+
+  // ─── Freeze Pane Helpers ──────────────────────────────────────────
+  // A cell is frozen if its row index is below frozenRows or its col index is frozenColumns.
+  // Frozen cells get sticky positioning so they stay visible during scroll.
+  const isRowFrozen = (row: number) => frozenRows > 0 && row < frozenRows;
+  const isColFrozen = (col: number) => frozenColumns > 0 && col < frozenColumns;
+  const isCellFrozen = (row: number, col: number) => isRowFrozen(row) || isColFrozen(col);
 
   // ─── Insert at Cursor Helper ─────────────────────────────────────
   // Inserts text at the cursor position in an input element, replacing
@@ -1164,19 +1171,27 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
           const isHovered = hoveredHeader?.type === 'col' && hoveredHeader.index === col;
           const isDragging = isResizing && resizeDragRef.current?.type === 'col' && resizeDragRef.current?.index === col;
           const showHandle = isHovered || isDragging;
+          const colFrozen = isColFrozen(col);
+          const colHeaderStyle: React.CSSProperties = {
+            width: getColWidth(col),
+            minWidth: getColWidth(col),
+            height: defaultRowHeight,
+            left: ROW_WIDTH + virtualCol.start,
+          };
+          // Frozen column headers stick to the left (below the already-sticky header row)
+          if (colFrozen) {
+            colHeaderStyle.position = 'sticky';
+            colHeaderStyle.left = ROW_WIDTH + virtualCol.start;
+            colHeaderStyle.zIndex = 30; // Above data cells (z-20 header row + 10)
+          }
           return (
             <div
               key={`col-header-${col}`}
               data-col-header={col}
-              className={`grid-cell-header border-b border-gray-300 absolute cursor-pointer select-none ${
+              className={`grid-cell-header border-b border-gray-300 ${colFrozen ? '' : 'absolute'} cursor-pointer select-none ${
                 colSelected ? 'bg-blue-600 text-white' : 'hover:bg-gray-200'
               }`}
-              style={{
-                width: getColWidth(col),
-                minWidth: getColWidth(col),
-                height: defaultRowHeight,
-                left: ROW_WIDTH + virtualCol.start,
-              }}
+              style={colHeaderStyle}
               onMouseEnter={() => setHoveredHeader({ type: 'col', index: col })}
               onMouseLeave={() => setHoveredHeader((prev) => (prev?.type === 'col' ? null : prev))}
               onMouseDown={(e) => {
@@ -1227,6 +1242,7 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
                 width: ROW_WIDTH,
                 minWidth: ROW_WIDTH,
                 height: getRowHeight(virtualRow.index),
+                ...(isRowFrozen(virtualRow.index) ? { top: defaultRowHeight + virtualRow.start, zIndex: 20 } : {}),
               }}
               onMouseEnter={() => setHoveredHeader({ type: 'row', index: virtualRow.index })}
               onMouseLeave={() => setHoveredHeader((prev) => (prev?.type === 'row' ? null : prev))}
@@ -1277,6 +1293,26 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
                 if (cell.style.backgroundColor) cellStyle.backgroundColor = cell.style.backgroundColor;
                 if (cell.style.textAlign) cellStyle.textAlign = cell.style.textAlign;
               }
+              // Apply freeze pane styling (sticky positioning for frozen rows/columns)
+              if (isCellFrozen(row, col)) {
+                cellStyle.position = 'sticky';
+                // Frozen rows stick below the header row
+                if (isRowFrozen(row)) {
+                  // Top offset: header height + sum of heights of frozen rows above this one
+                  let topOffset = defaultRowHeight;
+                  for (let r = 0; r < row; r++) {
+                    topOffset += getRowHeight(r);
+                  }
+                  cellStyle.top = topOffset;
+                  cellStyle.zIndex = 15;
+                }
+                // Frozen columns stick to the right of the row header
+                if (isColFrozen(col)) {
+                  cellStyle.left = ROW_WIDTH + virtualCol.start;
+                  cellStyle.zIndex = isRowFrozen(row) ? 25 : 15;
+                }
+                cellStyle.backgroundColor = '#f0f4f8';
+              }
               // Apply highlight if cell is referenced in formula
               if (highlightIdx !== null) {
                 cellStyle.backgroundColor = HIGHLIGHT_COLORS[highlightIdx % HIGHLIGHT_COLORS.length];
@@ -1311,11 +1347,12 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
                   cellStyle.animation = 'marching-ants 1s ease-in-out infinite';
                 }
               }
+              const cellFrozen = isCellFrozen(row, col);
               return (
                 <div
                   key={`cell-${key}`}
                   data-col={col}
-                  className={`grid-cell absolute ${isSelected ? 'grid-cell-selected' : ''}`}
+                  className={`grid-cell ${cellFrozen ? 'grid-cell-frozen' : 'absolute'} ${isSelected ? 'grid-cell-selected' : ''}`}
                   style={cellStyle}
                   onMouseDown={(e) => handleCellMouseDown(row, col, e.shiftKey)}
                   onDoubleClick={() => handleCellEdit(row, col)}

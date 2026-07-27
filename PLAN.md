@@ -4,9 +4,9 @@
 Achieve a clean, clutter-free UI with standardized dropdown menus, formula wizard, function bar, and R1C1 reference format.
 
 ## Current State
-- **1347 tests** across **51 suites**, All passing
+- **1445 tests** across **55 suites**, All passing
 - Lint clean (0 warnings), Build clean
-- Coverage: **90.48% stmts, 80.38% branches, 90.92% funcs, 92.38% lines**
+- Coverage: **93.21% stmts, 83.91% branches, 93.83% funcs, 94.83% lines**
 - Phases 1-10 complete: Menu system, Formula bar, Function bar, R1C1 toggle, Layout polish, Nested Formula Wizard
 - Phase 11 complete: Cell Style System (Bold, Italic, Underline, Colors, Alignment)
 - Phase 12 complete: Search & Replace (find/replace with case, exact match, formula scope, multi-sheet)
@@ -493,6 +493,50 @@ Achieve a clean, clutter-free UI with standardized dropdown menus, formula wizar
 ---
 
 ## Progress Log
+
+### 2026-07-27 (Stage 3: Coverage Recovery — Complex Files)
+
+**Stage 3a-3b: App.tsx integration tests (+27 tests)**
+- Sheet operations (add, switch, rename, copy, delete sheets)
+- Insert/delete row and column handlers
+- Freeze/unfreeze panes
+- Clear contents
+- Import/export bridge events (Excel, CSV, PDF)
+- Global keyboard shortcuts (Ctrl+B/I/U/H/Shift+Z)
+- Help menu (About, Keyboard Shortcuts modal)
+- Format menu (bold, italic, underline, text/fill colors, alignment, number format, clear styles)
+- App.tsx: 87% → 91% lines, 71% → 75% branches
+
+**Stage 3c-3e: Grid.tsx interaction tests (+15 tests)**
+- Cell editing input (Enter commit, Escape cancel, Tab, F2 toggle, paste at cursor)
+- Row/column header selection and keyboard navigation
+- Point mode resize handles (visual rendering)
+- Point mode selection highlight (dashed border)
+- Clipboard clear on typing, marching ants visual
+- R1C1 reference format column headers
+- Grid.tsx: 86% → 87% lines, 86% → 87% branches
+
+**Results:** 1445 tests (+42 from Stage 3 start), 55 suites, lint clean
+**Overall:** 93.21% stmts, 83.91% branches, 93.83% funcs, 94.83% lines
+
+### 2026-07-27 (Stage 2: Coverage Recovery — Quick Wins)
+
+**useFormulaWizard.ts: 52.38% → 90.47% branches**
+- Added defensive guard tests (enterNested before open, cancelPointSelection from nested, applyPointSelection edge cases, max nesting enforcement)
+
+**FormulaBar.tsx: 75% → 87% lines, 61% → 80% branches**
+- Added expand/collapse (Ctrl+Shift+U), Ctrl+C/V/Arrow handling, Shift+Arrow in EDIT vs POINT, R1C1 display, select handler, blur handling
+
+**useCellEditing.ts: 83.84% → 93.28% lines, 75.81% → 88.11% branches**
+- Added Alt+Enter line breaks, Ctrl+Enter commit-and-stay, Ctrl+Arrow word navigation, End key, setBuffer/setCaretPos, commit with batch parameter, POINT state edge cases
+
+**HistoryContext.tsx: 66.66% → 75% branches**
+- Added istanbul ignore for genuinely unreachable defensive fallbacks
+
+**pdfExport.ts: 75% → 100% branches**
+- Added test with cell in non-header position with all formatting variants
+
+**Results:** 1403 tests, 53 suites, lint clean
 
 ### 2026-07-27 (Stage 1: Cleanup — Remove Merge Scope + Dead Code)
 

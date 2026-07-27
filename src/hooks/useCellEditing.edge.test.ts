@@ -223,31 +223,21 @@ describe('useCellEditing - setBuffer and setCaretPos', () => {
   });
 });
 
-describe('useCellEditing - commit with batch parameter', () => {
-  it('commit passes batch=true to onCommit', () => {
+describe('useCellEditing - commit with batch (via Ctrl+Enter)', () => {
+  it('Ctrl+Enter in ENTER state commits with batch=true', () => {
     const onCommit = jest.fn();
     const { result } = createHook({ onCommit });
-    act(() => result.current.startEnter('V'));
-    act(() => result.current.commit(undefined, true));
-    expect(onCommit).toHaveBeenCalledWith(0, 0, 'V', true);
+    act(() => result.current.handleKey('H', false, false));
+    act(() => { result.current.handleKey('Enter', false, true); });
+    expect(onCommit).toHaveBeenCalledWith(0, 0, 'H', true);
   });
 
-  it('commit passes batch=false to onCommit', () => {
+  it('Ctrl+Enter in EDIT state commits with batch=true', () => {
     const onCommit = jest.fn();
-    const { result } = createHook({ onCommit });
-    act(() => result.current.startEnter('V'));
-    act(() => result.current.commit(undefined, false));
-    expect(onCommit).toHaveBeenCalledWith(0, 0, 'V', false);
-  });
-
-  it('commit with direction and batch calls both callbacks', () => {
-    const onCommit = jest.fn();
-    const onNavigate = jest.fn();
-    const { result } = createHook({ onCommit, onNavigate });
-    act(() => result.current.startEnter('V'));
-    act(() => result.current.commit({ dRow: 1, dCol: 0 }, true));
-    expect(onCommit).toHaveBeenCalledWith(0, 0, 'V', true);
-    expect(onNavigate).toHaveBeenCalledWith(1, 0);
+    const { result } = createHook({ cellValue: 'Test', onCommit });
+    act(() => result.current.handleKey('F2', false, false));
+    act(() => { result.current.handleKey('Enter', false, true); });
+    expect(onCommit).toHaveBeenCalledWith(0, 0, 'Test', true);
   });
 });
 

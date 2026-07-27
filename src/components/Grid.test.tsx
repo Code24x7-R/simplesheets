@@ -1970,3 +1970,64 @@ describe('Grid Component', () => {
   });
 
 });
+
+// ─── Freeze Panes ──────────────────────────────────────────────────
+
+describe('Grid - Freeze Panes', () => {
+  it('applies frozen class to cells in frozen rows/columns', () => {
+    const sheet = createTestSheet({ frozenRows: 1, frozenColumns: 1 });
+    render(<Grid sheet={sheet} />);
+    // Cell at (0,0) is in frozen row 0 and frozen col 0
+    const cellA1 = screen.getByText('A1').closest('.grid-cell') as HTMLElement;
+    expect(cellA1.classList.contains('grid-cell-frozen')).toBe(true);
+  });
+
+  it('does not apply frozen class when nothing is frozen', () => {
+    const sheet = createTestSheet({ frozenRows: 0, frozenColumns: 0 });
+    render(<Grid sheet={sheet} />);
+    const cellA1 = screen.getByText('A1').closest('.grid-cell') as HTMLElement;
+    expect(cellA1.classList.contains('grid-cell-frozen')).toBe(false);
+  });
+
+  it('applies sticky positioning to frozen cells', () => {
+    const sheet = createTestSheet({ frozenRows: 1, frozenColumns: 1 });
+    render(<Grid sheet={sheet} />);
+    const cellA1 = screen.getByText('A1').closest('.grid-cell') as HTMLElement;
+    expect(cellA1.style.position).toBe('sticky');
+  });
+
+  it('frozen cells have non-frozen siblings that are absolutely positioned', () => {
+    const sheet = createTestSheet({ frozenRows: 1, frozenColumns: 1 });
+    render(<Grid sheet={sheet} />);
+    // Cell at (1,1) is NOT frozen (beyond the 1 frozen row/col)
+    // Find by data attribute since text might be in a span
+    const cellB2 = document.querySelector('[data-row-container="1"] [data-col="1"]') as HTMLElement;
+    expect(cellB2).toBeInTheDocument();
+    expect(cellB2.classList.contains('grid-cell-frozen')).toBe(false);
+    expect(cellB2.classList.contains('absolute')).toBe(true);
+  });
+
+  it('frozen column headers have sticky positioning', () => {
+    const sheet = createTestSheet({ frozenRows: 1, frozenColumns: 1 });
+    render(<Grid sheet={sheet} />);
+    // Column header for col 0 (frozen) should have sticky position
+    const colHeader = document.querySelector('[data-col-header="0"]') as HTMLElement;
+    expect(colHeader.style.position).toBe('sticky');
+  });
+
+  it('frozen row headers have top offset for sticky positioning', () => {
+    const sheet = createTestSheet({ frozenRows: 1, frozenColumns: 1 });
+    render(<Grid sheet={sheet} />);
+    // Row header for row 0 (frozen) should have a top offset
+    const rowHeader = document.querySelector('[data-row-header="0"]') as HTMLElement;
+    expect(rowHeader.style.top).toBeTruthy();
+  });
+
+  it('frozen cells get frosted background color', () => {
+    const sheet = createTestSheet({ frozenRows: 1, frozenColumns: 1 });
+    render(<Grid sheet={sheet} />);
+    const cellA1 = screen.getByText('A1').closest('.grid-cell') as HTMLElement;
+    // Browser normalizes hex to rgb
+    expect(cellA1.style.backgroundColor).toBe('rgb(240, 244, 248)');
+  });
+});

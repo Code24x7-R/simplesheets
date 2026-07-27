@@ -159,6 +159,31 @@ describe('App - Freeze Panes', () => {
     const statusBar = screen.getByTestId('status-message');
     expect(statusBar?.textContent).toContain('Panes unfrozen');
   });
+
+  it('freezing panes applies frozen class to grid cells', () => {
+    render(<App />);
+    // Freeze panes via View menu
+    fireEvent.click(screen.getByText('View'));
+    fireEvent.click(screen.getByText('Freeze Panes').closest('.menu-item') as HTMLElement);
+
+    // The grid should now have frozen cells (row 0 and col 0)
+    const cellA1 = document.querySelector('[data-col="0"]') as HTMLElement;
+    expect(cellA1).toBeInTheDocument();
+    expect(cellA1.classList.contains('grid-cell-frozen')).toBe(true);
+  });
+
+  it('unfreezing panes removes frozen class from grid cells', () => {
+    render(<App />);
+    // Freeze then unfreeze
+    fireEvent.click(screen.getByText('View'));
+    fireEvent.click(screen.getByText('Freeze Panes').closest('.menu-item') as HTMLElement);
+    fireEvent.click(screen.getByText('View'));
+    fireEvent.click(screen.getByText('Unfreeze Panes').closest('.menu-item') as HTMLElement);
+
+    // The grid should no longer have frozen cells
+    const cellA1 = document.querySelector('[data-col="0"]') as HTMLElement;
+    expect(cellA1.classList.contains('grid-cell-frozen')).toBe(false);
+  });
 });
 
 describe('App - Clear Contents', () => {
