@@ -270,4 +270,84 @@ describe('FilterDropdown', () => {
       expect(defaultProps.onClose).toHaveBeenCalled();
     });
   });
+
+  describe('edge cases', () => {
+    it('handles applying with no values selected (clears filter)', () => {
+      render(<FilterDropdown {...defaultProps} />);
+      // Don't select any values
+      fireEvent.click(screen.getByTestId('filter-apply'));
+      expect(defaultProps.onApply).toHaveBeenCalledWith(undefined);
+    });
+
+    it('handles custom filter with empty value (does not apply)', () => {
+      render(<FilterDropdown {...defaultProps} />);
+      fireEvent.click(screen.getByText('Custom filter'));
+      // Leave custom filter value empty
+      fireEvent.click(screen.getByTestId('filter-apply'));
+      // Should not apply custom filter with empty value (unless isEmpty/isNotEmpty)
+      // Falls through to selectedValues check (which is empty), so clears filter
+      expect(defaultProps.onApply).toHaveBeenCalledWith(undefined);
+    });
+
+    it('handles custom filter with numeric value for greaterThan', () => {
+      render(<FilterDropdown {...defaultProps} />);
+      fireEvent.click(screen.getByText('Custom filter'));
+      fireEvent.change(screen.getByTestId('filter-custom-type'), { target: { value: 'greaterThan' } });
+      fireEvent.change(screen.getByTestId('filter-custom-value'), { target: { value: 'abc' } });
+      fireEvent.click(screen.getByTestId('filter-apply'));
+      // NaN should become 0
+      expect(defaultProps.onApply).toHaveBeenCalledWith({
+        conditions: [{ type: 'greaterThan', value: 0 }],
+        logic: 'AND',
+      });
+    });
+
+    it('handles custom filter with lessOrEqual condition', () => {
+      render(<FilterDropdown {...defaultProps} />);
+      fireEvent.click(screen.getByText('Custom filter'));
+      fireEvent.change(screen.getByTestId('filter-custom-type'), { target: { value: 'lessOrEqual' } });
+      fireEvent.change(screen.getByTestId('filter-custom-value'), { target: { value: '50' } });
+      fireEvent.click(screen.getByTestId('filter-apply'));
+      expect(defaultProps.onApply).toHaveBeenCalledWith({
+        conditions: [{ type: 'lessOrEqual', value: 50 }],
+        logic: 'AND',
+      });
+    });
+
+    it('handles custom filter with notContains condition', () => {
+      render(<FilterDropdown {...defaultProps} />);
+      fireEvent.click(screen.getByText('Custom filter'));
+      fireEvent.change(screen.getByTestId('filter-custom-type'), { target: { value: 'notContains' } });
+      fireEvent.change(screen.getByTestId('filter-custom-value'), { target: { value: 'test' } });
+      fireEvent.click(screen.getByTestId('filter-apply'));
+      expect(defaultProps.onApply).toHaveBeenCalledWith({
+        conditions: [{ type: 'notContains', value: 'test' }],
+        logic: 'AND',
+      });
+    });
+
+    it('handles custom filter with notEquals condition', () => {
+      render(<FilterDropdown {...defaultProps} />);
+      fireEvent.click(screen.getByText('Custom filter'));
+      fireEvent.change(screen.getByTestId('filter-custom-type'), { target: { value: 'notEquals' } });
+      fireEvent.change(screen.getByTestId('filter-custom-value'), { target: { value: 'Alice' } });
+      fireEvent.click(screen.getByTestId('filter-apply'));
+      expect(defaultProps.onApply).toHaveBeenCalledWith({
+        conditions: [{ type: 'notEquals', value: 'Alice' }],
+        logic: 'AND',
+      });
+    });
+
+    it('handles custom filter with endsWith condition', () => {
+      render(<FilterDropdown {...defaultProps} />);
+      fireEvent.click(screen.getByText('Custom filter'));
+      fireEvent.change(screen.getByTestId('filter-custom-type'), { target: { value: 'endsWith' } });
+      fireEvent.change(screen.getByTestId('filter-custom-value'), { target: { value: 'ice' } });
+      fireEvent.click(screen.getByTestId('filter-apply'));
+      expect(defaultProps.onApply).toHaveBeenCalledWith({
+        conditions: [{ type: 'endsWith', value: 'ice' }],
+        logic: 'AND',
+      });
+    });
+  });
 });
