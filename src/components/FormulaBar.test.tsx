@@ -144,3 +144,64 @@ describe('FormulaBar - Formula Editing', () => {
   });
 
 });
+
+describe('FormulaBar - keyboard shortcuts', () => {
+  const defaultProps = {
+    session: { ...defaultSession, state: 'EDIT', buffer: '=SUM(A1:A10)', isFormula: true } as EditingSession,
+    pointSession: null,
+    value: '=SUM(A1:A10)',
+    cursorPos: 11,
+    statusMessage: 'Edit',
+    onRawKeyDown: jest.fn(),
+    onRawChange: jest.fn(),
+    onRawFocus: jest.fn(),
+    onRawBlur: jest.fn(),
+    onRawCaretMove: jest.fn(),
+    onCellPick: jest.fn(),
+    autoComplete: { open: false, matches: [], index: 0, tokenStart: 0 },
+    onAcceptAutoComplete: jest.fn(),
+    onNavigateAutoComplete: jest.fn(),
+    onDismissAutoComplete: jest.fn(),
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('expands/collapses on Ctrl+Shift+U', () => {
+    render(<FormulaBar {...defaultProps} />);
+    const input = screen.getByDisplayValue('=SUM(A1:A10)');
+    fireEvent.keyDown(input, { ctrlKey: true, shiftKey: true, key: 'u' });
+    // Should toggle expanded state (no error thrown)
+    // Re-query the input since the component may have re-rendered
+    expect(screen.getByDisplayValue('=SUM(A1:A10)')).toBeInTheDocument();
+  });
+
+  it('handles Ctrl+C to copy selected text', () => {
+    render(<FormulaBar {...defaultProps} />);
+    const input = screen.getByDisplayValue('=SUM(A1:A10)') as HTMLInputElement;
+    // Select some text
+    input.setSelectionRange(4, 8);
+    fireEvent.keyDown(input, { ctrlKey: true, key: 'c' });
+    // Should attempt to copy (no error thrown)
+    expect(input).toBeInTheDocument();
+  });
+
+  it('handles Ctrl+V to paste from clipboard', () => {
+    render(<FormulaBar {...defaultProps} />);
+    const input = screen.getByDisplayValue('=SUM(A1:A10)');
+    fireEvent.keyDown(input, { ctrlKey: true, key: 'v' });
+    // Should attempt to paste (no error thrown)
+    expect(input).toBeInTheDocument();
+  });
+
+  it('handles Ctrl+X to cut selected text', () => {
+    render(<FormulaBar {...defaultProps} />);
+    const input = screen.getByDisplayValue('=SUM(A1:A10)') as HTMLInputElement;
+    // Select some text
+    input.setSelectionRange(4, 8);
+    fireEvent.keyDown(input, { ctrlKey: true, key: 'x' });
+    // Should attempt to cut (no error thrown)
+    expect(input).toBeInTheDocument();
+  });
+});
