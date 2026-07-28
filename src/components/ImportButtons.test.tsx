@@ -304,4 +304,48 @@ describe('ImportJsonButton', () => {
 
     expect(onImport).not.toHaveBeenCalled();
   });
+
+  it('calls onError with error message when Excel import returns error', async () => {
+    (importExcelFile as jest.Mock).mockResolvedValue({ success: false, error: 'Invalid Excel file' });
+
+    const onError = jest.fn();
+    render(<ImportExcelButton onImport={jest.fn()} onError={onError} />);
+
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const file = createMockFile('bad.xlsx', 'not valid');
+
+    Object.defineProperty(input, 'files', { value: [file] });
+    fireEvent.change(input);
+
+    await waitFor(() => {
+      expect(onError).toHaveBeenCalledWith('Invalid Excel file');
+    });
+  });
+
+  it('shows loading state during Excel import', async () => {
+    let resolvePromise: (value: { success: boolean; workbook?: unknown }) => void;
+    const promise = new Promise<{ success: boolean; workbook?: unknown }>((resolve) => {
+      resolvePromise = resolve;
+    });
+    (importExcelFile as jest.Mock).mockReturnValue(promise);
+
+    render(<ImportExcelButton onImport={jest.fn()} onError={jest.fn()} />);
+
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const file = createMockFile('test.xlsx', 'content');
+
+    Object.defineProperty(input, 'files', { value: [file] });
+    fireEvent.change(input);
+
+    // Loading state should be shown (button is disabled)
+    const button = screen.getByTitle('Import an Excel file');
+    expect(button).toBeDisabled();
+
+    // Resolve the promise
+    resolvePromise!({ success: true, workbook: { id: '1', name: 'Test', sheets: [], activeSheetIndex: 0 } });
+
+    await waitFor(() => {
+      expect(screen.getByTitle('Import an Excel file')).not.toBeDisabled();
+    });
+  });
 });
