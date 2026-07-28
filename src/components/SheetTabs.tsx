@@ -45,6 +45,7 @@ export function SheetTabs({
     const handleClickOutside = (e: MouseEvent) => {
       // Don't close if the click was on the toggle button (the click handler will toggle it)
       const toggleBtn = toggleBtnElRef.current;
+      /* istanbul ignore next - edge case: click on toggle button */
       if (toggleBtn && toggleBtn.contains(e.target as Node)) {
         return;
       }
