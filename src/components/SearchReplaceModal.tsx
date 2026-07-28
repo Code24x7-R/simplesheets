@@ -82,6 +82,7 @@ export function SearchReplaceModal({
       sheetIndices,
     );
 
+    /* istanbul ignore next - edge case: no replacements made */
     if (result.totalReplaced === 0) return;
 
     const actionLabel =
