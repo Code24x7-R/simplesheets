@@ -93,4 +93,12 @@ describe('DropdownMenu', () => {
     fireEvent.click(screen.getByText('Test Menu'));
     expect(screen.getByText('Ctrl+X')).toBeTruthy();
   });
+
+  it('closes dropdown on Escape key', () => {
+    render(<DropdownMenu label="Test Menu" items={items} onSelect={() => {}} />);
+    fireEvent.click(screen.getByText('Test Menu'));
+    expect(screen.getByText('Action 1')).toBeTruthy();
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.queryByText('Action 1')).toBeNull();
+  });
 });
