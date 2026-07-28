@@ -163,4 +163,111 @@ describe('FilterDropdown', () => {
     expect(checkboxes[2]).not.toBeChecked();
     expect(checkboxes[3]).toBeChecked(); // Charlie
   });
+
+  describe('custom filter types', () => {
+    it('applies "equals" custom filter', () => {
+      render(<FilterDropdown {...defaultProps} />);
+      fireEvent.click(screen.getByText('Custom filter'));
+      fireEvent.change(screen.getByTestId('filter-custom-type'), { target: { value: 'equals' } });
+      fireEvent.change(screen.getByTestId('filter-custom-value'), { target: { value: 'Alice' } });
+      fireEvent.click(screen.getByTestId('filter-apply'));
+      expect(defaultProps.onApply).toHaveBeenCalledWith({
+        conditions: [{ type: 'equals', value: 'Alice' }],
+        logic: 'AND',
+      });
+    });
+
+    it('applies "startsWith" custom filter', () => {
+      render(<FilterDropdown {...defaultProps} />);
+      fireEvent.click(screen.getByText('Custom filter'));
+      fireEvent.change(screen.getByTestId('filter-custom-type'), { target: { value: 'startsWith' } });
+      fireEvent.change(screen.getByTestId('filter-custom-value'), { target: { value: 'Al' } });
+      fireEvent.click(screen.getByTestId('filter-apply'));
+      expect(defaultProps.onApply).toHaveBeenCalledWith({
+        conditions: [{ type: 'startsWith', value: 'Al' }],
+        logic: 'AND',
+      });
+    });
+
+    it('applies "greaterThan" custom filter', () => {
+      render(<FilterDropdown {...defaultProps} />);
+      fireEvent.click(screen.getByText('Custom filter'));
+      fireEvent.change(screen.getByTestId('filter-custom-type'), { target: { value: 'greaterThan' } });
+      fireEvent.change(screen.getByTestId('filter-custom-value'), { target: { value: '100' } });
+      fireEvent.click(screen.getByTestId('filter-apply'));
+      expect(defaultProps.onApply).toHaveBeenCalledWith({
+        conditions: [{ type: 'greaterThan', value: 100 }],
+        logic: 'AND',
+      });
+    });
+
+    it('applies "isEmpty" custom filter', () => {
+      render(<FilterDropdown {...defaultProps} />);
+      fireEvent.click(screen.getByText('Custom filter'));
+      fireEvent.change(screen.getByTestId('filter-custom-type'), { target: { value: 'isEmpty' } });
+      fireEvent.click(screen.getByTestId('filter-apply'));
+      expect(defaultProps.onApply).toHaveBeenCalledWith({
+        conditions: [{ type: 'isEmpty' }],
+        logic: 'AND',
+      });
+    });
+
+    it('applies "isNotEmpty" custom filter', () => {
+      render(<FilterDropdown {...defaultProps} />);
+      fireEvent.click(screen.getByText('Custom filter'));
+      fireEvent.change(screen.getByTestId('filter-custom-type'), { target: { value: 'isNotEmpty' } });
+      fireEvent.click(screen.getByTestId('filter-apply'));
+      expect(defaultProps.onApply).toHaveBeenCalledWith({
+        conditions: [{ type: 'isNotEmpty' }],
+        logic: 'AND',
+      });
+    });
+  });
+
+  describe('toggle all behavior', () => {
+    it('deselects all when "Select All" is clicked and all are selected', () => {
+      render(<FilterDropdown {...defaultProps} />);
+      const selectAllCheckbox = screen.getByTestId('filter-select-all');
+      // First click selects all
+      fireEvent.click(selectAllCheckbox);
+      // Second click deselects all
+      fireEvent.click(selectAllCheckbox);
+      // Apply with no selection should clear filter
+      fireEvent.click(screen.getByTestId('filter-apply'));
+      expect(defaultProps.onApply).toHaveBeenCalledWith(undefined);
+    });
+  });
+
+  describe('search filtering', () => {
+    it('shows empty state when search has no matches', () => {
+      render(<FilterDropdown {...defaultProps} />);
+      const searchInput = screen.getByTestId('filter-search-input');
+      fireEvent.change(searchInput, { target: { value: 'xyz123' } });
+      expect(screen.getByText('No values')).toBeInTheDocument();
+    });
+
+    it('selects all only checks visible (filtered) values', () => {
+      render(<FilterDropdown {...defaultProps} />);
+      const searchInput = screen.getByTestId('filter-search-input');
+      fireEvent.change(searchInput, { target: { value: 'ali' } });
+      // Only Alice should be visible
+      const selectAllCheckbox = screen.getByTestId('filter-select-all');
+      fireEvent.click(selectAllCheckbox);
+      // Apply should only include Alice
+      fireEvent.click(screen.getByTestId('filter-apply'));
+      expect(defaultProps.onApply).toHaveBeenCalledWith(
+        expect.objectContaining({
+          conditions: [{ type: 'includes', values: ['Alice'] }],
+        })
+      );
+    });
+  });
+
+  describe('keyboard handling', () => {
+    it('closes on Escape key', () => {
+      render(<FilterDropdown {...defaultProps} />);
+      fireEvent.keyDown(document, { key: 'Escape' });
+      expect(defaultProps.onClose).toHaveBeenCalled();
+    });
+  });
 });

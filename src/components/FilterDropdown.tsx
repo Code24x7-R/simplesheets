@@ -118,7 +118,7 @@ export function FilterDropdown({
   };
 
   const handleApply = () => {
-    if (showCustomFilter && customFilterValue) {
+    if (showCustomFilter && (customFilterValue || customFilterType === 'isEmpty' || customFilterType === 'isNotEmpty')) {
       // Build custom filter condition
       const condition = buildCustomCondition(customFilterType, customFilterValue);
       if (condition) {
