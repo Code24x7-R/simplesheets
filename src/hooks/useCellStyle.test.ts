@@ -9,6 +9,12 @@ import {
   DEFAULTCellStyle,
   COLOR_PALETTE,
   NUMBER_FORMATS,
+  makeBorder,
+  BORDER_PRESETS,
+  BORDER_COLORS,
+  DEFAULT_BORDER_WIDTH,
+  DEFAULT_BORDER_STYLE,
+  DEFAULT_BORDER_COLOR,
 } from './useCellStyle';
 import type { CellStyle } from '../types';
 
@@ -159,5 +165,82 @@ describe('NUMBER_FORMATS', () => {
       expect(fmt.label).toBeTruthy();
       expect(fmt.value).toBeTruthy();
     }
+  });
+});
+
+describe('makeBorder', () => {
+  it('creates a CSS border string', () => {
+    expect(makeBorder('1px', 'solid', '#000000')).toBe('1px solid #000000');
+  });
+
+  it('creates a thick border', () => {
+    expect(makeBorder('3px', 'solid', '#FF0000')).toBe('3px solid #FF0000');
+  });
+
+  it('creates a dashed border', () => {
+    expect(makeBorder('1px', 'dashed', '#333333')).toBe('1px dashed #333333');
+  });
+
+  it('returns "none" for none style', () => {
+    expect(makeBorder('0', 'none', '#000000')).toBe('none');
+  });
+
+  it('returns "none" for 0 width', () => {
+    expect(makeBorder('0', 'solid', '#000000')).toBe('none');
+  });
+});
+
+describe('BORDER_PRESETS', () => {
+  it('contains 8 presets', () => {
+    expect(BORDER_PRESETS).toHaveLength(8);
+  });
+
+  it('first preset is None', () => {
+    expect(BORDER_PRESETS[0].label).toBe('None');
+    expect(BORDER_PRESETS[0].style).toBe('none');
+  });
+
+  it('has Thin as second preset', () => {
+    expect(BORDER_PRESETS[1].label).toBe('Thin');
+    expect(BORDER_PRESETS[1].width).toBe('1px');
+    expect(BORDER_PRESETS[1].style).toBe('solid');
+  });
+
+  it('each preset has label, width, and style', () => {
+    for (const preset of BORDER_PRESETS) {
+      expect(preset.label).toBeTruthy();
+      expect(preset.width).toBeTruthy();
+      expect(preset.style).toBeTruthy();
+    }
+  });
+});
+
+describe('BORDER_COLORS', () => {
+  it('contains 16 colors', () => {
+    expect(BORDER_COLORS).toHaveLength(16);
+  });
+
+  it('first color is black', () => {
+    expect(BORDER_COLORS[0]).toBe('#000000');
+  });
+
+  it('all entries are valid hex colors', () => {
+    for (const color of BORDER_COLORS) {
+      expect(color).toMatch(/^#[0-9A-Fa-f]{6}$/);
+    }
+  });
+});
+
+describe('default border constants', () => {
+  it('DEFAULT_BORDER_WIDTH is 1px', () => {
+    expect(DEFAULT_BORDER_WIDTH).toBe('1px');
+  });
+
+  it('DEFAULT_BORDER_STYLE is solid', () => {
+    expect(DEFAULT_BORDER_STYLE).toBe('solid');
+  });
+
+  it('DEFAULT_BORDER_COLOR is black', () => {
+    expect(DEFAULT_BORDER_COLOR).toBe('#000000');
   });
 });

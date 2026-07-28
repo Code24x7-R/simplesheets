@@ -1,4 +1,4 @@
-import { parseFormula, FormulaError, extractCellRefs, adjustFormulaRefs, cellRefToString, rangeToString } from './formulaParser';
+import { parseFormula, FormulaError, extractCellRefs, adjustFormulaRefs, prefixRefsWithSheet, cellRefToString, rangeToString } from './formulaParser';
 import type { CellRefNode, RangeNode } from './formulaParser';
 
 describe('Formula Parser', () => {
@@ -581,6 +581,195 @@ describe('Formula Parser', () => {
         end: { type: 'cell', row: 4, col: 1, absoluteCol: true, absoluteRow: true },
       };
       expect(rangeToString(node)).toBe('$A$1:$B$5');
+    });
+  });
+});
+
+// ─── Cross-Sheet Reference Prefixing ────────────────────────────────
+
+describe('prefixRefsWithSheet', () => {
+  it('prefixes simple relative reference', () => {
+    expect(prefixRefsWithSheet('A1', 'Sheet1')).toBe('Sheet1!A1');
+  });
+
+  it('prefixes multiple references in a formula', () => {
+    expect(prefixRefsWithSheet('A1+B1', 'Sheet1')).toBe('Sheet1!A1+Sheet1!B1');
+  });
+
+  it('preserves absolute reference markers', () => {
+    expect(prefixRefsWithSheet('$A$1', 'Sheet1')).toBe('Sheet1!$A$1');
+  });
+
+  it('handles mixed absolute and relative references', () => {
+    expect(prefixRefsWithSheet('A1+$B2', 'Sheet1')).toBe('Sheet1!A1+Sheet1!$B2');
+  });
+
+  it('does not modify already-qualified cross-sheet references', () => {
+    // Sheet2!A1 should NOT be modified (it already has a sheet prefix)
+    expect(prefixRefsWithSheet('Sheet2!A1+B1', 'Sheet1')).toBe('Sheet2!A1+Sheet1!B1');
+  });
+
+  it('handles sheet names with spaces (quoted)', () => {
+    expect(prefixRefsWithSheet('A1', 'My Sheet')).toBe("'My Sheet'!A1");
+  });
+
+  it('handles multi-letter column references', () => {
+    expect(prefixRefsWithSheet('AA1+AB2', 'Data')).toBe('Data!AA1+Data!AB2');
+  });
+
+  it('handles function calls with references', () => {
+    expect(prefixRefsWithSheet('SUM(A1:A10)', 'Sheet1')).toBe('SUM(Sheet1!A1:Sheet1!A10)');
+  });
+
+  it('handles empty formula', () => {
+    expect(prefixRefsWithSheet('', 'Sheet1')).toBe('');
+  });
+
+  it('handles formula with no references', () => {
+    expect(prefixRefsWithSheet('42+10', 'Sheet1')).toBe('42+10');
+  });
+});
+
+// ─── Complex Formula Patterns ─────────────────────────────────────────
+// Verifies that common real-world formula patterns parse correctly.
+
+describe('Complex Formula Patterns', () => {
+  describe('Pattern 1: +C10+D10 (addition with + prefix)', () => {
+    it('parses + prefix as unary plus', () => {
+      const ast = parseFormula('+C10+D10');
+      // Should be: unary+(C10) + D10
+      expect(ast.type).toBe('binary');
+      if (ast.type === 'binary') {
+        expect(ast.op).toBe('+');
+        expect(ast.left.type).toBe('unary');
+        if (ast.left.type === 'unary') {
+          expect(ast.left.op).toBe('+');
+        }
+        expect(ast.right.type).toBe('cell');
+      }
+    });
+
+    it('extracts both cell references', () => {
+      const ast = parseFormula('+C10+D10');
+      const refs = extractCellRefs(ast);
+      expect(refs).toHaveLength(2);
+      expect(refs[0].row).toBe(9); // C10 = row 9 (0-indexed)
+      expect(refs[0].col).toBe(2); // C = col 2
+      expect(refs[1].row).toBe(9); // D10 = row 9
+      expect(refs[1].col).toBe(3); // D = col 3
+    });
+  });
+
+  describe('Pattern 2: +F4/100 (division with + prefix)', () => {
+    it('parses +F4/100 correctly', () => {
+      const ast = parseFormula('+F4/100');
+      // Should be: (unary+(F4)) / 100
+      expect(ast.type).toBe('binary');
+      if (ast.type === 'binary') {
+        expect(ast.op).toBe('/');
+        expect(ast.left.type).toBe('unary');
+        expect(ast.right.type).toBe('number');
+        if (ast.right.type === 'number') {
+          expect(ast.right.value).toBe(100);
+        }
+      }
+    });
+
+    it('extracts F4 reference', () => {
+      const ast = parseFormula('+F4/100');
+      const refs = extractCellRefs(ast);
+      expect(refs).toHaveLength(1);
+      expect(refs[0].row).toBe(3); // F4 = row 3
+      expect(refs[0].col).toBe(5); // F = col 5
+    });
+  });
+
+  describe('Pattern 3: =(A17+D17)*0.25 (parenthesized expression)', () => {
+    it('parses parenthesized addition with multiplication', () => {
+      // Note: parseFormula expects the formula without the leading '='
+      const ast = parseFormula('(A17+D17)*0.25');
+      // Should be: (A17 + D17) * 0.25
+      expect(ast.type).toBe('binary');
+      if (ast.type === 'binary') {
+        expect(ast.op).toBe('*');
+        expect(ast.left.type).toBe('binary');
+        if (ast.left.type === 'binary') {
+          expect(ast.left.op).toBe('+');
+        }
+        expect(ast.right.type).toBe('number');
+        if (ast.right.type === 'number') {
+          expect(ast.right.value).toBe(0.25);
+        }
+      }
+    });
+
+    it('extracts both cell references', () => {
+      // Note: parseFormula expects the formula without the leading '='
+      const ast = parseFormula('(A17+D17)*0.25');
+      const refs = extractCellRefs(ast);
+      expect(refs).toHaveLength(2);
+      expect(refs[0].row).toBe(16); // A17 = row 16
+      expect(refs[0].col).toBe(0); // A = col 0
+      expect(refs[1].row).toBe(16); // D17 = row 16
+      expect(refs[1].col).toBe(3); // D = col 3
+    });
+  });
+
+  describe('Pattern 4: =-F15 (unary minus on cell)', () => {
+    it('parses unary minus on cell reference', () => {
+      // Note: parseFormula expects the formula without the leading '='
+      const ast = parseFormula('-F15');
+      // Should be: unary-(F15)
+      expect(ast.type).toBe('unary');
+      if (ast.type === 'unary') {
+        expect(ast.op).toBe('-');
+        expect(ast.operand.type).toBe('cell');
+        if (ast.operand.type === 'cell') {
+          expect(ast.operand.row).toBe(14); // F15 = row 14
+          expect(ast.operand.col).toBe(5); // F = col 5
+        }
+      }
+    });
+
+    it('extracts F15 reference', () => {
+      // Note: parseFormula expects the formula without the leading '='
+      const ast = parseFormula('-F15');
+      const refs = extractCellRefs(ast);
+      expect(refs).toHaveLength(1);
+      expect(refs[0].row).toBe(14); // F15 = row 14
+      expect(refs[0].col).toBe(5); // F = col 5
+    });
+  });
+
+  describe('Pattern 5: Edge cases', () => {
+    it('parses double unary minus --F15', () => {
+      const ast = parseFormula('--F15');
+      // Should be: unary-(unary-(F15))
+      expect(ast.type).toBe('unary');
+      if (ast.type === 'unary') {
+        expect(ast.op).toBe('-');
+        expect(ast.operand.type).toBe('unary');
+      }
+    });
+
+    it('parses explicit unary plus +F15', () => {
+      const ast = parseFormula('+F15');
+      // Should be: unary+(F15)
+      expect(ast.type).toBe('unary');
+      if (ast.type === 'unary') {
+        expect(ast.op).toBe('+');
+        expect(ast.operand.type).toBe('cell');
+      }
+    });
+
+    it('parses nested parentheses ((A1+B1)*C1)', () => {
+      // Note: parseFormula expects the formula without the leading '='
+      const ast = parseFormula('((A1+B1)*C1)');
+      // Should be: (A1 + B1) * C1
+      expect(ast.type).toBe('binary');
+      if (ast.type === 'binary') {
+        expect(ast.op).toBe('*');
+      }
     });
   });
 });

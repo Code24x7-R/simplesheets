@@ -266,9 +266,9 @@ describe('useCellEditing - POINT state edge cases', () => {
     act(() => result.current.handleKey('U', false, false));
     act(() => result.current.handleKey('M', false, false));
     act(() => result.current.handleKey('(', false, false));
-    // Move to a cell (creates a range from anchor A1 to current B2)
-    act(() => result.current.handleKey('ArrowDown', false, false));
-    act(() => result.current.handleKey('ArrowRight', false, false));
+    // Move with shift to create a range from anchor A1 to current B2
+    act(() => result.current.handleKey('ArrowDown', true, false));
+    act(() => result.current.handleKey('ArrowRight', true, false));
     // Type ) to commit reference and close
     let keyResult!: KeyHandlingResult;
     act(() => { keyResult = result.current.handleKey(')', false, false); });
@@ -285,9 +285,9 @@ describe('useCellEditing - POINT state edge cases', () => {
     act(() => result.current.handleKey('U', false, false));
     act(() => result.current.handleKey('M', false, false));
     act(() => result.current.handleKey('(', false, false));
-    // Move to create a range (anchor ≠ current)
-    act(() => result.current.handleKey('ArrowDown', false, false));
-    act(() => result.current.handleKey('ArrowRight', false, false));
+    // Move with shift to create a range (anchor ≠ current)
+    act(() => result.current.handleKey('ArrowDown', true, false));
+    act(() => result.current.handleKey('ArrowRight', true, false));
     // Type : — anchor≠current so it's not single-cell duplication, falls through to operator commit
     let keyResult!: KeyHandlingResult;
     act(() => { keyResult = result.current.handleKey(':', false, false); });

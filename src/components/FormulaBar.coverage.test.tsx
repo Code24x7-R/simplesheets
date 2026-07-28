@@ -13,121 +13,6 @@ const defaultSession: EditingSession = {
   isFormula: false,
 };
 
-describe('FormulaBar - AutoComplete Navigation', () => {
-  const defaultProps: FormulaBarProps = {
-    session: { ...defaultSession, state: 'EDIT', buffer: '=S', isFormula: true },
-    pointSession: null,
-    value: '=S',
-    cursorPos: 2,
-    statusMessage: 'Edit',
-    onRawKeyDown: jest.fn(),
-    onRawChange: jest.fn(),
-    onRawFocus: jest.fn(),
-    onRawBlur: jest.fn(),
-    onRawCaretMove: jest.fn(),
-    onCellPick: jest.fn(),
-  };
-
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
-
-  it('navigates down in auto-complete with ArrowDown', () => {
-    const onRawKeyDown = jest.fn();
-    render(<FormulaBar {...defaultProps} onRawKeyDown={onRawKeyDown} value="=" session={{ ...defaultSession, state: 'EDIT', buffer: '=', isFormula: true }} cursorPos={1} />);
-    const input = screen.getByPlaceholderText(/Enter a value or formula/);
-
-    // Open auto-complete
-    act(() => {
-      fireEvent.focus(input);
-      fireEvent.change(input, { target: { value: '=S' } });
-    });
-
-    // Verify dropdown is open (SUM may appear in function bar too)
-    expect(screen.getAllByText('SUM').length).toBeGreaterThan(0);
-
-    // Navigate down
-    fireEvent.keyDown(input, { key: 'ArrowDown' });
-    expect(screen.getAllByText('SUM').length).toBeGreaterThan(0);
-  });
-
-  it('navigates up in auto-complete with ArrowUp', () => {
-    const onChange = jest.fn();
-    render(<FormulaBar {...defaultProps} value="=" onChange={onChange} />);
-    const input = screen.getByPlaceholderText(/Enter a value or formula/);
-
-    // Open auto-complete
-    act(() => {
-      fireEvent.focus(input);
-      fireEvent.change(input, { target: { value: '=S' } });
-    });
-
-    // Verify dropdown is open (SUM may appear in function bar too)
-    expect(screen.getAllByText('SUM').length).toBeGreaterThan(0);
-  });
-
-  it('accepts auto-complete with Tab', () => {
-    render(<FormulaBar {...defaultProps} value="=" />);
-    const input = screen.getByPlaceholderText(/Enter a value or formula/);
-
-    // Open auto-complete
-    act(() => {
-      fireEvent.focus(input);
-      fireEvent.change(input, { target: { value: '=S' } });
-    });
-
-    // Verify dropdown is open
-    expect(screen.getAllByText('SUM').length).toBeGreaterThan(0);
-
-    // Accept with Tab
-    fireEvent.keyDown(input, { key: 'Tab' });
-
-    // Auto-complete should close (check for dropdown specifically)
-    const dropdowns = document.querySelectorAll('[role="menu"]');
-    expect(dropdowns.length).toBe(0);
-  });
-
-  it('closes auto-complete with Escape', () => {
-    render(<FormulaBar {...defaultProps} value="=" />);
-    const input = screen.getByPlaceholderText(/Enter a value or formula/);
-
-    // Open auto-complete
-    act(() => {
-      fireEvent.focus(input);
-      fireEvent.change(input, { target: { value: '=S' } });
-    });
-
-    // Verify dropdown is open
-    expect(screen.getAllByText('SUM').length).toBeGreaterThan(0);
-
-    // Close with Escape
-    fireEvent.keyDown(input, { key: 'Escape' });
-
-    // Auto-complete should close (check for dropdown specifically)
-    const dropdowns = document.querySelectorAll('[role="menu"]');
-    expect(dropdowns.length).toBe(0);
-  });
-
-  it('opens auto-complete on click when editing a formula', () => {
-    render(<FormulaBar {...defaultProps} value="=" />);
-    const input = screen.getByPlaceholderText(/Enter a value or formula/);
-
-    // Open auto-complete
-    act(() => {
-      fireEvent.focus(input);
-      fireEvent.change(input, { target: { value: '=SU' } });
-    });
-
-    // Click should re-open auto-complete if closed
-    act(() => {
-      fireEvent.click(input);
-    });
-
-    // Auto-complete should be visible (SUM may appear in function bar too)
-    expect(screen.getAllByText('SUM').length).toBeGreaterThan(0);
-  });
-});
-
 describe('FormulaBar - Raw Key Handling', () => {
   const defaultProps: FormulaBarProps = {
     session: { ...defaultSession, state: 'EDIT', buffer: '=SUM(', isFormula: true },
@@ -141,6 +26,10 @@ describe('FormulaBar - Raw Key Handling', () => {
     onRawBlur: jest.fn(),
     onRawCaretMove: jest.fn(),
     onCellPick: jest.fn(),
+    autoComplete: { open: false, matches: [], index: 0, tokenStart: 0 },
+    onAcceptAutoComplete: jest.fn(),
+    onNavigateAutoComplete: jest.fn(),
+    onDismissAutoComplete: jest.fn(),
   };
 
   beforeEach(() => {
@@ -179,6 +68,10 @@ describe('FormulaBar - Escape Key', () => {
     onRawBlur: jest.fn(),
     onRawCaretMove: jest.fn(),
     onCellPick: jest.fn(),
+    autoComplete: { open: false, matches: [], index: 0, tokenStart: 0 },
+    onAcceptAutoComplete: jest.fn(),
+    onNavigateAutoComplete: jest.fn(),
+    onDismissAutoComplete: jest.fn(),
   };
 
   beforeEach(() => {
@@ -208,6 +101,10 @@ describe('FormulaBar - Formula Display Overlay', () => {
     onRawBlur: jest.fn(),
     onRawCaretMove: jest.fn(),
     onCellPick: jest.fn(),
+    autoComplete: { open: false, matches: [], index: 0, tokenStart: 0 },
+    onAcceptAutoComplete: jest.fn(),
+    onNavigateAutoComplete: jest.fn(),
+    onDismissAutoComplete: jest.fn(),
   };
 
   beforeEach(() => {
@@ -250,6 +147,10 @@ describe('FormulaBar - Error Display', () => {
     onRawBlur: jest.fn(),
     onRawCaretMove: jest.fn(),
     onCellPick: jest.fn(),
+    autoComplete: { open: false, matches: [], index: 0, tokenStart: 0 },
+    onAcceptAutoComplete: jest.fn(),
+    onNavigateAutoComplete: jest.fn(),
+    onDismissAutoComplete: jest.fn(),
   };
 
   beforeEach(() => {
@@ -292,6 +193,10 @@ describe('FormulaBar - Auto-Close Parentheses', () => {
     onRawBlur: jest.fn(),
     onRawCaretMove: jest.fn(),
     onCellPick: jest.fn(),
+    autoComplete: { open: false, matches: [], index: 0, tokenStart: 0 },
+    onAcceptAutoComplete: jest.fn(),
+    onNavigateAutoComplete: jest.fn(),
+    onDismissAutoComplete: jest.fn(),
   };
 
   beforeEach(() => {
@@ -324,6 +229,10 @@ describe('FormulaBar - AutoComplete Edge Cases', () => {
     onRawBlur: jest.fn(),
     onRawCaretMove: jest.fn(),
     onCellPick: jest.fn(),
+    autoComplete: { open: false, matches: [], index: 0, tokenStart: 0 },
+    onAcceptAutoComplete: jest.fn(),
+    onNavigateAutoComplete: jest.fn(),
+    onDismissAutoComplete: jest.fn(),
   };
 
   beforeEach(() => {
@@ -347,40 +256,6 @@ describe('FormulaBar - AutoComplete Edge Cases', () => {
   });
 });
 
-describe('FormulaBar - Function Bar', () => {
-  const defaultProps: FormulaBarProps = {
-    session: defaultSession,
-    pointSession: null,
-    value: '',
-    cursorPos: 0,
-    statusMessage: 'Ready',
-    onRawKeyDown: jest.fn(),
-    onRawChange: jest.fn(),
-    onRawFocus: jest.fn(),
-    onRawBlur: jest.fn(),
-    onRawCaretMove: jest.fn(),
-    onCellPick: jest.fn(),
-  };
-
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
-
-  it('renders function bar buttons', () => {
-    render(<FormulaBar {...defaultProps} />);
-    expect(screen.getByText('SUM')).toBeInTheDocument();
-    expect(screen.getByText('AVERAGE')).toBeInTheDocument();
-    expect(screen.getByText('IF')).toBeInTheDocument();
-  });
-
-  it('calls onInsertFunction when a function button is clicked', () => {
-    const onInsertFunction = jest.fn();
-    render(<FormulaBar {...defaultProps} onInsertFunction={onInsertFunction} />);
-    fireEvent.click(screen.getByText('SUM'));
-    expect(onInsertFunction).toHaveBeenCalledWith('SUM');
-  });
-});
-
 describe('FormulaBar - Focus transitions to EDIT mode', () => {
   const makeProps = (): FormulaBarProps => ({
     session: { ...defaultSession, state: 'SELECT' },
@@ -394,6 +269,10 @@ describe('FormulaBar - Focus transitions to EDIT mode', () => {
     onRawBlur: jest.fn(),
     onRawCaretMove: jest.fn(),
     onCellPick: jest.fn(),
+    autoComplete: { open: false, matches: [], index: 0, tokenStart: 0 },
+    onAcceptAutoComplete: jest.fn(),
+    onNavigateAutoComplete: jest.fn(),
+    onDismissAutoComplete: jest.fn(),
   });
 
   it('calls onRawFocus when focused in SELECT state', () => {

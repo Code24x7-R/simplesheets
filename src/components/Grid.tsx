@@ -6,8 +6,10 @@ import { cellKey, colToLetter } from '../types';
 import type { HighlightedRange } from './FormulaBar';
 import type { ReferenceFormat } from '../hooks/useReferenceFormat';
 import { ResizeHandle } from './ResizeHandle';
+import { FilterDropdown } from './FilterDropdown';
 import { formatNumberValue, isNumberFormat, isNumericValue } from '../utils/numberFormat';
 import { hasClipboardData } from '../utils/clipboard';
+import type { ColumnFilter } from '../utils/sheetFilter';
 import { HIGHLIGHT_COLORS, HIGHLIGHT_BORDER_COLORS } from '../utils/highlightColors';
 
 /** Point mode selection range (for visual feedback during formula editing). */
@@ -78,6 +80,27 @@ interface GridProps {
   onClearClipboard?: () => void;
   /** When true, display formulas instead of computed values (Ctrl + `). */
   showFormulas?: boolean;
+  /** Called when the cell editing value changes (for FormulaBar autocomplete). */
+  onCellEditChange?: (value: string) => void;
+  /** Called when a key is pressed during POINT mode in cell edit (for arrow key navigation).
+   * Returns the new buffer value if the FSM updated it (e.g., after arrow navigation
+   * or closing parenthesis), so the Grid can sync its editValue. */
+  onPointKeyDown?: (key: string, shiftKey: boolean, ctrlKey: boolean, altKey: boolean) => string | undefined;
+  /** Callback when the fill handle is dragged.
+   * Provides the source range (the selection being extended) and the target end cell.
+   * The parent computes the fill values based on pattern detection. */
+  onFillSeries?: (sourceStartRow: number, sourceStartCol: number, sourceEndRow: number, sourceEndCol: number, targetEndRow: number, targetEndCol: number) => void;
+  /** Filter state for auto-filter feature. */
+  filterState?: {
+    active: boolean;
+    headerRow: number;
+    filters: Record<number, ColumnFilter>;
+    hiddenRows: Set<number>;
+    totalDataRows: number;
+    visibleDataRows: number;
+  } | null;
+  /** Callback when a filter is applied to a column. */
+  onApplyFilter?: (column: number, filter: ColumnFilter | undefined) => void;
 }
 
 const ROW_WIDTH = 50; // Width of row number column
@@ -94,7 +117,7 @@ export interface GridHandle {
  * Supports 10,000+ rows with smooth scrolling.
  */
 export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
-  { sheet, onCellChange, onCellsChange, onSelect, selectedCell, highlightedRanges = [], isPointMode = false, pointSelection = null, onCellPick, onHeaderSelect, onSelectionChange, onColumnResize, onRowResize, referenceFormat = 'A1', onInsertRowAbove, onInsertRowBelow, onDeleteRow, onInsertColLeft, onInsertColRight, onDeleteCol, clipboardRange, onClearClipboard, showFormulas = false },
+  { sheet, onCellChange, onCellsChange, onSelect, selectedCell, highlightedRanges = [], isPointMode = false, pointSelection = null, onCellPick, onHeaderSelect, onSelectionChange, onColumnResize, onRowResize, referenceFormat = 'A1', onInsertRowAbove, onInsertRowBelow, onDeleteRow, onInsertColLeft, onInsertColRight, onDeleteCol, clipboardRange, onClearClipboard, showFormulas = false, onCellEditChange, onPointKeyDown, onFillSeries, filterState = null, onApplyFilter },
   ref
 ) {
   const parentRef = useRef<HTMLDivElement>(null);
@@ -120,6 +143,25 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
   const [isResizing, setIsResizing] = useState(false);
   // Hover tracking: which header the mouse is over (drives handle visibility).
   const [hoveredHeader, setHoveredHeader] = useState<{ type: 'col' | 'row'; index: number } | null>(null);
+
+  // ─── Fill handle drag state ──────────────────────────────────────────
+  // Tracks when the user is dragging the fill handle (blue square at selection corner).
+  const fillDragRef = useRef<{
+    startX: number;
+    startY: number;
+    sourceStartRow: number;
+    sourceStartCol: number;
+    sourceEndRow: number;
+    sourceEndCol: number;
+    targetEndRow: number;
+    targetEndCol: number;
+  } | null>(null);
+  // Force re-render during fill drag to update target range visual.
+  const [, forceFillRender] = useState(0);
+
+  // ─── Filter dropdown state ────────────────────────────────────────────
+  const [activeFilterColumn, setActiveFilterColumn] = useState<number | null>(null);
+  const [filterDropdownAnchor, setFilterDropdownAnchor] = useState<HTMLElement | null>(null);
 
   // ─── Header context menu state ──────────────────────────────────────────
   const [headerContextMenu, setHeaderContextMenu] = useState<{
@@ -213,12 +255,41 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
     [showFormulas]
   );
 
+  // ─── Filter row mapping ─────────────────────────────────────────────
+  // When filter is active, map display row index → actual row index
+  const visibleRowIndices = useMemo(() => {
+    if (!filterState?.active) return null;
+    const indices: number[] = [];
+    for (let r = filterState.headerRow + 1; r < rowCount; r++) {
+      if (!filterState.hiddenRows.has(r)) {
+        indices.push(r);
+      }
+    }
+    return indices;
+  }, [filterState, rowCount]);
+
+  // Get actual row index from display index (for filter mode)
+  const getActualRowIndex = useCallback((displayIndex: number): number => {
+    if (visibleRowIndices && displayIndex >= 0 && displayIndex < visibleRowIndices.length) {
+      return visibleRowIndices[displayIndex];
+    }
+    return displayIndex + filterState!.headerRow + 1;
+  }, [visibleRowIndices, filterState]);
+
+  // Total rows for virtualizer (header + visible data rows)
+  const virtualRowCount = visibleRowIndices ? filterState!.headerRow + 1 + visibleRowIndices.length : rowCount;
+
   // Row virtualizer — handles vertical scrolling
   /* istanbul ignore next - virtualizer is mocked in tests */
   const rowVirtualizer = useVirtualizer({
-    count: rowCount,
+    count: virtualRowCount,
     getScrollElement: () => parentRef.current,
-    estimateSize: (index) => rowHeights[index] ?? defaultRowHeight,
+    estimateSize: (index) => {
+      const actualIndex = visibleRowIndices && index > filterState!.headerRow
+        ? getActualRowIndex(index - filterState!.headerRow - 1)
+        : index;
+      return rowHeights[actualIndex] ?? defaultRowHeight;
+    },
     overscan: 5,
   });
 
@@ -435,6 +506,31 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
   );
 
   /**
+   * Opens the filter dropdown for a column.
+   */
+  const handleColumnFilterClick = useCallback((column: number, headerElement: HTMLElement) => {
+    setActiveFilterColumn(column);
+    setFilterDropdownAnchor(headerElement);
+  }, []);
+
+  /**
+   * Closes the filter dropdown.
+   */
+  const handleCloseFilterDropdown = useCallback(() => {
+    setActiveFilterColumn(null);
+    setFilterDropdownAnchor(null);
+  }, []);
+
+  /**
+   * Handles applying a filter from the dropdown.
+   */
+  const handleApplyFilter = useCallback((_filter: ColumnFilter | undefined) => {
+    // Parent component will update filterState via onApplyFilter callback
+    // We just close the dropdown here
+    handleCloseFilterDropdown();
+  }, [handleCloseFilterDropdown]);
+
+  /**
    * Opens the header context menu on right-click.
    */
   const handleHeaderContextMenu = useCallback(
@@ -474,8 +570,10 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
       const cell = cells[key];
       setEditingCell(key);
       setEditValue(cell?.rawValue ?? '');
+      // Update the active cell so the FSM uses the correct row/col for POINT mode
+      onSelect?.(row, col);
     },
-    [cells]
+    [cells, onSelect]
   );
 
   /**
@@ -557,6 +655,107 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
       return row >= minRow && row <= maxRow && col >= minCol && col <= maxCol;
     },
     [selection]
+  );
+
+  /**
+   * Determines if the current selection qualifies for a fill handle.
+   * Requires at least 3 contiguous cells in a row or column.
+   */
+  const getFillHandleInfo = useCallback((): { row: number; col: number; count: number; direction: 'horizontal' | 'vertical' } | null => {
+    if (!selection || selection.type !== 'cell') return null;
+    const minRow = Math.min(selection.startRow, selection.endRow);
+    const maxRow = Math.max(selection.startRow, selection.endRow);
+    const minCol = Math.min(selection.startCol, selection.endCol);
+    const maxCol = Math.max(selection.startCol, selection.endCol);
+    const colCount = maxCol - minCol + 1;
+    const rowCount = maxRow - minRow + 1;
+    // Need at least 3 cells in a line (either horizontal or vertical)
+    if (colCount >= 3 && rowCount === 1) {
+      return { row: maxRow, col: maxCol, count: colCount, direction: 'horizontal' };
+    }
+    if (rowCount >= 3 && colCount === 1) {
+      return { row: maxRow, col: maxCol, count: rowCount, direction: 'vertical' };
+    }
+    return null;
+  }, [selection]);
+
+  /**
+   * Handles fill handle mouse down — starts the drag operation.
+   */
+  const handleFillHandleMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!selection || selection.type !== 'cell' || !onFillSeries) return;
+      const minRow = Math.min(selection.startRow, selection.endRow);
+      const maxRow = Math.max(selection.startRow, selection.endRow);
+      const minCol = Math.min(selection.startCol, selection.endCol);
+      const maxCol = Math.max(selection.startCol, selection.endCol);
+      fillDragRef.current = {
+        startX: e.clientX,
+        startY: e.clientY,
+        sourceStartRow: minRow,
+        sourceStartCol: minCol,
+        sourceEndRow: maxRow,
+        sourceEndCol: maxCol,
+        targetEndRow: maxRow,
+        targetEndCol: maxCol,
+      };
+
+      const onMouseMove = (moveEvent: MouseEvent) => {
+        if (!fillDragRef.current) return;
+        const deltaX = moveEvent.clientX - fillDragRef.current.startX;
+        const deltaY = moveEvent.clientY - fillDragRef.current.startY;
+        const avgColWidth = sheet.defaultColWidth;
+        const avgRowHeight = sheet.defaultRowHeight;
+        const dCol = Math.round(deltaX / avgColWidth);
+        const dRow = Math.round(deltaY / avgRowHeight);
+        // Determine fill direction based on the larger delta
+        let targetEndRow = fillDragRef.current.sourceEndRow;
+        let targetEndCol = fillDragRef.current.sourceEndCol;
+        if (Math.abs(dRow) > Math.abs(dCol)) {
+          // Vertical fill
+          if (dRow > 0) {
+            targetEndRow = fillDragRef.current.sourceEndRow + dRow;
+          }
+        } else {
+          // Horizontal fill
+          if (dCol > 0) {
+            targetEndCol = fillDragRef.current.sourceEndCol + dCol;
+          }
+        }
+        // Clamp to sheet bounds
+        targetEndRow = Math.min(targetEndRow, sheet.rowCount - 1);
+        targetEndCol = Math.min(targetEndCol, sheet.columnCount - 1);
+        fillDragRef.current.targetEndRow = targetEndRow;
+        fillDragRef.current.targetEndCol = targetEndCol;
+        forceFillRender((n) => n + 1);
+      };
+
+      const onMouseUp = () => {
+        window.removeEventListener('mousemove', onMouseMove);
+        window.removeEventListener('mouseup', onMouseUp);
+        if (fillDragRef.current) {
+          const drag = fillDragRef.current;
+          // Only trigger if target is beyond source
+          if (drag.targetEndRow > drag.sourceEndRow || drag.targetEndCol > drag.sourceEndCol) {
+            onFillSeries(
+              drag.sourceStartRow,
+              drag.sourceStartCol,
+              drag.sourceEndRow,
+              drag.sourceEndCol,
+              drag.targetEndRow,
+              drag.targetEndCol
+            );
+          }
+        }
+        fillDragRef.current = null;
+      };
+
+      window.addEventListener('mousemove', onMouseMove);
+      window.addEventListener('mouseup', onMouseUp);
+    },
+    [selection, sheet.defaultColWidth, sheet.defaultRowHeight, sheet.rowCount, sheet.columnCount, onFillSeries]
   );
 
   /**
@@ -837,8 +1036,10 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
       const key = cellKey(row, col);
       setEditingCell(key);
       setEditValue(char);
+      // Notify parent so the FSM enters ENTER mode
+      onCellEditChange?.(char);
     },
-    [onClearClipboard]
+    [onClearClipboard, onCellEditChange]
   );
 
   /**
@@ -1023,19 +1224,58 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
         return;
       }
 
+      // Track scroll direction for Excel-like viewport positioning
+      // 'start' = cell at top/left edge (context below/right visible)
+      // 'end' = cell at bottom/right edge (context above/left visible)
+      // 'auto' = scroll minimally to show cell (for Home, Tab, etc.)
+      let rowAlign: 'auto' | 'start' | 'end' = 'auto';
+      let colAlign: 'auto' | 'start' | 'end' = 'auto';
+
       // Standard cell-range navigation
       switch (e.key) {
         case 'ArrowUp':
-          row = Math.max(0, row - 1);
+          if (e.ctrlKey) {
+            // Ctrl+Up: jump to first row with data in current column (or row 0)
+            row = findEdgeRow(sheet, row, col, 'up');
+            rowAlign = 'end'; // Cell at bottom edge, show context above
+          } else {
+            // Regular arrow: move one cell, no scroll if cell is visible
+            row = Math.max(0, row - 1);
+            rowAlign = 'auto';
+          }
           break;
         case 'ArrowDown':
-          row = Math.min(rowCount - 1, row + 1);
+          if (e.ctrlKey) {
+            // Ctrl+Down: jump to last row with data in current column (or max row)
+            row = findEdgeRow(sheet, row, col, 'down');
+            rowAlign = 'start'; // Cell at top edge, show context below
+          } else {
+            // Regular arrow: move one cell, no scroll if cell is visible
+            row = Math.min(rowCount - 1, row + 1);
+            rowAlign = 'auto';
+          }
           break;
         case 'ArrowLeft':
-          col = Math.max(0, col - 1);
+          if (e.ctrlKey) {
+            // Ctrl+Left: jump to first column with data in current row (or col 0)
+            col = findEdgeCol(sheet, row, col, 'left');
+            colAlign = 'end'; // Cell at right edge, show context to the left
+          } else {
+            // Regular arrow: move one cell, no scroll if cell is visible
+            col = Math.max(0, col - 1);
+            colAlign = 'auto';
+          }
           break;
         case 'ArrowRight':
-          col = Math.min(columnCount - 1, col + 1);
+          if (e.ctrlKey) {
+            // Ctrl+Right: jump to last column with data in current row (or max col)
+            col = findEdgeCol(sheet, row, col, 'right');
+            colAlign = 'start'; // Cell at left edge, show context to the right
+          } else {
+            // Regular arrow: move one cell, no scroll if cell is visible
+            col = Math.min(columnCount - 1, col + 1);
+            colAlign = 'auto';
+          }
           break;
         case 'Home':
           col = 0;
@@ -1133,8 +1373,11 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
       }
 
       // Scroll the edited cell into view
-      rowVirtualizer.scrollToIndex(row);
-      columnVirtualizer.scrollToIndex(col);
+      // For Ctrl+Arrow jumps, use Excel-like positioning:
+      // - Jumping down/right: cell at top/left edge (context below/right visible)
+      // - Jumping up/left: cell at bottom/right edge (context above/left visible)
+      rowVirtualizer.scrollToIndex(row, { align: rowAlign });
+      columnVirtualizer.scrollToIndex(col, { align: colAlign });
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [effectiveSelection, editingCell, rowCount, columnCount, handleCellSelect, handleCellEdit, handleCellEditWithChar, isPrintableKey, rowVirtualizer, columnVirtualizer, onSelect, onCellChange, onCellsChange, onClearClipboard]
@@ -1202,6 +1445,16 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
               onContextMenu={(e) => handleHeaderContextMenu('col', col, e)}
             >
               {referenceFormat === 'R1C1' ? String(col + 1) : colToLetter(col)}
+              {filterState?.active && (
+                <span
+                  className={`filter-indicator ${filterState.filters[col] ? 'active' : ''} ${colSelected ? 'selected' : ''}`}
+                  data-testid="filter-indicator"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleColumnFilterClick(col, e.currentTarget.parentElement as HTMLElement);
+                  }}
+                />
+              )}
               {onColumnResize && (
                 <ResizeHandle
                   orientation="column"
@@ -1219,58 +1472,63 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
 
       {/* Virtualized rows */}
       <div data-spacer style={{ height: totalHeight, width: totalWidth + ROW_WIDTH, position: 'relative' }}>
-        {virtualRows.map((virtualRow) => (
+        {virtualRows.map((virtualRow) => {
+          // Map display row index to actual row index (when filter is active)
+          const actualRowIndex = visibleRowIndices && virtualRow.index > filterState!.headerRow
+            ? getActualRowIndex(virtualRow.index - filterState!.headerRow - 1)
+            : virtualRow.index;
+          return (
           <div
             key={`row-${virtualRow.index}`}
-            data-row-container={virtualRow.index}
+            data-row-container={actualRowIndex}
             className="flex absolute"
             style={{
               top: virtualRow.start,
-              height: getRowHeight(virtualRow.index),
+              height: getRowHeight(actualRowIndex),
               width: totalWidth + ROW_WIDTH,
             }}
           >
             {/* Row number (sticky) */}
             <div
-              data-row-header={virtualRow.index}
+              data-row-header={actualRowIndex}
               className={`sticky left-0 z-10 grid-cell-header border-r border-b border-gray-300 cursor-pointer select-none ${
-                isRowHeaderSelected(virtualRow.index)
+                isRowHeaderSelected(actualRowIndex)
                   ? 'bg-blue-600 text-white'
                   : 'hover:bg-gray-200'
               }`}
               style={{
                 width: ROW_WIDTH,
                 minWidth: ROW_WIDTH,
-                height: getRowHeight(virtualRow.index),
-                ...(isRowFrozen(virtualRow.index) ? { top: defaultRowHeight + virtualRow.start, zIndex: 20 } : {}),
+                height: getRowHeight(actualRowIndex),
+                ...(isRowFrozen(actualRowIndex) ? { top: defaultRowHeight + virtualRow.start, zIndex: 20 } : {}),
               }}
-              onMouseEnter={() => setHoveredHeader({ type: 'row', index: virtualRow.index })}
+              onMouseEnter={() => setHoveredHeader({ type: 'row', index: actualRowIndex })}
               onMouseLeave={() => setHoveredHeader((prev) => (prev?.type === 'row' ? null : prev))}
               onMouseDown={(e) => {
                 if ((e.target as HTMLElement).closest('.resize-handle')) return;
-                handleRowHeaderClick(virtualRow.index, e.shiftKey);
+                handleRowHeaderClick(actualRowIndex, e.shiftKey);
               }}
-              onContextMenu={(e) => handleHeaderContextMenu('row', virtualRow.index, e)}
+              onContextMenu={(e) => handleHeaderContextMenu('row', actualRowIndex, e)}
             >
-              {virtualRow.index + 1}
+              {actualRowIndex + 1}
               {onRowResize && (
                 <ResizeHandle
                   orientation="row"
-                  currentSize={getRowHeight(virtualRow.index)}
+                  currentSize={getRowHeight(actualRowIndex)}
                   visible={
-                    (hoveredHeader?.type === 'row' && hoveredHeader.index === virtualRow.index) ||
-                    (isResizing && resizeDragRef.current?.type === 'row' && resizeDragRef.current?.index === virtualRow.index)
+                    (hoveredHeader?.type === 'row' && hoveredHeader.index === actualRowIndex) ||
+                    (isResizing && resizeDragRef.current?.type === 'row' && resizeDragRef.current?.index === actualRowIndex)
                   }
-                  onResizeStart={() => handleResizeStart('row', virtualRow.index, getRowHeight(virtualRow.index))}
-                  onResizeMove={(newHeight) => handleResizeMove('row', virtualRow.index, newHeight)}
-                  onResizeEnd={(newHeight) => handleResizeEnd('row', virtualRow.index, newHeight)}
+                  onResizeStart={() => handleResizeStart('row', actualRowIndex, getRowHeight(actualRowIndex))}
+                  onResizeMove={(newHeight) => handleResizeMove('row', actualRowIndex, newHeight)}
+                  onResizeEnd={(newHeight) => handleResizeEnd('row', actualRowIndex, newHeight)}
                 />
               )}
             </div>
 
             {/* Virtualized columns */}
             {virtualColumns.map((virtualCol) => {
-              const row = virtualRow.index;
+              const row = actualRowIndex;
               const col = virtualCol.index;
               const key = cellKey(row, col);
               const cell = cells[key];
@@ -1293,6 +1551,11 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
                 if (cell.style.backgroundColor) cellStyle.backgroundColor = cell.style.backgroundColor;
                 if (cell.style.textAlign) cellStyle.textAlign = cell.style.textAlign;
               }
+              // Apply border styles
+              if (cell?.style?.borderTop) cellStyle.borderTop = cell.style.borderTop;
+              if (cell?.style?.borderBottom) cellStyle.borderBottom = cell.style.borderBottom;
+              if (cell?.style?.borderLeft) cellStyle.borderLeft = cell.style.borderLeft;
+              if (cell?.style?.borderRight) cellStyle.borderRight = cell.style.borderRight;
               // Apply freeze pane styling (sticky positioning for frozen rows/columns)
               if (isCellFrozen(row, col)) {
                 cellStyle.position = 'sticky';
@@ -1363,7 +1626,10 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
                       autoFocus
                       className="w-full h-full outline-none bg-white border border-blue-500 px-1 font-mono text-sm"
                       value={editValue}
-                      onChange={(e) => setEditValue(e.target.value)}
+                      onChange={(e) => {
+                        setEditValue(e.target.value);
+                        onCellEditChange?.(e.target.value);
+                      }}
                       onPaste={(e) => {
                         // When editing, always intercept paste and insert at cursor
                         // to prevent the native behavior of replacing all text
@@ -1375,10 +1641,46 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
                       }}
                       onBlur={commitEdit}
                       onKeyDown={(e) => {
+                        // ── POINT mode: forward keys to FSM ────────────────────
+                        // When pointing at cells for a formula, ALL keys except
+                        // Enter/Tab (commit+navigate) and Escape (cancel) should
+                        // go to the FSM for POINT mode processing.
+                        if (isPointMode && onPointKeyDown) {
+                          // Enter and Tab commit the reference and navigate
+                          // Escape cancels POINT mode
+                          // All other keys (arrows, ), :, ,, operators, etc.) go to FSM
+                          if (e.key === 'Enter' || e.key === 'Tab') {
+                            // Let the native handler below commit and navigate
+                          } else if (e.key === 'Escape') {
+                            // Let the native handler below cancel
+                          } else {
+                            e.preventDefault();
+                            const newBuffer = onPointKeyDown(e.key, e.shiftKey, e.ctrlKey, e.altKey);
+                            // Sync FSM buffer back to Grid's editValue
+                            if (newBuffer !== undefined) {
+                              setEditValue(newBuffer);
+                            }
+                            return;
+                          }
+                        }
                         if ((e.ctrlKey || e.metaKey) && (e.key === 'a' || e.key === 'A')) {
                           // Ctrl+A: select all text in the cell
                           e.preventDefault();
                           e.currentTarget.select();
+                        } else if (e.key === 'Enter' && e.altKey) {
+                          // Alt+Enter: insert line break at cursor
+                          e.preventDefault();
+                          const input = e.currentTarget;
+                          const selStart = input.selectionStart ?? editValue.length;
+                          const selEnd = input.selectionEnd ?? editValue.length;
+                          const newValue = editValue.slice(0, selStart) + '\n' + editValue.slice(selEnd);
+                          setEditValue(newValue);
+                          // Sync to FSM via onCellEditChange
+                          onCellEditChange?.(newValue);
+                          // Move cursor after the newline
+                          requestAnimationFrame(() => {
+                            input.setSelectionRange(selStart + 1, selStart + 1);
+                          });
                         } else if (e.key === 'Enter') {
                           e.preventDefault();
                           commitEdit();
@@ -1430,7 +1732,7 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
               );
             })}
           </div>
-        ))}
+        );})}
       </div>
 
       {/* ─── POINT Mode Range Resize Handles (Spec §3.3.2, §4.2) ─────────── */}
@@ -1450,6 +1752,88 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
           }}
         />
       )}
+
+      {/* Fill handle — small blue square at selection bottom-right corner */}
+      {(() => {
+        const fillInfo = getFillHandleInfo();
+        if (!fillInfo) return null;
+        const handleRow = fillDragRef.current ? fillDragRef.current.targetEndRow : fillInfo.row;
+        const handleCol = fillDragRef.current ? fillDragRef.current.targetEndCol : fillInfo.col;
+        const pos = getCellPixelPosition(handleRow, handleCol, sheet, rowVirtualizer, columnVirtualizer);
+        if (!pos) return null;
+        return (
+          <div
+            data-testid="fill-handle"
+            className="fill-handle"
+            onMouseDown={handleFillHandleMouseDown}
+            style={{
+              position: 'absolute',
+              top: pos.top + pos.height - 4,
+              left: pos.left + pos.width - 4,
+              width: 8,
+              height: 8,
+              zIndex: 25,
+            }}
+          />
+        );
+      })()}
+
+      {/* Fill target range visual feedback */}
+      {fillDragRef.current && (() => {
+        const drag = fillDragRef.current;
+        // Only show preview if target extends beyond source
+        if (drag.targetEndRow <= drag.sourceEndRow && drag.targetEndCol <= drag.sourceEndCol) return null;
+        // Determine the range of cells to highlight (only the NEW cells beyond source)
+        const isVerticalFill = drag.targetEndRow > drag.sourceEndRow;
+        const isHorizontalFill = drag.targetEndCol > drag.sourceEndCol;
+        const previewCells: Array<{ row: number; col: number }> = [];
+        if (isVerticalFill) {
+          // Vertical fill: highlight rows below source, same columns as source
+          for (let r = drag.sourceEndRow + 1; r <= drag.targetEndRow; r++) {
+            for (let c = drag.sourceStartCol; c <= drag.sourceEndCol; c++) {
+              previewCells.push({ row: r, col: c });
+            }
+          }
+        }
+        if (isHorizontalFill) {
+          // Horizontal fill: highlight columns right of source, same rows as source
+          for (let c = drag.sourceEndCol + 1; c <= drag.targetEndCol; c++) {
+            for (let r = drag.sourceStartRow; r <= drag.sourceEndRow; r++) {
+              previewCells.push({ row: r, col: c });
+            }
+          }
+        }
+        return (
+          <div
+            style={{
+              position: 'absolute',
+              top: defaultRowHeight,
+              left: 0,
+              pointerEvents: 'none',
+              zIndex: 5,
+            }}
+          >
+            {previewCells.map(({ row, col }) => {
+              const cellPos = getCellPixelPosition(row, col, sheet, rowVirtualizer, columnVirtualizer);
+              if (!cellPos) return null;
+              return (
+                <div
+                  key={`fill-preview-${row}-${col}`}
+                  style={{
+                    position: 'absolute',
+                    top: cellPos.top,
+                    left: cellPos.left,
+                    width: cellPos.width,
+                    height: cellPos.height,
+                    backgroundColor: 'rgba(37, 99, 235, 0.15)',
+                    border: '1px dashed #2563eb',
+                  }}
+                />
+              );
+            })}
+          </div>
+        );
+      })()}
 
       {/* Header context menu — rendered via portal to escape overflow clipping */}
       {headerContextMenu &&
@@ -1535,6 +1919,23 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
             )}
           </div>,
           document.body,
+        )}
+
+      {/* Filter dropdown — rendered via portal */}
+      {filterState?.active && activeFilterColumn !== null && filterDropdownAnchor &&
+        createPortal(
+          <FilterDropdown
+            sheet={sheet}
+            column={activeFilterColumn}
+            headerRow={filterState.headerRow}
+            currentFilter={filterState.filters[activeFilterColumn]}
+            onApply={(filter) => {
+              onApplyFilter?.(activeFilterColumn, filter);
+              handleApplyFilter(filter);
+            }}
+            onClose={handleCloseFilterDropdown}
+          />,
+          filterDropdownAnchor,
         )}
     </div>
   );
@@ -1701,4 +2102,172 @@ function PointResizeHandles({
       ))}
     </>
   );
+}
+
+/**
+ * Finds the edge row with data in the current column when navigating up/down.
+ * Jumps to the last contiguous cell with a value (Excel behavior).
+ *
+ * Ctrl+Down: If current cell has data, jumps to the last cell in the contiguous
+ *            block of data. If current cell is empty, jumps to the next row with data.
+ * Ctrl+Up:   If current cell has data, jumps to the first cell in the contiguous
+ *            block of data. If current cell is empty, jumps to the previous row with data.
+ */
+function findEdgeRow(
+  sheet: Sheet,
+  currentRow: number,
+  col: number,
+  direction: 'up' | 'down'
+): number {
+  const rowCount = sheet.rowCount;
+  const currentCellHasData = !!sheet.cells[cellKey(currentRow, col)];
+
+  if (direction === 'down') {
+    if (currentCellHasData) {
+      // Current cell has data: find the last contiguous row with data
+      let lastDataRow = currentRow;
+      for (let r = currentRow + 1; r < rowCount; r++) {
+        if (sheet.cells[cellKey(r, col)]) {
+          lastDataRow = r;
+        } else {
+          break; // Stop at first empty cell
+        }
+      }
+      // If we're already at the end of contiguous block, jump to next data after gap
+      if (lastDataRow === currentRow) {
+        for (let r = currentRow + 1; r < rowCount; r++) {
+          if (sheet.cells[cellKey(r, col)]) {
+            return r;
+          }
+        }
+        // No data found below, jump to bottom edge
+        return rowCount - 1;
+      }
+      return lastDataRow;
+    } else {
+      // Current cell is empty: find the next row with data
+      for (let r = currentRow + 1; r < rowCount; r++) {
+        if (sheet.cells[cellKey(r, col)]) {
+          return r;
+        }
+      }
+      return rowCount - 1; // No data found, go to bottom
+    }
+  } else {
+    // direction === 'up'
+    if (currentCellHasData) {
+      // Current cell has data: find the first contiguous row with data
+      let firstDataRow = currentRow;
+      for (let r = currentRow - 1; r >= 0; r--) {
+        if (sheet.cells[cellKey(r, col)]) {
+          firstDataRow = r;
+        } else {
+          break; // Stop at first empty cell
+        }
+      }
+      // If we're already at the start of contiguous block, jump to previous data before gap
+      if (firstDataRow === currentRow) {
+        for (let r = currentRow - 1; r >= 0; r--) {
+          if (sheet.cells[cellKey(r, col)]) {
+            return r;
+          }
+        }
+        // No data found above, jump to top edge
+        return 0;
+      }
+      return firstDataRow;
+    } else {
+      // Current cell is empty: find the previous row with data
+      for (let r = currentRow - 1; r >= 0; r--) {
+        if (sheet.cells[cellKey(r, col)]) {
+          return r;
+        }
+      }
+      return 0; // No data found, go to top
+    }
+  }
+}
+
+/**
+ * Finds the edge column with data in the current row when navigating left/right.
+ * Jumps to the last contiguous cell with a value (Excel behavior).
+ *
+ * Ctrl+Right: If current cell has data, jumps to the last cell in the contiguous
+ *             block of data. If current cell is empty, jumps to the next cell with data.
+ * Ctrl+Left:  If current cell has data, jumps to the first cell in the contiguous
+ *             block of data. If current cell is empty, jumps to the previous cell with data.
+ */
+function findEdgeCol(
+  sheet: Sheet,
+  row: number,
+  currentCol: number,
+  direction: 'left' | 'right'
+): number {
+  const colCount = sheet.columnCount;
+  const currentCellHasData = !!sheet.cells[cellKey(row, currentCol)];
+
+  if (direction === 'right') {
+    if (currentCellHasData) {
+      // Current cell has data: find the last contiguous cell with data
+      let lastDataCol = currentCol;
+      for (let c = currentCol + 1; c < colCount; c++) {
+        if (sheet.cells[cellKey(row, c)]) {
+          lastDataCol = c;
+        } else {
+          break; // Stop at first empty cell
+        }
+      }
+      // If we're already at the end of contiguous block, jump to next data after gap
+      if (lastDataCol === currentCol) {
+        for (let c = currentCol + 1; c < colCount; c++) {
+          if (sheet.cells[cellKey(row, c)]) {
+            return c;
+          }
+        }
+        // No data found to the right, jump to right edge
+        return colCount - 1;
+      }
+      return lastDataCol;
+    } else {
+      // Current cell is empty: find the next cell with data
+      for (let c = currentCol + 1; c < colCount; c++) {
+        if (sheet.cells[cellKey(row, c)]) {
+          return c;
+        }
+      }
+      return colCount - 1; // No data found, go to right edge
+    }
+  } else {
+    // direction === 'left'
+    if (currentCellHasData) {
+      // Current cell has data: find the first contiguous cell with data
+      let firstDataCol = currentCol;
+      for (let c = currentCol - 1; c >= 0; c--) {
+        if (sheet.cells[cellKey(row, c)]) {
+          firstDataCol = c;
+        } else {
+          break; // Stop at first empty cell
+        }
+      }
+      // If we're already at the start of contiguous block, jump to previous data before gap
+      if (firstDataCol === currentCol) {
+        for (let c = currentCol - 1; c >= 0; c--) {
+          if (sheet.cells[cellKey(row, c)]) {
+            return c;
+          }
+        }
+        // No data found to the left, jump to left edge
+        return 0;
+      }
+      return firstDataCol;
+    } else {
+      // Current cell is empty: find the previous cell with data
+      for (let c = currentCol - 1; c >= 0; c--) {
+        if (sheet.cells[cellKey(row, c)]) {
+          return c;
+        }
+      }
+      return 0; // No data found, go to left edge
+    }
+  }
 }

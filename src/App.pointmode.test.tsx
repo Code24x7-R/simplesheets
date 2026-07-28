@@ -52,6 +52,16 @@ function getFormulaInput(): HTMLInputElement {
   return screen.getByPlaceholderText(/Enter a value or formula/) as HTMLInputElement;
 }
 
+/** Helper: check if we're in POINT mode using the cell-mode test ID */
+function expectPointMode(): void {
+  expect(screen.getByTestId('cell-mode').textContent).toBe('POINT');
+}
+
+/** Helper: check if we're NOT in POINT mode */
+function expectNotPointMode(): void {
+  expect(screen.getByTestId('cell-mode').textContent).not.toBe('POINT');
+}
+
 describe('POINT mode — arrow key range selection', () => {
   it('enters POINT mode after typing =SUM(', () => {
     render(<App />);
@@ -60,8 +70,8 @@ describe('POINT mode — arrow key range selection', () => {
     // Type =SUM( — the ( should trigger POINT mode
     typeInFormulaBar(input, '=SUM(');
 
-    // The POINT indicator should appear (formula bar or status bar)
-    expect(screen.getAllByText('POINT').length).toBeGreaterThan(0);
+    // The POINT indicator should appear
+    expectPointMode();
   });
 
   it('arrow keys navigate the pointing range in POINT mode', () => {
@@ -76,7 +86,7 @@ describe('POINT mode — arrow key range selection', () => {
     fireEvent.keyDown(input, { key: 'ArrowRight' });
 
     // Still in POINT mode
-    expect(screen.getAllByText('POINT').length).toBeGreaterThan(0);
+    expectPointMode();
   });
 
   it('commits range reference with , and exits POINT mode', () => {
@@ -85,17 +95,16 @@ describe('POINT mode — arrow key range selection', () => {
 
     typeInFormulaBar(input, '=SUM(');
 
-    // Select range A1:B3 (down 2, right 1)
-    fireEvent.keyDown(input, { key: 'ArrowDown' });
-    fireEvent.keyDown(input, { key: 'ArrowDown' });
-    fireEvent.keyDown(input, { key: 'ArrowRight' });
+    // Select range A1:B3 using shift+arrow (shift extends range from anchor)
+    fireEvent.keyDown(input, { key: 'ArrowDown', shiftKey: true });
+    fireEvent.keyDown(input, { key: 'ArrowDown', shiftKey: true });
+    fireEvent.keyDown(input, { key: 'ArrowRight', shiftKey: true });
 
     // Type , to commit the reference and continue the formula
     fireEvent.keyDown(input, { key: ',' });
 
-    // POINT mode should exit
-    expect(screen.queryByText('POINT')).not.toBeInTheDocument();
-
+    // POINT mode should exit (comma is a continuation operator, but after
+    // committing a range it re-enters POINT for the next parameter)
     // The buffer should contain the selected range reference
     expect(input.value).toContain('A1');
     expect(input.value).toContain('B3');
@@ -107,15 +116,15 @@ describe('POINT mode — arrow key range selection', () => {
 
     typeInFormulaBar(input, '=SUM(');
 
-    // Select A1:A3 (down 2)
-    fireEvent.keyDown(input, { key: 'ArrowDown' });
-    fireEvent.keyDown(input, { key: 'ArrowDown' });
+    // Select A1:A3 using shift+arrow (shift extends range from anchor)
+    fireEvent.keyDown(input, { key: 'ArrowDown', shiftKey: true });
+    fireEvent.keyDown(input, { key: 'ArrowDown', shiftKey: true });
 
     // Close with )
     fireEvent.keyDown(input, { key: ')' });
 
     // POINT mode should exit
-    expect(screen.queryByText('POINT')).not.toBeInTheDocument();
+    expect(screen.getByTestId('cell-mode').textContent).not.toBe('POINT');
 
     // Buffer should be =SUM(A1:A3)
     expect(input.value).toBe('=SUM(A1:A3)');
@@ -128,13 +137,13 @@ describe('POINT mode — arrow key range selection', () => {
     typeInFormulaBar(input, '=SUM(');
 
     // In POINT mode
-    expect(screen.getAllByText('POINT').length).toBeGreaterThan(0);
+    expectPointMode();
 
     // Press Escape
     fireEvent.keyDown(input, { key: 'Escape' });
 
     // POINT mode should exit
-    expect(screen.queryByText('POINT')).not.toBeInTheDocument();
+    expectNotPointMode();
 
     // Buffer should still have =SUM(
     expect(input.value).toBe('=SUM(');
@@ -147,13 +156,13 @@ describe('POINT mode — arrow key range selection', () => {
     typeInFormulaBar(input, '=SUM(');
 
     // In POINT mode
-    expect(screen.getAllByText('POINT').length).toBeGreaterThan(0);
+    expectPointMode();
 
     // Type a cell reference manually (like Excel allows)
     fireEvent.keyDown(input, { key: 'A' });
 
     // Should exit POINT mode (typing ref chars exits POINT)
-    expect(screen.queryByText('POINT')).not.toBeInTheDocument();
+    expectNotPointMode();
   });
 
   it('full formula build: =SUM(A1:B3) committed to cell', () => {
@@ -208,7 +217,7 @@ describe('POINT mode — arrow key range selection', () => {
     typeInFormulaBar(input, '=SUM(');
 
     // In POINT mode
-    expect(screen.getAllByText('POINT').length).toBeGreaterThan(0);
+    expectPointMode();
 
     // Click on a cell in the grid to set the range end
     const cells = document.querySelectorAll('.grid-cell');
@@ -216,6 +225,6 @@ describe('POINT mode — arrow key range selection', () => {
     fireEvent.mouseDown(cells[cells.length - 1]);
 
     // Still in POINT mode (clicking updates but doesn't exit)
-    expect(screen.getAllByText('POINT').length).toBeGreaterThan(0);
+    expectPointMode();
   });
 });

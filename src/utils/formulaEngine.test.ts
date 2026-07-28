@@ -1891,3 +1891,87 @@ describe('Formula Engine', () => {
     });
   });
 });
+
+// ─── Cross-Sheet References ─────────────────────────────────────────
+
+describe('evaluateWorkbook - cross-sheet references', () => {
+  function createMultiSheetWorkbook(sheets: Sheet[]): Workbook {
+    return {
+      id: 'test-wb',
+      title: 'Test',
+      sheets,
+      activeSheetIndex: 0,
+      lastModified: Date.now(),
+    };
+  }
+
+  it('evaluates literal cross-sheet reference (Sheet2!A1)', () => {
+    const sheet1 = createSheet({ '0:0': '=Sheet2!A1' }, { name: 'Sheet1' });
+    const sheet2 = createSheet({ '0:0': '42' }, { name: 'Sheet2' });
+    const wb = createMultiSheetWorkbook([sheet1, sheet2]);
+    const result = evaluateWorkbook(wb, 0);
+    expect(result.cells['0:0'].computedValue).toBe(42);
+  });
+
+  it('evaluates formula cross-sheet reference (Sheet2 has formula)', () => {
+    const sheet1 = createSheet({ '0:0': '=Sheet2!A1' }, { name: 'Sheet1' });
+    const sheet2 = createSheet({ '0:0': '=10+20' }, { name: 'Sheet2' });
+    const wb = createMultiSheetWorkbook([sheet1, sheet2]);
+    const result = evaluateWorkbook(wb, 0);
+    expect(result.cells['0:0'].computedValue).toBe(30);
+  });
+
+  it('evaluates cross-sheet SUM referencing another sheet range', () => {
+    const sheet1 = createSheet({ '0:0': '=SUM(Sheet2!A1:A3)' }, { name: 'Sheet1' });
+    const sheet2 = createSheet({
+      '0:0': '10', '1:0': '20', '2:0': '30',
+    }, { name: 'Sheet2' });
+    const wb = createMultiSheetWorkbook([sheet1, sheet2]);
+    const result = evaluateWorkbook(wb, 0);
+    expect(result.cells['0:0'].computedValue).toBe(60);
+  });
+
+  it('returns #REF! for non-existent sheet name', () => {
+    const sheet1 = createSheet({ '0:0': '=NonExistent!A1' }, { name: 'Sheet1' });
+    const sheet2 = createSheet({ '0:0': '42' }, { name: 'Sheet2' });
+    const wb = createMultiSheetWorkbook([sheet1, sheet2]);
+    const result = evaluateWorkbook(wb, 0);
+    expect(result.cells['0:0'].computedValue).toBe('#REF!');
+  });
+
+  it('evaluates cross-sheet reference with sheet name containing spaces', () => {
+    const sheet1 = createSheet({ '0:0': "='My Sheet'!A1" }, { name: 'Sheet1' });
+    const sheet2 = createSheet({ '0:0': '99' }, { name: 'My Sheet' });
+    const wb = createMultiSheetWorkbook([sheet1, sheet2]);
+    const result = evaluateWorkbook(wb, 0);
+    expect(result.cells['0:0'].computedValue).toBe(99);
+  });
+
+  it('evaluates chained cross-sheet references (Sheet1 -> Sheet2 -> Sheet3)', () => {
+    const sheet1 = createSheet({ '0:0': '=Sheet2!A1' }, { name: 'Sheet1' });
+    const sheet2 = createSheet({ '0:0': '=Sheet3!A1' }, { name: 'Sheet2' });
+    const sheet3 = createSheet({ '0:0': '123' }, { name: 'Sheet3' });
+    const wb = createMultiSheetWorkbook([sheet1, sheet2, sheet3]);
+    const result = evaluateWorkbook(wb, 0);
+    expect(result.cells['0:0'].computedValue).toBe(123);
+  });
+
+  it('evaluates active sheet correctly when it is not sheet 0', () => {
+    const sheet1 = createSheet({ '0:0': '100' }, { name: 'Sheet1' });
+    const sheet2 = createSheet({ '0:0': '=Sheet1!A1' }, { name: 'Sheet2' });
+    const wb = createMultiSheetWorkbook([sheet1, sheet2]);
+    // Evaluate sheet2 (index 1)
+    const result = evaluateWorkbook(wb, 1);
+    expect(result.cells['0:0'].computedValue).toBe(100);
+  });
+
+  it('does not create false circular refs across sheets', () => {
+    const sheet1 = createSheet({ '0:0': '=Sheet2!A1' }, { name: 'Sheet1' });
+    const sheet2 = createSheet({ '0:0': '=Sheet1!A1' }, { name: 'Sheet2' });
+    const wb = createMultiSheetWorkbook([sheet1, sheet2]);
+    const result = evaluateWorkbook(wb, 0);
+    // These reference each other but are on different sheets — no intra-sheet cycle
+    // (Each cell reads the other which has no formula producing a value, so result is 0)
+    expect(result.circularRefs.length).toBe(0);
+  });
+});

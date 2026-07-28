@@ -8,8 +8,9 @@
  * the Grid (in-cell editing) and FormulaBar components.
  */
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { colToLetter } from '../types';
+import { searchFunctions, type FunctionInfo } from '../utils/formulaAutocomplete';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // State Machine Types
@@ -107,6 +108,18 @@ const POINT_TRIGGER_CHARS = new Set([
   '=', '(', ',', ':', '+', '-', '*', '/', '^', '&', '>', '<',
 ]);
 
+/**
+ * Operators that continue POINT mode after committing a reference.
+ * These are parameter separators (,) and binary operators (+, -, *, /, etc.)
+ * that indicate the formula is continuing — the user needs to navigate to
+ * the next cell reference.
+ *
+ * Excludes ')' (closes function → EDIT) and ':' (range operator → special handling).
+ */
+const POINT_CONTINUATION_CHARS = new Set([
+  '(', ',', '+', '-', '*', '/', '^', '&', '>', '<',
+]);
+
 /** Separator characters (structural + operators). */
 const SEPARATOR_CHARS = new Set([
   '=', '(', ',', ':', '{', ';', '+', '-', '*', '/', '^', '&', '>', '<',
@@ -137,6 +150,11 @@ export function shouldActivatePointMode(buffer: string, caretPos: number): boole
   if (textBeforeCaret.length === 0) return false;
 
   const lastChar = textBeforeCaret[textBeforeCaret.length - 1];
+
+  // '=' is only a trigger when used as an operator (e.g., =+A1), not when
+  // it's the first character starting a formula (caretPos === 1).
+  if (lastChar === '=' && caretPos <= 1) return false;
+
   return POINT_TRIGGER_CHARS.has(lastChar);
 }
 
@@ -181,7 +199,10 @@ function parseRefType(ref: string): RefType {
   return 'relative'; // A1
 }
 
-/** Cycles a cell reference to the next F4 state. */
+/** Cycles a single cell reference to the next F4 state.
+ *
+ * Cycle order: A1 → $A$1 → A$1 → $A1 → A1
+ */
 export function cycleReference(ref: string): string {
   // Extract row/col from the reference
   const match = ref.match(/^\$?([A-Za-z]+)\$?(\d+)$/);
@@ -204,6 +225,65 @@ export function cycleReference(ref: string): string {
   const nextType = F4_CYCLE_ORDER[(currentIdx + 1) % F4_CYCLE_ORDER.length];
 
   return formatRef(row, col, nextType);
+}
+
+/** Result of cycling one endpoint within a range token. */
+interface RangeCycleResult {
+  /** The new range token string. */
+  token: string;
+  /** The new caret offset within the range token (relative to token start).
+   *  This keeps the caret within the same endpoint so repeated F4 presses
+   *  keep cycling that endpoint. */
+  caretOffset: number;
+}
+
+/** Cycles ONE endpoint within a range token, chosen by caret offset.
+ *
+ * For a range like A1:B5, F4 cycles a single endpoint at a time:
+ *   A1:B5 → $A$1:B5 → A$1:B5 → $A1:B5 → A1:B5 (first endpoint done)
+ *   → A1:$B$5 → A1:B$5 → A1:$B5 → A1:B5 (second endpoint done)
+ *
+ * The `caretOffset` is the caret position relative to the start of the
+ * range token in the buffer.  The function determines which endpoint the
+ * caret is in and cycles only that endpoint through its 4 states.
+ *
+ * Returns null if the token is not a valid range or no endpoint found.
+ */
+export function cycleRangeRef(
+  rangeToken: string,
+  caretOffset: number,
+): RangeCycleResult | null {
+  const colonIdx = rangeToken.indexOf(':');
+  if (colonIdx === -1) return null;
+
+  const first = rangeToken.slice(0, colonIdx);
+  const second = rangeToken.slice(colonIdx + 1);
+
+  // Validate both endpoints are cell refs
+  if (!/^\$?[A-Za-z]+\$?\d+$/.test(first) || !/^\$?[A-Za-z]+\$?\d+$/.test(second)) {
+    return null;
+  }
+
+  // Determine which endpoint the caret is in/adjacent-to
+  // caretOffset is relative to the start of the range token
+  const firstLen = first.length; // e.g. "A1" = 2
+  // The first endpoint spans [0, firstLen], the colon is at firstLen,
+  // the second endpoint spans [firstLen+1, firstLen+1+second.length]
+  const inFirst = caretOffset <= firstLen;
+
+  if (inFirst) {
+    const cycled = cycleReference(first);
+    return {
+      token: cycled + ':' + second,
+      caretOffset: Math.min(caretOffset, cycled.length),
+    };
+  } else {
+    const cycled = cycleReference(second);
+    return {
+      token: first + ':' + cycled,
+      caretOffset: colonIdx + 1 + Math.min(caretOffset - colonIdx - 1, cycled.length),
+    };
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -294,12 +374,35 @@ interface UseCellEditingReturn {
   setCaretPos: (caretPosition: number) => void;
   /** Set buffer content and caret position (for paste operations). */
   setBuffer: (buffer: string, caretPos: number) => void;
+  /** Enter POINT mode from the current session state (e.g., after autocomplete inserts "=SUM(").
+   * @param caretPos - The caret position for insertPos. If not provided, uses the current session's caretPos.
+   * @param buffer - The buffer to use for trigger detection. If not provided, uses sessionRef.current.buffer.
+   *   Pass this when calling immediately after setBuffer to avoid stale ref values.
+   */
+  enterPointMode: (caretPos?: number, buffer?: string) => void;
   /** Commit the current buffer and transition to SELECT. */
   commit: (moveDirection?: { dRow: number; dCol: number }) => void;
   /** Cancel editing and restore original value. */
   cancel: () => void;
   /** Reset to SELECT state (e.g., on cell navigation). */
   reset: () => void;
+  /** Auto-complete state derived from the current buffer and caret position. */
+  autoComplete: {
+    /** Whether the auto-complete dropdown is open. */
+    open: boolean;
+    /** Matched function suggestions. */
+    matches: FunctionInfo[];
+    /** Currently selected index in the matches list. */
+    index: number;
+    /** Display start position of the function token being completed. */
+    tokenStart: number;
+  };
+  /** Accept the auto-complete suggestion at the given index. */
+  acceptAutoComplete: (index: number) => void;
+  /** Navigate the auto-complete selection by delta (+1 = down, -1 = up). */
+  navigateAutoComplete: (delta: number) => void;
+  /** Dismiss the auto-complete dropdown without accepting. */
+  dismissAutoComplete: () => void;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -325,13 +428,65 @@ export function useCellEditing({
     isFormula: false,
   });
 
-  const [pointSession, setPointSession] = useState<PointSession | null>(null);
+  const [pointSession, setPointSessionState] = useState<PointSession | null>(null);
+
+  // ─── Auto-complete state (driven by session.buffer + caret via sync effect) ───
+  const [autoCompleteOpen, setAutoCompleteOpen] = useState(false);
+  const [autoCompleteMatches, setAutoCompleteMatches] = useState<FunctionInfo[]>([]);
+  const [autoCompleteIndex, setAutoCompleteIndex] = useState(0);
+  const [autoCompleteTokenStart, setAutoCompleteTokenStart] = useState(0);
 
   // Refs for latest values (to avoid stale closures)
   const sessionRef = useRef(session);
   sessionRef.current = session;
   const pointRef = useRef(pointSession);
   pointRef.current = pointSession;
+
+  // Immediate setter for pointSession that also updates the ref
+  // This avoids stale ref values when multiple keys are processed in succession
+  const setPointSession = useCallback((newPs: PointSession | null) => {
+    setPointSessionState(newPs);
+    pointRef.current = newPs;
+  }, []);
+
+  // ─── Auto-complete state sync ─────────────────────────────────────────
+  /**
+   * Computes and applies auto-complete state from the current buffer, caret,
+   * and FSM state. Called after any buffer-changing operation so the
+   * auto-complete dropdown stays in sync with the editing session.
+   */
+  const syncAutoComplete = useCallback((buffer: string, caretPos: number, state: EditingState) => {
+    // Only show autocomplete while actively editing text (not pointing at cells)
+    if (state !== 'ENTER' && state !== 'EDIT') {
+      setAutoCompleteOpen(false);
+      return;
+    }
+    if (!buffer.startsWith('=')) {
+      setAutoCompleteOpen(false);
+      return;
+    }
+    const searchPos = Math.max(caretPos, 1);
+    const result = findFunctionToken(buffer, searchPos);
+    if (!result || result.token.length === 0) {
+      setAutoCompleteOpen(false);
+      return;
+    }
+    const matches = searchFunctions(result.token);
+    if (matches.length === 0) {
+      setAutoCompleteOpen(false);
+      return;
+    }
+    setAutoCompleteMatches(matches);
+    setAutoCompleteIndex(0);
+    setAutoCompleteTokenStart(result.start);
+    setAutoCompleteOpen(true);
+  }, []);
+
+  // ─── Auto-complete sync effect ────────────────────────────────────────
+  // Keeps auto-complete state in sync with session buffer/caret changes.
+  useEffect(() => {
+    syncAutoComplete(session.buffer, session.caretPos, session.state);
+  }, [session.buffer, session.caretPos, session.state, syncAutoComplete]);
 
   // ─── State Transitions ─────────────────────────────────────────────────
 
@@ -348,7 +503,7 @@ export function useCellEditing({
       isFormula,
     });
     setPointSession(null);
-  }, [activeRow, activeCol, cellValue]);
+  }, [activeRow, activeCol, cellValue, setPointSession]);
 
   const startEdit = useCallback(() => {
     const buffer = cellValue;
@@ -362,7 +517,7 @@ export function useCellEditing({
       isFormula: buffer.startsWith('='),
     });
     setPointSession(null);
-  }, [activeRow, activeCol, cellValue]);
+  }, [activeRow, activeCol, cellValue, setPointSession]);
 
   const startEditAt = useCallback((caretPosition: number) => {
     const buffer = cellValue;
@@ -377,29 +532,13 @@ export function useCellEditing({
       isFormula: buffer.startsWith('='),
     });
     setPointSession(null);
-  }, [activeRow, activeCol, cellValue]);
+  }, [activeRow, activeCol, cellValue, setPointSession]);
 
   const setCaretPos = useCallback((caretPosition: number) => {
     setSession((prev) => {
       if (prev.state !== 'EDIT') return prev;
       const clampedCaret = Math.max(0, Math.min(prev.buffer.length, caretPosition));
       return { ...prev, caretPos: clampedCaret };
-    });
-  }, []);
-
-  const setBuffer = useCallback((buffer: string, caretPos: number) => {
-    setSession((prev) => {
-      if (prev.state !== 'EDIT' && prev.state !== 'ENTER') return prev;
-      const clampedCaret = Math.max(0, Math.min(buffer.length, caretPos));
-      const newSession = {
-        ...prev,
-        buffer,
-        caretPos: clampedCaret,
-        isFormula: buffer.startsWith('=') || buffer.startsWith('+') || buffer.startsWith('-'),
-      };
-      // Update sessionRef immediately to avoid stale closures
-      sessionRef.current = newSession;
-      return newSession;
     });
   }, []);
 
@@ -415,7 +554,7 @@ export function useCellEditing({
 
     setSession((prev) => ({ ...prev, state: 'SELECT', buffer: '', caretPos: 0, isFormula: false }));
     setPointSession(null);
-  }, [onCommit, onNavigate, rowCount, colCount]);
+  }, [onCommit, onNavigate, rowCount, colCount, setPointSession]);
 
   const cancel = useCallback(() => {
     setSession((prev) => ({
@@ -426,7 +565,7 @@ export function useCellEditing({
       isFormula: false,
     }));
     setPointSession(null);
-  }, []);
+  }, [setPointSession]);
 
   const reset = useCallback(() => {
     setSession({
@@ -439,12 +578,24 @@ export function useCellEditing({
       isFormula: false,
     });
     setPointSession(null);
-  }, [activeRow, activeCol, cellValue]);
+  }, [activeRow, activeCol, cellValue, setPointSession]);
 
   // ─── Enter POINT Mode ──────────────────────────────────────────────────
 
-  const enterPointMode = useCallback((s: EditingSession) => {
-    const textBeforeCaret = s.buffer.slice(0, s.caretPos).trim();
+  /**
+   * Enter POINT mode from the current session state.
+   * Can be called externally (e.g., after autocomplete inserts "=SUM(").
+   * @param caretPos - The caret position to use for insertPos. If not provided,
+   *   uses the current session's caretPos.
+   * @param buffer - The buffer to use for trigger detection. Pass this when
+   *   calling immediately after setBuffer to avoid stale ref values.
+   */
+  const enterPointMode = useCallback((caretPos?: number, buffer?: string) => {
+    const s = sessionRef.current;
+    if (s.state === 'POINT') return; // already in POINT
+    const pos = caretPos ?? s.caretPos;
+    const buf = buffer ?? s.buffer;
+    const textBeforeCaret = buf.slice(0, pos).trim();
     const lastChar = textBeforeCaret.length > 0 ? textBeforeCaret[textBeforeCaret.length - 1] : '';
 
     setPointSession({
@@ -453,11 +604,75 @@ export function useCellEditing({
       anchorCol: s.col,
       currentRow: s.row,
       currentCol: s.col,
-      insertPos: s.caretPos,
+      insertPos: pos,
       triggerChar: lastChar,
     });
 
     setSession((prev) => ({ ...prev, state: 'POINT' }));
+  }, [setPointSession]);
+
+  // ─── Set Buffer ────────────────────────────────────────────────────────
+  const setBuffer = useCallback((buffer: string, caretPos: number) => {
+    setSession((prev) => {
+      if (prev.state !== 'EDIT' && prev.state !== 'ENTER') return prev;
+      const clampedCaret = Math.max(0, Math.min(buffer.length, caretPos));
+      const newSession = {
+        ...prev,
+        buffer,
+        caretPos: clampedCaret,
+        isFormula: buffer.startsWith('=') || buffer.startsWith('+') || buffer.startsWith('-'),
+      };
+      // Update sessionRef immediately to avoid stale closures
+      sessionRef.current = newSession;
+      return newSession;
+    });
+    // After updating the buffer, check if it ends with a POINT trigger
+    // character (e.g., after pasting "=SUM(" or clicking a function button).
+    // We check the new value directly because setSession is async.
+    if (shouldActivatePointMode(buffer, caretPos)) {
+      enterPointMode(caretPos, buffer);
+    }
+  }, [enterPointMode]);
+
+  // ─── Auto-complete actions ────────────────────────────────────────────
+  const acceptAutoComplete = useCallback((index: number) => {
+    const s = sessionRef.current;
+    if (s.state !== 'ENTER' && s.state !== 'EDIT') return;
+    if (!autoCompleteMatches.length || index < 0 || index >= autoCompleteMatches.length) return;
+
+    const selected = autoCompleteMatches[index];
+    const tokenStart = autoCompleteTokenStart;
+    const tokenResult = findFunctionToken(s.buffer, Math.max(s.caretPos, 1));
+    const tokenLen = tokenResult ? tokenResult.token.length : 0;
+
+    const before = s.buffer.slice(0, tokenStart);
+    const after = s.buffer.slice(tokenStart + tokenLen);
+    const newBuffer = before + selected.name + '(' + after;
+    const newCaret = tokenStart + selected.name.length + 1;
+
+    setSession((prev) => ({
+      ...prev,
+      buffer: newBuffer,
+      caretPos: newCaret,
+      isFormula: true,
+    }));
+    sessionRef.current = { ...s, buffer: newBuffer, caretPos: newCaret, isFormula: true };
+    setAutoCompleteOpen(false);
+
+    // Enter POINT mode so the user can navigate to select a range
+    enterPointMode(newCaret, newBuffer);
+  }, [autoCompleteMatches, autoCompleteTokenStart, enterPointMode]);
+
+  const navigateAutoComplete = useCallback((delta: number) => {
+    if (!autoCompleteMatches.length) return;
+    setAutoCompleteIndex((prev) => {
+      const len = autoCompleteMatches.length;
+      return ((prev + delta) % len + len) % len;
+    });
+  }, [autoCompleteMatches.length]);
+
+  const dismissAutoComplete = useCallback(() => {
+    setAutoCompleteOpen(false);
   }, []);
 
   // ─── Keyboard Handler ──────────────────────────────────────────────────
@@ -477,7 +692,18 @@ export function useCellEditing({
       if (isPrintableChar(key)) {
         startEnter(key);
         const isFormula = key === '=' || key === '+' || key === '-';
-        result.session = { ...s, state: 'ENTER', buffer: key, caretPos: 1, isFormula };
+        const newBuffer = key;
+        const newCaret = 1;
+        // Check if this character should trigger POINT mode immediately
+        // (e.g., typing "+" or "-" alone enters POINT mode for cell navigation)
+        if (shouldActivatePointMode(newBuffer, newCaret)) {
+          setSession((prev) => ({ ...prev, state: 'ENTER', buffer: newBuffer, caretPos: newCaret, isFormula }));
+          sessionRef.current = { ...s, state: 'ENTER', buffer: newBuffer, caretPos: newCaret, isFormula };
+          enterPointMode(newCaret, newBuffer);
+          result.session = { ...s, state: 'POINT', buffer: newBuffer, caretPos: newCaret, isFormula };
+          return result;
+        }
+        result.session = { ...s, state: 'ENTER', buffer: newBuffer, caretPos: newCaret, isFormula };
         return result;
       }
 
@@ -589,9 +815,23 @@ export function useCellEditing({
         // Cycle reference at end of buffer (Spec §2 — ENTER state)
         const refInfo = findRefAtCaret(s.buffer, s.buffer.length);
         if (refInfo) {
-          const cycled = cycleReference(refInfo.ref);
+          const caretOffset = s.buffer.length - refInfo.start;
+          let cycled: string;
+          let newCaret: number;
+          if (refInfo.ref.includes(':')) {
+            const rangeResult = cycleRangeRef(refInfo.ref, caretOffset);
+            if (rangeResult) {
+              cycled = rangeResult.token;
+              newCaret = refInfo.start + rangeResult.caretOffset;
+            } else {
+              cycled = cycleReference(refInfo.ref);
+              newCaret = refInfo.start + cycled.length;
+            }
+          } else {
+            cycled = cycleReference(refInfo.ref);
+            newCaret = refInfo.start + cycled.length;
+          }
           const newBuffer = s.buffer.slice(0, refInfo.start) + cycled + s.buffer.slice(refInfo.end);
-          const newCaret = refInfo.start + cycled.length;
           setSession((prev) => ({ ...prev, buffer: newBuffer, caretPos: newCaret }));
           result.session = { ...s, buffer: newBuffer, caretPos: newCaret };
           result.statusMessage = `Reference: ${cycled}`;
@@ -669,15 +909,19 @@ export function useCellEditing({
             if (refBeforeColon) {
               const dupBuffer = s.buffer.slice(0, s.caretPos) + ':' + refBeforeColon;
               const dupCaret = dupBuffer.length;
+              const dupSession = { ...s, buffer: dupBuffer, caretPos: dupCaret, isFormula };
               setSession((prev) => ({ ...prev, buffer: dupBuffer, caretPos: dupCaret, isFormula }));
-              enterPointMode({ ...s, buffer: dupBuffer, caretPos: dupCaret, isFormula });
-              result.session = { ...s, state: 'POINT', buffer: dupBuffer, caretPos: dupCaret, isFormula };
+              sessionRef.current = dupSession;
+              enterPointMode();
+              result.session = { ...dupSession, state: 'POINT' };
               return result;
             }
           }
+          const newSession = { ...s, buffer: newBuffer, caretPos: newCaret, isFormula };
           setSession((prev) => ({ ...prev, buffer: newBuffer, caretPos: newCaret, isFormula }));
-          enterPointMode({ ...s, buffer: newBuffer, caretPos: newCaret, isFormula });
-          result.session = { ...s, state: 'POINT', buffer: newBuffer, caretPos: newCaret, isFormula };
+          sessionRef.current = newSession;
+          enterPointMode();
+          result.session = { ...newSession, state: 'POINT' };
           return result;
         }
 
@@ -758,7 +1002,7 @@ export function useCellEditing({
 
       if (key === 'F2') {
         // Toggle to POINT mode
-        enterPointMode(s);
+        enterPointMode();
         result.session = { ...s, state: 'POINT' };
         return result;
       }
@@ -767,9 +1011,23 @@ export function useCellEditing({
         // Cycle reference at caret
         const refInfo = findRefAtCaret(s.buffer, s.caretPos);
         if (refInfo) {
-          const cycled = cycleReference(refInfo.ref);
+          const caretOffset = s.caretPos - refInfo.start;
+          let cycled: string;
+          let newCaret: number;
+          if (refInfo.ref.includes(':')) {
+            const rangeResult = cycleRangeRef(refInfo.ref, caretOffset);
+            if (rangeResult) {
+              cycled = rangeResult.token;
+              newCaret = refInfo.start + rangeResult.caretOffset;
+            } else {
+              cycled = cycleReference(refInfo.ref);
+              newCaret = refInfo.start + cycled.length;
+            }
+          } else {
+            cycled = cycleReference(refInfo.ref);
+            newCaret = refInfo.start + cycled.length;
+          }
           const newBuffer = s.buffer.slice(0, refInfo.start) + cycled + s.buffer.slice(refInfo.end);
-          const newCaret = refInfo.start + cycled.length;
           setSession((prev) => ({ ...prev, buffer: newBuffer, caretPos: newCaret }));
           result.session = { ...s, buffer: newBuffer, caretPos: newCaret };
           result.statusMessage = `Reference: ${cycled}`;
@@ -825,17 +1083,22 @@ export function useCellEditing({
             if (refBeforeColon) {
               const newBuffer = s.buffer.slice(0, s.caretPos) + ':' + refBeforeColon;
               const newCaret = newBuffer.length;
+              const newSession = { ...s, buffer: newBuffer, caretPos: newCaret };
               setSession((prev) => ({ ...prev, buffer: newBuffer, caretPos: newCaret }));
-              enterPointMode({ ...s, buffer: newBuffer, caretPos: newCaret });
-              result.session = { ...s, state: 'POINT', buffer: newBuffer, caretPos: newCaret };
+              sessionRef.current = newSession;
+              enterPointMode();
+              result.session = { ...newSession, state: 'POINT' };
               return result;
             }
           }
           // Insert char first, then enter POINT
           const newBuffer = s.buffer.slice(0, s.caretPos) + key + s.buffer.slice(s.caretPos);
-          setSession((prev) => ({ ...prev, buffer: newBuffer, caretPos: s.caretPos + 1 }));
-          enterPointMode({ ...s, buffer: newBuffer, caretPos: s.caretPos + 1 });
-          result.session = { ...s, state: 'POINT', buffer: newBuffer, caretPos: s.caretPos + 1 };
+          const newCaret = s.caretPos + 1;
+          const newSession = { ...s, buffer: newBuffer, caretPos: newCaret };
+          setSession((prev) => ({ ...prev, buffer: newBuffer, caretPos: newCaret }));
+          sessionRef.current = newSession;
+          enterPointMode();
+          result.session = { ...newSession, state: 'POINT' };
           return result;
         }
 
@@ -929,15 +1192,43 @@ export function useCellEditing({
       }
 
       if (key === 'F4') {
-        // Cycle current reference
-        const ps = pointRef.current;
-        if (ps) {
-          const refStr = formatPointRef(ps);
-          const cycled = cycleReference(refStr);
-          // Replace the reference in buffer at insertPos
-          const newBuffer = insertRefAt(s.buffer, ps.insertPos, cycled, s.caretPos);
-          setSession((prev) => ({ ...prev, buffer: newBuffer, caretPos: ps.insertPos + cycled.length }));
-          result.session = { ...s, buffer: newBuffer, caretPos: ps.insertPos + cycled.length };
+        // Cycle current reference.
+        // If the buffer already contains a reference at the caret, cycle it
+        // (so repeated F4 presses keep cycling through states).
+        // Otherwise, insert a reference for the current pointed cell/range.
+        const refInfo = findRefAtCaret(s.buffer, s.caretPos);
+        if (refInfo) {
+          const caretOffset = s.caretPos - refInfo.start;
+          let cycled: string;
+          let newCaret: number;
+          if (refInfo.ref.includes(':')) {
+            const rangeResult = cycleRangeRef(refInfo.ref, caretOffset);
+            if (rangeResult) {
+              cycled = rangeResult.token;
+              newCaret = refInfo.start + rangeResult.caretOffset;
+            } else {
+              cycled = cycleReference(refInfo.ref);
+              newCaret = refInfo.start + cycled.length;
+            }
+          } else {
+            cycled = cycleReference(refInfo.ref);
+            newCaret = refInfo.start + cycled.length;
+          }
+          const newBuffer = s.buffer.slice(0, refInfo.start) + cycled + s.buffer.slice(refInfo.end);
+          setSession((prev) => ({ ...prev, buffer: newBuffer, caretPos: newCaret }));
+          result.session = { ...s, buffer: newBuffer, caretPos: newCaret };
+          result.statusMessage = `Reference: ${cycled}`;
+        } else {
+          // No existing reference in buffer — insert one from the point session
+          const ps = pointRef.current;
+          if (ps) {
+            const refStr = formatPointRef(ps);
+            const cycled = cycleReference(refStr);
+            const newBuffer = insertRefAt(s.buffer, ps.insertPos, cycled, s.caretPos);
+            setSession((prev) => ({ ...prev, buffer: newBuffer, caretPos: ps.insertPos + cycled.length }));
+            result.session = { ...s, buffer: newBuffer, caretPos: ps.insertPos + cycled.length };
+            result.statusMessage = `Reference: ${cycled}`;
+          }
         }
         return result;
       }
@@ -978,16 +1269,26 @@ export function useCellEditing({
       }
 
       if (key.startsWith('Arrow')) {
-        // Navigate the pointing box
         const nav = getNavigationDelta(key, shiftKey);
         if (nav) {
           const ps = pointRef.current;
           if (ps) {
             const newRow = Math.max(0, Math.min(rowCount - 1, ps.currentRow + nav.dRow));
             const newCol = Math.max(0, Math.min(colCount - 1, ps.currentCol + nav.dCol));
-            const newPs = { ...ps, currentRow: newRow, currentCol: newCol };
+            const newPs = shiftKey
+              ? { ...ps, currentRow: newRow, currentCol: newCol }
+              : { ...ps, anchorRow: newRow, anchorCol: newCol, currentRow: newRow, currentCol: newCol };
             setPointSession(newPs);
             result.pointSession = newPs;
+
+            const refStr = formatPointRef(newPs);
+            const beforeRef = s.buffer.slice(0, ps.insertPos);
+            const afterRef = s.buffer.slice(s.caretPos);
+            const newBuffer = beforeRef + refStr + afterRef;
+            const newCaret = ps.insertPos + refStr.length;
+            setSession((prev) => ({ ...prev, buffer: newBuffer, caretPos: newCaret }));
+            sessionRef.current = { ...s, buffer: newBuffer, caretPos: newCaret };
+            result.session = { ...s, buffer: newBuffer, caretPos: newCaret };
           }
         }
         return result;
@@ -1040,7 +1341,11 @@ export function useCellEditing({
       }
 
       if (isOperatorChar(key)) {
-        // Auto-commit reference and exit POINT → EDIT
+        // Auto-commit reference. For continuation operators (parameter
+        // separators like ',' and binary ops like '+', '-', '*', '/'),
+        // re-enter POINT mode so the user can navigate to the next cell
+        // reference. This enables multi-parameter formulas like
+        // =SUM(A1, B1, C1) and =A1+B1*C1.
         const ps = pointRef.current;
         if (ps) {
           const refStr = formatPointRef(ps);
@@ -1048,11 +1353,31 @@ export function useCellEditing({
           // Replace from insertPos onward with the committed ref + operator
           const newBuffer = beforeRef + refStr + key;
           const newCaret = newBuffer.length;
-          setSession((prev) => ({ ...prev, state: 'EDIT', buffer: newBuffer, caretPos: newCaret }));
-          setPointSession(null);
-          result.session = { ...s, state: 'EDIT', buffer: newBuffer, caretPos: newCaret };
-          result.pointSession = null;
-          result.statusMessage = `Added ${refStr}`;
+
+          if (POINT_CONTINUATION_CHARS.has(key)) {
+            // Re-enter POINT mode for the next parameter/reference
+            setSession((prev) => ({ ...prev, state: 'POINT', buffer: newBuffer, caretPos: newCaret }));
+            const newPointSession: PointSession = {
+              isActive: true,
+              anchorRow: s.row,
+              anchorCol: s.col,
+              currentRow: s.row,
+              currentCol: s.col,
+              insertPos: newCaret,
+              triggerChar: key,
+            };
+            setPointSession(newPointSession);
+            result.session = { ...s, state: 'POINT', buffer: newBuffer, caretPos: newCaret };
+            result.pointSession = newPointSession;
+            result.statusMessage = `Added ${refStr}`;
+          } else {
+            // Non-continuation operator (e.g., ';' or '{') — exit to EDIT
+            setSession((prev) => ({ ...prev, state: 'EDIT', buffer: newBuffer, caretPos: newCaret }));
+            setPointSession(null);
+            result.session = { ...s, state: 'EDIT', buffer: newBuffer, caretPos: newCaret };
+            result.pointSession = null;
+            result.statusMessage = `Added ${refStr}`;
+          }
         }
         return result;
       }
@@ -1092,11 +1417,11 @@ export function useCellEditing({
 
     /* istanbul ignore next - defensive return for unknown state */
     return result;
-  }, [cellValue, rowCount, colCount, onCommit, onNavigate, startEnter, startEdit, commit, cancel, enterPointMode]);
+  }, [cellValue, rowCount, colCount, onCommit, onNavigate, startEnter, startEdit, commit, cancel, enterPointMode, setPointSession]);
 
   // ─── Cell Click Handler (for POINT mode) ──────────────────────────────
 
-  const handleCellClick = useCallback((row: number, col: number, _shiftKey: boolean): KeyHandlingResult => {
+  const handleCellClick = useCallback((row: number, col: number, shiftKey: boolean): KeyHandlingResult => {
     const s = sessionRef.current;
     const result: KeyHandlingResult = {
       session: s,
@@ -1107,16 +1432,34 @@ export function useCellEditing({
     };
 
     if (s.state === 'POINT') {
-      // Update the pointed-to cell
-      setPointSession((prev) => {
-        if (!prev) return prev;
-        return { ...prev, currentRow: row, currentCol: col };
-      });
-      result.pointSession = pointRef.current;
+      const ps = pointRef.current;
+      if (ps) {
+        // Update the pointed-to cell
+        const newCurrentRow = shiftKey ? ps.currentRow : row;
+        const newCurrentCol = shiftKey ? ps.currentCol : col;
+        const newPs = { ...ps, currentRow: newCurrentRow, currentCol: newCurrentCol };
+        setPointSession(newPs);
+        result.pointSession = newPs;
+
+        // Insert the reference into the buffer at the insert position
+        const refStr = formatPointRef(newPs);
+        const beforeRef = s.buffer.slice(0, ps.insertPos);
+        const afterRef = s.buffer.slice(ps.insertPos);
+        // Don't duplicate if the reference is already there
+        const newBuffer = beforeRef + refStr + afterRef;
+        const newCaret = ps.insertPos + refStr.length;
+
+        setSession((prev) => ({
+          ...prev,
+          buffer: newBuffer,
+          caretPos: newCaret,
+        }));
+        result.session = { ...s, buffer: newBuffer, caretPos: newCaret };
+      }
     }
 
     return result;
-  }, []);
+  }, [setPointSession]);
 
   return {
     session,
@@ -1128,15 +1471,65 @@ export function useCellEditing({
     startEditAt,
     setCaretPos,
     setBuffer,
+    enterPointMode,
     commit,
     cancel,
     reset,
+    autoComplete: {
+      open: autoCompleteOpen,
+      matches: autoCompleteMatches,
+      index: autoCompleteIndex,
+      tokenStart: autoCompleteTokenStart,
+    },
+    acceptAutoComplete,
+    navigateAutoComplete,
+    dismissAutoComplete,
   };
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Helper Functions
 // ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Finds the function name token at the cursor position in a formula buffer.
+ * Returns the uppercase token string and its display start position, or null
+ * if the cursor is not on a valid function name.
+ */
+function findFunctionToken(text: string, pos: number): { token: string; start: number } | null {
+  if (!text.startsWith('=')) return null;
+  const body = text.slice(1);
+  const relPos = Math.min(pos - 1, body.length - 1);
+  if (relPos < 0) return null;
+
+  // The character at the cursor must be alpha — otherwise the user is not
+  // typing a function name (e.g. cursor is right after '(', ',', '+', or a digit).
+  if (!/[A-Za-z]/.test(body[relPos])) return null;
+
+  // Walk backwards to find token start
+  let start = relPos;
+  while (start > 0 && /[A-Za-z]/.test(body[start - 1])) {
+    start--;
+  }
+
+  // Walk forwards to find token end
+  let end = relPos;
+  while (end < body.length && /[A-Za-z]/.test(body[end])) {
+    end++;
+  }
+
+  if (start === end) return null;
+
+  const token = body.slice(start, end).toUpperCase();
+
+  // Check if we're in a function context (start of formula or after separator)
+  const prevChar = start > 0 ? body[start - 1] : '';
+  const isFunctionContext = start === 0 || /[,(+\-*/&=<>]/.test(prevChar) || prevChar === ' ';
+
+  if (!isFunctionContext || token.length === 0) return null;
+
+  return { token, start: start + 1 }; // +1 for display position (after '=')
+}
 
 function getNavigationDelta(key: string, _shiftKey: boolean): { dRow: number; dCol: number } | null {
   switch (key) {

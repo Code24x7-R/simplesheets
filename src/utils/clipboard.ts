@@ -14,6 +14,12 @@ export interface ClipboardData {
   isCut: boolean;
   /** The type of selection that produced this clipboard data. */
   selectionType?: 'cell' | 'row' | 'col';
+  /** Index of the sheet this data was copied from (for cross-sheet paste). */
+  sourceSheetIndex?: number;
+  /** Top-left row of the source range (for correct formula offset calculation). */
+  sourceRow?: number;
+  /** Top-left column of the source range (for correct formula offset calculation). */
+  sourceCol?: number;
 }
 
 // Module-level clipboard (survives within the session)
@@ -26,6 +32,8 @@ let clipboardData: ClipboardData | null = null;
  * @param startCol - Starting column (inclusive).
  * @param endRow - Ending row (inclusive).
  * @param endCol - Ending column (inclusive).
+ * @param selectionType - Type of selection that produced this clipboard data.
+ * @param sourceSheetIndex - Index of the source sheet (for cross-sheet paste).
  * @returns The clipboard data for inspection/testing.
  */
 export function copyRange(
@@ -34,7 +42,8 @@ export function copyRange(
   startCol: number,
   endRow: number,
   endCol: number,
-  selectionType?: 'cell' | 'row' | 'col'
+  selectionType?: 'cell' | 'row' | 'col',
+  sourceSheetIndex?: number
 ): ClipboardData {
   const minRow = Math.min(startRow, endRow);
   const maxRow = Math.max(startRow, endRow);
@@ -54,7 +63,7 @@ export function copyRange(
     grid.push(row);
   }
 
-  clipboardData = { cells: grid, rowCount, colCount, isCut: false, selectionType };
+  clipboardData = { cells: grid, rowCount, colCount, isCut: false, selectionType, sourceSheetIndex, sourceRow: minRow, sourceCol: minCol };
   return clipboardData;
 }
 
@@ -68,9 +77,10 @@ export function cutRange(
   startCol: number,
   endRow: number,
   endCol: number,
-  selectionType?: 'cell' | 'row' | 'col'
+  selectionType?: 'cell' | 'row' | 'col',
+  sourceSheetIndex?: number
 ): ClipboardData {
-  const data = copyRange(cells, startRow, startCol, endRow, endCol, selectionType);
+  const data = copyRange(cells, startRow, startCol, endRow, endCol, selectionType, sourceSheetIndex);
   data.isCut = true;
   return data;
 }
@@ -115,6 +125,27 @@ export function clipboardAsCsv(data: ClipboardData, delimiter: string = ','): st
         .join(delimiter)
     )
     .join('\n');
+}
+
+/**
+ * Converts clipboard data to TSV (tab-separated values) format.
+ * TSV is preferred for pasting into spreadsheet applications.
+ * @param data - The clipboard data to convert.
+ * @returns The TSV string representation.
+ */
+export function clipboardAsTsv(data: ClipboardData): string {
+  return clipboardAsCsv(data, '\t');
+}
+
+/**
+ * Writes clipboard data to the system clipboard as TSV.
+ * This enables pasting into external applications (Excel, Google Sheets, etc.).
+ * @param data - The clipboard data to write.
+ * @returns A promise that resolves when the write is complete.
+ */
+export function writeClipboardToSystem(data: ClipboardData): Promise<void> {
+  const tsv = clipboardAsTsv(data);
+  return navigator.clipboard.writeText(tsv);
 }
 
 /**

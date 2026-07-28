@@ -1151,55 +1151,109 @@ export interface EvaluationResult {
  * @returns EvaluationResult with computed values and circular reference info.
  */
 export function evaluateWorkbook(workbook: import('../types').Workbook, activeSheetIndex: number): EvaluationResult {
-  const sheet = workbook.sheets[activeSheetIndex];
-  /* istanbul ignore next - invalid sheet index guard */
-  if (!sheet) return { cells: {}, circularRefs: [], success: false };
+  const sheets = workbook.sheets;
+  if (activeSheetIndex < 0 || activeSheetIndex >= sheets.length) {
+    return { cells: {}, circularRefs: [], success: false };
+  }
 
-  const ctx: EvalContext = {
-    cells: sheet.cells,
-    allSheets: workbook.sheets,
-    activeSheetIndex,
-    cache: new Map(),
-    evalStack: new Set(),
-    rowCount: sheet.rowCount,
-    colCount: sheet.columnCount,
+  // Shared evaluation context across all sheets
+  // This allows cross-sheet references to read computed values from other sheets
+  const sharedCache = new Map<string, CellValue>();
+  const allCircularRefs: string[] = [];
+
+  // Evaluate ALL sheets so cross-sheet references have computed values available.
+  // The order matters: sheets referenced by other sheets should be evaluated first.
+  // We use a simple multi-pass approach: evaluate sheets with no cross-sheet deps first,
+  // then evaluate sheets that reference others.
+  const evaluatedSheets = new Set<number>();
+
+  // Helper to evaluate a single sheet given the shared context
+  const evaluateSheet = (sheetIndex: number) => {
+    const sheet = sheets[sheetIndex];
+    if (!sheet) return;
+
+    const ctx: EvalContext = {
+      cells: sheet.cells,
+      allSheets: sheets,
+      activeSheetIndex: sheetIndex,
+      cache: sharedCache,
+      evalStack: new Set(),
+      rowCount: sheet.rowCount,
+      colCount: sheet.columnCount,
+    };
+
+    const { deps } = buildDependencyGraph(sheet);
+    const circularRefs = detectCircularReferences(deps);
+    allCircularRefs.push(...circularRefs);
+
+    // Topological sort for evaluation order
+    const evaluationOrder = topologicalSort(deps, sheet.cells);
+
+    // Evaluate all formula cells
+    for (const key of evaluationOrder) {
+      const cell = sheet.cells[key];
+      if (cell?.rawValue.startsWith('=')) {
+        try {
+          const ast = parseFormula(cell.rawValue.slice(1));
+          const result = evaluateNode(ast, ctx);
+          cell.computedValue = result;
+        } catch {
+          cell.computedValue = ERR_VALUE;
+        }
+      } else {
+        cell.computedValue = autoDetectType(cell.rawValue);
+      }
+    }
+
+    // Mark circular references
+    for (const key of circularRefs) {
+      const cell = sheet.cells[key];
+      if (cell) {
+        cell.computedValue = ERR_CIRCULAR;
+      }
+    }
+
+    evaluatedSheets.add(sheetIndex);
   };
 
-  const { deps } = buildDependencyGraph(sheet);
-  const circularRefs = detectCircularReferences(deps);
-
-  // Topological sort for evaluation order
-  const evaluationOrder = topologicalSort(deps, sheet.cells);
-
-  // Evaluate all formula cells
-  for (const key of evaluationOrder) {
-    const cell = sheet.cells[key];
-    if (cell?.rawValue.startsWith('=')) {
-      try {
-        const ast = parseFormula(cell.rawValue.slice(1));
-        const result = evaluateNode(ast, ctx);
-        cell.computedValue = result;
-      } catch {
-        cell.computedValue = ERR_VALUE;
-      }
-    } else {
-      cell.computedValue = autoDetectType(cell.rawValue);
+  // First pass: evaluate sheets that have no cross-sheet dependencies
+  for (let i = 0; i < sheets.length; i++) {
+    if (!hasCrossSheetDeps(sheets[i])) {
+      evaluateSheet(i);
     }
   }
 
-  // Mark circular references
-  for (const key of circularRefs) {
-    const cell = sheet.cells[key];
-    if (cell) {
-      cell.computedValue = ERR_CIRCULAR;
+  // Second pass: evaluate sheets with cross-sheet dependencies
+  // (they can now read computed values from the first-pass sheets)
+  for (let i = 0; i < sheets.length; i++) {
+    if (!evaluatedSheets.has(i)) {
+      evaluateSheet(i);
     }
   }
 
+  const activeSheet = sheets[activeSheetIndex];
   return {
-    cells: sheet.cells,
-    circularRefs,
+    cells: activeSheet?.cells ?? {},
+    circularRefs: allCircularRefs,
     success: true,
   };
+}
+
+/**
+ * Checks if a sheet has any cross-sheet formula dependencies.
+ */
+function hasCrossSheetDeps(sheet: Sheet): boolean {
+  for (const cell of Object.values(sheet.cells)) {
+    if (!cell.rawValue.startsWith('=')) continue;
+    try {
+      const ast = parseFormula(cell.rawValue.slice(1));
+      const refs = extractCellRefs(ast);
+      if (refs.some((ref) => ref.sheetName)) return true;
+    } catch {
+      // Invalid formula — skip
+    }
+  }
+  return false;
 }
 
 /**

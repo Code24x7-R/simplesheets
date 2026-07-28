@@ -33,6 +33,18 @@ export interface CellStyle {
 
   /** Text wrapping behavior. 'nowrap' truncates with ellipsis (default), 'normal' wraps. */
   whiteSpace?: 'normal' | 'nowrap' | 'pre';
+
+  /** Top border as a CSS border string (e.g., "1px solid #000000"). */
+  borderTop?: string;
+
+  /** Bottom border as a CSS border string. */
+  borderBottom?: string;
+
+  /** Left border as a CSS border string. */
+  borderLeft?: string;
+
+  /** Right border as a CSS border string. */
+  borderRight?: string;
 }
 
 /**

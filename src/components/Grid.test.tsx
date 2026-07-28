@@ -1,4 +1,5 @@
 import { render, screen, fireEvent } from '@testing-library/react';
+import { useState } from 'react';
 import { Grid } from './Grid';
 import type { Sheet } from '../types';
 
@@ -895,6 +896,169 @@ describe('Grid Component', () => {
 
     // Arrow left should stay at col 0
     fireEvent.keyDown(grid, { key: 'ArrowLeft' });
+    expect(onSelect).toHaveBeenCalledWith(0, 0);
+  });
+
+  it('Ctrl+Arrow jumps to edge of contiguous data region', () => {
+    const onSelect = jest.fn();
+    // Create sheet with contiguous data blocks
+    const sheet: Sheet = {
+      id: 'test-sheet',
+      name: 'Test',
+      cells: {
+        // Row 0: contiguous block A1-C1, gap, then F1
+        '0:0': { rawValue: 'A1', computedValue: 'A1' },
+        '0:1': { rawValue: 'B1', computedValue: 'B1' },
+        '0:2': { rawValue: 'C1', computedValue: 'C1' },
+        '0:5': { rawValue: 'F1', computedValue: 'F1' },
+        // Col 0: contiguous block A1-A3, gap, then A5
+        '1:0': { rawValue: 'A2', computedValue: 'A2' },
+        '2:0': { rawValue: 'A3', computedValue: 'A3' },
+        '4:0': { rawValue: 'A5', computedValue: 'A5' },
+      },
+      defaultColWidth: 100,
+      defaultRowHeight: 24,
+      columnWidths: {},
+      rowHeights: {},
+      columnCount: 10,
+      rowCount: 10,
+      frozenColumns: 0,
+      frozenRows: 0,
+    };
+
+    // Wrapper component to track selectedCell state
+    function TestWrapper() {
+      const [selectedCell, setSelectedCell] = useState({ row: 0, col: 0 });
+      return (
+        <Grid
+          sheet={sheet}
+          onSelect={(row, col) => {
+            onSelect(row, col);
+            setSelectedCell({ row, col });
+          }}
+          selectedCell={selectedCell}
+        />
+      );
+    }
+
+    render(<TestWrapper />);
+    const grid = document.querySelector('[tabindex="0"]') as HTMLElement;
+
+    // Ctrl+Right from A1 should jump to C1 (last contiguous cell with value)
+    fireEvent.keyDown(grid, { key: 'ArrowRight', ctrlKey: true });
+    expect(onSelect).toHaveBeenCalledWith(0, 2);
+
+    // Ctrl+Right from C1 (empty D1 after) should jump to F1 (next cell with data)
+    fireEvent.keyDown(grid, { key: 'ArrowRight', ctrlKey: true });
+    expect(onSelect).toHaveBeenCalledWith(0, 5);
+
+    // Ctrl+Down from F1 (no data below in col 5) should jump to bottom
+    fireEvent.keyDown(grid, { key: 'ArrowDown', ctrlKey: true });
+    expect(onSelect).toHaveBeenCalledWith(9, 5);
+
+    // Ctrl+Left from bottom-right area (no data to left in row 9) should jump to edge
+    fireEvent.keyDown(grid, { key: 'ArrowLeft', ctrlKey: true });
+    expect(onSelect).toHaveBeenCalledWith(9, 0);
+
+    // Ctrl+Up from row 9 (no data above in col 0 except contiguous block) should jump to A5
+    fireEvent.keyDown(grid, { key: 'ArrowUp', ctrlKey: true });
+    expect(onSelect).toHaveBeenCalledWith(4, 0);
+
+    // Ctrl+Up from A5 should jump to A3 (last contiguous cell going up)
+    fireEvent.keyDown(grid, { key: 'ArrowUp', ctrlKey: true });
+    expect(onSelect).toHaveBeenCalledWith(2, 0);
+  });
+
+  it('Ctrl+Arrow from empty cell jumps to next cell with data', () => {
+    const onSelect = jest.fn();
+    const sheet: Sheet = {
+      id: 'test-sheet',
+      name: 'Test',
+      cells: {
+        '0:0': { rawValue: 'A1', computedValue: 'A1' },
+        '0:4': { rawValue: 'E1', computedValue: 'E1' },
+        '3:0': { rawValue: 'A4', computedValue: 'A4' },
+      },
+      defaultColWidth: 100,
+      defaultRowHeight: 24,
+      columnWidths: {},
+      rowHeights: {},
+      columnCount: 10,
+      rowCount: 10,
+      frozenColumns: 0,
+      frozenRows: 0,
+    };
+
+    // Wrapper component to track selectedCell state, starting at B1 (empty)
+    function TestWrapper() {
+      const [selectedCell, setSelectedCell] = useState({ row: 0, col: 1 });
+      return (
+        <Grid
+          sheet={sheet}
+          onSelect={(row, col) => {
+            onSelect(row, col);
+            setSelectedCell({ row, col });
+          }}
+          selectedCell={selectedCell}
+        />
+      );
+    }
+
+    render(<TestWrapper />);
+    const grid = document.querySelector('[tabindex="0"]') as HTMLElement;
+
+    // Ctrl+Right from B1 (empty) should jump to E1 (next cell with data)
+    fireEvent.keyDown(grid, { key: 'ArrowRight', ctrlKey: true });
+    expect(onSelect).toHaveBeenCalledWith(0, 4);
+
+    // Ctrl+Left from E1 (empty cells between) should jump to A1
+    fireEvent.keyDown(grid, { key: 'ArrowLeft', ctrlKey: true });
+    expect(onSelect).toHaveBeenCalledWith(0, 0);
+
+    // Ctrl+Down from A1 (empty cells between) should jump to A4
+    fireEvent.keyDown(grid, { key: 'ArrowDown', ctrlKey: true });
+    expect(onSelect).toHaveBeenCalledWith(3, 0);
+
+    // Ctrl+Up from A4 (empty cells between) should jump to A1
+    fireEvent.keyDown(grid, { key: 'ArrowUp', ctrlKey: true });
+    expect(onSelect).toHaveBeenCalledWith(0, 0);
+  });
+
+  it('Ctrl+Arrow jumps to grid edge when no data in direction', () => {
+    const onSelect = jest.fn();
+    // Sheet with data only at A1
+    const sheet: Sheet = {
+      id: 'test-sheet',
+      name: 'Test',
+      cells: {
+        '0:0': { rawValue: 'A1', computedValue: 'A1' },
+      },
+      defaultColWidth: 100,
+      defaultRowHeight: 24,
+      columnWidths: {},
+      rowHeights: {},
+      columnCount: 10,
+      rowCount: 10,
+      frozenColumns: 0,
+      frozenRows: 0,
+    };
+    render(<Grid sheet={sheet} onSelect={onSelect} selectedCell={{ row: 5, col: 5 }} />);
+    const grid = document.querySelector('[tabindex="0"]') as HTMLElement;
+
+    // Ctrl+Down from F6 (no data below in col 5) should jump to bottom
+    fireEvent.keyDown(grid, { key: 'ArrowDown', ctrlKey: true });
+    expect(onSelect).toHaveBeenCalledWith(9, 5);
+
+    // Ctrl+Right from bottom (no data to right in row 9) should jump to right edge
+    fireEvent.keyDown(grid, { key: 'ArrowRight', ctrlKey: true });
+    expect(onSelect).toHaveBeenCalledWith(9, 9);
+
+    // Ctrl+Up from bottom-right (no data above in col 9) should jump to top
+    fireEvent.keyDown(grid, { key: 'ArrowUp', ctrlKey: true });
+    expect(onSelect).toHaveBeenCalledWith(0, 9);
+
+    // Ctrl+Left from top-right (no data to left in row 0 except A1) should jump to A1
+    fireEvent.keyDown(grid, { key: 'ArrowLeft', ctrlKey: true });
     expect(onSelect).toHaveBeenCalledWith(0, 0);
   });
 
@@ -1922,6 +2086,123 @@ describe('Grid Component', () => {
     expect(cellA1.style.borderTop).toContain('#dc2626');
   });
 
+  // ─── Fill Handle ──────────────────────────────────────────────────
+
+  it('shows fill handle when 3+ contiguous cells are selected', () => {
+    const sheet = createTestSheet({ columnCount: 5 });
+    // Add more cells for a 3-cell horizontal selection using non-numeric values
+    sheet.cells['0:0'] = { rawValue: 'x1' };
+    sheet.cells['0:1'] = { rawValue: 'x2' };
+    sheet.cells['0:2'] = { rawValue: 'x3' };
+    const onFillSeries = jest.fn();
+    render(<Grid sheet={sheet} onFillSeries={onFillSeries} />);
+    // Select A1 (row 0, col 0)
+    const cellA1 = document.querySelector('[data-row-container="0"] [data-col="0"]') as HTMLElement;
+    fireEvent.mouseDown(cellA1);
+    // Shift-click C1 to extend selection (row 0, col 2)
+    const cellC1 = document.querySelector('[data-row-container="0"] [data-col="2"]') as HTMLElement;
+    fireEvent.mouseDown(cellC1, { shiftKey: true });
+    // Fill handle should now be visible
+    expect(screen.getByTestId('fill-handle')).toBeInTheDocument();
+  });
+
+  it('does not show fill handle for single cell selection', () => {
+    const sheet = createTestSheet();
+    render(<Grid sheet={sheet} onFillSeries={jest.fn()} />);
+    expect(screen.queryByTestId('fill-handle')).not.toBeInTheDocument();
+  });
+
+  it('does not show fill handle for 2-cell selection', () => {
+    const sheet = createTestSheet({ columnCount: 5 });
+    const onFillSeries = jest.fn();
+    render(<Grid sheet={sheet} onFillSeries={onFillSeries} />);
+    // Click A1 then shift-click B1 (only 2 cells)
+    const cellA1 = document.querySelector('[data-row-container="0"] [data-col="0"]') as HTMLElement;
+    fireEvent.mouseDown(cellA1);
+    const cellB1 = document.querySelector('[data-row-container="0"] [data-col="1"]') as HTMLElement;
+    fireEvent.mouseDown(cellB1, { shiftKey: true });
+    // No fill handle for 2 cells
+    expect(screen.queryByTestId('fill-handle')).not.toBeInTheDocument();
+  });
+
+  it('calls onFillSeries when fill handle is dragged horizontally', () => {
+    const sheet = createTestSheet({ columnCount: 5 });
+    // Add cells for a 3-cell horizontal selection
+    sheet.cells['0:0'] = { rawValue: 'x1' };
+    sheet.cells['0:1'] = { rawValue: 'x2' };
+    sheet.cells['0:2'] = { rawValue: 'x3' };
+    const onFillSeries = jest.fn();
+    render(<Grid sheet={sheet} onFillSeries={onFillSeries} />);
+    // Select the range A1:C1
+    const cellA1 = document.querySelector('[data-row-container="0"] [data-col="0"]') as HTMLElement;
+    fireEvent.mouseDown(cellA1);
+    const cellC1 = document.querySelector('[data-row-container="0"] [data-col="2"]') as HTMLElement;
+    fireEvent.mouseDown(cellC1, { shiftKey: true });
+    // Verify fill handle is visible
+    const fillHandle = screen.getByTestId('fill-handle');
+    expect(fillHandle).toBeInTheDocument();
+    // Simulate dragging the fill handle to the right
+    // Starting position: col 2 ends at x=300 (3 cols * 100px), so handle is at ~300
+    // Drag to col 4: ~500px
+    fireEvent.mouseDown(fillHandle, { clientX: 350, clientY: 14 });
+    fireEvent.mouseMove(window, { clientX: 550, clientY: 14 });
+    fireEvent.mouseUp(window);
+    // Should call onFillSeries with source range (0,0)-(0,2) and target (0,4)
+    expect(onFillSeries).toHaveBeenCalledWith(0, 0, 0, 2, 0, 4);
+  });
+
+  // ─── Cell Border Styles ───────────────────────────────────────────
+
+  it('renders borderTop style on cells', () => {
+    const sheet = createTestSheet();
+    // Add a cell with a top border
+    sheet.cells['0:0'].style = { ...sheet.cells['0:0'].style, borderTop: '2px solid #FF0000' };
+    render(<Grid sheet={sheet} />);
+    const cellA1 = screen.getByText('A1').closest('.grid-cell') as HTMLElement;
+    expect(cellA1.style.borderTop).toBe('2px solid #FF0000');
+  });
+
+  it('renders borderBottom style on cells', () => {
+    const sheet = createTestSheet();
+    sheet.cells['0:0'].style = { ...sheet.cells['0:0'].style, borderBottom: '3px dashed #00FF00' };
+    render(<Grid sheet={sheet} />);
+    const cellA1 = screen.getByText('A1').closest('.grid-cell') as HTMLElement;
+    expect(cellA1.style.borderBottom).toBe('3px dashed #00FF00');
+  });
+
+  it('renders borderLeft style on cells', () => {
+    const sheet = createTestSheet();
+    sheet.cells['0:0'].style = { ...sheet.cells['0:0'].style, borderLeft: '1px dotted #0000FF' };
+    render(<Grid sheet={sheet} />);
+    const cellA1 = screen.getByText('A1').closest('.grid-cell') as HTMLElement;
+    expect(cellA1.style.borderLeft).toBe('1px dotted #0000FF');
+  });
+
+  it('renders borderRight style on cells', () => {
+    const sheet = createTestSheet();
+    sheet.cells['0:0'].style = { ...sheet.cells['0:0'].style, borderRight: '2px double #FF00FF' };
+    render(<Grid sheet={sheet} />);
+    const cellA1 = screen.getByText('A1').closest('.grid-cell') as HTMLElement;
+    expect(cellA1.style.borderRight).toBe('2px double #FF00FF');
+  });
+
+  it('renders all four borders on a cell', () => {
+    const sheet = createTestSheet();
+    sheet.cells['0:0'].style = {
+      ...sheet.cells['0:0'].style,
+      borderTop: '1px solid #000000',
+      borderBottom: '1px solid #000000',
+      borderLeft: '1px solid #000000',
+      borderRight: '1px solid #000000',
+    };
+    render(<Grid sheet={sheet} />);
+    const cellA1 = screen.getByText('A1').closest('.grid-cell') as HTMLElement;
+    expect(cellA1.style.borderTop).toBe('1px solid #000000');
+    expect(cellA1.style.borderBottom).toBe('1px solid #000000');
+    expect(cellA1.style.borderLeft).toBe('1px solid #000000');
+    expect(cellA1.style.borderRight).toBe('1px solid #000000');
+  });
+
   it('calls onClearClipboard when Escape is pressed', () => {
     const sheet = createTestSheet();
     const onClearClipboard = jest.fn();
@@ -2029,5 +2310,90 @@ describe('Grid - Freeze Panes', () => {
     const cellA1 = screen.getByText('A1').closest('.grid-cell') as HTMLElement;
     // Browser normalizes hex to rgb
     expect(cellA1.style.backgroundColor).toBe('rgb(240, 244, 248)');
+  });
+});
+
+describe('Grid - Filter', () => {
+  const createTestSheet = (): Sheet => ({
+    id: 'test-sheet',
+    name: 'Test',
+    cells: {
+      '0:0': { rawValue: 'Name', computedValue: 'Name' },
+      '1:0': { rawValue: 'Alice', computedValue: 'Alice' },
+      '2:0': { rawValue: 'Bob', computedValue: 'Bob' },
+    },
+    defaultColWidth: 100,
+    defaultRowHeight: 24,
+    columnWidths: {},
+    rowHeights: {},
+    columnCount: 5,
+    rowCount: 10,
+    frozenColumns: 0,
+    frozenRows: 0,
+  });
+
+  it('shows filter indicator when filter is active', () => {
+    const sheet = createTestSheet();
+    const filterState = {
+      active: true,
+      headerRow: 0,
+      filters: {},
+      hiddenRows: new Set<number>(),
+      totalDataRows: 9,
+      visibleDataRows: 9,
+    };
+    render(<Grid sheet={sheet} filterState={filterState} />);
+    // Filter indicator should be present on column headers
+    const indicators = document.querySelectorAll('.filter-indicator');
+    expect(indicators.length).toBeGreaterThan(0);
+  });
+
+  it('does not show filter indicator when filter is inactive', () => {
+    const sheet = createTestSheet();
+    render(<Grid sheet={sheet} filterState={null} />);
+    const indicators = document.querySelectorAll('.filter-indicator');
+    expect(indicators.length).toBe(0);
+  });
+
+  it('shows active filter indicator on filtered column', () => {
+    const sheet = createTestSheet();
+    const filterState = {
+      active: true,
+      headerRow: 0,
+      filters: {
+        0: {
+          conditions: [{ type: 'includes' as const, values: ['Alice'] }],
+          logic: 'AND' as const,
+        },
+      },
+      hiddenRows: new Set([2]),
+      totalDataRows: 9,
+      visibleDataRows: 8,
+    };
+    render(<Grid sheet={sheet} filterState={filterState} />);
+    const indicators = document.querySelectorAll('.filter-indicator');
+    expect(indicators.length).toBeGreaterThan(0);
+    // First column should have active indicator
+    expect(indicators[0].classList.contains('active')).toBe(true);
+  });
+
+  it('calls onApplyFilter when filter dropdown applies filter', () => {
+    const sheet = createTestSheet();
+    const filterState = {
+      active: true,
+      headerRow: 0,
+      filters: {},
+      hiddenRows: new Set<number>(),
+      totalDataRows: 9,
+      visibleDataRows: 9,
+    };
+    const onApplyFilter = jest.fn();
+    render(<Grid sheet={sheet} filterState={filterState} onApplyFilter={onApplyFilter} />);
+    // Click on a filter indicator to open dropdown
+    const indicators = document.querySelectorAll('.filter-indicator');
+    expect(indicators.length).toBeGreaterThan(0);
+    fireEvent.click(indicators[0]);
+    // The dropdown should now be visible
+    expect(screen.getByTestId('filter-search-input')).toBeInTheDocument();
   });
 });

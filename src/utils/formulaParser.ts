@@ -697,6 +697,53 @@ export function adjustFormulaRefs(formula: string, rowOffset: number, colOffset:
 }
 
 /**
+ * Converts all relative cell references in a formula to cross-sheet references
+ * pointing to the specified sheet. Used when pasting formulas across sheets.
+ *
+ * @param formula - The formula string (without leading "=").
+ * @param sheetName - The sheet name to prefix references with.
+ * @returns The formula with all relative refs converted to cross-sheet refs.
+ *
+ * @example
+ * // On Sheet1: =A1+B1 -> On Sheet2: =Sheet1!A1+Sheet1!B1
+ * prefixRefsWithSheet('A1+B1', 'Sheet1') // returns 'Sheet1!A1+Sheet1!B1'
+ */
+export function prefixRefsWithSheet(formula: string, sheetName: string): string {
+  const sheetPrefix = sheetName.includes(' ') ? `'${sheetName}'!` : `${sheetName}!`;
+
+  // Two-pass approach:
+  // 1. Temporarily replace already-qualified cross-sheet refs with placeholders
+  // 2. Prefix all remaining relative refs
+  // 3. Restore the cross-sheet refs
+
+  // Match cross-sheet references: word!ref or 'word word'!ref
+  // Sheet name part is non-capturing and matches both quoted and unquoted names
+  const crossSheetRegex = /('[^']*'!|[A-Za-z_][A-Za-z0-9_]*!)(\$?[A-Za-z]+\$?\d+)/gi;
+
+  const placeholders: string[] = [];
+  let protectedFormula = formula.replace(crossSheetRegex, (match) => {
+    // Use a placeholder that won't match the cell ref regex (no letter followed by digit)
+    const placeholder = `§§${placeholders.length}§§`;
+    placeholders.push(match);
+    return placeholder;
+  });
+
+  // Now prefix all remaining relative references
+  const cellRefRegex = /(?<![0-9])(\$?[A-Za-z]+\$?\d+)/gi;
+  protectedFormula = protectedFormula.replace(cellRefRegex, (match) => {
+    return `${sheetPrefix}${match}`;
+  });
+
+  // Restore cross-sheet references
+  let result = protectedFormula;
+  placeholders.forEach((original, idx) => {
+    result = result.replace(`§§${idx}§§`, original);
+  });
+
+  return result;
+}
+
+/**
  * Extracts all cell references from an AST.
  * Useful for building dependency graphs.
  */

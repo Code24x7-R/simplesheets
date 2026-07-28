@@ -25,6 +25,10 @@ const makeProps = (overrides: Partial<FormulaBarProps> = {}): FormulaBarProps =>
   onRawBlur: jest.fn(),
   onRawCaretMove: jest.fn(),
   onCellPick: jest.fn(),
+  autoComplete: { open: false, matches: [], index: 0, tokenStart: 0 },
+  onAcceptAutoComplete: jest.fn(),
+  onNavigateAutoComplete: jest.fn(),
+  onDismissAutoComplete: jest.fn(),
   ...overrides,
 });
 

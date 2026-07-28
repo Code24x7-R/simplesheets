@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useState, useRef } from 'react';
 import type { CellStyle, Selection, Workbook } from '../types';
 import { cellKey } from '../types';
 import {
@@ -9,6 +9,10 @@ import {
   toggleItalic,
   toggleUnderline,
   toggleWrapText,
+  makeBorder,
+  DEFAULT_BORDER_WIDTH,
+  DEFAULT_BORDER_STYLE,
+  DEFAULT_BORDER_COLOR,
 } from './useCellStyle';
 
 interface UseCellStylesParams {
@@ -28,6 +32,8 @@ interface UseCellStylesReturn {
   toggleItalicStyle: () => void;
   /** Cycle underline/strikethrough on the selected cells. */
   toggleUnderlineStyle: () => void;
+  /** Toggle strikethrough on the selected cells. */
+  toggleStrikethroughStyle: () => void;
   /** Set text color on the selected cells. */
   setTextColor: (color: string) => void;
   /** Set background color on the selected cells. */
@@ -40,6 +46,28 @@ interface UseCellStylesReturn {
   toggleWrapTextStyle: () => void;
   /** Clear all styling from the selected cells. */
   clearCellStyles: () => void;
+  /** Current border color for the next border application. */
+  borderColor: string;
+  /** Set the border color for the next border application. */
+  setBorderColor: (color: string) => void;
+  /** Current border style (e.g., "1px solid"). */
+  borderStyle: { width: string; style: string };
+  /** Set the border style for the next border application. */
+  setBorderStyle: (width: string, style: string) => void;
+  /** Apply top border to selected cells. */
+  setBorderTop: () => void;
+  /** Apply bottom border to selected cells. */
+  setBorderBottom: () => void;
+  /** Apply left border to selected cells. */
+  setBorderLeft: () => void;
+  /** Apply right border to selected cells. */
+  setBorderRight: () => void;
+  /** Apply all borders to selected cells. */
+  setBorderAll: () => void;
+  /** Apply outside border to selection range. */
+  setBorderOutside: () => void;
+  /** Clear all borders from selected cells. */
+  clearBorders: () => void;
 }
 
 /**
@@ -58,6 +86,32 @@ export function useCellStyles({
   const styleState = deriveCellStyleState(activeCell
     ? workbook.sheets[workbook.activeSheetIndex].cells[cellKey(activeCell.row, activeCell.col)]?.style
     : undefined);
+
+  // Border state: current color and style for next border application.
+  const [borderColor, setBorderColor] = useState(DEFAULT_BORDER_COLOR);
+  const [borderStyle, setBorderStyleState] = useState({
+    width: DEFAULT_BORDER_WIDTH,
+    style: DEFAULT_BORDER_STYLE,
+  });
+
+  // Refs to track latest values synchronously (so setBorderColor + setBorderTop work in sequence)
+  const borderColorRef = useRef(DEFAULT_BORDER_COLOR);
+  const borderStyleRef = useRef({ width: DEFAULT_BORDER_WIDTH, style: DEFAULT_BORDER_STYLE });
+
+  const setBorderColorWithRef = useCallback((color: string) => {
+    borderColorRef.current = color;
+    setBorderColor(color);
+  }, []);
+
+  const setBorderStyle = useCallback((width: string, style: string) => {
+    borderStyleRef.current = { width, style };
+    setBorderStyleState({ width, style });
+  }, []);
+
+  /** Builds the current border CSS string from the latest ref values. */
+  const getCurrentBorder = useCallback(() => {
+    return makeBorder(borderStyleRef.current.width, borderStyleRef.current.style, borderColorRef.current);
+  }, []);
 
   /** Applies a style mutation function to all selected cells. */
   const applyStyle = useCallback(
@@ -119,6 +173,13 @@ export function useCellStyles({
     [applyStyle]
   );
 
+  const toggleStrikethroughStyle = useCallback(
+    () => applyStyle((s) => ({
+      textDecoration: s.textDecoration === 'line-through' ? 'none' : 'line-through',
+    }), 'Strikethrough'),
+    [applyStyle]
+  );
+
   const setTextColor = useCallback(
     (color: string) => applyStyle(() => ({ color }), `Text color ${color}`),
     [applyStyle]
@@ -144,6 +205,186 @@ export function useCellStyles({
     () => applyStyle((s) => ({ whiteSpace: toggleWrapText(s) }), 'Wrap text'),
     [applyStyle]
   );
+
+  /** Applies a border to a specific edge of all selected cells. */
+  const applyBorderEdge = useCallback(
+    (edge: 'top' | 'bottom' | 'left' | 'right') => {
+      if (!selection) return;
+      const borderValue = getCurrentBorder();
+      const edgeMap = { top: 'borderTop', bottom: 'borderBottom', left: 'borderLeft', right: 'borderRight' } as const;
+      const prop = edgeMap[edge];
+
+      const sheet = workbook.sheets[workbook.activeSheetIndex];
+      const minRow = Math.min(selection.startRow, selection.endRow);
+      const maxRow = Math.max(selection.startRow, selection.endRow);
+      const minCol = Math.min(selection.startCol, selection.endCol);
+      const maxCol = Math.max(selection.startCol, selection.endCol);
+
+      const newCells = { ...sheet.cells };
+      let cellsUpdated = 0;
+
+      for (const [key, existing] of Object.entries(sheet.cells)) {
+        const colonIndex = key.indexOf(':');
+        const r = parseInt(key.slice(0, colonIndex), 10);
+        const c = parseInt(key.slice(colonIndex + 1), 10);
+        if (r < minRow || r > maxRow || c < minCol || c > maxCol) continue;
+        const merged = mergeCellStyle(existing?.style, { [prop]: borderValue });
+        newCells[key] = { ...existing, style: merged };
+        cellsUpdated++;
+      }
+
+      if (cellsUpdated === 0) return;
+
+      const newSheets = workbook.sheets.map((s, idx) =>
+        idx === workbook.activeSheetIndex ? { ...s, cells: newCells } : s
+      );
+      const newWorkbook: Workbook = {
+        ...workbook,
+        sheets: newSheets,
+        lastModified: Date.now(),
+      };
+      pushHistory(newWorkbook, `${edge} border`);
+      setStatusMessage(`Applied ${edge} border (${cellsUpdated} cell(s))`);
+    },
+    [selection, workbook, pushHistory, setStatusMessage, getCurrentBorder]
+  );
+
+  /** Applies all borders to selected cells. */
+  const setBorderAll = useCallback(
+    () => {
+      if (!selection) return;
+      const borderValue = getCurrentBorder();
+      const sheet = workbook.sheets[workbook.activeSheetIndex];
+      const minRow = Math.min(selection.startRow, selection.endRow);
+      const maxRow = Math.max(selection.startRow, selection.endRow);
+      const minCol = Math.min(selection.startCol, selection.endCol);
+      const maxCol = Math.max(selection.startCol, selection.endCol);
+
+      const newCells = { ...sheet.cells };
+      let cellsUpdated = 0;
+
+      for (const [key, existing] of Object.entries(sheet.cells)) {
+        const colonIndex = key.indexOf(':');
+        const r = parseInt(key.slice(0, colonIndex), 10);
+        const c = parseInt(key.slice(colonIndex + 1), 10);
+        if (r < minRow || r > maxRow || c < minCol || c > maxCol) continue;
+        const merged = mergeCellStyle(existing?.style, {
+          borderTop: borderValue,
+          borderBottom: borderValue,
+          borderLeft: borderValue,
+          borderRight: borderValue,
+        });
+        newCells[key] = { ...existing, style: merged };
+        cellsUpdated++;
+      }
+
+      if (cellsUpdated === 0) return;
+
+      const newSheets = workbook.sheets.map((s, idx) =>
+        idx === workbook.activeSheetIndex ? { ...s, cells: newCells } : s
+      );
+      const newWorkbook: Workbook = {
+        ...workbook,
+        sheets: newSheets,
+        lastModified: Date.now(),
+      };
+      pushHistory(newWorkbook, 'All borders');
+      setStatusMessage(`Applied all borders (${cellsUpdated} cell(s))`);
+    },
+    [selection, workbook, pushHistory, setStatusMessage, getCurrentBorder]
+  );
+
+  /** Applies outside border to the selection range. */
+  const setBorderOutside = useCallback(
+    () => {
+      if (!selection) return;
+      const borderValue = getCurrentBorder();
+      const sheet = workbook.sheets[workbook.activeSheetIndex];
+      const minRow = Math.min(selection.startRow, selection.endRow);
+      const maxRow = Math.max(selection.startRow, selection.endRow);
+      const minCol = Math.min(selection.startCol, selection.endCol);
+      const maxCol = Math.max(selection.startCol, selection.endCol);
+
+      const newCells = { ...sheet.cells };
+      let cellsUpdated = 0;
+
+      for (const [key, existing] of Object.entries(sheet.cells)) {
+        const colonIndex = key.indexOf(':');
+        const r = parseInt(key.slice(0, colonIndex), 10);
+        const c = parseInt(key.slice(colonIndex + 1), 10);
+        if (r < minRow || r > maxRow || c < minCol || c > maxCol) continue;
+        const updates: Partial<CellStyle> = {};
+        if (r === minRow) updates.borderTop = borderValue;
+        if (r === maxRow) updates.borderBottom = borderValue;
+        if (c === minCol) updates.borderLeft = borderValue;
+        if (c === maxCol) updates.borderRight = borderValue;
+        const merged = mergeCellStyle(existing?.style, updates);
+        newCells[key] = { ...existing, style: merged };
+        cellsUpdated++;
+      }
+
+      if (cellsUpdated === 0) return;
+
+      const newSheets = workbook.sheets.map((s, idx) =>
+        idx === workbook.activeSheetIndex ? { ...s, cells: newCells } : s
+      );
+      const newWorkbook: Workbook = {
+        ...workbook,
+        sheets: newSheets,
+        lastModified: Date.now(),
+      };
+      pushHistory(newWorkbook, 'Outside borders');
+      setStatusMessage(`Applied outside borders (${cellsUpdated} cell(s))`);
+    },
+    [selection, workbook, pushHistory, setStatusMessage, getCurrentBorder]
+  );
+
+  /** Clears all borders from selected cells. */
+  const clearBorders = useCallback(
+    () => {
+      if (!selection) return;
+      const sheet = workbook.sheets[workbook.activeSheetIndex];
+      const minRow = Math.min(selection.startRow, selection.endRow);
+      const maxRow = Math.max(selection.startRow, selection.endRow);
+      const minCol = Math.min(selection.startCol, selection.endCol);
+      const maxCol = Math.max(selection.startCol, selection.endCol);
+
+      const newCells = { ...sheet.cells };
+      let cellsUpdated = 0;
+
+      for (const [key, existing] of Object.entries(sheet.cells)) {
+        const colonIndex = key.indexOf(':');
+        const r = parseInt(key.slice(0, colonIndex), 10);
+        const c = parseInt(key.slice(colonIndex + 1), 10);
+        if (r < minRow || r > maxRow || c < minCol || c > maxCol) continue;
+        if (existing?.style) {
+          const { borderTop, borderBottom, borderLeft, borderRight, ...rest } = existing.style;
+          newCells[key] = { ...existing, style: Object.keys(rest).length > 0 ? rest : undefined };
+          if (borderTop || borderBottom || borderLeft || borderRight) {
+            cellsUpdated++;
+          }
+        }
+      }
+
+      if (cellsUpdated === 0) return;
+      const newSheets = workbook.sheets.map((s, idx) =>
+        idx === workbook.activeSheetIndex ? { ...s, cells: newCells } : s
+      );
+      const newWorkbook: Workbook = {
+        ...workbook,
+        sheets: newSheets,
+        lastModified: Date.now(),
+      };
+      pushHistory(newWorkbook, 'Clear borders');
+      setStatusMessage(`Cleared borders (${cellsUpdated} cell(s))`);
+    },
+    [selection, workbook, pushHistory, setStatusMessage]
+  );
+
+  const setBorderTop = useCallback(() => applyBorderEdge('top'), [applyBorderEdge]);
+  const setBorderBottom = useCallback(() => applyBorderEdge('bottom'), [applyBorderEdge]);
+  const setBorderLeft = useCallback(() => applyBorderEdge('left'), [applyBorderEdge]);
+  const setBorderRight = useCallback(() => applyBorderEdge('right'), [applyBorderEdge]);
 
   const clearCellStyles = useCallback(
     () => {
@@ -192,11 +433,23 @@ export function useCellStyles({
     toggleBoldStyle,
     toggleItalicStyle,
     toggleUnderlineStyle,
+    toggleStrikethroughStyle,
     setTextColor,
     setBackgroundColor,
     setTextAlign,
     setNumberFormat,
     toggleWrapTextStyle,
     clearCellStyles,
+    borderColor,
+    setBorderColor: setBorderColorWithRef,
+    borderStyle,
+    setBorderStyle,
+    setBorderTop,
+    setBorderBottom,
+    setBorderLeft,
+    setBorderRight,
+    setBorderAll,
+    setBorderOutside,
+    clearBorders,
   };
 }

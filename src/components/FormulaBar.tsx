@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { parseFormula, type ASTNode } from '../utils/formulaParser';
 import { validateFormula, type ValidationResult } from '../utils/formulaValidation';
-import { searchFunctions, type FunctionInfo } from '../utils/formulaAutocomplete';
+import { type FunctionInfo } from '../utils/formulaAutocomplete';
 import type { EditingSession, PointSession } from '../hooks/useCellEditing';
 import type { ReferenceFormat } from '../hooks/useReferenceFormat';
 import { colToLetter } from '../types';
@@ -45,15 +45,21 @@ export interface FormulaBarProps {
   /** Cell clicked during POINT mode - FSM updates selection. */
   onCellPick: (row: number, col: number, shiftKey: boolean) => void;
 
+  // ── Auto-complete state from FSM ──────────────────────────────────
+  /** Auto-complete state derived from the current buffer and caret. */
+  autoComplete: { open: boolean; matches: FunctionInfo[]; index: number; tokenStart: number };
+  /** Accept the auto-complete suggestion at the given index. */
+  onAcceptAutoComplete: (index: number) => void;
+  /** Navigate the auto-complete selection (+1 = down, -1 = up). */
+  onNavigateAutoComplete: (delta: number) => void;
+  /** Dismiss the auto-complete dropdown. */
+  onDismissAutoComplete: () => void;
+
   // ── UI callbacks (non-editing) ──────────────────────────────────────
   /** Reference format (A1 or R1C1). */
   referenceFormat?: ReferenceFormat;
   /** Callback when the reference format toggle is clicked. */
   onToggleReferenceFormat?: () => void;
-  /** Callback when a function is selected from the function bar. */
-  onInsertFunction?: (functionName: string) => void;
-  /** Callback when the Insert Function button is clicked (opens wizard). */
-  onOpenWizard?: () => void;
   /** Callback when formula highlights change. */
   onHighlightsChange?: (ranges: HighlightedRange[]) => void;
 }
@@ -118,10 +124,12 @@ function extractHighlights(formula: string): HighlightedRange[] {
 function AutoCompleteDropdown({
   matches,
   selectedIndex,
+  onHover,
   onSelect,
 }: {
   matches: FunctionInfo[];
   selectedIndex: number;
+  onHover: (index: number) => void;
   onSelect: (index: number) => void;
   onDismiss?: () => void;
 }) {
@@ -142,7 +150,7 @@ function AutoCompleteDropdown({
           }`}
           /* istanbul ignore next - mouse handlers for dropdown items */
           onMouseDown={() => onSelect(idx)}
-          onMouseEnter={() => onSelect(idx)}
+          onMouseEnter={() => onHover(idx)}
         >
           <span className="font-mono text-sm font-semibold text-blue-700 min-w-[80px]">
             {fn.name}
@@ -175,18 +183,18 @@ export function FormulaBar({
   onRawBlur,
   onRawCaretMove,
   onCellPick: _onCellPick,
+  autoComplete,
+  onAcceptAutoComplete,
+  onNavigateAutoComplete,
+  onDismissAutoComplete,
   referenceFormat = 'A1',
   onToggleReferenceFormat,
-  onInsertFunction,
-  onOpenWizard,
   onHighlightsChange,
 }: FormulaBarProps) {
-  const [autoCompleteOpen, setAutoCompleteOpen] = useState(false);
-  const [autoCompleteMatches, setAutoCompleteMatches] = useState<FunctionInfo[]>([]);
-  const [autoCompleteIndex, setAutoCompleteIndex] = useState(0);
-  const [autoCompleteTokenStart, setAutoCompleteTokenStart] = useState(0);
   const [expanded, setExpanded] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  // Track whether focus event should be ignored (used during Alt+Enter expansion)
+  const suppressFocus = useRef(false);
 
   // Derive editing mode from FSM session state
   const isEditing = session.state !== 'SELECT';
@@ -250,107 +258,26 @@ export function FormulaBar({
     }
   }, [cursorPos, value]);
 
-  // Transfer focus to textarea when expanded
-  useEffect(() => {
-    if (expanded && inputRef.current) {
-      inputRef.current.focus();
-    }
-  }, [expanded]);
 
-  // Close auto-complete when value changes externally
-  useEffect(() => {
-    if (!isEditing) {
-      setAutoCompleteOpen(false);
-    }
-  }, [isEditing]);
-
-  // Find function token at cursor position for auto-complete
-  const findFunctionToken = useCallback((text: string, pos: number): { token: string; start: number } | null => {
-    if (!text.startsWith('=')) return null;
-    const body = text.slice(1);
-    // Clamp to valid range; if cursor is at 0 (jsdom), search from end
-    const relPos = pos <= 0 ? body.length - 1 : Math.min(pos - 1, body.length - 1);
-    if (relPos < 0) return null;
-
-    // Walk backwards to find token start
-    let start = relPos;
-    while (start > 0 && /[A-Za-z]/.test(body[start - 1])) {
-      start--;
-    }
-
-    // Walk forwards to find token end
-    let end = relPos;
-    while (end < body.length && /[A-Za-z]/.test(body[end])) {
-      end++;
-    }
-
-    if (start === end) return null;
-
-    const token = body.slice(start, end).toUpperCase();
-
-    // Check if we're in a function context
-    const prevChar = start > 0 ? body[start - 1] : '';
-    const isFunctionContext = start === 0 || /[,(+\-*/&=<>]/.test(prevChar) || prevChar === ' ';
-
-    if (!isFunctionContext || token.length === 0) return null;
-
-    return { token, start: start + 1 }; // +1 for display position
-  }, []);
-
-  const openAutoComplete = useCallback(() => {
-    const result = findFunctionToken(value, cursorPos);
-    /* istanbul ignore next - cursor not on a function token */
-    if (!result) {
-      setAutoCompleteOpen(false);
-      return;
-    }
-
-    const matches = searchFunctions(result.token);
-    /* istanbul ignore next - no functions match the token */
-    if (matches.length === 0) {
-      setAutoCompleteOpen(false);
-      return;
-    }
-
-    setAutoCompleteMatches(matches);
-    setAutoCompleteIndex(0);
-    setAutoCompleteTokenStart(result.start);
-    setAutoCompleteOpen(true);
-  }, [value, cursorPos, findFunctionToken]);
 
   const handleFocus = useCallback(() => {
+    // Suppress focus handling when expanding for Alt+Enter
+    if (suppressFocus.current) {
+      suppressFocus.current = false;
+      return;
+    }
     const input = inputRef.current;
     const caretPos = input ? (input.selectionStart ?? 0) : value.length;
     onRawFocus(caretPos);
   }, [onRawFocus, value.length]);
 
   const handleBlur = useCallback(() => {
+    // Suppress blur-commit when expanding for Alt+Enter
+    if (suppressFocus.current) {
+      return;
+    }
     onRawBlur();
   }, [onRawBlur]);
-
-  const acceptAutoComplete = useCallback((index: number) => {
-    const selected = autoCompleteMatches[index];
-    if (!selected) return;
-
-    const before = value.slice(0, autoCompleteTokenStart);
-    const after = value.slice(autoCompleteTokenStart + (findFunctionToken(value, cursorPos)?.token.length ?? 0));
-    const newValue = before + selected.name + '()' + after;
-
-    // Update display value
-    onChange(newValue);
-
-    // Position cursor inside the parens
-    const newPos = autoCompleteTokenStart + selected.name.length + 2;
-    onRawCaretMove(newPos);
-    setAutoCompleteOpen(false);
-
-    // Focus back on input
-    /* istanbul ignore next - requestAnimationFrame in jsdom */
-    requestAnimationFrame(() => {
-      inputRef.current?.focus();
-      inputRef.current?.setSelectionRange(newPos, newPos);
-    });
-  }, [autoCompleteMatches, value, autoCompleteTokenStart, cursorPos, onRawCaretMove, onChange, findFunctionToken]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     // ── Expand/Collapse Formula Bar (Ctrl + Shift + U) ────────────────
@@ -361,25 +288,46 @@ export function FormulaBar({
       return;
     }
 
+    // ── Alt+Enter: insert line break ─────────────────────────────────
+    // Expand to textarea and insert a newline at the cursor position.
+    if (e.key === 'Enter' && e.altKey) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!expanded) {
+        // Use cursorPos prop (FSM caret) instead of native selection,
+        // because the native selection may not be in sync with the FSM.
+        const newValue = value.slice(0, cursorPos) + '\n' + value.slice(cursorPos);
+        // Mark that the next focus event should be suppressed
+        suppressFocus.current = true;
+        // Expand to textarea to show the newline
+        setExpanded(true);
+        // Update the buffer via onChange (which calls the FSM)
+        onChange(newValue);
+        // Update the caret position in the FSM
+        onRawCaretMove(cursorPos + 1);
+        return;
+      }
+    }
+
     // ── Auto-complete navigation (takes priority when dropdown is open) ──
-    if (autoCompleteOpen && ['ArrowDown', 'ArrowUp', 'Tab', 'Enter', 'Escape'].includes(e.key)) {
+    if (autoComplete.open && ['ArrowDown', 'ArrowUp', 'Tab', 'Enter', 'Escape'].includes(e.key)) {
       switch (e.key) {
         case 'ArrowDown':
           e.preventDefault();
-          setAutoCompleteIndex((prev) => (prev + 1) % autoCompleteMatches.length);
+          onNavigateAutoComplete(1);
           return;
         case 'ArrowUp':
           e.preventDefault();
-          setAutoCompleteIndex((prev) => (prev - 1 + autoCompleteMatches.length) % autoCompleteMatches.length);
+          onNavigateAutoComplete(-1);
           return;
         case 'Tab':
         case 'Enter':
           e.preventDefault();
-          acceptAutoComplete(autoCompleteIndex);
+          onAcceptAutoComplete(autoComplete.index);
           return;
         case 'Escape':
           e.preventDefault();
-          setAutoCompleteOpen(false);
+          onDismissAutoComplete();
           return;
       }
     }
@@ -442,6 +390,15 @@ export function FormulaBar({
       input?.setSelectionRange(caretPos, caretPos);
     }
 
+    // ── Always forward ) to FSM (commits POINT reference) ──────────
+    // Must be handled before the selection check because ) is a printable
+    // char that would otherwise be inserted natively when text is selected
+    if (e.key === ')') {
+      e.preventDefault();
+      onRawKeyDown(e);
+      return;
+    }
+
     // ── Handle selection-based keys natively ─────────────────────────
     // If text is selected, let the native input handle Backspace/Delete/printable
     // keys. The onChange handler will sync the result to the FSM.
@@ -455,42 +412,22 @@ export function FormulaBar({
     // ── Forward all other keys to FSM ─────────────────────────────────
     e.preventDefault();
     onRawKeyDown(e);
-  }, [autoCompleteOpen, autoCompleteMatches, autoCompleteIndex, acceptAutoComplete, value, onChange, onRawCaretMove, onRawKeyDown, session.state]);
+  }, [autoComplete, onAcceptAutoComplete, onNavigateAutoComplete, onDismissAutoComplete, value, onChange, onRawCaretMove, onRawKeyDown, session.state, cursorPos, expanded]);
 
-  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const newValue = e.target.value;
     const rawPos = e.target.selectionStart;
     const newPos = rawPos !== null && rawPos !== undefined ? rawPos : newValue.length;
 
-    // Forward to FSM
+    // Forward to FSM (autocomplete state is derived from FSM session)
     onRawChange(newValue, newPos);
-
-    // Check if we should show auto-complete
-    if (newValue.startsWith('=')) {
-      const searchPos = Math.max(newPos, 1);
-      const result = findFunctionToken(newValue, searchPos);
-      if (result && result.token.length >= 1) {
-        const matches = searchFunctions(result.token);
-        if (matches.length > 0) {
-          setAutoCompleteMatches(matches);
-          setAutoCompleteIndex(0);
-          setAutoCompleteTokenStart(result.start);
-          setAutoCompleteOpen(true);
-          return;
-        }
-      }
-    }
-    setAutoCompleteOpen(false);
-  }, [onRawChange, findFunctionToken]);
+  }, [onRawChange]);
 
   const handleClick = useCallback(() => {
     const input = inputRef.current;
     const caretPos = input ? (input.selectionStart ?? 0) : value.length;
     onRawCaretMove(caretPos);
-    if (isEditing && value.startsWith('=')) {
-      openAutoComplete();
-    }
-  }, [onRawCaretMove, isEditing, value, openAutoComplete]);
+  }, [onRawCaretMove, value.length]);
 
   const handleSelect = useCallback(() => {
     const input = inputRef.current;
@@ -595,17 +532,6 @@ export function FormulaBar({
         {/* Formula fx indicator */}
         <span className="text-gray-400 font-medium">fx</span>
 
-        {/* Insert Function button */}
-        {onOpenWizard && (
-          <button
-            className="text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-1.5 py-0.5 rounded transition-colors"
-            onClick={onOpenWizard}
-            title="Open formula wizard"
-          >
-            ƒx
-          </button>
-        )}
-
         {/* Point mode indicator */}
         {isPointMode && (
           <span className="text-xs font-bold text-white bg-blue-600 px-1.5 py-0.5 rounded animate-pulse">
@@ -664,34 +590,18 @@ export function FormulaBar({
         </div>
       </div>
 
-      {/* Function bar — one line of common functions */}
-      <div className="function-bar">
-        {['SUM', 'AVERAGE', 'COUNT', 'MAX', 'MIN', 'IF', 'SUMIF', 'COUNTIF', 'VLOOKUP', 'ROUND'].map((fn) => (
-          <button
-            key={fn}
-            className="function-btn"
-            onClick={() => onInsertFunction?.(fn)}
-            title={`Insert ${fn}() formula`}
-          >
-            {fn}
-          </button>
-        ))}
-      </div>
-
       {/* Error / incomplete display */}
       {errorDisplay}
 
       {/* Auto-complete dropdown */}
-      {autoCompleteOpen && (
+      {autoComplete.open && (
         <div className="absolute left-[8rem] right-3 top-full z-50">
           <AutoCompleteDropdown
-            matches={autoCompleteMatches}
-            selectedIndex={autoCompleteIndex}
-            onSelect={(idx) => {
-              setAutoCompleteIndex(idx);
-              acceptAutoComplete(idx);
-            }}
-            onDismiss={() => setAutoCompleteOpen(false)}
+            matches={autoComplete.matches}
+            selectedIndex={autoComplete.index}
+            onHover={(idx) => onNavigateAutoComplete(idx - autoComplete.index)}
+            onSelect={onAcceptAutoComplete}
+            onDismiss={onDismissAutoComplete}
           />
         </div>
       )}

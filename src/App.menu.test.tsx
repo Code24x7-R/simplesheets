@@ -38,12 +38,20 @@ describe('App - Menu Handlers', () => {
     jest.clearAllMocks();
   });
 
-  it('shows About message from Help menu', () => {
+  it('shows About SimpleSheet modal from Help menu', () => {
     render(<App />);
     fireEvent.click(screen.getByText('Help'));
     fireEvent.click(screen.getByText('About SimpleSheet'));
-    const statusBar = screen.getByTestId('status-message');
-    expect(statusBar?.textContent).toContain('SimpleSheet v0.1.0');
+    expect(screen.getByText('About SimpleSheet')).toBeInTheDocument();
+  });
+
+  it('closes About SimpleSheet modal on close button click', () => {
+    render(<App />);
+    fireEvent.click(screen.getByText('Help'));
+    fireEvent.click(screen.getByText('About SimpleSheet'));
+    expect(screen.getByText('About SimpleSheet')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Close'));
+    expect(screen.queryByText('About SimpleSheet')).not.toBeInTheDocument();
   });
 
   it('shows keyboard shortcuts modal from Help menu', () => {

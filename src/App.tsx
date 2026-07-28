@@ -13,15 +13,17 @@ import { FormulaBar } from './components/FormulaBar';
 import type { HighlightedRange } from './components/FormulaBar';
 import { PrintSetupModal } from './components/PrintSetupModal';
 import { ShortcutsModal } from './components/ShortcutsModal';
+import { AboutModal } from './components/AboutModal';
 import { SearchReplaceModal } from './components/SearchReplaceModal';
 import { SheetTabs } from './components/SheetTabs';
 import { MenuBar } from './components/MenuBar';
+import { Toolbar } from './components/Toolbar';
 import { ImportExportBridge } from './components/ImportExportBridge';
 import { evaluateWorkbook } from './utils/formulaEngine';
-import { copyRange, cutRange as clipCutRange, getClipboard, clearClipboard, hasClipboardData } from './utils/clipboard';
-import { adjustFormulaRefs } from './utils/formulaParser';
+import { copyRange, cutRange as clipCutRange, getClipboard, clearClipboard, hasClipboardData, writeClipboardToSystem } from './utils/clipboard';
+import { adjustFormulaRefs, prefixRefsWithSheet } from './utils/formulaParser';
 import { useAutosave } from './hooks/useAutosave';
-import { useCellEditing, getStatusMessage } from './hooks/useCellEditing';
+import { useCellEditing, getStatusMessage, shouldActivatePointMode } from './hooks/useCellEditing';
 import { useCellStyles } from './hooks/useCellStyles';
 import { useReferenceFormat } from './hooks/useReferenceFormat';
 import { useFormulaWizard } from './hooks/useFormulaWizard';
@@ -29,6 +31,13 @@ import { FormulaWizard } from './components/FormulaWizard';
 import { loadAutosave } from './services/storageService';
 import type { Cell, Selection, Sheet } from './types';
 import { insertRow, deleteRow, insertCol, deleteCol } from './utils/sheetOperations';
+import { computeFillSeries } from './utils/fillSeries';
+import { sortRange } from './utils/sheetSort';
+import {
+  createFilterState,
+  type FilterState,
+} from './utils/sheetFilter';
+import type { ColumnFilter } from './utils/sheetFilter';
 
 // ─── Empty Workbook ──────────────────────────────────────────────────────────
 
@@ -145,13 +154,13 @@ function WorkbookView() {
   const { format: referenceFormat, toggle: toggleReferenceFormat } = useReferenceFormat();
   const [showPrintSetup, setShowPrintSetup] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
+  const [showAbout, setShowAbout] = useState(false);
   const [showSearchReplace, setShowSearchReplace] = useState(false);
   const [showPasteModal, setShowPasteModal] = useState(false);
   const [pendingPasteHtml, setPendingPasteHtml] = useState<string | null>(null);
   const [pendingPastePlain, setPendingPastePlain] = useState<string | null>(null);
   const {
     wizard: formulaWizard,
-    openWizard: openFormulaWizard,
     closeWizard: closeFormulaWizard,
     setParameter: setWizardParameter,
     enterNested: enterWizardNested,
@@ -183,6 +192,8 @@ function WorkbookView() {
   } | null>(null);
   // Toggle formula view (Ctrl + `) - show formulas instead of values
   const [showFormulas, setShowFormulas] = useState(false);
+  // Filter state for auto-filter feature
+  const [filterState, setFilterState] = useState<FilterState | null>(null);
 
   // Sheet reference (needed by the editing hook and everywhere else)
   const sheet = workbook.sheets[workbook.activeSheetIndex];
@@ -199,11 +210,18 @@ function WorkbookView() {
     pointSession: editingPointSession,
     handleKey: handleEditingKey,
     handleCellClick: handleEditingCellClick,
+    startEnter,
+    startEdit,
     startEditAt,
     setCaretPos,
     setBuffer,
+    enterPointMode,
     commit: commitEditing,
     reset: resetEditing,
+    autoComplete,
+    acceptAutoComplete,
+    navigateAutoComplete,
+    dismissAutoComplete,
   } = useCellEditing({
     activeRow: activeCell?.row ?? 0,
     activeCol: activeCell?.col ?? 0,
@@ -371,11 +389,6 @@ function WorkbookView() {
 
   // ─── Formula Wizard ──────────────────────────────────────────────
 
-  const handleOpenWizard = useCallback(() => {
-    const cellRef = activeCell ? colToLetter(activeCell.col) + (activeCell.row + 1) : undefined;
-    openFormulaWizard('SUM', cellRef);
-  }, [activeCell, openFormulaWizard]);
-
   const handleWizardApply = useCallback(
     (formula: string) => {
       if (activeCell) {
@@ -392,7 +405,10 @@ function WorkbookView() {
   // Raw key down - FSM decides what to do based on current state
   const handleFormulaRawKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
-      handleEditingKey(e.key, e.shiftKey, e.ctrlKey, e.altKey);
+      const result = handleEditingKey(e.key, e.shiftKey, e.ctrlKey, e.altKey);
+      if (result.statusMessage) {
+        setStatusMessage(result.statusMessage);
+      }
     },
     [handleEditingKey],
   );
@@ -400,9 +416,59 @@ function WorkbookView() {
   // Raw change - FSM updates buffer
   const handleFormulaRawChange = useCallback(
     (value: string, caretPos: number) => {
-      setBuffer(value, caretPos);
+      const s = editingSession;
+      if (s.state === 'SELECT' && value.length > 0) {
+        // First character typed in formula bar: start editing.
+        // If value is just "=", "+", or "-", start ENTER mode (replaces content).
+        // Otherwise start EDIT mode (append to existing content).
+        const firstChar = value[0];
+        if (firstChar === '=' || firstChar === '+' || firstChar === '-') {
+          startEnter(firstChar);
+          // If more characters were typed, update buffer with full value
+          if (value.length > 1) {
+            setBuffer(value, caretPos);
+          }
+        } else {
+          startEdit();
+          setBuffer(value, caretPos);
+        }
+      } else {
+        setBuffer(value, caretPos);
+      }
+      // POINT trigger detection is now handled inside setBuffer
     },
-    [setBuffer],
+    [setBuffer, startEnter, startEdit, editingSession],
+  );
+
+  // Cell edit change - updates FormulaBar value AND drives the FSM
+  // when typing in grid cell.
+  const handleCellEditChange = useCallback(
+    (value: string) => {
+      setFormulaBarValue(value);
+
+      const s = editingSession;
+
+      if (s.state === 'SELECT' && value.length > 0) {
+        // First character: start editing
+        startEnter(value.slice(-1));
+        if (value.length > 1) {
+          setBuffer(value, value.length);
+        } else if (shouldActivatePointMode(value, 1)) {
+          // Single-character POINT trigger (e.g., "+" or "-"):
+          // startEnter already set buffer, now enter POINT mode
+          enterPointMode(1, value);
+        }
+      } else if (s.state === 'POINT') {
+        // In POINT mode, typing a letter exits POINT and enters EDIT.
+        // Process the new character through the FSM's POINT handler.
+        handleEditingKey(value.slice(-1), false, false, false);
+      } else {
+        // ENTER or EDIT: update buffer
+        setBuffer(value, value.length);
+      }
+      // POINT trigger detection is now handled inside setBuffer
+    },
+    [editingSession, startEnter, setBuffer, handleEditingKey, enterPointMode],
   );
 
   // Raw focus - FSM enters EDIT mode
@@ -430,7 +496,7 @@ function WorkbookView() {
   // ─── Help / Utility Actions ──────────────────────────────────────────
 
   const handleAbout = useCallback(() => {
-    setStatusMessage('SimpleSheet v0.1.0 — A lightweight spreadsheet app');
+    setShowAbout(true);
   }, []);
 
   const handleShortcuts = useCallback(() => {
@@ -447,6 +513,8 @@ function WorkbookView() {
       pushHistory(updatedWb, description);
       setStatusMessage(description);
       setShowSearchReplace(false);
+      // Restore focus to grid so keyboard navigation works
+      gridRef.current?.focus();
     },
     [pushHistory],
   );
@@ -514,6 +582,7 @@ function WorkbookView() {
     if (prev) {
       setStatusMessage('Undo performed');
       setActiveCell(null);
+      gridRef.current?.focus();
     }
   }, [undo]);
 
@@ -521,6 +590,7 @@ function WorkbookView() {
     const next = redo();
     if (next) {
       setStatusMessage('Redo performed');
+      gridRef.current?.focus();
     }
   }, [redo]);
 
@@ -589,6 +659,7 @@ function WorkbookView() {
       setActiveCell(null);
       setFormulaBarValue('');
       setStatusMessage('Created new workbook');
+      gridRef.current?.focus();
     },
     [resetHistory]
   );
@@ -605,6 +676,7 @@ function WorkbookView() {
       pushHistory(newWb, `Switch to ${workbook.sheets[index].name}`);
       setActiveCell(null);
       setFormulaBarValue('');
+      gridRef.current?.focus();
     },
     [workbook, pushHistory]
   );
@@ -633,6 +705,7 @@ function WorkbookView() {
     pushHistory(newWb, `Add Sheet${sheetNum}`);
     setActiveCell(null);
     setFormulaBarValue('');
+    gridRef.current?.focus();
   }, [workbook, pushHistory]);
 
   const handleRenameSheet = useCallback(
@@ -649,6 +722,7 @@ function WorkbookView() {
       };
       pushHistory(newWb, `Rename sheet to "${trimmed}"`);
       setStatusMessage(`Renamed sheet to "${trimmed}"`);
+      gridRef.current?.focus();
     },
     [workbook, pushHistory]
   );
@@ -676,6 +750,7 @@ function WorkbookView() {
       pushHistory(newWb, `Copy sheet "${source.name}"`);
       setActiveCell(null);
       setFormulaBarValue('');
+      gridRef.current?.focus();
     },
     [workbook, pushHistory]
   );
@@ -696,6 +771,7 @@ function WorkbookView() {
       pushHistory(newWb, `Delete sheet "${sheetName}"`);
       setActiveCell(null);
       setFormulaBarValue('');
+      gridRef.current?.focus();
     },
     [workbook, pushHistory]
   );
@@ -778,7 +854,7 @@ function WorkbookView() {
       const detail = (e as CustomEvent).detail;
       /* istanbul ignore next - defensive null check */
       if (!detail) return;
-      copyRange(sheet.cells, detail.startRow, detail.startCol, detail.endRow, detail.endCol, detail.selectionType);
+      const clipboardData = copyRange(sheet.cells, detail.startRow, detail.startCol, detail.endRow, detail.endCol, detail.selectionType, workbook.activeSheetIndex);
       setClipboardRange({
         startRow: Math.min(detail.startRow, detail.endRow),
         startCol: Math.min(detail.startCol, detail.endCol),
@@ -793,13 +869,18 @@ function WorkbookView() {
           ? `Column${detail.startCol !== detail.endCol ? 's' : ''} copied`
           : 'Selection copied'
       );
+      // Also write to system clipboard for pasting into external applications
+      writeClipboardToSystem(clipboardData).catch(() => {
+        /* istanbul ignore next - clipboard access may be denied in some environments */
+        // Silently fail - internal clipboard still works
+      });
     };
 
     const handleCutEvent = (e: Event) => {
       const detail = (e as CustomEvent).detail;
       /* istanbul ignore next - defensive null check */
       if (!detail) return;
-      clipCutRange(sheet.cells, detail.startRow, detail.startCol, detail.endRow, detail.endCol, detail.selectionType);
+      const cutData = clipCutRange(sheet.cells, detail.startRow, detail.startCol, detail.endRow, detail.endCol, detail.selectionType, workbook.activeSheetIndex);
       setPendingCutRange({
         type: detail.selectionType ?? 'cell',
         startRow: Math.min(detail.startRow, detail.endRow),
@@ -823,6 +904,11 @@ function WorkbookView() {
           ? `Column${detail.startCol !== detail.endCol ? 's' : ''} cut`
           : 'Selection cut'
       );
+      // Also write to system clipboard for pasting into external applications
+      writeClipboardToSystem(cutData).catch(() => {
+        /* istanbul ignore next - clipboard access may be denied in some environments */
+        // Silently fail - internal clipboard still works
+      });
     };
 
     const handlePasteEvent = (e: Event) => {
@@ -838,25 +924,21 @@ function WorkbookView() {
       // Skip blanks can be passed via event detail (from Paste Special dialog)
       const skipBlanks = detail.skipBlanks ?? pasteSkipBlanks;
 
-      // Calculate source origin (top-left of copied range)
-      /* istanbul ignore next - pendingCutRange null fallback */
-      const srcRow = isCut ? pendingCutRange?.startRow ?? 0 : 0;
-      /* istanbul ignore next - pendingCutRange null fallback */
-      const srcCol = isCut ? pendingCutRange?.startCol ?? 0 : 0;
-
-      // For row selections, only offset rows (columns stay fixed).
-      // For column selections, only offset columns (rows stay fixed).
-      const rowOffset = selType === 'col' ? 0 : targetRow - srcRow;
-      const colOffset = selType === 'row' ? 0 : targetCol - srcCol;
-
       // Check for destination range mismatch (Excel behavior)
       // If user selected a range (not single cell), validate it matches clipboard
       const destSel = selection;
       const isSingleCellTarget = !destSel || (destSel.startRow === destSel.endRow && destSel.startCol === destSel.endCol);
 
+      // Determine the destination range
+      // For single-cell paste: destination = clipboard size
+      // For range paste: destination = selected range (tiled with clipboard if needed)
+      let destRowCount = clipboard.rowCount;
+      let destColCount = clipboard.colCount;
+
       if (!isSingleCellTarget && selType === 'cell' && destSel) {
-        const destRowCount = Math.abs(destSel.endRow - destSel.startRow) + 1;
-        const destColCount = Math.abs(destSel.endCol - destSel.startCol) + 1;
+        destRowCount = Math.abs(destSel.endRow - destSel.startRow) + 1;
+        destColCount = Math.abs(destSel.endCol - destSel.startCol) + 1;
+
         const srcRowCount = clipboard.rowCount;
         const srcColCount = clipboard.colCount;
 
@@ -880,9 +962,14 @@ function WorkbookView() {
       let cellsUpdated = 0;
       let cellsSkipped = 0;
 
-      for (let r = 0; r < clipboard.rowCount; r++) {
-        for (let c = 0; c < clipboard.colCount; c++) {
-          const cell = clipboard.cells[r][c];
+      for (let r = 0; r < destRowCount; r++) {
+        for (let c = 0; c < destColCount; c++) {
+          // Calculate source cell using modulo for tiled paste
+          // For row selections, only tile vertically (columns stay fixed)
+          // For column selections, only tile horizontally (rows stay fixed)
+          const srcRow = selType === 'col' ? r : r % clipboard.rowCount;
+          const srcCol = selType === 'row' ? c : c % clipboard.colCount;
+          const cell = clipboard.cells[srcRow][srcCol];
           /* istanbul ignore next - defensive null check */
           const isEmptySource = !cell || !cell.rawValue;
 
@@ -892,14 +979,36 @@ function WorkbookView() {
             continue;
           }
 
-          const destRow = r + rowOffset;
-          const destCol = c + colOffset;
+          const destRow = targetRow + r;
+          const destCol = targetCol + c;
           const destKey = cellKey(destRow, destCol);
 
           // Adjust formulas if pasting
           let newValue = cell?.rawValue ?? '';
-          if (newValue.startsWith('=') && (rowOffset !== 0 || colOffset !== 0)) {
-            newValue = '=' + adjustFormulaRefs(newValue.slice(1), rowOffset, colOffset);
+          if (newValue.startsWith('=')) {
+            const formulaBody = newValue.slice(1);
+            const sourceIdx = clipboard.sourceSheetIndex;
+            const targetIdx = workbook.activeSheetIndex;
+
+            if (sourceIdx !== undefined && sourceIdx !== targetIdx) {
+              // Cross-sheet paste: convert relative refs to cross-sheet refs pointing back to source
+              const sourceSheetName = workbook.sheets[sourceIdx]?.name;
+              if (sourceSheetName) {
+                newValue = '=' + prefixRefsWithSheet(formulaBody, sourceSheetName);
+              }
+            } else {
+              // Calculate the offset from source to destination for this specific cell
+              // srcRow/srcCol are clipboard indices (0-based within copied range)
+              // clipboard.sourceRow/sourceCol are the original spreadsheet coordinates
+              const sourceRow = clipboard.sourceRow ?? 0;
+              const sourceCol = clipboard.sourceCol ?? 0;
+              const cellRowOffset = destRow - (sourceRow + srcRow);
+              const cellColOffset = destCol - (sourceCol + srcCol);
+              if (cellRowOffset !== 0 || cellColOffset !== 0) {
+                // Same-sheet paste with offset: adjust references by offset
+                newValue = '=' + adjustFormulaRefs(formulaBody, cellRowOffset, cellColOffset);
+              }
+            }
           }
 
           const destCell: Cell = {
@@ -974,12 +1083,22 @@ function WorkbookView() {
     toggleBoldStyle,
     toggleItalicStyle,
     toggleUnderlineStyle,
+    toggleStrikethroughStyle,
     setTextColor,
     setBackgroundColor,
     setTextAlign,
     setNumberFormat,
     toggleWrapTextStyle,
     clearCellStyles,
+    borderColor,
+    setBorderColor,
+    setBorderTop,
+    setBorderBottom,
+    setBorderLeft,
+    setBorderRight,
+    setBorderAll,
+    setBorderOutside,
+    clearBorders,
   } = useCellStyles({
     activeCell,
     selection,
@@ -1012,6 +1131,144 @@ function WorkbookView() {
       handleCellsChange(changes);
     }
   }, [activeCell, selection, sheet.cells, handleCellsChange]);
+
+  // ─── Fill Series ──────────────────────────────────────────────────────
+
+  const handleFillSeries = useCallback(
+    (sourceStartRow: number, sourceStartCol: number, sourceEndRow: number, sourceEndCol: number, targetEndRow: number, targetEndCol: number) => {
+      // Determine if fill is horizontal or vertical based on source shape
+      const isVertical = sourceEndRow > sourceStartRow && sourceStartCol === sourceEndCol;
+      const isHorizontal = sourceEndCol > sourceStartCol && sourceStartRow === sourceEndRow;
+      const currentSheet = workbook.sheets[workbook.activeSheetIndex];
+      const changes: Array<{ row: number; col: number; value: string }> = [];
+
+      if (isVertical) {
+        // Vertical fill: source is a column range (3+ rows, 1 col)
+        const sourceCells: Cell[] = [];
+        for (let r = sourceStartRow; r <= sourceEndRow; r++) {
+          const cell = currentSheet.cells[cellKey(r, sourceStartCol)];
+          if (cell) sourceCells.push(cell);
+        }
+        if (sourceCells.length >= 3) {
+          const fillCount = targetEndRow - sourceEndRow;
+          const fillValues = computeFillSeries(sourceCells, fillCount);
+          if (fillValues) {
+            for (let i = 0; i < fillValues.length; i++) {
+              changes.push({ row: sourceEndRow + 1 + i, col: sourceStartCol, value: fillValues[i] });
+            }
+          }
+        }
+      } else if (isHorizontal) {
+        // Horizontal fill: source is a row range (1 row, 3+ cols)
+        const sourceCells: Cell[] = [];
+        for (let c = sourceStartCol; c <= sourceEndCol; c++) {
+          const cell = currentSheet.cells[cellKey(sourceStartRow, c)];
+          if (cell) sourceCells.push(cell);
+        }
+        if (sourceCells.length >= 3) {
+          const fillCount = targetEndCol - sourceEndCol;
+          const fillValues = computeFillSeries(sourceCells, fillCount);
+          if (fillValues) {
+            for (let i = 0; i < fillValues.length; i++) {
+              changes.push({ row: sourceStartRow, col: sourceEndCol + 1 + i, value: fillValues[i] });
+            }
+          }
+        }
+      }
+
+      if (changes.length > 0) {
+        handleCellsChange(changes);
+      }
+    },
+    [workbook, handleCellsChange]
+  );
+
+  // ─── Sort ──────────────────────────────────────────────────────────
+
+  const handleSortAscending = useCallback(() => {
+    if (!selection) return;
+    const currentSheet = workbook.sheets[workbook.activeSheetIndex];
+    const sorted = sortRange(
+      currentSheet,
+      selection.startRow,
+      selection.endRow,
+      [{ column: selection.startCol, direction: 'asc' }],
+      true
+    );
+    if (sorted === currentSheet) return; // No change
+
+    const newSheets = workbook.sheets.map((s, idx) =>
+      idx === workbook.activeSheetIndex ? sorted : s
+    );
+    const newWb: Workbook = { ...workbook, sheets: newSheets, lastModified: Date.now() };
+    pushHistory(newWb, `Sorted column ${colToLetter(selection.startCol)} ascending`);
+    setStatusMessage(`Sorted column ${colToLetter(selection.startCol)} — ascending`);
+  }, [workbook, pushHistory, selection]);
+
+  const handleSortDescending = useCallback(() => {
+    if (!selection) return;
+    const currentSheet = workbook.sheets[workbook.activeSheetIndex];
+    const sorted = sortRange(
+      currentSheet,
+      selection.startRow,
+      selection.endRow,
+      [{ column: selection.startCol, direction: 'desc' }],
+      true
+    );
+    if (sorted === currentSheet) return; // No change
+
+    const newSheets = workbook.sheets.map((s, idx) =>
+      idx === workbook.activeSheetIndex ? sorted : s
+    );
+    const newWb: Workbook = { ...workbook, sheets: newSheets, lastModified: Date.now() };
+    pushHistory(newWb, `Sorted column ${colToLetter(selection.startCol)} descending`);
+    setStatusMessage(`Sorted column ${colToLetter(selection.startCol)} — descending`);
+  }, [workbook, pushHistory, selection]);
+
+  // ─── Filter ──────────────────────────────────────────────────────────
+
+  const handleToggleFilter = useCallback(() => {
+    if (filterState?.active) {
+      // Turn off filter
+      setFilterState(null);
+      setStatusMessage('Filter cleared');
+    } else {
+      // Turn on filter with default header row = 0
+      const currentSheet = workbook.sheets[workbook.activeSheetIndex];
+      const newFilterState = createFilterState(currentSheet, 0, {});
+      newFilterState.active = true;
+      setFilterState(newFilterState);
+      setStatusMessage('Filter enabled — click column headers to filter');
+    }
+  }, [filterState, workbook]);
+
+  const handleApplyFilter = useCallback((column: number, filter: ColumnFilter | undefined) => {
+    const currentSheet = workbook.sheets[workbook.activeSheetIndex];
+    const currentFilters = filterState?.filters || {};
+
+    let newFilters: Record<number, ColumnFilter>;
+    if (filter) {
+      newFilters = { ...currentFilters, [column]: filter };
+    } else {
+      newFilters = { ...currentFilters };
+      delete newFilters[column];
+    }
+
+    const newFilterState = createFilterState(currentSheet, 0, newFilters);
+    newFilterState.active = true;
+    setFilterState(newFilterState);
+
+    if (filter) {
+      setStatusMessage(`Filter applied to column ${colToLetter(column)} — ${newFilterState.visibleDataRows} of ${newFilterState.totalDataRows} rows visible`);
+    } else {
+      setStatusMessage(`Filter cleared for column ${colToLetter(column)}`);
+    }
+  }, [filterState, workbook]);
+
+  const handleClearAllFilters = useCallback(() => {
+    setFilterState(null);
+    setStatusMessage('All filters cleared');
+  }, []);
 
   // ─── Clipboard Menu Actions ────────────────────────────────────────────
 
@@ -1350,10 +1607,15 @@ function WorkbookView() {
         e.preventDefault();
         handleRedo();
       }
+      // Ctrl+Shift+L toggles filter (Excel shortcut)
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'l' || e.key === 'L')) {
+        e.preventDefault();
+        handleToggleFilter();
+      }
     };
     window.addEventListener('keydown', handleGlobalKeyDown);
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-  }, [handleUndo, handleRedo, handleNewSheet, handleSaveMenu, handleLoadMenu, handleSearchReplace, toggleBoldStyle, toggleItalicStyle, toggleUnderlineStyle]);
+  }, [handleUndo, handleRedo, handleNewSheet, handleSaveMenu, handleLoadMenu, handleSearchReplace, toggleBoldStyle, toggleItalicStyle, toggleUnderlineStyle, handleToggleFilter]);
 
   return (
     <div className="h-screen flex flex-col">
@@ -1401,6 +1663,18 @@ function WorkbookView() {
           onSetNumberFormat={setNumberFormat}
           onToggleWrapText={toggleWrapTextStyle}
           onClearStyles={clearCellStyles}
+          onSetBorderTop={setBorderTop}
+          onSetBorderBottom={setBorderBottom}
+          onSetBorderLeft={setBorderLeft}
+          onSetBorderRight={setBorderRight}
+          onSetBorderAll={setBorderAll}
+          onSetBorderOutside={setBorderOutside}
+          onClearBorders={clearBorders}
+          onSortAscending={handleSortAscending}
+          onSortDescending={handleSortDescending}
+          onToggleFilter={handleToggleFilter}
+          onClearAllFilters={handleClearAllFilters}
+          isFilterActive={filterState?.active || false}
           isBold={styleState.fontWeight === 'bold'}
           isItalic={styleState.fontStyle === 'italic'}
           isUnderline={styleState.textDecoration === 'underline'}
@@ -1411,6 +1685,39 @@ function WorkbookView() {
         />
         <span className="text-sm text-gray-500">{workbook.title}</span>
       </header>
+
+      {/* Toolbar */}
+      <Toolbar
+        onToggleBold={toggleBoldStyle}
+        onToggleItalic={toggleItalicStyle}
+        onToggleUnderline={toggleUnderlineStyle}
+        onToggleStrikethrough={toggleStrikethroughStyle}
+        onSetTextColor={setTextColor}
+        onSetBackgroundColor={setBackgroundColor}
+        onSetAlignLeft={() => setTextAlign('left')}
+        onSetAlignCenter={() => setTextAlign('center')}
+        onSetAlignRight={() => setTextAlign('right')}
+        onSetNumberFormat={setNumberFormat}
+        onSetBorderTop={setBorderTop}
+        onSetBorderBottom={setBorderBottom}
+        onSetBorderLeft={setBorderLeft}
+        onSetBorderRight={setBorderRight}
+        onSetBorderAll={setBorderAll}
+        onSetBorderOutside={setBorderOutside}
+        onClearBorders={clearBorders}
+        onSetBorderColor={setBorderColor}
+        onUndo={handleUndo}
+        onRedo={handleRedo}
+        onCopy={handleCopyMenu}
+        onCut={handleCutMenu}
+        onPaste={handlePasteMenu}
+        isBold={styleState.fontWeight === 'bold'}
+        isItalic={styleState.fontStyle === 'italic'}
+        isUnderline={styleState.textDecoration === 'underline'}
+        canUndo={canUndo}
+        canRedo={canRedo}
+        borderColor={borderColor}
+      />
 
       {/* Formula Bar */}
       <FormulaBar
@@ -1425,14 +1732,12 @@ function WorkbookView() {
         onRawBlur={handleFormulaRawBlur}
         onRawCaretMove={setCaretPos}
         onCellPick={handleFormulaCellPick}
+        autoComplete={autoComplete}
+        onAcceptAutoComplete={acceptAutoComplete}
+        onNavigateAutoComplete={navigateAutoComplete}
+        onDismissAutoComplete={dismissAutoComplete}
         referenceFormat={referenceFormat}
         onToggleReferenceFormat={toggleReferenceFormat}
-        onInsertFunction={(fn) => {
-          // Insert function template at cursor
-          const template = `${fn}()`;
-          setFormulaBarValue((prev) => prev + template);
-        }}
-        onOpenWizard={handleOpenWizard}
         onHighlightsChange={setHighlightedRanges}
       />
 
@@ -1473,6 +1778,15 @@ function WorkbookView() {
           clipboardRange={clipboardRange}
           onClearClipboard={handleClearClipboard}
           showFormulas={showFormulas}
+          onCellEditChange={handleCellEditChange}
+          onPointKeyDown={(key, shift, ctrl, alt) => {
+            const result = handleEditingKey(key, shift, ctrl, alt);
+            // Return the new buffer value so Grid can sync its editValue
+            return result.session.buffer;
+          }}
+          onFillSeries={handleFillSeries}
+          filterState={filterState}
+          onApplyFilter={handleApplyFilter}
         />
       </div>
 
@@ -1482,6 +1796,11 @@ function WorkbookView() {
           <span className="font-medium text-gray-700 w-16" data-testid="cell-mode">{cellMode}</span>
           <span className="text-gray-400">|</span>
           <span data-testid="status-message">{showFormulas ? 'Formulas' : statusMessage}</span>
+          {filterState?.active && filterState.visibleDataRows !== filterState.totalDataRows && (
+            <span className="text-blue-600 font-medium" data-testid="filter-status">
+              {filterState.visibleDataRows} of {filterState.totalDataRows} rows visible
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-4">
           {/* Quick calculations for selection */}
@@ -1507,11 +1826,12 @@ function WorkbookView() {
       />
 
       {/* Modals */}
-      <PrintSetupModal isOpen={showPrintSetup} onClose={() => setShowPrintSetup(false)} />
-      <ShortcutsModal isOpen={showShortcuts} onClose={() => setShowShortcuts(false)} />
+      <PrintSetupModal isOpen={showPrintSetup} onClose={() => { setShowPrintSetup(false); gridRef.current?.focus(); }} />
+      <ShortcutsModal isOpen={showShortcuts} onClose={() => { setShowShortcuts(false); gridRef.current?.focus(); }} />
+      <AboutModal isOpen={showAbout} onClose={() => { setShowAbout(false); gridRef.current?.focus(); }} />
       <SearchReplaceModal
         isOpen={showSearchReplace}
-        onClose={() => setShowSearchReplace(false)}
+        onClose={() => { setShowSearchReplace(false); gridRef.current?.focus(); }}
         workbook={workbook}
         activeSheetIndex={workbook.activeSheetIndex}
         onUpdate={handleSearchReplaceApply}
@@ -1522,12 +1842,14 @@ function WorkbookView() {
           setShowPasteModal(false);
           setPendingPasteHtml(null);
           setPendingPastePlain(null);
+          gridRef.current?.focus();
         }}
         onPasteFormatted={() => {
           if (pendingPasteHtml) handleExternalPaste('', pendingPasteHtml);
           setShowPasteModal(false);
           setPendingPasteHtml(null);
           setPendingPastePlain(null);
+          gridRef.current?.focus();
         }}
         onPastePlainText={() => {
           const text = pendingPastePlain ?? pendingPasteHtml ?? '';
@@ -1535,6 +1857,7 @@ function WorkbookView() {
           setShowPasteModal(false);
           setPendingPasteHtml(null);
           setPendingPastePlain(null);
+          gridRef.current?.focus();
         }}
         html={pendingPasteHtml}
         plain={pendingPastePlain}
@@ -1544,6 +1867,7 @@ function WorkbookView() {
         onClose={() => {
           setShowPasteSpecial(false);
           setPendingPasteDetail(null);
+          gridRef.current?.focus();
         }}
         onApply={handlePasteSpecialApply}
         skipBlanks={pasteSkipBlanks}

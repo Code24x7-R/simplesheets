@@ -327,6 +327,109 @@ describe('App - Save Button', () => {
   });
 });
 
+describe('App - Fill Series', () => {
+  it('extends arithmetic series when fill handle is dragged', () => {
+    render(<App />);
+    // Set up cells A1=1, B1=2, C1=3
+    const cells = document.querySelectorAll('.grid-cell');
+    const getCell = (_row: number, col: number) =>
+      Array.from(cells).find(
+        (c) => c.getAttribute('data-col') === String(col)
+      ) as HTMLElement;
+    // Edit A1 = 1
+    fireEvent.mouseDown(getCell(0, 0));
+    fireEvent.doubleClick(getCell(0, 0));
+    const input = screen.getByPlaceholderText(/Enter a value or formula/);
+    fireEvent.change(input, { target: { value: '1' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    // Edit B1 = 2
+    fireEvent.mouseDown(getCell(0, 1));
+    fireEvent.doubleClick(getCell(0, 1));
+    const input2 = screen.getByPlaceholderText(/Enter a value or formula/);
+    fireEvent.change(input2, { target: { value: '2' } });
+    fireEvent.keyDown(input2, { key: 'Enter' });
+    // Edit C1 = 3
+    fireEvent.mouseDown(getCell(0, 2));
+    fireEvent.doubleClick(getCell(0, 2));
+    const input3 = screen.getByPlaceholderText(/Enter a value or formula/);
+    fireEvent.change(input3, { target: { value: '3' } });
+    fireEvent.keyDown(input3, { key: 'Enter' });
+    // Click A1 to start selection
+    fireEvent.mouseDown(getCell(0, 0));
+    // Shift-click C1 to select A1:C1
+    fireEvent.mouseDown(getCell(0, 2), { shiftKey: true });
+    // Find the fill handle
+    const fillHandle = document.querySelector('[data-testid="fill-handle"]') as HTMLElement;
+    expect(fillHandle).not.toBeNull();
+    // Drag the fill handle to the right (2 cells)
+    fireEvent.mouseDown(fillHandle, { clientX: 350, clientY: 14 });
+    fireEvent.mouseMove(window, { clientX: 550, clientY: 14 });
+    fireEvent.mouseUp(window);
+    // Verify cells D1 and E1 now have values 4 and 5
+    const updatedCells = document.querySelectorAll('.grid-cell');
+    const getCellText = (_row: number, col: number) => {
+      const cell = Array.from(updatedCells).find(
+        (c) => c.getAttribute('data-col') === String(col)
+      );
+      return cell?.textContent;
+    };
+    expect(getCellText(0, 3)).toBe('4');
+    expect(getCellText(0, 4)).toBe('5');
+  });
+});
+
+describe('App - Sort', () => {
+  it('renders Data menu with sort options', () => {
+    render(<App />);
+    // Click on Data menu
+    fireEvent.click(screen.getByText('Data'));
+    // Verify sort options exist
+    expect(screen.getByText('Sort A → Z')).toBeInTheDocument();
+    expect(screen.getByText('Sort Z → A')).toBeInTheDocument();
+  });
+});
+
+describe('App - Filter', () => {
+  it('renders Data menu with filter options', () => {
+    render(<App />);
+    // Click on Data menu
+    fireEvent.click(screen.getByText('Data'));
+    // Verify filter options exist
+    expect(screen.getByText('Toggle Filter')).toBeInTheDocument();
+    expect(screen.getByText('Clear All Filters')).toBeInTheDocument();
+  });
+
+  it('shows filter status when filter is active', () => {
+    render(<App />);
+    // Open Data menu and click Toggle Filter
+    fireEvent.click(screen.getByText('Data'));
+    const toggleFilterItem = screen.getByText('Toggle Filter').closest('.menu-item') as HTMLElement;
+    expect(toggleFilterItem).not.toBeNull();
+    fireEvent.click(toggleFilterItem);
+
+    // Check status message
+    const statusBar = screen.getByTestId('status-message');
+    expect(statusBar?.textContent).toContain('Filter enabled');
+  });
+
+  it('clears filter when Clear All Filters is clicked', () => {
+    render(<App />);
+    // Enable filter first
+    fireEvent.click(screen.getByText('Data'));
+    const toggleFilterItem = screen.getByText('Toggle Filter').closest('.menu-item') as HTMLElement;
+    fireEvent.click(toggleFilterItem);
+
+    // Now clear filter
+    fireEvent.click(screen.getByText('Data'));
+    const clearFilterItem = screen.getByText('Clear All Filters').closest('.menu-item') as HTMLElement;
+    fireEvent.click(clearFilterItem);
+
+    // Check status message
+    const statusBar = screen.getByTestId('status-message');
+    expect(statusBar?.textContent).toContain('cleared');
+  });
+});
+
 describe('App - Circular Reference', () => {
   it('shows warning when circular reference detected', () => {
     render(<App />);

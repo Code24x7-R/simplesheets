@@ -321,8 +321,7 @@ describe('App - Help Menu', () => {
     render(<App />);
     fireEvent.click(screen.getByText('Help'));
     fireEvent.click(screen.getByText('About SimpleSheet').closest('.menu-item') as HTMLElement);
-    const statusBar = screen.getByTestId('status-message');
-    expect(statusBar?.textContent).toContain('SimpleSheet v0.1.0');
+    expect(screen.getByText('About SimpleSheet')).toBeInTheDocument();
   });
 
   it('opens Keyboard Shortcuts modal', () => {

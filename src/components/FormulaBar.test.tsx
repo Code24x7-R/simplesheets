@@ -25,6 +25,10 @@ describe('FormulaBar', () => {
     onRawBlur: jest.fn(),
     onRawCaretMove: jest.fn(),
     onCellPick: jest.fn(),
+    autoComplete: { open: false, matches: [], index: 0, tokenStart: 0 },
+    onAcceptAutoComplete: jest.fn(),
+    onNavigateAutoComplete: jest.fn(),
+    onDismissAutoComplete: jest.fn(),
   };
 
   beforeEach(() => {
@@ -44,16 +48,6 @@ describe('FormulaBar', () => {
   it('renders input with placeholder', () => {
     render(<FormulaBar {...defaultProps} />);
     expect(screen.getByPlaceholderText(/Enter a value or formula/)).toBeInTheDocument();
-  });
-
-  it('renders Insert Function button when onOpenWizard is provided', () => {
-    render(<FormulaBar {...defaultProps} onOpenWizard={jest.fn()} />);
-    expect(screen.getByText('ƒx')).toBeInTheDocument();
-  });
-
-  it('does not render Insert Function button when onOpenWizard is not provided', () => {
-    render(<FormulaBar {...defaultProps} />);
-    expect(screen.queryByText('ƒx')).not.toBeInTheDocument();
   });
 
   it('renders POINT indicator when in POINT mode', () => {
@@ -109,6 +103,10 @@ describe('FormulaBar - Formula Editing', () => {
     onRawBlur: jest.fn(),
     onRawCaretMove: jest.fn(),
     onCellPick: jest.fn(),
+    autoComplete: { open: false, matches: [], index: 0, tokenStart: 0 },
+    onAcceptAutoComplete: jest.fn(),
+    onNavigateAutoComplete: jest.fn(),
+    onDismissAutoComplete: jest.fn(),
   };
 
   beforeEach(() => {

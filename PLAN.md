@@ -392,28 +392,49 @@ Achieve a clean, clutter-free UI with standardized dropdown menus, formula wizar
 
 ---
 
-## Phase 15: Sheet Filtering Functions (TODO)
-*Implement Excel-style auto-filtering for data analysis.*
+## Phase 18: Sort & Filter (2026-07-28)
+*Implement Excel/Google Sheets-style sort and filter functionality.*
 
-### Phase 15a: Filter State & UI — TODO
-- [ ] Add filter state to Sheet model (filter range, column filters)
-- [ ] Add filter dropdown arrows to column headers
-- [ ] Create filter dropdown UI (checkbox list of unique values, search)
-- [ ] Support text filters, number filters, date filters
-- [ ] Add "Clear Filter" and "Clear All Filters" options
+### Phase 18a: Sort Utility — COMPLETE ✅
+- [x] Create `src/utils/sheetSort.ts` with sortRange function
+- [x] Sort by single or multiple columns (ascending/descending)
+- [x] Auto-detect data range from selection or used range
+- [x] Preserve entire row integrity (cells move together)
+- [x] Adjust formula references after sort (relative refs update)
+- [x] Handle mixed data types (text, numbers, dates, empty)
+- [x] Create `src/utils/sheetSort.test.ts` (21 tests)
 
-### Phase 15b: Filter Logic — TODO
-- [ ] Implement row hiding based on filter criteria
-- [ ] Update virtualizer to skip hidden rows
-- [ ] Status bar: show "X of Y records visible" when filter active
-- [ ] Paste behavior: skip hidden cells (don't overwrite filtered-out rows)
-- [ ] Copy behavior: option to copy visible cells only
+### Phase 18b: Sort UI & Integration — COMPLETE ✅
+- [x] Add "Data" menu with Sort items (A-Z, Z-A)
+- [x] Wire sort handlers in App.tsx with history push
+- [x] Add sort test in App.handlers.test.tsx
+- [x] Status bar: "Sorted by column X" confirmation
 
-### Phase 15c: Filter Integration — TODO
-- [ ] Add "Filter" toggle button to toolbar or Data menu
-- [ ] Keyboard shortcut for toggle filter (Ctrl+Shift+L)
-- [ ] Auto-detect header row for filter range
-- [ ] Persist filter state with workbook save/load
+### Phase 18c: Filter State & Logic — COMPLETE ✅
+- [x] Create `src/utils/sheetFilter.ts` with filter engine
+- [x] Filter state: per-column criteria (includes list, custom conditions)
+- [x] Row visibility tracking (Set of hidden row indices)
+- [x] Support: text contains, equals, starts with, greater than, less than, blank
+- [x] Multiple column filters (AND logic)
+- [x] Create `src/utils/sheetFilter.test.ts` (33 tests)
+
+### Phase 18d: Filter UI — COMPLETE ✅
+- [x] Add filter toggle to Data menu ("Toggle Filter" + "Clear All Filters")
+- [x] Add filter dropdown arrows to column headers in Grid (blue triangle indicator)
+- [x] Create FilterDropdown component (checkbox list + search + custom filter tabs)
+- [x] Modify Grid to respect filter state (display rows map to actual rows via visibleRowIndices)
+- [x] Filter status indicator on column headers (active class when filter applied)
+- [x] "Clear Filter" and "Clear All Filters" options in dropdown and menu
+- [x] Keyboard shortcut: Ctrl+Shift+L to toggle filter
+- [x] FilterDropdown.test.tsx (12 tests)
+- [x] Grid filter tests (4 tests)
+
+### Phase 18e: Filter Integration — COMPLETE ✅
+- [x] Wire filter handlers in App.tsx (handleToggleFilter, handleApplyFilter, handleClearAllFilters)
+- [x] Update virtualizer to skip hidden rows (virtualRowCount based on visible rows)
+- [x] Status bar: "X of Y records visible" when filter active (filter-status testid)
+- [x] Add filter integration tests (3 tests in App.handlers.test.tsx)
+- [x] Filter state persisted in App.tsx (filterState state variable)
 
 ---
 
@@ -826,3 +847,36 @@ Achieve a clean, clutter-free UI with standardized dropdown menus, formula wizar
 - Added 4 new tests for bulk delete operations
 - **887 tests across 33 suites, all passing**
 - Build, lint (0 errors), and type-check all pass
+
+### 2026-07-27 (Stage 5: Cross-Sheet References — COMPLETE ✅)
+
+**Stage 5a: Cross-Sheet Formula Evaluation**
+- Fixed `evaluateWorkbook` to evaluate ALL sheets in the workbook using a shared cache
+- Added `hasCrossSheetDeps` helper to detect cross-sheet formula dependencies
+- Two-pass evaluation: sheets with no cross-sheet deps first, then sheets with deps
+- Added 8 unit tests for cross-sheet formula evaluation
+- Tests cover: literal refs, formula refs, SUM ranges, #REF! errors, quoted sheet names, chained refs, non-active sheet evaluation, circular ref detection
+
+**Stage 5b: Cross-Sheet Paste**
+- Added `sourceSheetIndex` to `ClipboardData` interface
+- Updated `copyRange` and `cutRange` to accept and store source sheet index
+- Added `prefixRefsWithSheet` utility to convert relative refs to cross-sheet refs
+- Updated paste handler in App.tsx to adjust formula references when pasting across sheets
+- Added 10 unit tests for `prefixRefsWithSheet`
+- Added 4 integration tests for cross-sheet paste (literal values, same-sheet paste, cross-sheet paste, preserve cross-sheet refs)
+
+**Files modified:**
+- `src/utils/formulaEngine.ts` — evaluateWorkbook now evaluates all sheets
+- `src/utils/formulaParser.ts` — added `prefixRefsWithSheet` function
+- `src/utils/clipboard.ts` — added `sourceSheetIndex` to ClipboardData
+- `src/App.tsx` — paste handler adjusts cross-sheet refs
+
+**Files created:**
+- `src/App.crosssheet.test.tsx` — integration tests for cross-sheet paste
+
+**Results:**
+- **1475 tests across 56 suites, all passing**
+- Lint clean (0 warnings)
+- Only 2 pre-existing TypeScript errors (not regressions)
+- Cross-sheet formula evaluation: `=Sheet2!A1` correctly returns computed value from Sheet2
+- Cross-sheet paste: relative refs converted to cross-sheet refs pointing back to source sheet

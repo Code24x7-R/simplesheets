@@ -4,6 +4,7 @@ import {
   shouldActivatePointMode,
   isOperatorChar,
   cycleReference,
+  cycleRangeRef,
   MODE_CODES,
   type KeyHandlingResult,
 } from './useCellEditing';
@@ -37,9 +38,19 @@ describe('shouldActivatePointMode', () => {
     expect(shouldActivatePointMode('=SUM', 0)).toBe(false);
   });
 
-  it('returns true at caret position 1 (right after =)', () => {
-    expect(shouldActivatePointMode('=S', 1)).toBe(true);
-    expect(shouldActivatePointMode('=', 1)).toBe(true);
+  it('returns false at caret position 1 when = is the first char', () => {
+    // '=' as the first char starts a formula, doesn't trigger POINT mode
+    expect(shouldActivatePointMode('=', 1)).toBe(false);
+    // But '=S' with caret at 1 (before S) should still work for the = trigger
+    // Actually no - caret at 1 means we just typed =, so no trigger
+    expect(shouldActivatePointMode('=S', 1)).toBe(false);
+  });
+
+  it('returns true when = is used as operator (not first char)', () => {
+    // = after another = (like ==A1) should trigger
+    expect(shouldActivatePointMode('==', 2)).toBe(true);
+    // = after a function name should trigger
+    expect(shouldActivatePointMode('=SUM(', 5)).toBe(true);
   });
 
   it('returns false for text after = with no separator', () => {
@@ -156,6 +167,72 @@ describe('cycleReference (F4)', () => {
     expect(cycleReference('notaref')).toBe('notaref');
     expect(cycleReference('123')).toBe('123');
     expect(cycleReference('')).toBe('');
+  });
+
+  // ── Range cycling: one endpoint at a time ──────────────────────
+  // For A1:B5, F4 cycles the first endpoint through its 4 states,
+  // then the second endpoint through its 4 states:
+  //   A1:B5 → $A$1:B5 → A$1:B5 → $A1:B5 → A1:B5
+  //   → A1:$B$5 → A1:B$5 → A1:$B5 → A1:B5
+  //
+  // The caretOffset tracks position WITHIN the range token so repeated
+  // F4 presses stay on the same endpoint.
+  describe('cycleRangeRef (F4 on ranges)', () => {
+    it('cycles first endpoint when caret is in first half', () => {
+      // caretOffset 0 = at start of "A1" → cycle first endpoint
+      expect(cycleRangeRef('A1:B5', 0)!.token).toBe('$A$1:B5');
+      expect(cycleRangeRef('$A$1:B5', 1)!.token).toBe('A$1:B5');
+      expect(cycleRangeRef('A$1:B5', 2)!.token).toBe('$A1:B5');
+      expect(cycleRangeRef('$A1:B5', 2)!.token).toBe('A1:B5');
+    });
+
+    it('cycles second endpoint when caret is in second half', () => {
+      // caretOffset 3 = at colon position → cycle second endpoint
+      expect(cycleRangeRef('A1:B5', 3)!.token).toBe('A1:$B$5');
+      expect(cycleRangeRef('A1:$B$5', 4)!.token).toBe('A1:B$5');
+      expect(cycleRangeRef('A1:B$5', 6)!.token).toBe('A1:$B5');
+      expect(cycleRangeRef('A1:$B5', 6)!.token).toBe('A1:B5');
+    });
+
+    it('tracks caret offset to stay on same endpoint', () => {
+      // After cycling first endpoint, caret stays within it
+      const r1 = cycleRangeRef('A1:B5', 1)!;
+      expect(r1.token).toBe('$A$1:B5');
+      expect(r1.caretOffset).toBeLessThanOrEqual(3); // within "$A$1"
+
+      // After cycling second endpoint, caret stays within it
+      const r2 = cycleRangeRef('A1:B5', 4)!;
+      expect(r2.token).toBe('A1:$B$5');
+      expect(r2.caretOffset).toBeGreaterThan(3); // past colon
+    });
+
+    it('full range cycle returns to start after 8 presses with caret tracking', () => {
+      let ref = 'A1:B5';
+      let caretOffset = 1; // start in first endpoint
+      for (let i = 0; i < 8; i++) {
+        const result = cycleRangeRef(ref, caretOffset);
+        if (result) {
+          ref = result.token;
+          caretOffset = result.caretOffset;
+        }
+      }
+      expect(ref).toBe('A1:B5');
+    });
+
+    it('handles range with multi-letter columns', () => {
+      expect(cycleRangeRef('AA10:AB20', 2)!.token).toBe('$AA$10:AB20');
+      expect(cycleRangeRef('AA10:AB20', 6)!.token).toBe('AA10:$AB$20');
+    });
+
+    it('returns null for non-range input', () => {
+      expect(cycleRangeRef('A1', 2)).toBeNull();
+      expect(cycleRangeRef('notaref', 4)).toBeNull();
+    });
+
+    it('returns null for invalid range endpoints', () => {
+      expect(cycleRangeRef('A1:notaref', 2)).toBeNull();
+      expect(cycleRangeRef('notaref:B5', 4)).toBeNull();
+    });
   });
 });
 
@@ -511,17 +588,19 @@ describe('useCellEditing - ENTER state', () => {
     expect(result.current.session.isFormula).toBe(true);
   });
 
-  it('typing - enters ENTER mode as formula', () => {
+  it('typing - enters POINT mode immediately (unary minus trigger)', () => {
     const { result } = createHook();
     let keyResult!: KeyHandlingResult;
     act(() => {
       keyResult = result.current.handleKey('-', false, false);
     });
-    expect(keyResult.session.state).toBe('ENTER');
+    // Typing '-' alone enters POINT mode immediately because '-' is a
+    // trigger character for cell navigation (unary minus on a cell ref)
+    expect(keyResult.session.state).toBe('POINT');
     expect(keyResult.session.isFormula).toBe(true);
     expect(keyResult.session.buffer).toBe('-');
     // Hook state should also reflect the change
-    expect(result.current.session.state).toBe('ENTER');
+    expect(result.current.session.state).toBe('POINT');
     expect(result.current.session.isFormula).toBe(true);
   });
 
@@ -857,7 +936,7 @@ describe('useCellEditing - POINT state', () => {
     expect(result.current.pointSession).toBeNull();
   });
 
-  it('operator char auto-commits reference and exits to EDIT', () => {
+  it('continuation operator (+) auto-commits reference and re-enters POINT', () => {
     const { result } = createHook();
     enterPointState(result);
     // Move to cell (2, 2)
@@ -876,9 +955,95 @@ describe('useCellEditing - POINT state', () => {
     act(() => {
       result.current.handleKey('+', false, false);
     });
-    expect(result.current.session.state).toBe('EDIT');
-    expect(result.current.pointSession).toBeNull();
+    // '+' is a continuation operator → stays in POINT for next operand
+    expect(result.current.session.state).toBe('POINT');
+    expect(result.current.pointSession).not.toBeNull();
     expect(result.current.session.buffer).toContain('C3');
+    expect(result.current.session.buffer).toContain('+');
+  });
+
+  it('separator (,) auto-commits reference and re-enters POINT for multi-param', () => {
+    const { result } = createHook();
+    enterPointState(result);
+    // Move to cell (2, 2)
+    act(() => {
+      result.current.handleKey('ArrowDown', false, false);
+    });
+    act(() => {
+      result.current.handleKey('ArrowDown', false, false);
+    });
+    act(() => {
+      result.current.handleKey('ArrowRight', false, false);
+    });
+    act(() => {
+      result.current.handleKey('ArrowRight', false, false);
+    });
+    act(() => {
+      result.current.handleKey(',', false, false);
+    });
+    // ',' is a parameter separator → stays in POINT for next parameter
+    expect(result.current.session.state).toBe('POINT');
+    expect(result.current.pointSession).not.toBeNull();
+    expect(result.current.session.buffer).toContain('C3');
+    expect(result.current.session.buffer).toContain(',');
+    // Pointing box resets to the active cell for the next reference
+    expect(result.current.pointSession?.anchorRow).toBe(0);
+    expect(result.current.pointSession?.anchorCol).toBe(0);
+  });
+
+  it('multi-parameter formula: =SUM(C3, D4) via POINT mode', () => {
+    const { result } = createHook();
+    enterPointState(result);
+    // Navigate to C3 (row 2, col 2) — regular arrow moves both anchor and current
+    act(() => { result.current.handleKey('ArrowDown', false, false); });
+    act(() => { result.current.handleKey('ArrowDown', false, false); });
+    act(() => { result.current.handleKey('ArrowRight', false, false); });
+    act(() => { result.current.handleKey('ArrowRight', false, false); });
+    // Type comma — commits C3 and re-enters POINT
+    act(() => { result.current.handleKey(',', false, false); });
+    expect(result.current.session.state).toBe('POINT');
+    // Single-cell reference since regular arrow moves anchor+current together
+    expect(result.current.session.buffer).toBe('=SUM(C3,');
+    // Navigate to D4 (row 3, col 3) — but anchor reset to active cell (0,0)
+    // after comma, so we navigate from A1 to D4
+    act(() => { result.current.handleKey('ArrowDown', false, false); });
+    act(() => { result.current.handleKey('ArrowDown', false, false); });
+    act(() => { result.current.handleKey('ArrowDown', false, false); });
+    act(() => { result.current.handleKey('ArrowRight', false, false); });
+    act(() => { result.current.handleKey('ArrowRight', false, false); });
+    act(() => { result.current.handleKey('ArrowRight', false, false); });
+    // Type ')' — commits D4 and closes function, exits to EDIT
+    let keyResult!: KeyHandlingResult;
+    act(() => { keyResult = result.current.handleKey(')', false, false); });
+    expect(keyResult.session.state).toBe('EDIT');
+    expect(keyResult.session.buffer).toBe('=SUM(C3,D4)');
+  });
+
+  it('binary operation: =C3+D4 via POINT mode', () => {
+    const { result } = createHook();
+    enterPointState(result);
+    // Navigate to C3 — regular arrow moves both anchor and current
+    act(() => { result.current.handleKey('ArrowDown', false, false); });
+    act(() => { result.current.handleKey('ArrowDown', false, false); });
+    act(() => { result.current.handleKey('ArrowRight', false, false); });
+    act(() => { result.current.handleKey('ArrowRight', false, false); });
+    // Type '+' — commits C3 and re-enters POINT
+    act(() => { result.current.handleKey('+', false, false); });
+    expect(result.current.session.state).toBe('POINT');
+    // Single-cell reference since regular arrow moves anchor+current together
+    expect(result.current.session.buffer).toBe('=SUM(C3+');
+    // Navigate to D4
+    act(() => { result.current.handleKey('ArrowDown', false, false); });
+    act(() => { result.current.handleKey('ArrowDown', false, false); });
+    act(() => { result.current.handleKey('ArrowDown', false, false); });
+    act(() => { result.current.handleKey('ArrowRight', false, false); });
+    act(() => { result.current.handleKey('ArrowRight', false, false); });
+    act(() => { result.current.handleKey('ArrowRight', false, false); });
+    // Type ')' — commits D4 and closes function
+    let keyResult!: KeyHandlingResult;
+    act(() => { keyResult = result.current.handleKey(')', false, false); });
+    expect(keyResult.session.state).toBe('EDIT');
+    expect(keyResult.session.buffer).toBe('=SUM(C3+D4)');
   });
 
   it('Enter commits reference and commits cell value', () => {

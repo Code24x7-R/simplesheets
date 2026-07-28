@@ -348,6 +348,213 @@ describe('useCellStyles', () => {
     });
   });
 
+  describe('border operations', () => {
+    it('applies top border to selected cells', () => {
+      const workbook = createTestWorkbook();
+      const selection: Selection = {
+        type: 'cell',
+        startRow: 0, startCol: 0, endRow: 0, endCol: 0,
+        anchorRow: 0, anchorCol: 0,
+      };
+      const { result } = renderCellStyles(workbook, { row: 0, col: 0 }, selection);
+
+      act(() => {
+        result.current.setBorderTop();
+      });
+
+      expect(mockPushHistory).toHaveBeenCalledTimes(1);
+      const newWb = mockPushHistory.mock.calls[0][0];
+      expect(newWb.sheets[0].cells['0:0'].style?.borderTop).toBe('1px solid #000000');
+    });
+
+    it('applies bottom border to selected cells', () => {
+      const workbook = createTestWorkbook();
+      const selection: Selection = {
+        type: 'cell',
+        startRow: 0, startCol: 0, endRow: 0, endCol: 0,
+        anchorRow: 0, anchorCol: 0,
+      };
+      const { result } = renderCellStyles(workbook, { row: 0, col: 0 }, selection);
+
+      act(() => {
+        result.current.setBorderBottom();
+      });
+
+      const newWb = mockPushHistory.mock.calls[0][0];
+      expect(newWb.sheets[0].cells['0:0'].style?.borderBottom).toBe('1px solid #000000');
+    });
+
+    it('applies left border to selected cells', () => {
+      const workbook = createTestWorkbook();
+      const selection: Selection = {
+        type: 'cell',
+        startRow: 0, startCol: 0, endRow: 0, endCol: 0,
+        anchorRow: 0, anchorCol: 0,
+      };
+      const { result } = renderCellStyles(workbook, { row: 0, col: 0 }, selection);
+
+      act(() => {
+        result.current.setBorderLeft();
+      });
+
+      const newWb = mockPushHistory.mock.calls[0][0];
+      expect(newWb.sheets[0].cells['0:0'].style?.borderLeft).toBe('1px solid #000000');
+    });
+
+    it('applies right border to selected cells', () => {
+      const workbook = createTestWorkbook();
+      const selection: Selection = {
+        type: 'cell',
+        startRow: 0, startCol: 0, endRow: 0, endCol: 0,
+        anchorRow: 0, anchorCol: 0,
+      };
+      const { result } = renderCellStyles(workbook, { row: 0, col: 0 }, selection);
+
+      act(() => {
+        result.current.setBorderRight();
+      });
+
+      const newWb = mockPushHistory.mock.calls[0][0];
+      expect(newWb.sheets[0].cells['0:0'].style?.borderRight).toBe('1px solid #000000');
+    });
+
+    it('applies all borders to selected cells', () => {
+      const workbook = createTestWorkbook();
+      const selection: Selection = {
+        type: 'cell',
+        startRow: 0, startCol: 0, endRow: 0, endCol: 0,
+        anchorRow: 0, anchorCol: 0,
+      };
+      const { result } = renderCellStyles(workbook, { row: 0, col: 0 }, selection);
+
+      act(() => {
+        result.current.setBorderAll();
+      });
+
+      const newWb = mockPushHistory.mock.calls[0][0];
+      const style = newWb.sheets[0].cells['0:0'].style;
+      expect(style?.borderTop).toBe('1px solid #000000');
+      expect(style?.borderBottom).toBe('1px solid #000000');
+      expect(style?.borderLeft).toBe('1px solid #000000');
+      expect(style?.borderRight).toBe('1px solid #000000');
+    });
+
+    it('applies outside borders to selection range', () => {
+      const workbook = createTestWorkbook();
+      const selection: Selection = {
+        type: 'cell',
+        startRow: 0, startCol: 0, endRow: 1, endCol: 1,
+        anchorRow: 0, anchorCol: 0,
+      };
+      const { result } = renderCellStyles(workbook, { row: 0, col: 0 }, selection);
+
+      act(() => {
+        result.current.setBorderOutside();
+      });
+
+      const newWb = mockPushHistory.mock.calls[0][0];
+      // Top-left corner: top + left
+      expect(newWb.sheets[0].cells['0:0'].style?.borderTop).toBe('1px solid #000000');
+      expect(newWb.sheets[0].cells['0:0'].style?.borderLeft).toBe('1px solid #000000');
+      // Bottom-right corner: bottom + right
+      expect(newWb.sheets[0].cells['1:1'].style?.borderBottom).toBe('1px solid #000000');
+      expect(newWb.sheets[0].cells['1:1'].style?.borderRight).toBe('1px solid #000000');
+    });
+
+    it('clears borders from selected cells', () => {
+      const workbook = createTestWorkbook();
+      // Add a cell with borders
+      workbook.sheets[0].cells['0:0'].style = { ...workbook.sheets[0].cells['0:0'].style, borderTop: '1px solid #000000' };
+      const selection: Selection = {
+        type: 'cell',
+        startRow: 0, startCol: 0, endRow: 0, endCol: 0,
+        anchorRow: 0, anchorCol: 0,
+      };
+      const { result } = renderCellStyles(workbook, { row: 0, col: 0 }, selection);
+
+      act(() => {
+        result.current.clearBorders();
+      });
+
+      const newWb = mockPushHistory.mock.calls[0][0];
+      expect(newWb.sheets[0].cells['0:0'].style?.borderTop).toBeUndefined();
+    });
+
+    it('uses custom border color', () => {
+      const workbook = createTestWorkbook();
+      const selection: Selection = {
+        type: 'cell',
+        startRow: 0, startCol: 0, endRow: 0, endCol: 0,
+        anchorRow: 0, anchorCol: 0,
+      };
+      const { result } = renderCellStyles(workbook, { row: 0, col: 0 }, selection);
+
+      act(() => {
+        result.current.setBorderColor('#FF0000');
+        result.current.setBorderTop();
+      });
+
+      const newWb = mockPushHistory.mock.calls[0][0];
+      expect(newWb.sheets[0].cells['0:0'].style?.borderTop).toBe('1px solid #FF0000');
+    });
+
+    it('does nothing without selection', () => {
+      const workbook = createTestWorkbook();
+      const { result } = renderCellStyles(workbook, { row: 0, col: 0 }, null);
+
+      act(() => {
+        result.current.setBorderTop();
+      });
+
+      expect(mockPushHistory).not.toHaveBeenCalled();
+    });
+
+    it('exposes borderColor and borderStyle state', () => {
+      const workbook = createTestWorkbook();
+      const { result } = renderCellStyles(workbook, { row: 0, col: 0 }, null);
+
+      expect(result.current.borderColor).toBe('#000000');
+      expect(result.current.borderStyle).toEqual({ width: '1px', style: 'solid' });
+    });
+  });
+
+  describe('toggleStrikethroughStyle', () => {
+    it('applies strikethrough to selected cells', () => {
+      const workbook = createTestWorkbook();
+      const selection: Selection = {
+        type: 'cell',
+        startRow: 0, startCol: 0, endRow: 0, endCol: 0,
+        anchorRow: 0, anchorCol: 0,
+      };
+      const { result } = renderCellStyles(workbook, { row: 0, col: 0 }, selection);
+
+      act(() => {
+        result.current.toggleStrikethroughStyle();
+      });
+
+      const newWb = mockPushHistory.mock.calls[0][0];
+      expect(newWb.sheets[0].cells['0:0'].style?.textDecoration).toBe('line-through');
+    });
+
+    it('toggles strikethrough off when already strikethrough', () => {
+      const workbook = createTestWorkbook();
+      workbook.sheets[0].cells['0:0'].style = { ...workbook.sheets[0].cells['0:0'].style, textDecoration: 'line-through' };
+      const selection: Selection = {
+        type: 'cell',
+        startRow: 0, startCol: 0, endRow: 0, endCol: 0,
+        anchorRow: 0, anchorCol: 0,
+      };
+      const { result } = renderCellStyles(workbook, { row: 0, col: 0 }, selection);
+
+      act(() => {
+        result.current.toggleStrikethroughStyle();
+      });
+
+      const newWb = mockPushHistory.mock.calls[0][0];
+      expect(newWb.sheets[0].cells['0:0'].style?.textDecoration).toBe('none');
+    });
+  });
+
   describe('sparse iteration (performance)', () => {
     it('only touches existing cells when a full column is selected', () => {
       const workbook = createTestWorkbook();

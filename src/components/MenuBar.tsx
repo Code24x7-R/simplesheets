@@ -48,10 +48,23 @@ interface MenuBarProps {
   onSetNumberFormat: (format: string) => void;
   onToggleWrapText: () => void;
   onClearStyles: () => void;
+  onSetBorderTop: () => void;
+  onSetBorderBottom: () => void;
+  onSetBorderLeft: () => void;
+  onSetBorderRight: () => void;
+  onSetBorderAll: () => void;
+  onSetBorderOutside: () => void;
+  onClearBorders: () => void;
   isBold: boolean;
   isItalic: boolean;
   isUnderline: boolean;
   isWrapText: boolean;
+  // Data
+  onSortAscending: () => void;
+  onSortDescending: () => void;
+  onToggleFilter: () => void;
+  onClearAllFilters: () => void;
+  isFilterActive: boolean;
   // Help
   onAbout: () => void;
   onShortcuts: () => void;
@@ -119,7 +132,19 @@ export function MenuBar(props: MenuBarProps) {
         'format-number-number': () => props.onSetNumberFormat('0.00'),
         'format-number-currency': () => props.onSetNumberFormat('$#,##0.00'),
         'format-number-percent': () => props.onSetNumberFormat('0.00%'),
+        'format-border-all': props.onSetBorderAll,
+        'format-border-outside': props.onSetBorderOutside,
+        'format-border-top': props.onSetBorderTop,
+        'format-border-bottom': props.onSetBorderBottom,
+        'format-border-left': props.onSetBorderLeft,
+        'format-border-right': props.onSetBorderRight,
+        'format-border-clear': props.onClearBorders,
         'format-clear-styles': props.onClearStyles,
+        // Data
+        'data-sort-asc': props.onSortAscending,
+        'data-sort-desc': props.onSortDescending,
+        'data-toggle-filter': props.onToggleFilter,
+        'data-clear-filter': props.onClearAllFilters,
         // Help
         'help-about': props.onAbout,
         'help-shortcuts': props.onShortcuts,
@@ -246,12 +271,36 @@ export function MenuBar(props: MenuBarProps) {
       ],
     },
     { id: 'sep-format-2', label: '', separator: true },
+    {
+      id: 'format-border',
+      label: 'Borders',
+      icon: '⊞',
+      submenu: [
+        { id: 'format-border-all', label: 'All Borders', icon: '⊞' },
+        { id: 'format-border-outside', label: 'Outside Borders', icon: '⊡' },
+        { id: 'format-border-top', label: 'Top Border', icon: '⊤' },
+        { id: 'format-border-bottom', label: 'Bottom Border', icon: '⊥' },
+        { id: 'format-border-left', label: 'Left Border', icon: '⊣' },
+        { id: 'format-border-right', label: 'Right Border', icon: '⊢' },
+        { id: 'sep-border-1', label: '', separator: true },
+        { id: 'format-border-clear', label: 'Clear Borders', icon: '⊡' },
+      ],
+    },
+    { id: 'sep-format-3', label: '', separator: true },
     { id: 'format-clear-styles', label: 'Clear Styles', icon: '⊡' },
   ];
 
   const helpItems: MenuItem[] = [
     { id: 'help-shortcuts', label: 'Keyboard Shortcuts', icon: '⌨️' },
     { id: 'help-about', label: 'About SimpleSheet', icon: 'ℹ️' },
+  ];
+
+  const dataItems: MenuItem[] = [
+    { id: 'data-sort-asc', label: 'Sort A → Z', icon: '↑' },
+    { id: 'data-sort-desc', label: 'Sort Z → A', icon: '↓' },
+    { id: 'data-separator-2', label: '-', icon: '', separator: true },
+    { id: 'data-toggle-filter', label: props.isFilterActive ? 'Filter ✓' : 'Toggle Filter', icon: '🔍', shortcut: 'Ctrl+Shift+L' },
+    { id: 'data-clear-filter', label: 'Clear All Filters', icon: '✕' },
   ];
 
   return (
@@ -261,6 +310,7 @@ export function MenuBar(props: MenuBarProps) {
       <DropdownMenu label="View" items={viewItems} onSelect={handleSelect} />
       <DropdownMenu label="Insert" items={insertItems} onSelect={handleSelect} />
       <DropdownMenu label="Format" items={formatItems} onSelect={handleSelect} />
+      <DropdownMenu label="Data" items={dataItems} onSelect={handleSelect} />
       <DropdownMenu label="Help" items={helpItems} onSelect={handleSelect} />
     </div>
   );

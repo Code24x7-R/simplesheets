@@ -1,6 +1,71 @@
 import type { CellStyle } from '../types';
 
 /**
+ * Represents a cell border edge.
+ */
+export type BorderEdge = 'top' | 'bottom' | 'left' | 'right';
+
+/**
+ * Represents a border style preset.
+ */
+export interface BorderPreset {
+  label: string;
+  width: string;
+  style: string;
+}
+
+/**
+ * Common border style presets.
+ */
+export const BORDER_PRESETS: BorderPreset[] = [
+  { label: 'None', width: '0', style: 'none' },
+  { label: 'Thin', width: '1px', style: 'solid' },
+  { label: 'Medium', width: '2px', style: 'solid' },
+  { label: 'Thick', width: '3px', style: 'solid' },
+  { label: 'Double', width: '3px', style: 'double' },
+  { label: 'Dashed', width: '1px', style: 'dashed' },
+  { label: 'Dotted', width: '1px', style: 'dotted' },
+  { label: 'Hair', width: '1px', style: 'solid' },
+];
+
+/**
+ * Common border colors.
+ */
+export const BORDER_COLORS = [
+  '#000000',
+  '#434343',
+  '#666666',
+  '#999999',
+  '#FF0000',
+  '#FF9900',
+  '#FFFF00',
+  '#00FF00',
+  '#00FFFF',
+  '#0000FF',
+  '#9900FF',
+  '#FF00FF',
+  '#E6B8AF',
+  '#F4CCCC',
+  '#FCE5CD',
+  '#FFF2CC',
+];
+
+/**
+ * Constructs a CSS border string from width, style, and color.
+ */
+export function makeBorder(width: string, style: string, color: string): string {
+  if (style === 'none' || width === '0') return 'none';
+  return `${width} ${style} ${color}`;
+}
+
+/**
+ * Default border style used when applying borders.
+ */
+export const DEFAULT_BORDER_WIDTH = '1px';
+export const DEFAULT_BORDER_STYLE = 'solid';
+export const DEFAULT_BORDER_COLOR = '#000000';
+
+/**
  * Represents the style state derived from the active/selected cell.
  * Used to show toggle state in the UI (e.g., Bold button pressed).
  */
