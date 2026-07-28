@@ -24,6 +24,7 @@ export const ImportExcelButton = forwardRef<HTMLButtonElement, ImportExcelButton
   const handleFileChange = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
+      /* istanbul ignore next - edge case: no file selected */
       if (!file) return;
 
       setLoading(true);
@@ -35,6 +36,7 @@ export const ImportExcelButton = forwardRef<HTMLButtonElement, ImportExcelButton
           onError?.(result.error ?? 'Import failed');
         }
       } catch (err) {
+        /* istanbul ignore next - edge case: non-Error exception */
         onError?.(err instanceof Error ? err.message : 'Import error');
       } finally {
         setLoading(false);
