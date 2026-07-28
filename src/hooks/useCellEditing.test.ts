@@ -1370,3 +1370,77 @@ describe('useCellEditing - ENTER → POINT transition', () => {
     expect(result.current.session.buffer).toBe('=(');
   });
 });
+
+describe('useCellEditing - EDIT mode arrow key navigation', () => {
+  it('ArrowUp commits and navigates up in EDIT mode', () => {
+    const { result } = createHook({ cellValue: 'Hello' });
+    act(() => { result.current.handleKey('F2', false, false); });
+    let keyResult!: KeyHandlingResult;
+    act(() => { keyResult = result.current.handleKey('ArrowUp', false, false); });
+    expect(keyResult.session.state).toBe('SELECT');
+    expect(keyResult.navigate).toEqual({ dRow: -1, dCol: 0 });
+  });
+
+  it('ArrowDown commits and navigates down in EDIT mode', () => {
+    const { result } = createHook({ cellValue: 'Hello' });
+    act(() => { result.current.handleKey('F2', false, false); });
+    let keyResult!: KeyHandlingResult;
+    act(() => { keyResult = result.current.handleKey('ArrowDown', false, false); });
+    expect(keyResult.session.state).toBe('SELECT');
+    expect(keyResult.navigate).toEqual({ dRow: 1, dCol: 0 });
+  });
+
+  it('Home moves caret to start in EDIT mode', () => {
+    const { result } = createHook({ cellValue: 'Hello' });
+    act(() => { result.current.handleKey('F2', false, false); });
+    let keyResult!: KeyHandlingResult;
+    act(() => { keyResult = result.current.handleKey('Home', false, false); });
+    expect(keyResult.session.caretPos).toBe(0);
+  });
+
+  it('Ctrl+Home moves caret to start in EDIT mode', () => {
+    const { result } = createHook({ cellValue: 'Hello' });
+    act(() => { result.current.handleKey('F2', false, false); });
+    let keyResult!: KeyHandlingResult;
+    act(() => { keyResult = result.current.handleKey('Home', false, true); });
+    expect(keyResult.session.caretPos).toBe(0);
+  });
+});
+
+describe('useCellEditing - POINT mode colon for range extension', () => {
+  it('extends single cell to range with colon in POINT mode', () => {
+    const { result } = createHook();
+    // Enter POINT mode
+    act(() => { result.current.handleKey('=', false, false); });
+    act(() => { result.current.handleKey('S', false, false); });
+    act(() => { result.current.handleKey('U', false, false); });
+    act(() => { result.current.handleKey('M', false, false); });
+    act(() => { result.current.handleKey('(', false, false); });
+    // Navigate to a cell
+    act(() => { result.current.handleCellClick(3, 2, false); });
+    // Type colon to extend to range
+    let keyResult!: KeyHandlingResult;
+    act(() => { keyResult = result.current.handleKey(':', false, false); });
+    // Should create a range like C4:C4 (since anchor == current)
+    expect(keyResult.session.buffer).toContain(':');
+  });
+});
+
+describe('useCellEditing - POINT mode F4 insert reference', () => {
+  it('inserts reference from point session on F4 when no existing ref', () => {
+    const { result } = createHook();
+    // Enter POINT mode
+    act(() => { result.current.handleKey('=', false, false); });
+    act(() => { result.current.handleKey('S', false, false); });
+    act(() => { result.current.handleKey('U', false, false); });
+    act(() => { result.current.handleKey('M', false, false); });
+    act(() => { result.current.handleKey('(', false, false); });
+    // Navigate to a cell
+    act(() => { result.current.handleCellClick(3, 2, false); });
+    // Press F4 to insert reference (cycles to absolute $C$4)
+    let keyResult!: KeyHandlingResult;
+    act(() => { keyResult = result.current.handleKey('F4', false, false); });
+    // Should insert a reference like $C$4 (F4 cycles to absolute)
+    expect(keyResult.session.buffer).toContain('$C$4');
+  });
+});
