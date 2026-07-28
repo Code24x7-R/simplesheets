@@ -206,4 +206,80 @@ describe('Toolbar', () => {
     fireEvent.click(screen.getByTitle('Percent format'));
     expect(defaultProps.onSetNumberFormat).toHaveBeenCalledWith('0.00%');
   });
+
+  describe('color pickers', () => {
+    it('opens text color picker when text color button is clicked', () => {
+      render(<Toolbar {...defaultProps} />);
+      const textColorBtn = screen.getByTitle('Text Color');
+      fireEvent.click(textColorBtn);
+      // Color picker popover should be visible
+      expect(screen.getByTitle('#000000')).toBeTruthy();
+    });
+
+    it('opens fill color picker when fill color button is clicked', () => {
+      render(<Toolbar {...defaultProps} />);
+      const fillColorBtn = screen.getByTitle('Fill Color');
+      fireEvent.click(fillColorBtn);
+      expect(screen.getByTitle('#000000')).toBeTruthy();
+    });
+
+    it('opens border color picker when border color button is clicked', () => {
+      render(<Toolbar {...defaultProps} />);
+      const borderColorBtn = screen.getByTitle('Border Color');
+      fireEvent.click(borderColorBtn);
+      expect(screen.getByTitle('#000000')).toBeTruthy();
+    });
+
+    it('calls onSetTextColor when a color cell is clicked', () => {
+      render(<Toolbar {...defaultProps} />);
+      fireEvent.click(screen.getByTitle('Text Color'));
+      // Click on a specific color
+      fireEvent.click(screen.getByTitle('#FF0000'));
+      expect(defaultProps.onSetTextColor).toHaveBeenCalledWith('#FF0000');
+    });
+
+    it('calls onSetBackgroundColor when a fill color cell is clicked', () => {
+      render(<Toolbar {...defaultProps} />);
+      fireEvent.click(screen.getByTitle('Fill Color'));
+      fireEvent.click(screen.getByTitle('#00FF00'));
+      expect(defaultProps.onSetBackgroundColor).toHaveBeenCalledWith('#00FF00');
+    });
+
+    it('calls onSetBorderColor when a border color cell is clicked', () => {
+      render(<Toolbar {...defaultProps} />);
+      fireEvent.click(screen.getByTitle('Border Color'));
+      fireEvent.click(screen.getByTitle('#0000FF'));
+      expect(defaultProps.onSetBorderColor).toHaveBeenCalledWith('#0000FF');
+    });
+
+    it('closes color picker when clicking a color', () => {
+      render(<Toolbar {...defaultProps} />);
+      fireEvent.click(screen.getByTitle('Text Color'));
+      expect(screen.getByTitle('#FF0000')).toBeTruthy();
+      fireEvent.click(screen.getByTitle('#FF0000'));
+      // After clicking a color, the picker should close
+      expect(screen.queryByTitle('#FF0000')).toBeNull();
+    });
+
+    it('toggles color picker closed when clicking the same button', () => {
+      render(<Toolbar {...defaultProps} />);
+      const textColorBtn = screen.getByTitle('Text Color');
+      fireEvent.click(textColorBtn);
+      expect(screen.getByTitle('#FF0000')).toBeTruthy();
+      // Click same button again to close
+      fireEvent.click(textColorBtn);
+      expect(screen.queryByTitle('#FF0000')).toBeNull();
+    });
+  });
+
+  describe('dropdown close behavior', () => {
+    it('closes border dropdown when clicking outside', () => {
+      render(<Toolbar {...defaultProps} />);
+      fireEvent.click(screen.getByTitle('Borders'));
+      expect(screen.getByText('All Borders')).toBeTruthy();
+      // Simulate clicking outside
+      fireEvent.mouseDown(document.body);
+      expect(screen.queryByText('All Borders')).toBeNull();
+    });
+  });
 });
