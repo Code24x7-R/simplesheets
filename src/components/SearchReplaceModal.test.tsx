@@ -271,4 +271,44 @@ describe('SearchReplaceModal', () => {
     fireEvent.keyDown(replaceInput, { key: 'Enter' });
     expect(screen.getByText(/Found/)).toBeTruthy();
   });
+
+  it('Replace All does nothing when no matches found', () => {
+    const onUpdate = jest.fn();
+    render(
+      <SearchReplaceModal
+        isOpen={true}
+        onClose={jest.fn()}
+        workbook={makeWorkbook()}
+        activeSheetIndex={0}
+        onUpdate={onUpdate}
+      />,
+    );
+    fireEvent.change(screen.getByLabelText('Find'), { target: { value: 'nonexistent' } });
+    fireEvent.change(screen.getByLabelText('Replace with'), { target: { value: 'replacement' } });
+    fireEvent.click(screen.getByText('🔍 Search'));
+    fireEvent.click(screen.getByText('Replace All'));
+    // No matches, so onUpdate should not be called
+    expect(onUpdate).not.toHaveBeenCalled();
+  });
+
+  it('Replace All with empty replacement deletes matches', () => {
+    const onUpdate = jest.fn();
+    render(
+      <SearchReplaceModal
+        isOpen={true}
+        onClose={jest.fn()}
+        workbook={makeWorkbook()}
+        activeSheetIndex={0}
+        onUpdate={onUpdate}
+      />,
+    );
+    fireEvent.change(screen.getByLabelText('Find'), { target: { value: 'hello' } });
+    // Leave replacement empty
+    fireEvent.click(screen.getByText('🔍 Search'));
+    fireEvent.click(screen.getByText('Replace All'));
+    expect(onUpdate).toHaveBeenCalledTimes(1);
+    // The matched cells should now be empty
+    const updatedWb = onUpdate.mock.calls[0][0];
+    expect(updatedWb.sheets[0].cells['0:0'].rawValue).toBe('');
+  });
 });
