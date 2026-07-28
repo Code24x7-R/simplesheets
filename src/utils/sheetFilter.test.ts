@@ -503,4 +503,59 @@ describe('sheetFilter', () => {
       expect(actualToDisplayRow(state, 3, 4)).toBe(2);  // Charlie visible
     });
   });
+
+  describe('filter condition edge cases', () => {
+    it('handles custom condition type (returns true)', () => {
+      const sheet = createTestSheet();
+      sheet.cells['0:0'] = makeCell('Name');
+      sheet.cells['1:0'] = makeCell('Alice');
+      sheet.cells['2:0'] = makeCell('Bob');
+
+      const filters: Record<number, ColumnFilter> = {
+        0: { conditions: [{ type: 'custom', value: '=A1>0' }] },
+      };
+
+      const state = createFilterState(sheet, 0, filters);
+      // Custom conditions return true (no filtering)
+      expect(isRowVisible(state, 1)).toBe(true);
+      expect(isRowVisible(state, 2)).toBe(true);
+    });
+
+    it('handles empty conditions array', () => {
+      const sheet = createTestSheet();
+      sheet.cells['0:0'] = makeCell('Name');
+      sheet.cells['1:0'] = makeCell('Alice');
+
+      const filters: Record<number, ColumnFilter> = {
+        0: { conditions: [], logic: 'AND' },
+      };
+
+      const state = createFilterState(sheet, 0, filters);
+      // Empty conditions should show all rows
+      expect(isRowVisible(state, 1)).toBe(true);
+    });
+
+    it('handles OR logic', () => {
+      const sheet = createTestSheet();
+      sheet.cells['0:0'] = makeCell('Name');
+      sheet.cells['1:0'] = makeCell('Alice');
+      sheet.cells['2:0'] = makeCell('Bob');
+      sheet.cells['3:0'] = makeCell('Charlie');
+
+      const filters: Record<number, ColumnFilter> = {
+        0: {
+          conditions: [
+            { type: 'equals', value: 'Alice' },
+            { type: 'equals', value: 'Charlie' },
+          ],
+          logic: 'OR',
+        },
+      };
+
+      const state = createFilterState(sheet, 0, filters);
+      expect(isRowVisible(state, 1)).toBe(true);  // Alice matches
+      expect(isRowVisible(state, 2)).toBe(false); // Bob doesn't match
+      expect(isRowVisible(state, 3)).toBe(true);  // Charlie matches
+    });
+  });
 });
