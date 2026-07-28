@@ -80,6 +80,41 @@ describe('formulaWizardCompiler', () => {
       expect(result).toBe('UNKNOWN(A1)');
     });
 
+    it('handles unknown function with nested function', () => {
+      const childNode: FormulaASTNode = {
+        id: 'node_2',
+        parentId: 'node_1',
+        functionName: 'SUM',
+        parameterValues: {
+          number1: { parameterId: 'number1', rawValue: 'A1:A10', isNestedFunction: false },
+        },
+      };
+      const parentNode: FormulaASTNode = {
+        id: 'node_1',
+        functionName: 'UNKNOWN',
+        parameterValues: {
+          param1: { parameterId: 'param1', rawValue: '', isNestedFunction: true, nestedNodeId: 'node_2' },
+        },
+      };
+      const nodeMap = new Map([['node_1', parentNode], ['node_2', childNode]]);
+      const result = compileASTNodeToString(parentNode, nodeMap);
+      expect(result).toBe('UNKNOWN(SUM(A1:A10))');
+    });
+
+    it('handles missing nested node in nodeMap', () => {
+      const parentNode: FormulaASTNode = {
+        id: 'node_1',
+        functionName: 'ROUND',
+        parameterValues: {
+          number: { parameterId: 'number', rawValue: '', isNestedFunction: true, nestedNodeId: 'missing_node' },
+          num_digits: { parameterId: 'num_digits', rawValue: '2', isNestedFunction: false },
+        },
+      };
+      const nodeMap = new Map([['node_1', parentNode]]);
+      const result = compileASTNodeToString(parentNode, nodeMap);
+      expect(result).toBe('ROUND(, 2)');
+    });
+
     it('compiles SUMIF with all parameters', () => {
       const node: FormulaASTNode = {
         id: 'node_1',
@@ -164,6 +199,19 @@ describe('formulaWizardCompiler', () => {
     it('ANY type accepts anything', () => {
       expect(validateParameter('anything', 'ANY')).toBeNull();
     });
+
+    it('BOOLEAN type accepts 0 and 1', () => {
+      expect(validateParameter('0', 'BOOLEAN')).toBeNull();
+      expect(validateParameter('1', 'BOOLEAN')).toBeNull();
+    });
+
+    it('FUNCTION type always returns null', () => {
+      expect(validateParameter('SUM', 'FUNCTION')).toBeNull();
+    });
+
+    it('default case returns null for unknown types', () => {
+      expect(validateParameter('value', 'UNKNOWN_TYPE')).toBeNull();
+    });
   });
 
   describe('checkCircularReference', () => {
@@ -185,6 +233,15 @@ describe('formulaWizardCompiler', () => {
 
     it('is case-insensitive', () => {
       expect(checkCircularReference('=SUM(a1:a10)', 0, 0)).toBe(true);
+    });
+
+    it('returns true when target is in range bounds', () => {
+      // Target A1 (row 0, col 0) is the start of range A1:B10
+      expect(checkCircularReference('=SUM(A1:B10)', 0, 0)).toBe(true);
+    });
+
+    it('returns false for empty formula', () => {
+      expect(checkCircularReference('', 0, 0)).toBe(false);
     });
   });
 

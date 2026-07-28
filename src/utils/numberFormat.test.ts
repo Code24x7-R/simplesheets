@@ -126,6 +126,26 @@ describe('formatNumberValue', () => {
     expect(formatNumberValue(44197, 'mm/dd/yyyy')).toContain('2021');
   });
 
+  it('formats dates (mm/dd/yy)', () => {
+    // Short year format
+    const result = formatNumberValue(44197, 'mm/dd/yy');
+    expect(result).toContain('21'); // 2021 -> 21
+    expect(result).toContain('/');
+  });
+
+  it('formats dates (yyyy-mm-dd)', () => {
+    const result = formatNumberValue(44197, 'yyyy-mm-dd');
+    expect(result).toContain('2021');
+    expect(result).toContain('-');
+  });
+
+  it('formats scientific notation with negative exponent', () => {
+    const result = formatNumberValue(0.001, '0.00E+00');
+    expect(result).toContain('E');
+    // Uses Unicode minus sign (U+2212) for negative exponents
+    expect(result).toContain('−');
+  });
+
   it('formats time (hh:mm:ss)', () => {
     // 0.5 = noon
     expect(formatNumberValue(0.5, 'hh:mm:ss')).toBe('12:00:00');

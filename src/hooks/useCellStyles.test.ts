@@ -516,6 +516,41 @@ describe('useCellStyles', () => {
       expect(result.current.borderColor).toBe('#000000');
       expect(result.current.borderStyle).toEqual({ width: '1px', style: 'solid' });
     });
+
+    it('updates border style with setBorderStyle', () => {
+      const workbook = createTestWorkbook();
+      const selection: Selection = {
+        type: 'cell',
+        startRow: 0, startCol: 0, endRow: 0, endCol: 0,
+        anchorRow: 0, anchorCol: 0,
+      };
+      const { result } = renderCellStyles(workbook, { row: 0, col: 0 }, selection);
+
+      act(() => {
+        result.current.setBorderStyle('2px', 'dashed');
+        result.current.setBorderTop();
+      });
+
+      const newWb = mockPushHistory.mock.calls[0][0];
+      expect(newWb.sheets[0].cells['0:0'].style?.borderTop).toBe('2px dashed #000000');
+    });
+
+    it('returns early when no cells updated in border operation', () => {
+      const workbook = createTestWorkbook();
+      // Selection range with no existing cells
+      const selection: Selection = {
+        type: 'cell',
+        startRow: 10, startCol: 10, endRow: 12, endCol: 12,
+        anchorRow: 10, anchorCol: 10,
+      };
+      const { result } = renderCellStyles(workbook, { row: 10, col: 10 }, selection);
+
+      act(() => {
+        result.current.setBorderTop();
+      });
+
+      expect(mockPushHistory).not.toHaveBeenCalled();
+    });
   });
 
   describe('toggleStrikethroughStyle', () => {
@@ -552,6 +587,43 @@ describe('useCellStyles', () => {
 
       const newWb = mockPushHistory.mock.calls[0][0];
       expect(newWb.sheets[0].cells['0:0'].style?.textDecoration).toBe('none');
+    });
+  });
+
+  describe('toggleWrapTextStyle', () => {
+    it('toggles wrap text on selected cells', () => {
+      const workbook = createTestWorkbook();
+      const selection: Selection = {
+        type: 'cell',
+        startRow: 0, startCol: 0, endRow: 0, endCol: 0,
+        anchorRow: 0, anchorCol: 0,
+      };
+      const { result } = renderCellStyles(workbook, { row: 0, col: 0 }, selection);
+
+      act(() => {
+        result.current.toggleWrapTextStyle();
+      });
+
+      const newWb = mockPushHistory.mock.calls[0][0];
+      expect(newWb.sheets[0].cells['0:0'].style?.whiteSpace).toBe('normal');
+    });
+
+    it('toggles wrap text off when already normal', () => {
+      const workbook = createTestWorkbook();
+      workbook.sheets[0].cells['0:0'].style = { ...workbook.sheets[0].cells['0:0'].style, whiteSpace: 'normal' };
+      const selection: Selection = {
+        type: 'cell',
+        startRow: 0, startCol: 0, endRow: 0, endCol: 0,
+        anchorRow: 0, anchorCol: 0,
+      };
+      const { result } = renderCellStyles(workbook, { row: 0, col: 0 }, selection);
+
+      act(() => {
+        result.current.toggleWrapTextStyle();
+      });
+
+      const newWb = mockPushHistory.mock.calls[0][0];
+      expect(newWb.sheets[0].cells['0:0'].style?.whiteSpace).toBe('nowrap');
     });
   });
 

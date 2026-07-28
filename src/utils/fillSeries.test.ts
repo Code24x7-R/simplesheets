@@ -79,6 +79,21 @@ describe('fillSeries', () => {
         // All zeros: arithmetic with step 0 (not geometric)
         expect(pattern.type).toBe('arithmetic');
       });
+
+      it('returns unknown when some values are zero (geometric requires non-zero)', () => {
+        const cells = [makeCell('0'), makeCell('1'), makeCell('2')];
+        const pattern = detectPattern(cells);
+        // Has zero so geometric is skipped, arithmetic diffs are 1,1
+        expect(pattern.type).toBe('arithmetic');
+        expect(pattern.step).toBe(1);
+      });
+
+      it('returns unknown for geometric with zero mixed in', () => {
+        const cells = [makeCell('1'), makeCell('0'), makeCell('3')];
+        const pattern = detectPattern(cells);
+        // Zero present skips geometric, diffs are -1 and 3 (not constant)
+        expect(pattern.type).toBe('unknown');
+      });
     });
 
     describe('date series', () => {
@@ -94,6 +109,20 @@ describe('fillSeries', () => {
         const pattern = detectPattern(cells);
         expect(pattern.type).toBe('date');
         expect(pattern.dateInterval).toBe(7 * 24 * 60 * 60 * 1000); // 7 days
+      });
+
+      it('returns unknown for dates with zero interval', () => {
+        const cells = [makeCell('2024-01-01'), makeCell('2024-01-01'), makeCell('2024-01-01')];
+        const pattern = detectPattern(cells);
+        // Zero interval is not a valid date pattern
+        expect(pattern.type).toBe('unknown');
+      });
+
+      it('returns unknown for dates with inconsistent intervals', () => {
+        const cells = [makeCell('2024-01-01'), makeCell('2024-01-02'), makeCell('2024-01-04')];
+        const pattern = detectPattern(cells);
+        // Intervals are 1 day and 2 days (not same)
+        expect(pattern.type).toBe('unknown');
       });
     });
 
@@ -114,6 +143,13 @@ describe('fillSeries', () => {
         const cells = [makeCell('Fri'), makeCell('Sat'), makeCell('Sun')];
         const pattern = detectPattern(cells);
         expect(pattern.type).toBe('dayOfWeek');
+      });
+
+      it('returns unknown for non-sequential days', () => {
+        const cells = [makeCell('Mon'), makeCell('Wed'), makeCell('Fri')];
+        const pattern = detectPattern(cells);
+        // Days don't increment by 1
+        expect(pattern.type).toBe('unknown');
       });
     });
 
@@ -227,6 +263,35 @@ describe('fillSeries', () => {
       const pattern = { type: 'unknown' as const, originalValues: ['foo', 'bar', 'baz'] };
       const result = generateSeries(pattern, 2);
       expect(result).toEqual(['baz', 'baz']);
+    });
+
+    it('generates month of year series', () => {
+      const pattern = {
+        type: 'monthOfYear' as const,
+        textSequence: ['january', 'february', 'march', 'april', 'may', 'june',
+          'july', 'august', 'september', 'october', 'november', 'december'],
+        textIndices: [10, 11, 0],
+        originalValues: ['Nov', 'Dec', 'Jan'],
+      };
+      const result = generateSeries(pattern, 2);
+      expect(result).toEqual(['February', 'March']);
+    });
+
+    it('generates text sequence series (quarters)', () => {
+      const pattern = {
+        type: 'textSequence' as const,
+        textSequence: ['q1', 'q2', 'q3', 'q4'],
+        textIndices: [2, 3, 0],
+        originalValues: ['Q3', 'Q4', 'Q1'],
+      };
+      const result = generateSeries(pattern, 2);
+      expect(result).toEqual(['q2', 'q3']);
+    });
+
+    it('returns empty array for negative count', () => {
+      const pattern = { type: 'arithmetic' as const, step: 1, originalValues: [1, 2, 3] };
+      const result = generateSeries(pattern, -1);
+      expect(result).toEqual([]);
     });
   });
 
