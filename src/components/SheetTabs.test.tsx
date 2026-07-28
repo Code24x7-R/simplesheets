@@ -193,5 +193,17 @@ describe('SheetTabs', () => {
       // onRenameSheet should NOT have been called yet — user hasn't committed
       expect(mockCallbacks.onRenameSheet).not.toHaveBeenCalled();
     });
+
+    it('closes menu when clicking outside', () => {
+      const wb = createTestWorkbook(['Sheet1', 'Sheet2']);
+      render(<SheetTabs workbook={wb} {...mockCallbacks} />);
+      const toggleBtn = screen.getAllByTitle('Sheet actions (Rename, Copy, Delete)')[0];
+      // Open menu
+      fireEvent.click(toggleBtn);
+      expect(screen.getByText('Rename')).toBeTruthy();
+      // Click outside - should close menu
+      fireEvent.mouseDown(document.body);
+      expect(screen.queryByText('Rename')).toBeNull();
+    });
   });
 });
