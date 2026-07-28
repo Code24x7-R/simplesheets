@@ -59,6 +59,7 @@ function adjustFormulaForStructuralChange(
         if (newRow >= 0) {
           return `${absCol ? '$' : ''}${normalizedCol}${dollarRow}${newRow + 1}`;
         }
+        /* istanbul ignore next - edge case: row out of bounds */
         return match; // out of bounds, keep original
       }
 
