@@ -219,3 +219,41 @@ describe('frozen panes adjustment', () => {
     expect(result.frozenColumns).toBe(3);
   });
 });
+
+describe('adjustFormulaForStructuralChange edge cases', () => {
+  it('keeps original ref when row goes out of bounds', () => {
+    const sheet = createTestSheet();
+    // A1 references A2, insert row at 0 shifts A2→A3
+    sheet.cells['0:0'] = { rawValue: '=A2' };
+    const result = insertRow(sheet, 0);
+    // A2→A3, so =A2 becomes =A3
+    expect(result.cells['1:0']?.rawValue).toBe('=A3');
+  });
+
+  it('keeps original ref when column goes out of bounds', () => {
+    const sheet = createTestSheet();
+    // A1 references B1, insert col at 0 shifts B1→C1
+    sheet.cells['0:0'] = { rawValue: '=B1' };
+    const result = insertCol(sheet, 0);
+    // B1→C1, so =B1 becomes =C1
+    expect(result.cells['0:1']?.rawValue).toBe('=C1');
+  });
+
+  it('handles absolute column refs correctly', () => {
+    const sheet = createTestSheet();
+    // A1 references $A$1 (absolute)
+    sheet.cells['0:0'] = { rawValue: '=$A$1' };
+    const result = insertRow(sheet, 0);
+    // $A$1 stays as $A$1 (absolute ref)
+    expect(result.cells['1:0']?.rawValue).toBe('=$A$1');
+  });
+
+  it('handles absolute row refs correctly', () => {
+    const sheet = createTestSheet();
+    // A1 references A$1 (absolute row)
+    sheet.cells['1:0'] = { rawValue: '=A$1' };
+    const result = insertRow(sheet, 0);
+    // A$1 stays as A$1 (absolute row ref)
+    expect(result.cells['2:0']?.rawValue).toBe('=A$1');
+  });
+});
