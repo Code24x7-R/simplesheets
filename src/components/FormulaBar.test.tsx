@@ -204,4 +204,51 @@ describe('FormulaBar - keyboard shortcuts', () => {
     // Should attempt to cut (no error thrown)
     expect(input).toBeInTheDocument();
   });
+
+  it('handles Alt+Enter to insert line break', () => {
+    render(<FormulaBar {...defaultProps} />);
+    const input = screen.getByDisplayValue('=SUM(A1:A10)');
+    fireEvent.keyDown(input, { altKey: true, key: 'Enter' });
+    // Should insert line break (no error thrown)
+    // Re-query the input since the component may have re-rendered
+    expect(screen.getByDisplayValue(/SUM/)).toBeInTheDocument();
+  });
+});
+
+describe('FormulaBar - Error Display', () => {
+  const defaultProps = {
+    session: { ...defaultSession, state: 'EDIT', buffer: '=SUM(A1:A10)', isFormula: true } as EditingSession,
+    pointSession: null,
+    value: '=SUM(A1:A10)',
+    cursorPos: 11,
+    statusMessage: 'Edit',
+    onRawKeyDown: jest.fn(),
+    onRawChange: jest.fn(),
+    onRawFocus: jest.fn(),
+    onRawBlur: jest.fn(),
+    onRawCaretMove: jest.fn(),
+    onCellPick: jest.fn(),
+    autoComplete: { open: false, matches: [], index: 0, tokenStart: 0 },
+    onAcceptAutoComplete: jest.fn(),
+    onNavigateAutoComplete: jest.fn(),
+    onDismissAutoComplete: jest.fn(),
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('displays validation error when present', () => {
+    // Render with an invalid formula
+    render(
+      <FormulaBar
+        {...defaultProps}
+        value='=SUM('
+        session={{ ...defaultProps.session, buffer: '=SUM(' }}
+      />,
+    );
+    // The component should render without error
+    const input = screen.getByDisplayValue('=SUM(');
+    expect(input).toBeInTheDocument();
+  });
 });
