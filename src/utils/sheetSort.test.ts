@@ -1,6 +1,7 @@
 import {
   sortRange,
   sortEntireSheet,
+  sortSelection,
   findUsedRange,
   type SortColumn,
 } from './sheetSort';
@@ -359,6 +360,40 @@ describe('sheetSort', () => {
       const sheet = createTestSheet();
       const result = sortEntireSheet(sheet, 0, 'asc');
       expect(result).toBe(sheet);
+    });
+  });
+
+  describe('sortSelection - selection types', () => {
+    it('sorts entire sheet when single row is selected', () => {
+      const sheet = createTestSheet();
+      sheet.cells['0:0'] = makeCell('Charlie');
+      sheet.cells['1:0'] = makeCell('Alice');
+      sheet.cells['2:0'] = makeCell('Bob');
+
+      // Single row selection (selectionStartRow === selectionEndRow)
+      // This triggers sortEntireSheet by the active column
+      const result = sortSelection(sheet, 1, 0, 1, 0, 'asc', false);
+
+      // Should sort entire sheet by column 0
+      expect(result.cells['0:0']?.rawValue).toBe('Alice');
+      expect(result.cells['1:0']?.rawValue).toBe('Bob');
+      expect(result.cells['2:0']?.rawValue).toBe('Charlie');
+    });
+
+    it('sorts entire sheet when column selection spans multiple columns', () => {
+      const sheet = createTestSheet();
+      sheet.cells['0:0'] = makeCell('Charlie');
+      sheet.cells['1:0'] = makeCell('Alice');
+      sheet.cells['2:0'] = makeCell('Bob');
+
+      // Column selection (selectionStartCol !== selectionEndCol)
+      // This triggers sortEntireSheet by the first column of selection
+      const result = sortSelection(sheet, 0, 0, 2, 2, 'asc', false);
+
+      // Should sort entire sheet by column 0
+      expect(result.cells['0:0']?.rawValue).toBe('Alice');
+      expect(result.cells['1:0']?.rawValue).toBe('Bob');
+      expect(result.cells['2:0']?.rawValue).toBe('Charlie');
     });
   });
 });
