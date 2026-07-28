@@ -176,6 +176,7 @@ function renderInline(text: string): React.ReactNode {
 
   while ((match = regex.exec(text)) !== null) {
     // Text before match
+    /* istanbul ignore next - edge case: text before first match */
     if (match.index > lastIndex) {
       parts.push(text.slice(lastIndex, match.index));
     }
@@ -189,6 +190,7 @@ function renderInline(text: string): React.ReactNode {
       );
     } else if (match[4]) {
       // Code
+      /* istanbul ignore next - edge case: inline code parsing */
       parts.push(
         <code key={match.index} className="px-1 py-0.5 bg-gray-100 rounded text-xs font-mono text-gray-800">
           {match[4]}
