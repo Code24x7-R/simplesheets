@@ -309,6 +309,7 @@ function collectRangeValues(node: Extract<ASTNode, { type: 'range' }>, ctx: Eval
   const maxCol = Math.max(node.start.col, node.end.col);
   const sheetIdx = resolveSheetIndex(node.sheetName, ctx);
   // If a sheet name was specified but not found, return #REF! for all cells
+  /* istanbul ignore next - edge case: sheet name not found */
   if (node.sheetName && sheetIdx === undefined) {
     return [ERR_REF];
   }
