@@ -297,6 +297,7 @@ function buildCustomCondition(type: string, value: string): FilterCondition | nu
       return { type: 'isEmpty' };
     case 'isNotEmpty':
       return { type: 'isNotEmpty' };
+    /* istanbul ignore next - defensive fallback for unknown filter type */
     default:
       return null;
   }
