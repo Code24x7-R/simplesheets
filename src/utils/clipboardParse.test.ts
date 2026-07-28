@@ -254,6 +254,27 @@ describe('clipboardParse', () => {
       // hsl is not supported, returns trimmed as-is
       expect(result.styles[0][0]?.color).toBe('hsl(120, 100%, 50%)');
     });
+
+    it('handles cells with no style attribute', () => {
+      const html = '<table><tr><td>Plain</td></tr></table>';
+      const result = parseHtmlTable(html);
+      expect(result.styles[0][0]).toBeNull();
+    });
+
+    it('handles cells with empty style attribute', () => {
+      const html = '<table><tr><td style="">Empty Style</td></tr></table>';
+      const result = parseHtmlTable(html);
+      expect(result.styles[0][0]).toBeNull();
+    });
+
+    it('handles large HTML tables with safety limit', () => {
+      // Create a table with many rows to test the safety limit
+      const rows = Array(100).fill('<tr><td>Cell</td></tr>').join('');
+      const html = `<table>${rows}</table>`;
+      const result = parseHtmlTable(html);
+      // Should parse without locking up
+      expect(result.values.length).toBeGreaterThan(0);
+    });
   });
 
   describe('classifyPasteContent', () => {
