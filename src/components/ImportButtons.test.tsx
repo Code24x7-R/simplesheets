@@ -276,4 +276,32 @@ describe('ImportJsonButton', () => {
       expect(onError).toHaveBeenCalledWith('Import failed');
     });
   });
+
+  it('calls onError when JSON import returns error message', async () => {
+    (importJson as jest.Mock).mockReturnValue({ success: false, error: 'Invalid JSON format' });
+
+    const onError = jest.fn();
+    render(<ImportJsonButton onImport={jest.fn()} onError={onError} />);
+
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const file = createMockFile('bad.json', 'not json');
+
+    Object.defineProperty(input, 'files', { value: [file] });
+    fireEvent.change(input);
+
+    await waitFor(() => {
+      expect(onError).toHaveBeenCalledWith('Invalid JSON format');
+    });
+  });
+
+  it('does nothing when no file selected for JSON import', () => {
+    const onImport = jest.fn();
+    render(<ImportJsonButton onImport={onImport} onError={jest.fn()} />);
+
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    Object.defineProperty(input, 'files', { value: [] });
+    fireEvent.change(input);
+
+    expect(onImport).not.toHaveBeenCalled();
+  });
 });
