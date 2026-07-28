@@ -192,6 +192,49 @@ describe('Toolbar', () => {
     expect(defaultProps.onSetBorderBottom).toHaveBeenCalledTimes(1);
   });
 
+  it('calls onSetBorderBottom when Double Bottom preset is clicked', () => {
+    render(<Toolbar {...defaultProps} />);
+    fireEvent.click(screen.getByTitle('Borders'));
+    fireEvent.click(screen.getByText('Double Bottom'));
+    expect(defaultProps.onSetBorderBottom).toHaveBeenCalledTimes(1);
+  });
+
+  it('calls onSetBorderLeft when Left Border preset is clicked', () => {
+    render(<Toolbar {...defaultProps} />);
+    fireEvent.click(screen.getByTitle('Borders'));
+    fireEvent.click(screen.getByText('Left Border'));
+    expect(defaultProps.onSetBorderLeft).toHaveBeenCalledTimes(1);
+  });
+
+  it('calls onSetBorderRight when Right Border preset is clicked', () => {
+    render(<Toolbar {...defaultProps} />);
+    fireEvent.click(screen.getByTitle('Borders'));
+    fireEvent.click(screen.getByText('Right Border'));
+    expect(defaultProps.onSetBorderRight).toHaveBeenCalledTimes(1);
+  });
+
+  it('calls onSetBorderTop and onSetBorderBottom when Top and Bottom preset is clicked', () => {
+    render(<Toolbar {...defaultProps} />);
+    fireEvent.click(screen.getByTitle('Borders'));
+    fireEvent.click(screen.getByText('Top and Bottom'));
+    expect(defaultProps.onSetBorderTop).toHaveBeenCalledTimes(1);
+    expect(defaultProps.onSetBorderBottom).toHaveBeenCalledTimes(1);
+  });
+
+  it('calls onSetBorderAll when Inside Borders preset is clicked', () => {
+    render(<Toolbar {...defaultProps} />);
+    fireEvent.click(screen.getByTitle('Borders'));
+    fireEvent.click(screen.getByText('Inside Borders'));
+    expect(defaultProps.onSetBorderAll).toHaveBeenCalledTimes(1);
+  });
+
+  it('calls onSetBorderOutside when Thick Outside preset is clicked', () => {
+    render(<Toolbar {...defaultProps} />);
+    fireEvent.click(screen.getByTitle('Borders'));
+    fireEvent.click(screen.getByText('Thick Outside'));
+    expect(defaultProps.onSetBorderOutside).toHaveBeenCalledTimes(1);
+  });
+
   it('calls number format callbacks', () => {
     render(<Toolbar {...defaultProps} />);
     fireEvent.click(screen.getByTitle('General format'));
