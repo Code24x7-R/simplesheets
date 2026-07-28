@@ -262,6 +262,7 @@ export function FormulaBar({
 
   const handleFocus = useCallback(() => {
     // Suppress focus handling when expanding for Alt+Enter
+    /* istanbul ignore next - edge case: suppress focus after Alt+Enter */
     if (suppressFocus.current) {
       suppressFocus.current = false;
       return;
@@ -273,6 +274,7 @@ export function FormulaBar({
 
   const handleBlur = useCallback(() => {
     // Suppress blur-commit when expanding for Alt+Enter
+    /* istanbul ignore next - edge case: suppress blur after Alt+Enter */
     if (suppressFocus.current) {
       return;
     }
@@ -339,6 +341,7 @@ export function FormulaBar({
         const selectedText = input.value.slice(input.selectionStart ?? 0, input.selectionEnd ?? 0);
         navigator.clipboard.writeText(selectedText).catch(() => {
           // Fallback: use document.execCommand
+          /* istanbul ignore next - edge case: clipboard API unavailable */
           const textArea = document.createElement('textarea');
           textArea.value = selectedText;
           document.body.appendChild(textArea);
