@@ -1,6 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { FormulaWizard } from './FormulaWizard';
 import type { WizardStateData } from '../hooks/useFormulaWizard';
+import type { FormulaASTNode } from '../utils/formulaWizardSchema';
 
 // Helper to create a minimal wizard state
 function createWizardState(overrides: Partial<WizardStateData> = {}): WizardStateData {
