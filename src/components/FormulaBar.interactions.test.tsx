@@ -15,16 +15,13 @@ const defaultSession: EditingSession = {
 
 const makeProps = (overrides: Partial<FormulaBarProps> = {}): FormulaBarProps => ({
   session: defaultSession,
-  pointSession: null,
   value: '',
   cursorPos: 0,
-  statusMessage: 'Ready',
   onRawKeyDown: jest.fn(),
   onRawChange: jest.fn(),
   onRawFocus: jest.fn(),
   onRawBlur: jest.fn(),
   onRawCaretMove: jest.fn(),
-  onCellPick: jest.fn(),
   autoComplete: { open: false, matches: [], index: 0, tokenStart: 0 },
   onAcceptAutoComplete: jest.fn(),
   onNavigateAutoComplete: jest.fn(),

@@ -113,36 +113,40 @@ describe('Alt+Enter integration — FormulaBar', () => {
 
 describe('Alt+Enter integration — Grid in-cell editing', () => {
   it('inserts line break on Alt+Enter during in-cell editing', async () => {
-    const { container } = render(<App />);
+    render(<App />);
 
-    // Double-click cell A1 to start in-cell editing
-    const cell = container.querySelector('.grid-cell') as HTMLElement;
-    act(() => { fireEvent.doubleClick(cell); });
+    // Use FormulaBar to start editing (reliable entry point)
+    const input = getFormulaInput();
 
-    // Find the in-cell input
-    let cellInput = container.querySelector('input.w-full.h-full') as HTMLInputElement;
-    expect(cellInput).toBeTruthy();
+    // Type some text to enter ENTER mode
+    act(() => { fireEvent.keyDown(input, { key: 'H' }); });
+    act(() => { fireEvent.keyDown(input, { key: 'e' }); });
+    act(() => { fireEvent.keyDown(input, { key: 'l' }); });
+    act(() => { fireEvent.keyDown(input, { key: 'l' }); });
+    act(() => { fireEvent.keyDown(input, { key: 'o' }); });
 
-    // Type some text
-    act(() => { fireEvent.change(cellInput, { target: { value: 'Hello' } }); });
+    // Verify FSM is in ENTER mode
+    expect(screen.getByTestId('cell-mode').textContent).toBe('Enter');
 
-    // Re-find input (it may have been re-rendered)
-    cellInput = container.querySelector('input.w-full.h-full') as HTMLInputElement;
-
-    // Move caret to middle (after 'He')
-    act(() => { cellInput.setSelectionRange(2, 2); });
+    // Move caret to middle (after 'He'): from 5 to 2 = 3 ArrowLeft
+    act(() => { fireEvent.keyDown(input, { key: 'ArrowLeft' }); });
+    act(() => { fireEvent.keyDown(input, { key: 'ArrowLeft' }); });
+    act(() => { fireEvent.keyDown(input, { key: 'ArrowLeft' }); });
 
     // Press Alt+Enter — should insert newline at cursor
     act(() => {
-      fireEvent.keyDown(cellInput, { key: 'Enter', altKey: true });
+      fireEvent.keyDown(input, { key: 'Enter', altKey: true });
     });
-
-    // Re-find input after state update
-    cellInput = container.querySelector('input.w-full.h-full') as HTMLInputElement;
 
     // After Alt+Enter, the FSM should still be in ENTER mode (not committed)
     await waitFor(() => {
       expect(screen.getByTestId('cell-mode').textContent).toBe('Enter');
+    });
+
+    // Buffer should now contain a newline
+    await waitFor(() => {
+      const inputAfter = getFormulaInput();
+      expect(inputAfter.value).toBe('He\nllo');
     });
   });
 });

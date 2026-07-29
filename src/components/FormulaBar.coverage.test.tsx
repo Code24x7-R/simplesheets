@@ -16,16 +16,13 @@ const defaultSession: EditingSession = {
 describe('FormulaBar - Raw Key Handling', () => {
   const defaultProps: FormulaBarProps = {
     session: { ...defaultSession, state: 'EDIT', buffer: '=SUM(', isFormula: true },
-    pointSession: null,
     value: '=SUM(',
     cursorPos: 5,
-    statusMessage: 'Edit',
     onRawKeyDown: jest.fn(),
     onRawChange: jest.fn(),
     onRawFocus: jest.fn(),
     onRawBlur: jest.fn(),
     onRawCaretMove: jest.fn(),
-    onCellPick: jest.fn(),
     autoComplete: { open: false, matches: [], index: 0, tokenStart: 0 },
     onAcceptAutoComplete: jest.fn(),
     onNavigateAutoComplete: jest.fn(),
@@ -58,16 +55,13 @@ describe('FormulaBar - Raw Key Handling', () => {
 describe('FormulaBar - Escape Key', () => {
   const defaultProps: FormulaBarProps = {
     session: defaultSession,
-    pointSession: null,
     value: '42',
     cursorPos: 0,
-    statusMessage: 'Ready',
     onRawKeyDown: jest.fn(),
     onRawChange: jest.fn(),
     onRawFocus: jest.fn(),
     onRawBlur: jest.fn(),
     onRawCaretMove: jest.fn(),
-    onCellPick: jest.fn(),
     autoComplete: { open: false, matches: [], index: 0, tokenStart: 0 },
     onAcceptAutoComplete: jest.fn(),
     onNavigateAutoComplete: jest.fn(),
@@ -91,16 +85,13 @@ describe('FormulaBar - Escape Key', () => {
 describe('FormulaBar - Formula Display Overlay', () => {
   const defaultProps: FormulaBarProps = {
     session: { ...defaultSession, state: 'EDIT', buffer: '=A1+B1', isFormula: true },
-    pointSession: null,
     value: '=A1+B1',
     cursorPos: 7,
-    statusMessage: 'Edit',
     onRawKeyDown: jest.fn(),
     onRawChange: jest.fn(),
     onRawFocus: jest.fn(),
     onRawBlur: jest.fn(),
     onRawCaretMove: jest.fn(),
-    onCellPick: jest.fn(),
     autoComplete: { open: false, matches: [], index: 0, tokenStart: 0 },
     onAcceptAutoComplete: jest.fn(),
     onNavigateAutoComplete: jest.fn(),
@@ -126,7 +117,6 @@ describe('FormulaBar - Formula Display Overlay', () => {
   });
 
   it('returns null for formula display when not editing', () => {
-    render(<FormulaBar {...defaultProps} session={defaultSession} statusMessage="Ready" />);
 
     // Formula display should not be visible when not editing
     const formulaDisplay = document.querySelector('.pointer-events-none');
@@ -137,16 +127,13 @@ describe('FormulaBar - Formula Display Overlay', () => {
 describe('FormulaBar - Error Display', () => {
   const defaultProps: FormulaBarProps = {
     session: { ...defaultSession, state: 'EDIT', buffer: '=SUM(', isFormula: true },
-    pointSession: null,
     value: '=SUM(',
     cursorPos: 5,
-    statusMessage: 'Edit',
     onRawKeyDown: jest.fn(),
     onRawChange: jest.fn(),
     onRawFocus: jest.fn(),
     onRawBlur: jest.fn(),
     onRawCaretMove: jest.fn(),
-    onCellPick: jest.fn(),
     autoComplete: { open: false, matches: [], index: 0, tokenStart: 0 },
     onAcceptAutoComplete: jest.fn(),
     onNavigateAutoComplete: jest.fn(),
@@ -172,7 +159,6 @@ describe('FormulaBar - Error Display', () => {
   });
 
   it('returns null for error display when not editing', () => {
-    render(<FormulaBar {...defaultProps} session={defaultSession} statusMessage="Ready" />);
 
     // Error display should not be visible when not editing
     const errorDisplay = document.querySelector('.bg-red-50, .bg-yellow-50');
@@ -183,16 +169,13 @@ describe('FormulaBar - Error Display', () => {
 describe('FormulaBar - Auto-Close Parentheses', () => {
   const defaultProps: FormulaBarProps = {
     session: { ...defaultSession, state: 'EDIT', buffer: '=SUM(', isFormula: true },
-    pointSession: null,
     value: '=SUM(',
     cursorPos: 5,
-    statusMessage: 'Edit',
     onRawKeyDown: jest.fn(),
     onRawChange: jest.fn(),
     onRawFocus: jest.fn(),
     onRawBlur: jest.fn(),
     onRawCaretMove: jest.fn(),
-    onCellPick: jest.fn(),
     autoComplete: { open: false, matches: [], index: 0, tokenStart: 0 },
     onAcceptAutoComplete: jest.fn(),
     onNavigateAutoComplete: jest.fn(),
@@ -219,16 +202,13 @@ describe('FormulaBar - Auto-Close Parentheses', () => {
 describe('FormulaBar - AutoComplete Edge Cases', () => {
   const defaultProps: FormulaBarProps = {
     session: { ...defaultSession, state: 'EDIT', buffer: '=A1', isFormula: true },
-    pointSession: null,
     value: '=A1',
     cursorPos: 3,
-    statusMessage: 'Edit',
     onRawKeyDown: jest.fn(),
     onRawChange: jest.fn(),
     onRawFocus: jest.fn(),
     onRawBlur: jest.fn(),
     onRawCaretMove: jest.fn(),
-    onCellPick: jest.fn(),
     autoComplete: { open: false, matches: [], index: 0, tokenStart: 0 },
     onAcceptAutoComplete: jest.fn(),
     onNavigateAutoComplete: jest.fn(),
@@ -259,16 +239,13 @@ describe('FormulaBar - AutoComplete Edge Cases', () => {
 describe('FormulaBar - Focus transitions to EDIT mode', () => {
   const makeProps = (): FormulaBarProps => ({
     session: { ...defaultSession, state: 'SELECT' },
-    pointSession: null,
     value: 'Hello World',
     cursorPos: 0,
-    statusMessage: 'Ready',
     onRawKeyDown: jest.fn(),
     onRawChange: jest.fn(),
     onRawFocus: jest.fn(),
     onRawBlur: jest.fn(),
     onRawCaretMove: jest.fn(),
-    onCellPick: jest.fn(),
     autoComplete: { open: false, matches: [], index: 0, tokenStart: 0 },
     onAcceptAutoComplete: jest.fn(),
     onNavigateAutoComplete: jest.fn(),

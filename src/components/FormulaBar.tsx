@@ -54,6 +54,8 @@ export interface FormulaBarProps {
   onToggleReferenceFormat?: () => void;
   /** Callback when formula highlights change. */
   onHighlightsChange?: (ranges: HighlightedRange[]) => void;
+  /** Callback when the fx button is clicked — opens FormulaWizard with current formula. */
+  onFxClick?: (currentValue: string) => void;
 }
 
 /**
@@ -183,6 +185,7 @@ export const FormulaBar = forwardRef<FormulaBarHandle, FormulaBarProps>(function
   referenceFormat = 'A1',
   onToggleReferenceFormat,
   onHighlightsChange,
+  onFxClick,
 }, ref) {
   const [expanded, setExpanded] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -542,8 +545,18 @@ export const FormulaBar = forwardRef<FormulaBarHandle, FormulaBarProps>(function
           {activeCellRef}
         </button>
 
-        {/* Formula fx indicator */}
-        <span className="text-gray-400 font-medium">fx</span>
+        {/* Formula fx indicator — click to open FormulaWizard */}
+        {onFxClick ? (
+          <button
+            className="text-gray-400 font-medium hover:text-blue-600 hover:bg-blue-50 px-1.5 py-0.5 rounded transition-colors cursor-pointer"
+            onClick={() => onFxClick(value)}
+            title="Open Formula Wizard (Ctrl+Shift+F)"
+          >
+            fx
+          </button>
+        ) : (
+          <span className="text-gray-400 font-medium">fx</span>
+        )}
 
         {/* Point mode indicator */}
         {isPointMode && (

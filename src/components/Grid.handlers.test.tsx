@@ -1,7 +1,92 @@
-import { render, screen, fireEvent } from '@testing-library/react';
-import { useState } from 'react';
+import { render, fireEvent } from '@testing-library/react';
+import { useState, useCallback } from 'react';
 import { Grid } from './Grid';
 import type { Sheet } from '../types';
+import type { EditingSession } from '../hooks/useCellEditing';
+import type { HeaderSelection } from './Grid';
+
+/**
+ * Test helper: a minimal FSM session manager for Grid component tests.
+ */
+function useTestEditingSession() {
+  const [session, setSession] = useState<EditingSession>({
+    state: 'SELECT',
+    row: 0,
+    col: 0,
+    buffer: '',
+    originalValue: '',
+    caretPos: 0,
+    isFormula: false,
+  });
+
+  const onStartEdit = useCallback((row: number, col: number) => {
+    setSession({
+      state: 'EDIT',
+      row,
+      col,
+      buffer: '',
+      originalValue: '',
+      caretPos: 0,
+      isFormula: false,
+    });
+  }, []);
+
+  const onStartEnter = useCallback((row: number, col: number, char: string) => {
+    setSession({
+      state: 'ENTER',
+      row,
+      col,
+      buffer: char,
+      originalValue: '',
+      caretPos: 1,
+      isFormula: char === '=' || char === '+' || char === '-',
+    });
+  }, []);
+
+  const onRawKeyDown = useCallback((e: React.KeyboardEvent) => {
+    const s = session;
+    if (e.key === 'Escape') {
+      setSession({ ...s, state: 'SELECT', buffer: '', caretPos: 0, isFormula: false });
+      return;
+    }
+    if (e.key === 'Enter' || e.key === 'Tab') {
+      setSession({ ...s, state: 'SELECT', buffer: '', caretPos: 0, isFormula: false });
+      return;
+    }
+    if (e.key === 'Backspace') {
+      if (s.buffer.length > 0 && s.caretPos > 0) {
+        const newBuffer = s.buffer.slice(0, s.caretPos - 1) + s.buffer.slice(s.caretPos);
+        setSession({ ...s, buffer: newBuffer, caretPos: s.caretPos - 1 });
+      }
+      return;
+    }
+    if (e.key === 'Delete') {
+      if (s.caretPos < s.buffer.length) {
+        const newBuffer = s.buffer.slice(0, s.caretPos) + s.buffer.slice(s.caretPos + 1);
+        setSession({ ...s, buffer: newBuffer });
+      }
+      return;
+    }
+    if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      const newBuffer = s.buffer.slice(0, s.caretPos) + e.key + s.buffer.slice(s.caretPos);
+      const isFormula = newBuffer.startsWith('=') || newBuffer.startsWith('+') || newBuffer.startsWith('-');
+      setSession({ ...s, buffer: newBuffer, caretPos: s.caretPos + 1, isFormula });
+    }
+  }, [session]);
+
+  const onRawChange = useCallback((value: string, caretPos: number) => {
+    const isFormula = value.startsWith('=') || value.startsWith('+') || value.startsWith('-');
+    setSession((prev) => ({
+      ...prev,
+      state: value.length > 0 ? (prev.state === 'SELECT' ? 'ENTER' : prev.state) : prev.state,
+      buffer: value,
+      caretPos,
+      isFormula,
+    }));
+  }, []);
+
+  return { session, onStartEdit, onStartEnter, onRawKeyDown, onRawChange };
+}
 
 // Mock the virtualizer to render all items in test environment
 jest.mock('@tanstack/react-virtual', () => ({
@@ -63,14 +148,13 @@ interface GridWrapperProps {
   onCellChange?: (row: number, col: number, value: string) => void;
   onCellsChange?: (changes: Array<{ row: number; col: number; value: string }>) => void;
   onCellSelect?: (row: number, col: number) => void;
-  onHeaderSelect?: (type: 'row' | 'col', index: number) => void;
+  onHeaderSelect?: (selection: HeaderSelection) => void;
 }
 
 function GridWrapper(props: GridWrapperProps) {
   const [sheet, setSheet] = useState(props.sheet ?? createTestSheet());
   const [selectedCell, setSelectedCell] = useState(props.selectedCell ?? { row: 0, col: 0 });
-  const [editingCell, setEditingCell] = useState<{ row: number; col: number } | null>(null);
-  const [editValue, setEditValue] = useState('');
+  const editing = useTestEditingSession();
 
   const handleCellChange = (row: number, col: number, value: string) => {
     setSheet((prev) => ({
@@ -85,8 +169,8 @@ function GridWrapper(props: GridWrapperProps) {
     props.onCellSelect?.(row, col);
   };
 
-  const handleHeaderSelect = (type: 'row' | 'col', index: number) => {
-    props.onHeaderSelect?.(type, index);
+  const handleHeaderSelect = (selection: HeaderSelection) => {
+    props.onHeaderSelect?.(selection);
   };
 
   return (
@@ -95,26 +179,15 @@ function GridWrapper(props: GridWrapperProps) {
       selectedCell={selectedCell}
       onCellChange={handleCellChange}
       onCellsChange={props.onCellsChange}
-      onCellSelect={handleCellSelect}
+      onSelect={handleCellSelect}
       onHeaderSelect={handleHeaderSelect}
-      editingCell={editingCell}
-      onEditingCellChange={setEditingCell}
-      editValue={editValue}
-      onEditValueChange={setEditValue}
-      rowHeights={{}}
-      colWidths={{}}
+      session={editing.session}
+      onStartEdit={editing.onStartEdit}
+      onStartEnter={editing.onStartEnter}
+      onRawKeyDown={editing.onRawKeyDown}
+      onRawChange={editing.onRawChange}
       filterState={null}
       onApplyFilter={() => {}}
-      onClearFilters={() => {}}
-      onSort={() => {}}
-      onResizeColumn={() => {}}
-      onResizeRow={() => {}}
-      onInsertRow={() => {}}
-      onInsertCol={() => {}}
-      onDeleteRow={() => {}}
-      onDeleteCol={() => {}}
-      onUndo={() => {}}
-      onRedo={() => {}}
     />
   );
 }

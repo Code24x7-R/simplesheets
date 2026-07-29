@@ -31,16 +31,13 @@ const sampleMatches: FunctionInfo[] = [
 
 const makeProps = (overrides: Partial<FormulaBarProps> = {}): FormulaBarProps => ({
   session: { ...defaultSession, state: 'EDIT', buffer: '=S', isFormula: true },
-  pointSession: null,
   value: '=S',
   cursorPos: 2,
-  statusMessage: 'Edit',
   onRawKeyDown: jest.fn(),
   onRawChange: jest.fn(),
   onRawFocus: jest.fn(),
   onRawBlur: jest.fn(),
   onRawCaretMove: jest.fn(),
-  onCellPick: jest.fn(),
   autoComplete: defaultAutoComplete,
   onAcceptAutoComplete: jest.fn(),
   onNavigateAutoComplete: jest.fn(),

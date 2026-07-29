@@ -443,4 +443,38 @@ describe('App - Global Keyboard Shortcuts', () => {
       });
     }).not.toThrow();
   });
+
+  it('Ctrl+Shift+F opens Formula Wizard without error', () => {
+    render(<App />);
+
+    // Ctrl+Shift+F should trigger the Formula Wizard handler
+    expect(() => {
+      act(() => {
+        fireGlobalKeyDown('F', { ctrlKey: true, shiftKey: true });
+      });
+    }).not.toThrow();
+  });
+
+  it('fx button click opens Formula Wizard', () => {
+    render(<App />);
+    const formulaBarInput = screen.getByPlaceholderText(/Enter a value or formula/) as HTMLInputElement;
+
+    // Enter a formula in the formula bar
+    act(() => {
+      formulaBarInput.focus();
+    });
+    act(() => {
+      fireEvent.change(formulaBarInput, { target: { value: '=SUM(A1:A10)' } });
+    });
+
+    // Click the fx button
+    const fxButton = screen.getByText('fx');
+    expect(fxButton.tagName).toBe('BUTTON');
+    act(() => {
+      fireEvent.click(fxButton);
+    });
+
+    // Formula Wizard should be open (check for wizard title)
+    expect(screen.getByText('Nested Formula Wizard')).toBeInTheDocument();
+  });
 });

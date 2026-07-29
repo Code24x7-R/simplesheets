@@ -33,6 +33,7 @@ describe('MenuBar', () => {
     onInsertRowBelow: jest.fn(),
     onInsertColLeft: jest.fn(),
     onInsertColRight: jest.fn(),
+    onFormulaWizard: jest.fn(),
     onToggleBold: jest.fn(),
     onToggleItalic: jest.fn(),
     onToggleUnderline: jest.fn(),
@@ -160,6 +161,16 @@ describe('MenuBar', () => {
     expect(screen.getByText('Row Below')).toBeTruthy();
     expect(screen.getByText('Column Left')).toBeTruthy();
     expect(screen.getByText('Column Right')).toBeTruthy();
+  });
+
+  it('Insert menu shows Formula Wizard option', () => {
+    const onFormulaWizard = jest.fn();
+    render(<MenuBar {...defaultProps} onFormulaWizard={onFormulaWizard} />);
+    fireEvent.click(screen.getByText('Insert'));
+    const wizardItem = screen.getByText('Formula Wizard…');
+    expect(wizardItem).toBeTruthy();
+    fireEvent.click(wizardItem);
+    expect(onFormulaWizard).toHaveBeenCalledTimes(1);
   });
 
   it('Format menu shows Bold, Italic, Underline items', () => {

@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, act } from '@testing-library/react';
 import { ImportExportBridge } from './ImportExportBridge';
 import { PrintSetupProvider } from '../context/PrintSetupContext';
 import type { Workbook, Sheet } from '../types';

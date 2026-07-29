@@ -512,7 +512,7 @@ describe('sheetFilter', () => {
       sheet.cells['2:0'] = makeCell('Bob');
 
       const filters: Record<number, ColumnFilter> = {
-        0: { conditions: [{ type: 'custom', value: '=A1>0' }] },
+        0: { conditions: [{ type: 'custom', formula: '=A1>0' }] },
       };
 
       const state = createFilterState(sheet, 0, filters);

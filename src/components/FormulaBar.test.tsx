@@ -42,6 +42,28 @@ describe('FormulaBar', () => {
     expect(screen.getByText('fx')).toBeInTheDocument();
   });
 
+  it('renders fx as clickable button when onFxClick provided', () => {
+    const onFxClick = jest.fn();
+    render(<FormulaBar {...defaultProps} onFxClick={onFxClick} value="=SUM(A1:A5)" />);
+    const fxButton = screen.getByText('fx');
+    expect(fxButton.tagName).toBe('BUTTON');
+    fireEvent.click(fxButton);
+    expect(onFxClick).toHaveBeenCalledWith('=SUM(A1:A5)');
+  });
+
+  it('renders fx as plain span when onFxClick not provided', () => {
+    render(<FormulaBar {...defaultProps} />);
+    const fxSpan = screen.getByText('fx');
+    expect(fxSpan.tagName).toBe('SPAN');
+  });
+
+  it('fx button passes current value to onFxClick', () => {
+    const onFxClick = jest.fn();
+    render(<FormulaBar {...defaultProps} onFxClick={onFxClick} value="=AVERAGE(B1:B10)" />);
+    fireEvent.click(screen.getByText('fx'));
+    expect(onFxClick).toHaveBeenCalledWith('=AVERAGE(B1:B10)');
+  });
+
   it('renders input with placeholder', () => {
     render(<FormulaBar {...defaultProps} />);
     expect(screen.getByPlaceholderText(/Enter a value or formula/)).toBeInTheDocument();
@@ -52,7 +74,6 @@ describe('FormulaBar', () => {
       <FormulaBar
         {...defaultProps}
         session={{ ...defaultSession, state: 'POINT' }}
-        statusMessage="Point"
       />,
     );
     expect(screen.getByText('POINT')).toBeInTheDocument();
@@ -135,7 +156,6 @@ describe('FormulaBar - Formula Editing', () => {
       <FormulaBar
         {...defaultProps}
         session={{ ...defaultSession, state: 'SELECT' }}
-        statusMessage="Ready"
         onRawFocus={onRawFocus}
       />,
     );

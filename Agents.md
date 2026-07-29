@@ -1,99 +1,189 @@
-# Agents.md – Guidance for the SimpleSheet LLM Agent
+# AGENTS.md — SimpleSheet Development Guide
 
-## 1. Overview
-The **SimpleSheet LLM Agent** is an autonomous language‑model worker that will turn the design specification into a fully functional web‑app.  
-Its job is to:
+## 1. Project Summary
 
-* Consume the **prompt templates** (see `promptTemplates.json` in the repository).  
-* Generate the required artifacts (code files, docs, tests, configs).  
-* Verify that each artifact meets its **acceptance criteria**.  
-* Update the task status in the master task list.  
+**SimpleSheet** is a browser-based spreadsheet app (React + TypeScript + Vite + Tailwind). No server, no account — fast, offline-capable, reads/writes Excel files.
 
-All work must be performed **non‑autogressively** – each task is a self‑contained unit that produces a single, well‑defined output.
+**Current metrics:** 1873 tests · 74 suites · all passing · lint clean · build clean  
+**Coverage:** 93.94% stmts · 85.03% branches · 95.76% funcs · 95.31% lines
 
 ---
 
-## 2. Core Responsibilities
-| Responsibility | How to Achieve It |
-|----------------|-------------------|
-| **Task Execution** | For a given `taskId`, copy the associated `prompt` and run it through the LLM. Return the generated output exactly as a fenced code block (file name as language label). |
-| **Validation** | After generation, programmatically (or manually) check the **acceptance** condition (e.g., compile‑time errors, test pass, UI behavior). |
-| **Status Update** | When a task passes, emit a JSON snippet (see *Status Update Format* below) that marks the task as `done` and includes a reference to the artifact. |
-| **Dependency Management** | Only start a task when **all** `dependencies` listed in the task definition have status `done`. |
-| **Error Handling** | If a generated artifact fails validation, return a JSON snippet with `status: "error"` and a short `message`. The orchestrator can then request a retry. |
-| **Documentation** | Keep the `Agents.md` file up‑to‑date with any new conventions or workflow changes. |
+## 2. Development Workflow
+
+This project uses an **iterative, test-driven, coverage-focused** workflow — NOT the rigid task-list waterfall described in `tasks.json` (that file is stale; see `PLAN.md` for the real roadmap).
+
+### 2.1 How Work Actually Happens
+
+1. **Pick a phase** from `PLAN.md` (e.g., "Phase 8: Final Verification — close coverage gaps in App.tsx")
+2. **Write tests first** — add Jest tests targeting uncovered lines/branches
+3. **Implement or fix** — make the code pass the new tests
+4. **Verify the full suite** — `npm test && npm run lint && npm run type-check && npm run build`
+5. **Update PLAN.md** — mark subtasks complete, update coverage numbers
+6. **Commit** — descriptive commit message with test count and coverage delta
+
+### 2.2 Priority Order
+
+| Priority | Focus | Rationale |
+|----------|-------|-----------|
+| 1 | **Branch coverage** | Weakest metric at 85.03% — biggest room for improvement |
+| 2 | **App.tsx branches** (76.04%) | Root component — most user-facing edge cases live here |
+| 3 | **formulaEngine.ts branches** (76.04%) | Core engine — defensive branches and error paths |
+| 4 | **HistoryContext.tsx branches** (75%) | Undo/redo — edge cases in stack management |
+| 5 | **Remaining Phase 8 gaps** | See PLAN.md "Phase 8: Final Verification" for the full list |
 
 ---
 
-## 3. Workflow
+## 3. Validation Methods
 
-1. **Initialize** – Load `tasks.json` (the master task list) and `promptTemplates.json`.  
-2. **Select Next Task** – Scan for the first task whose `status` is `todo` **and** whose `dependencies` are all `done`.  
-3. **Run Prompt** – Retrieve the matching prompt from `promptTemplates.json` and send it to the LLM.  
-4. **Receive Output** – The LLM returns the requested artifact(s) in fenced code blocks.  
-5. **Validate** – Run the appropriate build / test / UI check.  
-6. **Report** – Emit a **status update** JSON (see below).  
-7. **Loop** – Return to step 2 until all tasks are `done` or an unrecoverable error occurs.
+| Check | Command | Pass Condition |
+|-------|---------|----------------|
+| **Unit tests** | `npm test` | All pass, no failures |
+| **Lint** | `npm run lint` | 0 warnings, 0 errors |
+| **Type-check** | `npm run type-check` | 0 TypeScript errors |
+| **Build** | `npm run build` | Clean build, no errors |
+| **Coverage** | `npm test` (auto-reports) | Lines ≥ 95%, Branches ≥ 85% |
+
+> **Note:** Cypress E2E was removed in Stage 1 cleanup. The project uses Jest + React Testing Library exclusively.
+
+### 3.1 What to Validate After Each Change
+
+```bash
+# Full verification — run after every meaningful change
+npm test && npm run lint && npm run type-check && npm run build
+```
 
 ---
 
-## 4. Status Update Format
+## 4. Code Quality Standards
 
-```json
-{
-  "taskId": "task-2-1",
-  "status": "done",
-  "artifact": [
-    {
-      "path": "src/components/Grid.tsx",
-      "type": "code",
-      "content": "<code block>"
-    },
-    {
-      "path": "src/App.tsx",
-      "type": "code",
-      "content": "<code block>"
-    }
-  ],
-  "notes": "Smooth scrolling verified on 10 k rows."
-}
+### 4.1 Test Coverage Targets
 
+- **Lines:** ≥ 95% (currently 95.31%)
+- **Branches:** ≥ 85% (currently 85.03% — **weakest metric, prioritize this**)
+- **Functions:** ≥ 95% (currently 95.76%)
+- **Statements:** ≥ 93% (currently 93.94%)
 
-### 5. Prompt Template Usage
+### 4.2 Istanbul Ignore Comments
 
-Each entry in promptTemplates.json contains:
-* taskId – matches a task in the master list.
-* prompt – the exact instruction to give the LLM.
-* outputFormat – the expected artifact(s) (file name, type).
-* acceptance – the criteria the agent must verify before marking the task done.
+Use `/* istanbul ignore next */` sparingly — only for genuinely unreachable code (defensive fallbacks, `require.main` checks). Don't use it to dodge testing a branch that *can* be tested.
 
-The agent must not modify the prompt text; it should be passed verbatim to the LLM.
-If a prompt requests multiple files, the LLM should return separate fenced code blocks labelled with the filename (e.g., ts src/components/Grid.tsx).
+### 4.3 File Organization
 
-### 6. Validation Checklist
+```
+src/
+├── components/     # UI components (Grid, FormulaBar, MenuBar, modals...)
+├── context/        # React Context providers (History, Freeze, PrintSetup)
+├── hooks/          # Custom hooks (useCellEditing FSM, useAutosave, useReferenceFormat)
+├── services/       # Import/Export services (Excel, CSV, JSON, PDF)
+├── utils/          # Pure utilities (formulaParser, formulaEngine, clipboard, sheetSort...)
+├── types.ts        # Core data model (Workbook, Sheet, Cell, CellStyle)
+├── App.tsx         # Root component — orchestrates everything
+└── main.tsx        # React entry point
+```
 
-Artifact Type	Validation Method
-TypeScript / JSX	Run npm run lint && npm run build. No TypeScript errors, no lint warnings.
-Jest Tests	Execute npm test. All tests pass, coverage ≥ 80 % for the targeted files.
-Cypress E2E	Run npm run cypress. No failures; screenshots saved on error.
-UI Components	Manually open npm run dev and verify the described behavior (e.g., merging cells works, freeze panes stay visible).
-Import/Export	Load a sample file, export it back, and compare content (binary diff for XLSX, string diff for CSV/JSON).
-PDF	Open generated PDF, confirm layout matches on‑screen preview.
-Performance Benchmark	Run the benchmark script; ensure FPS ≥ 55 and export latency ≤ 2 s.
-If a validation step fails, the agent should emit an "error" status with a concise message and re‑run the prompt after any necessary clarification.
+---
 
-### 7. Communication Protocol
+## 5. Key Architecture Notes
 
-The agent only communicates via JSON status updates and, when asked, returns the generated code blocks.
-No extraneous prose should be added to the status update JSON.
-The only free‑form text the agent may emit is a single short follow‑up question (as required by the overall system policy) after a batch of status updates, e.g., “Do you want to prioritize column resizing before freeze panes?”
+### 5.1 Cell Editing FSM (`useCellEditing.ts`)
 
-### 8. Example Interaction
+The cell editor is a finite state machine with states: **SELECT → ENTER → EDIT → POINT**. Understanding this FSM is essential for any cell-editing work.
 
-User → Agent: "Please start with task‑2‑1." Agent → LLM (prompt from promptTemplates.json): "Implement a virtualized grid component …" Agent → LLM returns code blocks. Agent → Validation (npm run build) succeeds. Agent → Sends status update JSON (see Section 4).
+- **SELECT** — Navigation, delete, F2 to edit
+- **ENTER** — Just started editing (typing replaces content)
+- **EDIT** — Mid-edit (caret movement, text selection)
+- **POINT** — Selecting a range for a formula reference
 
-### 9. Extending the Agent
+### 5.2 Formula Engine
 
-To add new tasks, append them to tasks.json and create a matching entry in promptTemplates.json.
-Update the dependency graph accordingly.
-The agent will automatically consider the new tasks in its next iteration.
+- `formulaParser.ts` — Parses A1-style formulas into AST
+- `formulaEngine.ts` — Evaluates AST, manages dependencies, detects circular refs
+- 50+ functions implemented (math, logical, text, date, statistical, lookup, financial)
+- Cross-sheet references supported (`=Sheet2!A1`)
+
+### 5.3 State Management
+
+- **No Redux/Zustand** — uses React Context + `useReducer` in App.tsx
+- `HistoryContext` — Undo/redo stack (50 levels)
+- `FreezeContext` — Freeze pane state
+- `PrintSetupContext` — Page setup for PDF export
+
+### 5.4 Virtualization
+
+- `@tanstack/react-virtual` for windowed rendering
+- Supports 100k+ rows × unlimited columns
+- Filter mode uses `visibleRowIndices` mapping (display row → actual row)
+
+---
+
+## 6. Adding New Features
+
+When adding a feature (not just fixing coverage):
+
+1. **Create the utility/hook** in `src/utils/` or `src/hooks/`
+2. **Write tests first** — cover all branches, edge cases, error paths
+3. **Create the component** in `src/components/` if UI is needed
+4. **Wire into App.tsx** — add handlers, state, render the component
+5. **Update MenuBar** if the feature needs a menu item
+6. **Update README.md** — document the feature
+7. **Update PLAN.md** — add a new phase entry
+8. **Verify** — full `npm test && npm run lint && npm run type-check && npm run build`
+
+---
+
+## 7. Coverage Improvement Strategy
+
+### 7.1 How to Find Gaps
+
+```bash
+# Run tests with coverage report
+npm test -- --coverage
+
+# Open the HTML report
+start coverage/lcov-report/index.html  # macOS: open coverage/lcov-report/index.html
+```
+
+### 7.2 Branch Coverage Tips
+
+- Look for `if` statements without `else` coverage
+- Look for ternary operators where only one branch is hit
+- Look for `switch` statements where some `case`s are never reached
+- Look for early returns that are never triggered
+- Look for error-handling paths (`catch` blocks, error callbacks)
+
+### 7.3 Files with Lowest Branch Coverage (attack these first)
+
+| File | Branches | Lines | Priority |
+|------|----------|-------|----------|
+| App.tsx | 76.04% | 91.05% | 🔴 High |
+| formulaEngine.ts | 76.04% | 97.53% | 🔴 High |
+| HistoryContext.tsx | 75% | 100% | 🔴 High |
+| storageService.ts | 66.66% | 100% | 🟡 Medium |
+| FilterDropdown.tsx | 80.76% | 93.9% | 🟡 Medium |
+| useCellStyles.ts | 77.46% | 100% | 🟡 Medium |
+| sheetOperations.ts | 81.01% | 97% | 🟡 Medium |
+| SearchReplaceModal.tsx | 83.33% | 100% | 🟢 Lower |
+| FormulaBar.tsx | 84.55% | 94.73% | 🟢 Lower |
+
+---
+
+## 8. Common Pitfalls
+
+1. **Forgetting `measure()` on virtualizer** — mocks in tests need `measure: jest.fn()`
+2. **Stale closure in callbacks** — use refs (`selectionRef`, `sessionRef`) for current values
+3. **`handleFormulaRawKeyDown` doesn't use the result** — known issue; sync state explicitly
+4. **POINT mode state corruption** — arrow keys during navigation must preserve POINT state
+5. **`editInputRef` timing** — input ref is null until first render; guard with `if (ref?.current)`
+6. **Ignoring `stopPropagation`** — modal inputs must stop propagation to prevent global shortcut firing
+
+---
+
+## 9. Useful References
+
+- `PLAN.md` — Master roadmap with all phases, subtasks, and coverage-by-file table
+- `PROGRESS_LOG.md` — Chronological development history
+- `SCRATCHPAD.md` — Running checklist of completed items
+- `MEMORY.md` — Long-term decisions and lessons learned
+- `excel-dataentry.md` — Excel editing behavior specification
+- `excel_web_editor_shortcuts-v4.json` — Keyboard shortcut reference

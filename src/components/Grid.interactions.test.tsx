@@ -1,6 +1,125 @@
 import { render, fireEvent } from '@testing-library/react';
+import { useState, useCallback } from 'react';
 import { Grid } from './Grid';
 import type { Sheet } from '../types';
+import type { EditingSession } from '../hooks/useCellEditing';
+
+/**
+ * Test helper: a minimal FSM session manager for Grid component tests.
+ */
+function useTestEditingSession() {
+  const [session, setSession] = useState<EditingSession>({
+    state: 'SELECT',
+    row: 0,
+    col: 0,
+    buffer: '',
+    originalValue: '',
+    caretPos: 0,
+    isFormula: false,
+  });
+
+  const onStartEdit = useCallback((row: number, col: number) => {
+    setSession({
+      state: 'EDIT',
+      row,
+      col,
+      buffer: '',
+      originalValue: '',
+      caretPos: 0,
+      isFormula: false,
+    });
+  }, []);
+
+  const onStartEnter = useCallback((row: number, col: number, char: string) => {
+    setSession({
+      state: 'ENTER',
+      row,
+      col,
+      buffer: char,
+      originalValue: '',
+      caretPos: 1,
+      isFormula: char === '=' || char === '+' || char === '-',
+    });
+  }, []);
+
+  const onRawKeyDown = useCallback((e: React.KeyboardEvent) => {
+    const s = session;
+    if (e.key === 'Escape') {
+      setSession({ ...s, state: 'SELECT', buffer: '', caretPos: 0, isFormula: false });
+      return;
+    }
+    if (e.key === 'Enter' || e.key === 'Tab' || e.key === 'F2') {
+      setSession({ ...s, state: 'SELECT', buffer: '', caretPos: 0, isFormula: false });
+      return;
+    }
+    if (e.key === 'Backspace') {
+      if (s.buffer.length > 0 && s.caretPos > 0) {
+        const newBuffer = s.buffer.slice(0, s.caretPos - 1) + s.buffer.slice(s.caretPos);
+        setSession({ ...s, buffer: newBuffer, caretPos: s.caretPos - 1 });
+      }
+      return;
+    }
+    if (e.key === 'Delete') {
+      if (s.caretPos < s.buffer.length) {
+        const newBuffer = s.buffer.slice(0, s.caretPos) + s.buffer.slice(s.caretPos + 1);
+        setSession({ ...s, buffer: newBuffer });
+      }
+      return;
+    }
+    if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      const newBuffer = s.buffer.slice(0, s.caretPos) + e.key + s.buffer.slice(s.caretPos);
+      const isFormula = newBuffer.startsWith('=') || newBuffer.startsWith('+') || newBuffer.startsWith('-');
+      setSession({ ...s, buffer: newBuffer, caretPos: s.caretPos + 1, isFormula });
+    }
+  }, [session]);
+
+  const onRawChange = useCallback((value: string, caretPos: number) => {
+    const isFormula = value.startsWith('=') || value.startsWith('+') || value.startsWith('-');
+    setSession((prev) => ({
+      ...prev,
+      state: value.length > 0 ? (prev.state === 'SELECT' ? 'ENTER' : prev.state) : prev.state,
+      buffer: value,
+      caretPos,
+      isFormula,
+    }));
+  }, []);
+
+  return { session, onStartEdit, onStartEnter, onRawKeyDown, onRawChange };
+}
+
+function GridWithEditing(
+  props: Omit<React.ComponentProps<typeof Grid>, 'session' | 'onStartEdit' | 'onStartEnter' | 'onRawKeyDown' | 'onRawChange'> & {
+    onCellChange?: (row: number, col: number, value: string) => void;
+  },
+) {
+  const { onCellChange, ...gridProps } = props;
+  const editing = useTestEditingSession();
+
+  const handleRawKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      const prevState = editing.session.state;
+      const prevBuffer = editing.session.buffer;
+      const prevRow = editing.session.row;
+      const prevCol = editing.session.col;
+      editing.onRawKeyDown(e);
+      if ((e.key === 'Enter' || e.key === 'Tab' || e.key === 'F2') && prevState !== 'SELECT') {
+        onCellChange?.(prevRow, prevCol, prevBuffer);
+      }
+    },
+    [editing, onCellChange],
+  );
+
+  return (
+    <Grid
+      {...gridProps}
+      session={editing.session}
+      onStartEdit={editing.onStartEdit}
+      onStartEnter={editing.onStartEnter}
+      onRawKeyDown={handleRawKeyDown}
+      onRawChange={editing.onRawChange}
+    />
+  );
+}
 
 // Mutable flag to control hasClipboardData mock behavior in tests
 let clipboardMockHasData = false;
@@ -70,7 +189,7 @@ describe('Grid - Cell Editing Input', () => {
   it('commits edit on Enter key', () => {
     const onCellChange = jest.fn();
     render(
-      <Grid
+      <GridWithEditing
         sheet={createTestSheet()}
         onCellChange={onCellChange}
         onSelect={jest.fn()}
@@ -95,7 +214,7 @@ describe('Grid - Cell Editing Input', () => {
   it('cancels edit on Escape key', () => {
     const onCellChange = jest.fn();
     render(
-      <Grid
+      <GridWithEditing
         sheet={createTestSheet()}
         onCellChange={onCellChange}
         onSelect={jest.fn()}
@@ -112,14 +231,13 @@ describe('Grid - Cell Editing Input', () => {
     fireEvent.keyDown(input, { key: 'Escape' });
 
     // Cell change should not be called for the draft value
-    // (the cancelRef prevents the blur commit)
     expect(onCellChange).not.toHaveBeenCalled();
   });
 
   it('commits edit on Tab and exits edit mode', () => {
     const onCellChange = jest.fn();
     render(
-      <Grid
+      <GridWithEditing
         sheet={createTestSheet()}
         onCellChange={onCellChange}
         onSelect={jest.fn()}
@@ -143,7 +261,7 @@ describe('Grid - Cell Editing Input', () => {
   it('F2 toggles edit mode off', () => {
     const onCellChange = jest.fn();
     render(
-      <Grid
+      <GridWithEditing
         sheet={createTestSheet()}
         onCellChange={onCellChange}
         onSelect={jest.fn()}
@@ -167,7 +285,7 @@ describe('Grid - Cell Editing Input', () => {
   it('handles paste during editing by inserting at cursor', () => {
     const onCellChange = jest.fn();
     render(
-      <Grid
+      <GridWithEditing
         sheet={createTestSheet()}
         onCellChange={onCellChange}
         onSelect={jest.fn()}

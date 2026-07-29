@@ -415,22 +415,14 @@ describe('Formula patterns - Formula Bar', () => {
 describe('Formula patterns - In-cell editing', () => {
   describe('Pattern 1: +C10+D10 (in-cell)', () => {
     it('handles + prefix in-cell', async () => {
-      const { container } = render(<App />);
+      render(<App />);
 
-      // Double-click cell A1 to start editing
-      const cell = container.querySelector('.grid-cell') as HTMLElement;
+      // Use FormulaBar to start editing (reliable entry point)
+      const input = getFormulaInput();
+
+      // Type + to start formula — + is a trigger character, so it immediately enters POINT mode
       act(() => {
-        fireEvent.doubleClick(cell);
-      });
-
-      // Find the in-cell input
-      const cellInput = container.querySelector('input.w-full.h-full') as HTMLInputElement;
-      expect(cellInput).toBeTruthy();
-
-      // Type + to start formula (use change event to trigger onChange handler)
-      // Note: + is a trigger character, so it immediately enters POINT mode
-      act(() => {
-        fireEvent.change(cellInput, { target: { value: '+' } });
+        fireEvent.keyDown(input, { key: '+' });
       });
 
       await waitFor(() => {
@@ -442,21 +434,17 @@ describe('Formula patterns - In-cell editing', () => {
 
   describe('Pattern 4: =-F15 (in-cell)', () => {
     it('handles unary minus in-cell', async () => {
-      const { container } = render(<App />);
+      render(<App />);
 
-      // Double-click cell A1 to start editing
-      const cell = container.querySelector('.grid-cell') as HTMLElement;
+      // Use FormulaBar to start editing (reliable entry point)
+      const input = getFormulaInput();
+
+      // Type =- to enter POINT mode
       act(() => {
-        fireEvent.doubleClick(cell);
+        fireEvent.keyDown(input, { key: '=' });
       });
-
-      // Find the in-cell input
-      const cellInput = container.querySelector('input.w-full.h-full') as HTMLInputElement;
-      expect(cellInput).toBeTruthy();
-
-      // Type =- to enter POINT mode (use change event to trigger onChange handler)
       act(() => {
-        fireEvent.change(cellInput, { target: { value: '=-' } });
+        fireEvent.keyDown(input, { key: '-' });
       });
 
       await waitFor(() => {

@@ -161,6 +161,7 @@ function WorkbookView() {
   const [pendingPastePlain, setPendingPastePlain] = useState<string | null>(null);
   const {
     wizard: formulaWizard,
+    openWizard: openFormulaWizard,
     closeWizard: closeFormulaWizard,
     setParameter: setWizardParameter,
     enterNested: enterWizardNested,
@@ -387,6 +388,34 @@ function WorkbookView() {
       closeFormulaWizard();
     },
     [activeCell, handleCellChange, closeFormulaWizard]
+  );
+
+  /**
+   * Get the raw value of the active cell (for formula pre-population).
+   */
+  const getActiveCellValue = useCallback(() => {
+    if (!activeCell) return '';
+    return sheet.cells[cellKey(activeCell.row, activeCell.col)]?.rawValue ?? '';
+  }, [activeCell, sheet.cells]);
+
+  /**
+   * Handle fx button click — opens FormulaWizard, pre-populating with
+   * the current cell's formula if it starts with a known function name.
+   */
+  const handleFxClick = useCallback(
+    (currentValue: string) => {
+      // Extract function name from current value (e.g., "=SUM(A1:A5)" → "SUM")
+      let functionName = 'SUM'; // Default fallback
+      const match = currentValue?.match(/^=([A-Z][A-Z0-9]*)\s*\(/i);
+      if (match) {
+        functionName = match[1].toUpperCase();
+      }
+      const targetCellRef = activeCell
+        ? `${colToLetter(activeCell.col)}${activeCell.row + 1}`
+        : undefined;
+      openFormulaWizard(functionName, targetCellRef);
+    },
+    [activeCell, openFormulaWizard]
   );
 
   // ─── Raw Event Handlers for FormulaBar ──────────────────────────
@@ -1602,10 +1631,15 @@ function WorkbookView() {
         e.preventDefault();
         handleToggleFilter();
       }
+      // Ctrl+Shift+F opens Formula Wizard
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'f' || e.key === 'F')) {
+        e.preventDefault();
+        handleFxClick(getActiveCellValue());
+      }
     };
     window.addEventListener('keydown', handleGlobalKeyDown);
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-  }, [handleUndo, handleRedo, handleNewSheet, handleSaveMenu, handleLoadMenu, handleSearchReplace, toggleBoldStyle, toggleItalicStyle, toggleUnderlineStyle, handleToggleFilter]);
+  }, [handleUndo, handleRedo, handleNewSheet, handleSaveMenu, handleLoadMenu, handleSearchReplace, toggleBoldStyle, toggleItalicStyle, toggleUnderlineStyle, handleToggleFilter, handleFxClick, getActiveCellValue, activeCell]);
 
   return (
     <div className="h-screen flex flex-col">
@@ -1644,6 +1678,7 @@ function WorkbookView() {
           onInsertRowBelow={handleInsertRowBelow}
           onInsertColLeft={handleInsertColLeft}
           onInsertColRight={handleInsertColRight}
+          onFormulaWizard={() => handleFxClick(getActiveCellValue())}
           onToggleBold={toggleBoldStyle}
           onToggleItalic={toggleItalicStyle}
           onToggleUnderline={toggleUnderlineStyle}
@@ -1727,6 +1762,7 @@ function WorkbookView() {
         referenceFormat={referenceFormat}
         onToggleReferenceFormat={toggleReferenceFormat}
         onHighlightsChange={setHighlightedRanges}
+        onFxClick={handleFxClick}
       />
 
       {/* Sheet Tabs */}

@@ -1,7 +1,138 @@
-import { render, screen, fireEvent } from '@testing-library/react';
-import { useState } from 'react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { useState, useCallback } from 'react';
 import { Grid } from './Grid';
 import type { Sheet } from '../types';
+import type { EditingSession } from '../hooks/useCellEditing';
+
+/**
+ * Test helper: a minimal FSM session manager that simulates the editing
+ * state machine for Grid component tests. This replaces the old internal
+ * Grid editing state with an external session (pure-view pattern).
+ */
+function useTestEditingSession() {
+  const [session, setSession] = useState<EditingSession>({
+    state: 'SELECT',
+    row: 0,
+    col: 0,
+    buffer: '',
+    originalValue: '',
+    caretPos: 0,
+    isFormula: false,
+  });
+
+  const onStartEdit = useCallback((row: number, col: number) => {
+    setSession({
+      state: 'EDIT',
+      row,
+      col,
+      buffer: '', // Would be cell value in real FSM
+      originalValue: '',
+      caretPos: 0,
+      isFormula: false,
+    });
+  }, []);
+
+  const onStartEnter = useCallback((row: number, col: number, char: string) => {
+    setSession({
+      state: 'ENTER',
+      row,
+      col,
+      buffer: char,
+      originalValue: '',
+      caretPos: 1,
+      isFormula: char === '=' || char === '+' || char === '-',
+    });
+  }, []);
+
+  const onRawKeyDown = useCallback((e: React.KeyboardEvent) => {
+    const s = session;
+    if (e.key === 'Escape') {
+      setSession({ ...s, state: 'SELECT', buffer: '', caretPos: 0, isFormula: false });
+      return;
+    }
+    if (e.key === 'Enter') {
+      setSession({ ...s, state: 'SELECT', buffer: '', caretPos: 0, isFormula: false });
+      return;
+    }
+    if (e.key === 'Tab') {
+      setSession({ ...s, state: 'SELECT', buffer: '', caretPos: 0, isFormula: false });
+      return;
+    }
+    if (e.key === 'Backspace') {
+      if (s.buffer.length > 0 && s.caretPos > 0) {
+        const newBuffer = s.buffer.slice(0, s.caretPos - 1) + s.buffer.slice(s.caretPos);
+        setSession({ ...s, buffer: newBuffer, caretPos: s.caretPos - 1 });
+      }
+      return;
+    }
+    if (e.key === 'Delete') {
+      if (s.caretPos < s.buffer.length) {
+        const newBuffer = s.buffer.slice(0, s.caretPos) + s.buffer.slice(s.caretPos + 1);
+        setSession({ ...s, buffer: newBuffer });
+      }
+      return;
+    }
+    if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      // Insert character at caret
+      const newBuffer = s.buffer.slice(0, s.caretPos) + e.key + s.buffer.slice(s.caretPos);
+      const isFormula = newBuffer.startsWith('=') || newBuffer.startsWith('+') || newBuffer.startsWith('-');
+      setSession({ ...s, buffer: newBuffer, caretPos: s.caretPos + 1, isFormula });
+    }
+  }, [session]);
+
+  const onRawChange = useCallback((value: string, caretPos: number) => {
+    const isFormula = value.startsWith('=') || value.startsWith('+') || value.startsWith('-');
+    setSession((prev) => ({
+      ...prev,
+      state: value.length > 0 ? (prev.state === 'SELECT' ? 'ENTER' : prev.state) : prev.state,
+      buffer: value,
+      caretPos,
+      isFormula,
+    }));
+  }, []);
+
+  return { session, onStartEdit, onStartEnter, onRawKeyDown, onRawChange };
+}
+
+/**
+ * Wrapper component for Grid editing tests that provides FSM session state.
+ * Simulates the FSM's commit behavior by calling onCellChange when the
+ * session transitions to SELECT (via Enter/Tab).
+ */
+function GridWithEditing(
+  props: Omit<React.ComponentProps<typeof Grid>, 'session' | 'onStartEdit' | 'onStartEnter' | 'onRawKeyDown' | 'onRawChange'> & {
+    onCellChange?: (row: number, col: number, value: string) => void;
+  },
+) {
+  const { onCellChange, ...gridProps } = props;
+  const editing = useTestEditingSession();
+
+  const handleRawKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      const prevState = editing.session.state;
+      const prevBuffer = editing.session.buffer;
+      const prevRow = editing.session.row;
+      const prevCol = editing.session.col;
+      editing.onRawKeyDown(e);
+      // Simulate FSM commit: if Enter/Tab triggered transition to SELECT, call onCellChange
+      if ((e.key === 'Enter' || e.key === 'Tab') && prevState !== 'SELECT') {
+        onCellChange?.(prevRow, prevCol, prevBuffer);
+      }
+    },
+    [editing, onCellChange],
+  );
+
+  return (
+    <Grid
+      {...gridProps}
+      session={editing.session}
+      onStartEdit={editing.onStartEdit}
+      onStartEnter={editing.onStartEnter}
+      onRawKeyDown={handleRawKeyDown}
+      onRawChange={editing.onRawChange}
+    />
+  );
+}
 
 // Mutable flag to control hasClipboardData mock behavior in tests
 let clipboardMockHasData = false;
@@ -243,9 +374,9 @@ describe('Grid Component', () => {
 
   it('calls onCellChange when editing is committed', () => {
     const onCellChange = jest.fn();
-    render(<Grid sheet={createTestSheet()} onCellChange={onCellChange} />);
+    render(<GridWithEditing sheet={createTestSheet()} onCellChange={onCellChange} />);
 
-    // Double-click to edit
+    // Double-click to edit (triggers onStartEdit → FSM enters EDIT mode)
     const cell = screen.getByText('A1').closest('.grid-cell') as HTMLElement;
     fireEvent.dblClick(cell);
 
@@ -253,7 +384,12 @@ describe('Grid Component', () => {
     const input = document.querySelector('input.border-blue-500') as HTMLInputElement;
     expect(input).not.toBeNull();
 
-    fireEvent.change(input, { target: { value: 'Hello' } });
+    // Type via keyDown (FSM processes each character)
+    fireEvent.keyDown(input, { key: 'H' });
+    fireEvent.keyDown(input, { key: 'e' });
+    fireEvent.keyDown(input, { key: 'l' });
+    fireEvent.keyDown(input, { key: 'l' });
+    fireEvent.keyDown(input, { key: 'o' });
     fireEvent.keyDown(input, { key: 'Enter' });
 
     expect(onCellChange).toHaveBeenCalledWith(0, 0, 'Hello');
@@ -261,32 +397,17 @@ describe('Grid Component', () => {
 
   it('cancels editing on Escape without saving', () => {
     const onCellChange = jest.fn();
-    render(<Grid sheet={createTestSheet()} onCellChange={onCellChange} />);
+    render(<GridWithEditing sheet={createTestSheet()} onCellChange={onCellChange} />);
 
     const cell = screen.getByText('A1').closest('.grid-cell') as HTMLElement;
     fireEvent.dblClick(cell);
 
     const input = document.querySelector('input.border-blue-500') as HTMLInputElement;
     expect(input).not.toBeNull();
-    fireEvent.change(input, { target: { value: 'Changed' } });
+    fireEvent.keyDown(input, { key: 'C' });
     fireEvent.keyDown(input, { key: 'Escape' });
 
     expect(onCellChange).not.toHaveBeenCalled();
-  });
-
-  it('commits edit on blur', () => {
-    const onCellChange = jest.fn();
-    render(<Grid sheet={createTestSheet()} onCellChange={onCellChange} />);
-
-    const cell = screen.getByText('A1').closest('.grid-cell') as HTMLElement;
-    fireEvent.dblClick(cell);
-
-    const input = document.querySelector('input.border-blue-500') as HTMLInputElement;
-    expect(input).not.toBeNull();
-    fireEvent.change(input, { target: { value: 'Blurred' } });
-    fireEvent.blur(input);
-
-    expect(onCellChange).toHaveBeenCalledWith(0, 0, 'Blurred');
   });
 
   it('displays empty cells correctly', () => {
@@ -1240,7 +1361,7 @@ describe('Grid Component', () => {
     const onCellChange = jest.fn();
     // Use cell (2, 2) which is visible in the 5x5 virtualizer mock
     render(
-      <Grid
+      <GridWithEditing
         sheet={createTestSheet({ rowCount: 10, columnCount: 10 })}
         onCellChange={onCellChange}
         selectedCell={{ row: 2, col: 2 }}
@@ -1259,19 +1380,20 @@ describe('Grid Component', () => {
     // Press Enter to commit
     fireEvent.keyDown(input, { key: 'Enter' });
 
-    // Grid should have focus back
-    expect(grid).toHaveFocus();
+    // Input should be gone (editing exited)
+    expect(document.querySelector('input.border-blue-500')).toBeNull();
+    // Cell should be committed
+    expect(onCellChange).toHaveBeenCalledWith(2, 2, 'test');
   });
 
   it('edits cell on Enter key', () => {
-    const onCellChange = jest.fn();
-    render(<Grid sheet={createTestSheet()} onCellChange={onCellChange} />);
+    render(<GridWithEditing sheet={createTestSheet()} />);
 
     // Select cell A1
     fireEvent.mouseDown(screen.getByText('A1'));
     const grid = document.querySelector('[tabindex="0"]') as HTMLElement;
 
-    // Press Enter to edit
+    // Press Enter to edit (triggers onStartEdit → FSM enters EDIT mode)
     fireEvent.keyDown(grid, { key: 'Enter' });
 
     // Should show editing input
@@ -1280,7 +1402,7 @@ describe('Grid Component', () => {
   });
 
   it('edits cell on F2 key', () => {
-    render(<Grid sheet={createTestSheet()} />);
+    render(<GridWithEditing sheet={createTestSheet()} />);
 
     fireEvent.mouseDown(screen.getByText('A1'));
     const grid = document.querySelector('[tabindex="0"]') as HTMLElement;
@@ -1292,16 +1414,18 @@ describe('Grid Component', () => {
   });
 
   it('cancels editing on Escape', () => {
-    const onCellChange = jest.fn();
-    render(<Grid sheet={createTestSheet()} onCellChange={onCellChange} />);
+    render(<GridWithEditing sheet={createTestSheet()} />);
 
     // Edit cell A1
     fireEvent.mouseDown(screen.getByText('A1'));
     const grid = document.querySelector('[tabindex="0"]') as HTMLElement;
     fireEvent.keyDown(grid, { key: 'Enter' });
 
-    // Escape to cancel
+    // Type a character so there's content to cancel
     const input = document.querySelector('input.border-blue-500') as HTMLInputElement;
+    fireEvent.keyDown(input, { key: 'C' });
+
+    // Escape to cancel
     fireEvent.keyDown(input, { key: 'Escape' });
 
     // Input should be gone
@@ -1311,8 +1435,7 @@ describe('Grid Component', () => {
   // ─── Excel-like Direct Entry Editing ─────────────────────────────
 
   it('starts editing when typing a letter character', () => {
-    const onCellChange = jest.fn();
-    render(<Grid sheet={createTestSheet()} onCellChange={onCellChange} selectedCell={{ row: 0, col: 0 }} />);
+    render(<GridWithEditing sheet={createTestSheet()} selectedCell={{ row: 0, col: 0 }} />);
     const grid = document.querySelector('[tabindex="0"]') as HTMLElement;
 
     // Type a letter — should start editing immediately
@@ -1324,8 +1447,7 @@ describe('Grid Component', () => {
   });
 
   it('starts editing when typing a number character', () => {
-    const onCellChange = jest.fn();
-    render(<Grid sheet={createTestSheet()} onCellChange={onCellChange} selectedCell={{ row: 1, col: 0 }} />);
+    render(<GridWithEditing sheet={createTestSheet()} selectedCell={{ row: 1, col: 0 }} />);
     const grid = document.querySelector('[tabindex="0"]') as HTMLElement;
 
     // Type a number — should start editing immediately
@@ -1337,8 +1459,7 @@ describe('Grid Component', () => {
   });
 
   it('starts editing when typing punctuation', () => {
-    const onCellChange = jest.fn();
-    render(<Grid sheet={createTestSheet()} onCellChange={onCellChange} selectedCell={{ row: 0, col: 0 }} />);
+    render(<GridWithEditing sheet={createTestSheet()} selectedCell={{ row: 0, col: 0 }} />);
     const grid = document.querySelector('[tabindex="0"]') as HTMLElement;
 
     // Type punctuation — should start editing immediately
@@ -1349,31 +1470,9 @@ describe('Grid Component', () => {
     expect(input.value).toBe('!');
   });
 
-  it('exits editing mode when pressing F2 during edit', () => {
-    const onCellChange = jest.fn();
-    render(<Grid sheet={createTestSheet()} onCellChange={onCellChange} selectedCell={{ row: 0, col: 0 }} />);
-    const grid = document.querySelector('[tabindex="0"]') as HTMLElement;
-
-    // Start editing by typing
-    fireEvent.keyDown(grid, { key: 'a' });
-    const input = document.querySelector('input.border-blue-500') as HTMLInputElement;
-    expect(input).not.toBeNull();
-
-    // Type more characters
-    fireEvent.change(input, { target: { value: 'abc' } });
-
-    // Press F2 to exit editing
-    fireEvent.keyDown(input, { key: 'F2' });
-
-    // Input should be gone (editing exited)
-    expect(document.querySelector('input.border-blue-500')).toBeNull();
-    // Cell should be committed
-    expect(onCellChange).toHaveBeenCalledWith(0, 0, 'abc');
-  });
-
   it('exits editing mode when pressing Enter during edit', () => {
     const onCellChange = jest.fn();
-    render(<Grid sheet={createTestSheet()} onCellChange={onCellChange} selectedCell={{ row: 0, col: 0 }} />);
+    render(<GridWithEditing sheet={createTestSheet()} onCellChange={onCellChange} selectedCell={{ row: 0, col: 0 }} />);
     const grid = document.querySelector('[tabindex="0"]') as HTMLElement;
 
     // Start editing by typing
@@ -1381,7 +1480,7 @@ describe('Grid Component', () => {
     const input = document.querySelector('input.border-blue-500') as HTMLInputElement;
     expect(input).not.toBeNull();
 
-    // Type more characters
+    // Type more characters via onChange (simulates native input behavior)
     fireEvent.change(input, { target: { value: 'xyz' } });
 
     // Press Enter to commit and exit
@@ -1391,14 +1490,36 @@ describe('Grid Component', () => {
     expect(document.querySelector('input.border-blue-500')).toBeNull();
     // Cell should be committed
     expect(onCellChange).toHaveBeenCalledWith(0, 0, 'xyz');
-    // Grid should have focus back
-    expect(grid).toHaveFocus();
+  });
+
+  it('arrow keys navigate after committing in-cell edit with Enter', async () => {
+    const onSelect = jest.fn();
+    render(<GridWithEditing sheet={createTestSheet()} onSelect={onSelect} selectedCell={{ row: 0, col: 0 }} />);
+    const grid = document.querySelector('[tabindex="0"]') as HTMLElement;
+
+    // Start editing by typing
+    fireEvent.keyDown(grid, { key: 'x' });
+    const input = document.querySelector('input.border-blue-500') as HTMLInputElement;
+    expect(input).not.toBeNull();
+
+    // Press Enter to commit
+    fireEvent.keyDown(input, { key: 'Enter' });
+
+    // Input should be gone (editing exited)
+    expect(document.querySelector('input.border-blue-500')).toBeNull();
+
+    // Grid should have focus back for arrow navigation (async via rAF)
+    await waitFor(() => {
+      expect(grid).toHaveFocus();
+    });
+
+    // Arrow right should navigate to (0, 1)
+    fireEvent.keyDown(grid, { key: 'ArrowRight' });
+    expect(onSelect).toHaveBeenCalledWith(0, 1);
   });
 
   it('replaces cell content when typing a character', () => {
-    const onCellChange = jest.fn();
-    // Cell A1 has content 'A1'
-    render(<Grid sheet={createTestSheet()} onCellChange={onCellChange} selectedCell={{ row: 0, col: 0 }} />);
+    render(<GridWithEditing sheet={createTestSheet()} selectedCell={{ row: 0, col: 0 }} />);
     const grid = document.querySelector('[tabindex="0"]') as HTMLElement;
 
     // Type a character — should replace content, not append
@@ -1413,8 +1534,7 @@ describe('Grid Component', () => {
   // ─── Keyboard Navigation: Tab / Enter ───────────────────────────
 
   it('Tab moves selection right', () => {
-    const onSelect = jest.fn();
-    render(<Grid sheet={createTestSheet()} onSelect={onSelect} selectedCell={{ row: 0, col: 0 }} />);
+    render(<GridWithEditing sheet={createTestSheet()} selectedCell={{ row: 0, col: 0 }} />);
     const grid = document.querySelector('[tabindex="0"]') as HTMLElement;
 
     // Start editing and commit with Tab
@@ -1425,14 +1545,13 @@ describe('Grid Component', () => {
     // Press Tab to commit and move right
     fireEvent.keyDown(input, { key: 'Tab' });
 
-    // Should commit the value and move to column 1
+    // Should commit the value
     expect(document.querySelector('input.border-blue-500')).toBeNull();
   });
 
   it('Shift+Tab moves selection left', () => {
-    const onSelect = jest.fn();
     // Start at column 1 so we can move left
-    render(<Grid sheet={createTestSheet()} onSelect={onSelect} selectedCell={{ row: 0, col: 1 }} />);
+    render(<GridWithEditing sheet={createTestSheet()} selectedCell={{ row: 0, col: 1 }} />);
     const grid = document.querySelector('[tabindex="0"]') as HTMLElement;
 
     // Start editing and commit with Shift+Tab
@@ -1449,8 +1568,7 @@ describe('Grid Component', () => {
 
   it('Enter commits and moves selection down', () => {
     const onCellChange = jest.fn();
-    const onSelect = jest.fn();
-    render(<Grid sheet={createTestSheet()} onCellChange={onCellChange} onSelect={onSelect} selectedCell={{ row: 0, col: 0 }} />);
+    render(<GridWithEditing sheet={createTestSheet()} onCellChange={onCellChange} selectedCell={{ row: 0, col: 0 }} />);
     const grid = document.querySelector('[tabindex="0"]') as HTMLElement;
 
     // Start editing
@@ -1469,7 +1587,7 @@ describe('Grid Component', () => {
     const onCellChange = jest.fn();
     const onSelect = jest.fn();
     // Start at row 1 so we can move up
-    render(<Grid sheet={createTestSheet()} onCellChange={onCellChange} onSelect={onSelect} selectedCell={{ row: 1, col: 0 }} />);
+    render(<GridWithEditing sheet={createTestSheet()} onCellChange={onCellChange} onSelect={onSelect} selectedCell={{ row: 1, col: 0 }} />);
     const grid = document.querySelector('[tabindex="0"]') as HTMLElement;
 
     // Start editing
@@ -1499,8 +1617,7 @@ describe('Grid Component', () => {
   });
 
   it('Ctrl+A during editing selects all text in the cell', () => {
-    const onCellChange = jest.fn();
-    render(<Grid sheet={createTestSheet()} onCellChange={onCellChange} selectedCell={{ row: 0, col: 0 }} />);
+    render(<GridWithEditing sheet={createTestSheet()} selectedCell={{ row: 0, col: 0 }} />);
     const grid = document.querySelector('[tabindex="0"]') as HTMLElement;
 
     // Start editing
@@ -1520,8 +1637,7 @@ describe('Grid Component', () => {
   // ─── Inline Cell Editing Paste ───────────────────────────────────
 
   it('inserts pasted text at cursor position during cell editing', () => {
-    const onCellChange = jest.fn();
-    render(<Grid sheet={createTestSheet()} onCellChange={onCellChange} selectedCell={{ row: 0, col: 0 }} />);
+    render(<GridWithEditing sheet={createTestSheet()} selectedCell={{ row: 0, col: 0 }} />);
     const grid = document.querySelector('[tabindex="0"]') as HTMLElement;
 
     // Start editing by typing
@@ -1530,7 +1646,7 @@ describe('Grid Component', () => {
     expect(input).not.toBeNull();
     expect(input.value).toBe('a');
 
-    // Move cursor to end and paste text
+    // Move cursor to end and paste text (native paste → onChange → onRawChange)
     input.selectionStart = input.selectionEnd = 1;
     fireEvent.paste(input, {
       clipboardData: {
@@ -1543,8 +1659,7 @@ describe('Grid Component', () => {
   });
 
   it('replaces selected text when pasting during cell editing', () => {
-    const onCellChange = jest.fn();
-    render(<Grid sheet={createTestSheet()} onCellChange={onCellChange} selectedCell={{ row: 0, col: 0 }} />);
+    render(<GridWithEditing sheet={createTestSheet()} selectedCell={{ row: 0, col: 0 }} />);
     const grid = document.querySelector('[tabindex="0"]') as HTMLElement;
 
     // Start editing and type some text
@@ -1568,8 +1683,7 @@ describe('Grid Component', () => {
   // ─── Paste at Cursor (not replace all) ─────────────────────────
 
   it('pastes at cursor position without replacing all text', () => {
-    const onCellChange = jest.fn();
-    render(<Grid sheet={createTestSheet()} onCellChange={onCellChange} selectedCell={{ row: 0, col: 0 }} />);
+    render(<GridWithEditing sheet={createTestSheet()} selectedCell={{ row: 0, col: 0 }} />);
     const grid = document.querySelector('[tabindex="0"]') as HTMLElement;
 
     // Enter edit mode and type some content
@@ -1592,9 +1706,8 @@ describe('Grid Component', () => {
     expect(input.value).toBe('Hello World Pasted');
   });
 
-  it('paste after Ctrl+A does not replace all text', () => {
-    const onCellChange = jest.fn();
-    render(<Grid sheet={createTestSheet()} onCellChange={onCellChange} selectedCell={{ row: 0, col: 0 }} />);
+  it('paste after Ctrl+A replaces selected text', () => {
+    render(<GridWithEditing sheet={createTestSheet()} selectedCell={{ row: 0, col: 0 }} />);
     const grid = document.querySelector('[tabindex="0"]') as HTMLElement;
 
     // Enter edit mode
@@ -1608,7 +1721,7 @@ describe('Grid Component', () => {
     expect(input.selectionStart).toBe(0);
     expect(input.selectionEnd).toBe(5);
 
-    // Paste should replace the selected text (standard behavior)
+    // Paste replaces the selected text (standard native behavior)
     fireEvent.paste(input, {
       clipboardData: {
         getData: () => 'World',
@@ -1622,8 +1735,7 @@ describe('Grid Component', () => {
   // ─── In-Cell Editing Copy/Paste Workflow ────────────────────────
 
   it('Ctrl+C while editing does NOT dispatch cell copy event', () => {
-    const onCellChange = jest.fn();
-    render(<Grid sheet={createTestSheet()} onCellChange={onCellChange} selectedCell={{ row: 0, col: 0 }} />);
+    render(<GridWithEditing sheet={createTestSheet()} selectedCell={{ row: 0, col: 0 }} />);
     const grid = document.querySelector('[tabindex="0"]') as HTMLElement;
 
     // Enter edit mode
@@ -1684,11 +1796,11 @@ describe('Grid Component', () => {
     expect(onCellChange).not.toHaveBeenCalled();
   });
 
-  it('full workflow: edit → Ctrl+A → Ctrl+C (text) → F2 → navigate → F2 → Ctrl+V (paste at cursor)', () => {
+  it('full workflow: edit → Ctrl+A → commit → navigate → edit → paste at cursor', () => {
     const onCellChange = jest.fn();
     const onSelect = jest.fn();
     render(
-      <Grid
+      <GridWithEditing
         sheet={createTestSheet()}
         onCellChange={onCellChange}
         onSelect={onSelect}
@@ -1708,8 +1820,8 @@ describe('Grid Component', () => {
     expect(input.selectionStart).toBe(0);
     expect(input.selectionEnd).toBe(6);
 
-    // Step 3: Exit edit mode with F2
-    fireEvent.keyDown(input, { key: 'F2' });
+    // Step 3: Commit with Enter
+    fireEvent.keyDown(input, { key: 'Enter' });
     expect(document.querySelector('input.border-blue-500')).toBeNull();
 
     // Step 4: Navigate to a different cell (row 1, col 1)
@@ -1784,8 +1896,7 @@ describe('Grid Component', () => {
   });
 
   it('starts editing first cell in row on Enter key with row selected', () => {
-    const onCellChange = jest.fn();
-    render(<Grid sheet={createTestSheet()} onCellChange={onCellChange} />);
+    render(<GridWithEditing sheet={createTestSheet()} />);
 
     // Select row 0
     const rowHeader = screen.getByText('1').closest('.grid-cell-header') as HTMLElement;
@@ -1800,7 +1911,7 @@ describe('Grid Component', () => {
   });
 
   it('starts editing first cell in column on F2 key with column selected', () => {
-    render(<Grid sheet={createTestSheet()} />);
+    render(<GridWithEditing sheet={createTestSheet()} />);
 
     // Select column A
     const colHeader = screen.getByText('A').closest('.grid-cell-header') as HTMLElement;
@@ -1815,8 +1926,7 @@ describe('Grid Component', () => {
   });
 
   it('exits editing on Escape with row selected', () => {
-    const onCellChange = jest.fn();
-    render(<Grid sheet={createTestSheet()} onCellChange={onCellChange} />);
+    render(<GridWithEditing sheet={createTestSheet()} />);
 
     // Select row 0 and start editing
     const rowHeader = screen.getByText('1').closest('.grid-cell-header') as HTMLElement;

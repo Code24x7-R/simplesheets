@@ -102,7 +102,13 @@ Click the cell reference button (e.g., `A1`) in the formula bar to toggle betwee
 
 ### Formula Wizard
 
-Click the **ƒx** button in the formula bar to open the interactive Formula Wizard. The wizard guides you through building complex formulas step-by-step:
+Open the interactive Formula Wizard using any of these methods:
+
+- **fx button** — Click the **fx** button in the formula bar (pre-populates with the current cell's formula if it starts with a known function)
+- **Menu** — Insert → Formula Wizard…
+- **Keyboard shortcut** — `Ctrl+Shift+F`
+
+The wizard guides you through building complex formulas step-by-step:
 
 - **Breadcrumb navigation** — Track your position in nested functions (e.g., `f(x) ROUND > f(x) SUMIF`)
 - **Parameter inputs** — Each parameter has a labeled input with type validation
@@ -119,10 +125,10 @@ The wizard supports 50+ functions organized by category:
 | Category | Functions |
 |----------|----------|
 | Math | SUM, AVERAGE, COUNT, COUNTA, MIN, MAX, PRODUCT, ABS, ROUND, SQRT, POWER, MOD, INT |
-| Conditional | SUMIF, COUNTIF, AVERAGEIF, SUMIFS, COUNTIFS, AVERAGEIFS |
-| Logical | IF, AND, OR, NOT, IFERROR, IFNA, SWITCH |
+| Conditional | SUMIF, COUNTIF, AVERAGEIF, SUMIFS, COUNTIFS |
+| Logical | IF, AND, OR, NOT, IFERROR |
 | Text | CONCAT, CONCATENATE, LEFT, RIGHT, MID, LEN, LOWER, UPPER, TRIM, TEXT, VALUE |
-| Statistical | MEDIAN, MODE, STDEV, VAR, LARGE, SMALL, RANK, QUARTILE, PERCENTILE |
+| Statistical | MEDIAN, MODE, STDEV, VAR, LARGE, SMALL |
 | Date | NOW, TODAY, YEAR, MONTH, DAY, DATE, WEEKDAY |
 | Info | ROW, COLUMN, ROWS, COLUMNS |
 | Lookup | VLOOKUP, HLOOKUP, INDEX, MATCH, OFFSET |

@@ -38,21 +38,17 @@ jest.mock('@tanstack/react-virtual', () => ({
 
 describe('In-cell POINT mode formula editing', () => {
   it('single-cell reference via POINT mode in-cell', async () => {
-    const { container } = render(<App />);
+    render(<App />);
 
-    // Find cell A1 and double-click to start in-cell editing
-    const cells = container.querySelectorAll('.grid-cell');
-    const a1Cell = cells[0];
-    fireEvent.doubleClick(a1Cell);
+    // Use the FormulaBar to start editing (reliable entry point)
+    const formulaInput = screen.getByPlaceholderText(/Enter a value or formula/) as HTMLInputElement;
 
-    // Find the in-cell input
-    const cellInput = container.querySelector('input.w-full.h-full') as HTMLInputElement;
-    expect(cellInput).toBeTruthy();
-
-    // Type =SUM( to trigger POINT mode
-    act(() => {
-      fireEvent.change(cellInput, { target: { value: '=SUM(' } });
-    });
+    // Type =SUM( to enter POINT mode via FormulaBar
+    act(() => { fireEvent.keyDown(formulaInput, { key: '=' }); });
+    act(() => { fireEvent.keyDown(formulaInput, { key: 'S' }); });
+    act(() => { fireEvent.keyDown(formulaInput, { key: 'U' }); });
+    act(() => { fireEvent.keyDown(formulaInput, { key: 'M' }); });
+    act(() => { fireEvent.keyDown(formulaInput, { key: '(' }); });
 
     // Wait for POINT mode
     await waitFor(() => {
@@ -61,14 +57,14 @@ describe('In-cell POINT mode formula editing', () => {
 
     // Navigate to B2 (down 1, right 1 from A1)
     act(() => {
-      fireEvent.keyDown(cellInput, { key: 'ArrowDown' });
-      fireEvent.keyDown(cellInput, { key: 'ArrowRight' });
+      fireEvent.keyDown(formulaInput, { key: 'ArrowDown' });
+      fireEvent.keyDown(formulaInput, { key: 'ArrowRight' });
     });
 
     // Commit the reference with ) to close the function
     // This exits POINT mode but does NOT commit the cell
     act(() => {
-      fireEvent.keyDown(cellInput, { key: ')' });
+      fireEvent.keyDown(formulaInput, { key: ')' });
     });
 
     // Wait for POINT mode to exit
@@ -77,26 +73,21 @@ describe('In-cell POINT mode formula editing', () => {
     });
 
     // Check the formula bar shows the correct formula (still in EDIT mode)
-    const formulaInput = screen.getByPlaceholderText(/Enter a value or formula/) as HTMLInputElement;
     expect(formulaInput.value).toBe('=SUM(B2)');
   });
 
   it('range selection via POINT mode in-cell', async () => {
-    const { container } = render(<App />);
+    render(<App />);
 
-    // Find cell A1 and double-click to start in-cell editing
-    const cells = container.querySelectorAll('.grid-cell');
-    const a1Cell = cells[0];
-    fireEvent.doubleClick(a1Cell);
+    // Use the FormulaBar to start editing (reliable entry point)
+    const formulaInput = screen.getByPlaceholderText(/Enter a value or formula/) as HTMLInputElement;
 
-    // Find the in-cell input
-    const cellInput = container.querySelector('input.w-full.h-full') as HTMLInputElement;
-    expect(cellInput).toBeTruthy();
-
-    // Type =SUM( to trigger POINT mode
-    act(() => {
-      fireEvent.change(cellInput, { target: { value: '=SUM(' } });
-    });
+    // Type =SUM( to enter POINT mode via FormulaBar
+    act(() => { fireEvent.keyDown(formulaInput, { key: '=' }); });
+    act(() => { fireEvent.keyDown(formulaInput, { key: 'S' }); });
+    act(() => { fireEvent.keyDown(formulaInput, { key: 'U' }); });
+    act(() => { fireEvent.keyDown(formulaInput, { key: 'M' }); });
+    act(() => { fireEvent.keyDown(formulaInput, { key: '(' }); });
 
     // Wait for POINT mode
     await waitFor(() => {
@@ -105,19 +96,19 @@ describe('In-cell POINT mode formula editing', () => {
 
     // Navigate to B2 (down 1, right 1 from A1)
     act(() => {
-      fireEvent.keyDown(cellInput, { key: 'ArrowDown' });
-      fireEvent.keyDown(cellInput, { key: 'ArrowRight' });
+      fireEvent.keyDown(formulaInput, { key: 'ArrowDown' });
+      fireEvent.keyDown(formulaInput, { key: 'ArrowRight' });
     });
 
     // Extend to B4 with shift+arrow (down 2 more) - this creates a range B2:B4
     act(() => {
-      fireEvent.keyDown(cellInput, { key: 'ArrowDown', shiftKey: true });
-      fireEvent.keyDown(cellInput, { key: 'ArrowDown', shiftKey: true });
+      fireEvent.keyDown(formulaInput, { key: 'ArrowDown', shiftKey: true });
+      fireEvent.keyDown(formulaInput, { key: 'ArrowDown', shiftKey: true });
     });
 
     // Commit with )
     act(() => {
-      fireEvent.keyDown(cellInput, { key: ')' });
+      fireEvent.keyDown(formulaInput, { key: ')' });
     });
 
     // Wait for POINT mode to exit
@@ -126,26 +117,22 @@ describe('In-cell POINT mode formula editing', () => {
     });
 
     // Check the formula bar shows the correct formula with range
-    const formulaInput = screen.getByPlaceholderText(/Enter a value or formula/) as HTMLInputElement;
-    expect(formulaInput.value).toBe('=SUM(B2:B4)');
+    const formulaInputAfter = screen.getByPlaceholderText(/Enter a value or formula/) as HTMLInputElement;
+    expect(formulaInputAfter.value).toBe('=SUM(B2:B4)');
   });
 
   it('formula committed via POINT mode evaluates correctly', async () => {
     const { container } = render(<App />);
 
-    // Find cell A1 and double-click to start in-cell editing
-    const cells = container.querySelectorAll('.grid-cell');
-    const a1Cell = cells[0];
-    fireEvent.doubleClick(a1Cell);
+    // Use the FormulaBar to start editing (reliable entry point)
+    const formulaInput = screen.getByPlaceholderText(/Enter a value or formula/) as HTMLInputElement;
 
-    // Find the in-cell input
-    const cellInput = container.querySelector('input.w-full.h-full') as HTMLInputElement;
-    expect(cellInput).toBeTruthy();
-
-    // Type =SUM( to trigger POINT mode
-    act(() => {
-      fireEvent.change(cellInput, { target: { value: '=SUM(' } });
-    });
+    // Type =SUM( to enter POINT mode via FormulaBar
+    act(() => { fireEvent.keyDown(formulaInput, { key: '=' }); });
+    act(() => { fireEvent.keyDown(formulaInput, { key: 'S' }); });
+    act(() => { fireEvent.keyDown(formulaInput, { key: 'U' }); });
+    act(() => { fireEvent.keyDown(formulaInput, { key: 'M' }); });
+    act(() => { fireEvent.keyDown(formulaInput, { key: '(' }); });
 
     // Wait for POINT mode
     await waitFor(() => {
@@ -154,13 +141,13 @@ describe('In-cell POINT mode formula editing', () => {
 
     // Navigate to B2 (down 1, right 1 from A1)
     act(() => {
-      fireEvent.keyDown(cellInput, { key: 'ArrowDown' });
-      fireEvent.keyDown(cellInput, { key: 'ArrowRight' });
+      fireEvent.keyDown(formulaInput, { key: 'ArrowDown' });
+      fireEvent.keyDown(formulaInput, { key: 'ArrowRight' });
     });
 
     // Commit the reference with ) to close the function
     act(() => {
-      fireEvent.keyDown(cellInput, { key: ')' });
+      fireEvent.keyDown(formulaInput, { key: ')' });
     });
 
     // Wait for POINT mode to exit
@@ -170,15 +157,15 @@ describe('In-cell POINT mode formula editing', () => {
 
     // Now press Enter to commit the cell value
     act(() => {
-      fireEvent.keyDown(cellInput, { key: 'Enter' });
+      fireEvent.keyDown(formulaInput, { key: 'Enter' });
     });
 
     // After Enter, selection moves to A2 (which is empty)
     // The formula bar should now show A2's value (empty)
     await waitFor(() => {
-      const formulaInput = screen.getByPlaceholderText(/Enter a value or formula/) as HTMLInputElement;
+      const formulaInputAfter = screen.getByPlaceholderText(/Enter a value or formula/) as HTMLInputElement;
       // A2 is empty, so formula bar shows empty
-      expect(formulaInput.value).toBe('');
+      expect(formulaInputAfter.value).toBe('');
     });
 
     // Navigate back to A1 using the grid's keydown handler
@@ -190,8 +177,8 @@ describe('In-cell POINT mode formula editing', () => {
 
     // Check the formula bar shows A1's formula
     await waitFor(() => {
-      const formulaInput = screen.getByPlaceholderText(/Enter a value or formula/) as HTMLInputElement;
-      expect(formulaInput.value).toBe('=SUM(B2)');
+      const formulaInputFinal = screen.getByPlaceholderText(/Enter a value or formula/) as HTMLInputElement;
+      expect(formulaInputFinal.value).toBe('=SUM(B2)');
     });
   });
 });

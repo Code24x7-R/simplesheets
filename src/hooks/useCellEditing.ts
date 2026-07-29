@@ -364,12 +364,18 @@ interface UseCellEditingReturn {
   handleKey: (key: string, shiftKey: boolean, ctrlKey: boolean, altKey?: boolean) => KeyHandlingResult;
   /** Handle a cell click (for POINT mode). */
   handleCellClick: (row: number, col: number, shiftKey: boolean) => KeyHandlingResult;
-  /** Start editing a cell (ENTER mode — replaces content). */
-  startEnter: (key: string) => void;
-  /** Start editing a cell (EDIT mode — preserves content). */
-  startEdit: () => void;
-  /** Start editing a cell (EDIT mode — preserves content) with caret at specific position. */
-  startEditAt: (caretPosition: number) => void;
+  /** Start editing a cell (ENTER mode — replaces content).
+   * @param row - Optional row override (uses activeRow if not provided).
+   * @param col - Optional column override (uses activeCol if not provided). */
+  startEnter: (key: string, row?: number, col?: number) => void;
+  /** Start editing a cell (EDIT mode — preserves content).
+   * @param row - Optional row override (uses activeRow if not provided).
+   * @param col - Optional column override (uses activeCol if not provided). */
+  startEdit: (row?: number, col?: number) => void;
+  /** Start editing a cell (EDIT mode — preserves content) with caret at specific position.
+   * @param row - Optional row override (uses activeRow if not provided).
+   * @param col - Optional column override (uses activeCol if not provided). */
+  startEditAt: (caretPosition: number, row?: number, col?: number) => void;
   /** Set caret position without changing state (for click handling). */
   setCaretPos: (caretPosition: number) => void;
   /** Set buffer content and caret position (for paste operations). */
@@ -490,13 +496,15 @@ export function useCellEditing({
 
   // ─── State Transitions ─────────────────────────────────────────────────
 
-  const startEnter = useCallback((key: string) => {
+  const startEnter = useCallback((key: string, row?: number, col?: number) => {
+    const r = row ?? activeRow;
+    const c = col ?? activeCol;
     const newBuffer = key;
     const isFormula = key === '=' || key === '+' || key === '-';
     setSession({
       state: 'ENTER',
-      row: activeRow,
-      col: activeCol,
+      row: r,
+      col: c,
       buffer: newBuffer,
       originalValue: cellValue,
       caretPos: newBuffer.length,
@@ -505,12 +513,14 @@ export function useCellEditing({
     setPointSession(null);
   }, [activeRow, activeCol, cellValue, setPointSession]);
 
-  const startEdit = useCallback(() => {
+  const startEdit = useCallback((row?: number, col?: number) => {
+    const r = row ?? activeRow;
+    const c = col ?? activeCol;
     const buffer = cellValue;
     setSession({
       state: 'EDIT',
-      row: activeRow,
-      col: activeCol,
+      row: r,
+      col: c,
       buffer,
       originalValue: cellValue,
       caretPos: buffer.length,
@@ -519,13 +529,19 @@ export function useCellEditing({
     setPointSession(null);
   }, [activeRow, activeCol, cellValue, setPointSession]);
 
-  const startEditAt = useCallback((caretPosition: number) => {
-    const buffer = cellValue;
+  const startEditAt = useCallback((caretPosition: number, row?: number, col?: number) => {
+    const r = row ?? activeRow;
+    const c = col ?? activeCol;
+    // If already editing (ENTER/EDIT/POINT), preserve the existing buffer
+    // to avoid discarding typed content when clicking from grid to formula bar
+    const currentSession = sessionRef.current;
+    const alreadyEditing = currentSession.state === 'ENTER' || currentSession.state === 'EDIT';
+    const buffer = alreadyEditing ? currentSession.buffer : cellValue;
     const clampedCaret = Math.max(0, Math.min(buffer.length, caretPosition));
     setSession({
       state: 'EDIT',
-      row: activeRow,
-      col: activeCol,
+      row: r,
+      col: c,
       buffer,
       originalValue: cellValue,
       caretPos: clampedCaret,
@@ -614,7 +630,9 @@ export function useCellEditing({
   // ─── Set Buffer ────────────────────────────────────────────────────────
   const setBuffer = useCallback((buffer: string, caretPos: number) => {
     setSession((prev) => {
-      if (prev.state !== 'EDIT' && prev.state !== 'ENTER') return prev;
+      if (prev.state !== 'EDIT' && prev.state !== 'ENTER') {
+        return prev;
+      }
       const clampedCaret = Math.max(0, Math.min(buffer.length, caretPos));
       const newSession = {
         ...prev,

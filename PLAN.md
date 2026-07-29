@@ -4,7 +4,7 @@
 Achieve a clean, clutter-free UI with standardized dropdown menus, formula wizard, formula bar, and R1C1 reference format.
 
 ## Current State
-- **1923 tests** across **78 suites**, All passing
+- **1929 tests** across **78 suites**, All passing
 - Lint clean (0 warnings), Build clean
 - Coverage: **94.31% stmts, 85.58% branches, 96.11% funcs, 95.68% lines**
 - Phases 1-10 complete: Menu system, Formula bar, R1C1 toggle, pdfExport, Layout polish, Nested Formula Wizard
@@ -14,6 +14,7 @@ Achieve a clean, clutter-free UI with standardized dropdown menus, formula wizar
 - Phase 14 complete: Keyboard Shortcut Audit & Fixes (global shortcuts, grid navigation, shortcuts modal)
 - Phase 16 complete: Keyboard Shortcut Gaps (Ctrl+Enter, Alt+Enter, Ctrl+Left/Right, End key)
 - Phase 20 complete: Number Formatting Enhancements (auto-align numbers/dates/times, Accounting format)
+- Phase 24 complete: Formula Wizard Wiring (fx button, Ctrl+Shift+F, Insert menu)
 
 ---
 
@@ -149,6 +150,46 @@ Achieve a clean, clutter-free UI with standardized dropdown menus, formula wizar
 - [ ] Validation rules saved/loaded with workbook
 - [ ] Dropdown arrow shown for list-validated cells
 - [ ] Validation included in copy/paste (rules follow data)
+
+---
+
+## Phase 24: Formula Wizard Wiring — COMPLETE ✅ (2026-07-29)
+
+**Problem**: The FormulaWizard was fully built (component, hook, schema, 45 functions) but had no UI trigger — `openWizard` was never called, and the "fx" span in FormulaBar was just a static label.
+
+**Solution**: Wired the FormulaWizard with three distinct triggers plus README accuracy.
+
+### Phase 24a: FormulaBar fx Button — COMPLETE ✅
+- [x] Add `onFxClick` prop to FormulaBar (passes current value to handler)
+- [x] Convert static `<span>fx</span>` to clickable `<button>` when `onFxClick` provided
+- [x] Button passes current formula value (e.g., `=SUM(A1:A5)`) to handler
+- [x] Hover styling (blue highlight) and tooltip "Open Formula Wizard (Ctrl+Shift+F)"
+
+### Phase 24b: Formula Detection — COMPLETE ✅
+- [x] `handleFxClick` extracts function name from current value via regex `/^=([A-Z][A-Z0-9]*)\s*\(/i`
+- [x] Falls back to `SUM` if no formula detected
+- [x] Passes active cell reference to wizard (`targetCellRef`)
+- [x] `getActiveCellValue` helper for menu/keyboard shortcut access
+
+### Phase 24c: Menu Integration — COMPLETE ✅
+- [x] Add `onFormulaWizard` prop to MenuBar
+- [x] Add "Formula Wizard…" item under Insert menu with 🧙 icon and `Ctrl+Shift+F` shortcut hint
+- [x] Wire handler to open wizard with active cell's current value
+
+### Phase 24d: Keyboard Shortcut — COMPLETE ✅
+- [x] Add `Ctrl+Shift+F` handler in global keydown listener
+- [x] Add `Ctrl+Shift+F` → "Open Formula Wizard" to ShortcutsModal
+
+### Phase 24e: Cleanup & Documentation — COMPLETE ✅
+- [x] Remove unused `pointSession`, `statusMessage`, `onCellPick` props from all FormulaBar test files
+- [x] Update README: fx button, menu, and keyboard shortcut all documented
+- [x] Fix README supported functions list to match actual schema (removed AVERAGEIFS, IFNA, SWITCH, RANK, QUARTILE, PERCENTILE)
+- [x] Add tests: fx button click, Ctrl+Shift+F shortcut, menu item, shortcut display
+
+**Files Modified**: `src/components/FormulaBar.tsx`, `src/components/MenuBar.tsx`, `src/components/ShortcutsModal.tsx`, `src/App.tsx`, `README.md`, `src/components/FormulaBar.test.tsx`, `src/components/MenuBar.test.tsx`, `src/components/ShortcutsModal.test.tsx`, `src/App.test.tsx`, `src/components/FormulaBar.coverage.test.tsx`, `src/components/FormulaBar.autocomplete.test.tsx`, `src/components/FormulaBar.interactions.test.tsx`
+
+**Tests**: 1929 passing, lint clean, build clean
+**Coverage**: Maintained (no production code logic changes, only wiring)
 
 ---
 
