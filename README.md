@@ -104,9 +104,16 @@ Click the cell reference button (e.g., `A1`) in the formula bar to toggle betwee
 
 Open the interactive Formula Wizard using any of these methods:
 
-- **fx button** — Click the **fx** button in the formula bar (pre-populates with the current cell's formula if it starts with a known function)
+- **fx button** — Click the **fx** button in the formula bar
 - **Menu** — Insert → Formula Wizard…
 - **Keyboard shortcut** — `Ctrl+Shift+F`
+
+#### Smart Open Behavior
+
+The wizard intelligently adapts based on the current cell's contents:
+
+- **Cell has a formula** (e.g., `=SUM(B4:D4)`) — Wizard opens with all parameters pre-populated from the formula. Nested functions like `=IF(A1>0, SUM(B4:D4), 0)` are shown as clickable elements you can drill into.
+- **Cell is empty** (or has a non-formula like `=A1+B1`) — A **Function Picker** appears with a searchable list of all 50+ functions. Pick one to start building.
 
 The wizard guides you through building complex formulas step-by-step:
 

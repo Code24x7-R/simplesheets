@@ -1315,11 +1315,11 @@ Wizard AST:
 
 ---
 
-#### Stage 25a: Formula Import Utility
+#### Stage 25a: Formula Import Utility — COMPLETE ✅
 
 **Goal**: Create `formulaWizardImport.ts` to convert parsed formulas into wizard AST.
 
-- [ ] **25a.1**: Create `src/utils/formulaWizardImport.ts` with:
+- [x] **25a.1**: Create `src/utils/formulaWizardImport.ts` with:
   - `importFormulaToWizard(formula: string): FormulaASTNode | null` — main entry point
   - Handles the case where formula doesn't start with a function (returns null)
   - Recursively walks the parser AST and builds wizard AST
@@ -1344,11 +1344,11 @@ Wizard AST:
 
 ---
 
-#### Stage 25b: Enhance useFormulaWizard Hook
+#### Stage 25b: Enhance useFormulaWizard Hook — COMPLETE ✅
 
 **Goal**: Add `importFormula` method to the hook.
 
-- [ ] **25b.1**: Add `importFormula(formula: string, targetCellRef?: string)` method to `useFormulaWizard`:
+- [x] **25b.1**: Add `importFormula(formula: string, targetCellRef?: string)` method to `useFormulaWizard`:
   - Calls `importFormulaToWizard()` to build the AST tree
   - Sets initial state with root node and full nested tree
   - Handles the case where import returns null (fall back to autocomplete)
@@ -1369,11 +1369,11 @@ Wizard AST:
 
 ---
 
-#### Stage 25c: Autocomplete Picker Component
+#### Stage 25c: Autocomplete Picker Component — COMPLETE ✅
 
 **Goal**: Create `FunctionPicker` component for when cell has no formula.
 
-- [ ] **25c.1**: Create `src/components/FunctionPicker.tsx`:
+- [x] **25c.1**: Create `src/components/FunctionPicker.tsx`:
   - Modal overlay similar to FormulaWizard
   - Search input at top
   - Scrollable list of functions grouped by category
@@ -1392,11 +1392,11 @@ Wizard AST:
 
 ---
 
-#### Stage 25d: Enhance FormulaWizard Component
+#### Stage 25d: Enhance FormulaWizard Component — COMPLETE ✅
 
 **Goal**: Update FormulaWizard to handle imported formulas and nested navigation.
 
-- [ ] **25d.1**: Update `FormulaWizard.tsx` to display imported parameter values:
+- [x] **25d.1**: Update `FormulaWizard.tsx` to display imported parameter values:
   - When opened with pre-populated AST, show parameter values from import
   - Parameters with nested functions show function name as value (e.g., "SUM(B4:D4)")
   - Clicking a nested function value navigates into it (reuses existing breadcrumb logic)
@@ -1416,11 +1416,11 @@ Wizard AST:
 
 ---
 
-#### Stage 25e: Wire Triggers in App.tsx
+#### Stage 25e: Wire Triggers in App.tsx — COMPLETE ✅
 
 **Goal**: Update `handleFxClick` and related handlers to use import.
 
-- [ ] **25e.1**: Update `handleFxClick` in `App.tsx`:
+- [x] **25e.1**: Update `handleFxClick` in `App.tsx`:
   - Check if current cell value starts with `=` and contains a function
   - If yes → call `importFormula(currentValue, targetCellRef)`
   - If no → call `openWithAutocomplete(targetCellRef)`
@@ -1490,8 +1490,8 @@ Wizard AST:
 
 ### Estimated Test Count
 
-- Current: 1929
-- After Phase 25: ~1965
+- Current: 1993
+- After Phase 25: ~2000 (25f docs remaining)
 
 ### Dependencies
 
