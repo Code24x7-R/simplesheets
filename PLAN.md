@@ -4,7 +4,7 @@
 Achieve a clean, clutter-free UI with standardized dropdown menus, formula wizard, formula bar, and R1C1 reference format.
 
 ## Current State
-- **1922 tests** across **78 suites**, All passing
+- **1923 tests** across **78 suites**, All passing
 - Lint clean (0 warnings), Build clean
 - Coverage: **94.31% stmts, 85.58% branches, 96.11% funcs, 95.68% lines**
 - Phases 1-10 complete: Menu system, Formula bar, R1C1 toggle, pdfExport, Layout polish, Nested Formula Wizard
@@ -14,6 +14,141 @@ Achieve a clean, clutter-free UI with standardized dropdown menus, formula wizar
 - Phase 14 complete: Keyboard Shortcut Audit & Fixes (global shortcuts, grid navigation, shortcuts modal)
 - Phase 16 complete: Keyboard Shortcut Gaps (Ctrl+Enter, Alt+Enter, Ctrl+Left/Right, End key)
 - Phase 20 complete: Number Formatting Enhancements (auto-align numbers/dates/times, Accounting format)
+
+---
+
+## Phase 21: Charts — PLANNED 📋
+*Create data visualization charts from spreadsheet data.*
+
+### Phase 21a: Chart Types
+- [ ] **Bar Chart** — vertical bars for comparing values across categories
+- [ ] **Column Chart** — horizontal bars for comparing values
+- [ ] **Line Chart** — trends over time or ordered categories
+- [ ] **Pie Chart** — proportional breakdown of a single data series
+- [ ] **Area Chart** — filled line chart showing cumulative totals
+- [ ] **Scatter Plot** — correlation between two numeric series
+
+### Phase 21b: Chart Configuration
+- [ ] Chart title and axis labels
+- [ ] Legend positioning (top, bottom, left, right, none)
+- [ ] Color scheme selection (palette picker)
+- [ ] Data range selection (automatic from selection or manual range)
+- [ ] Series selection (single or multiple series)
+- [ ] Switch rows/columns as data series
+
+### Phase 21c: Chart Rendering Engine
+- [ ] Pure SVG rendering (no external chart library — keeps bundle small)
+- [ ] Responsive sizing (fills container, redraws on resize)
+- [ ] Grid lines and tick marks
+- [ ] Data point labels (optional)
+- [ ] Animation on data change (smooth transitions)
+
+### Phase 21d: Chart UI & Interaction
+- [ ] Insert Chart dialog (Insert menu or toolbar button)
+- [ ] Chart positioning (embedded in sheet as floating object or full-sheet view)
+- [ ] Edit chart (reopen configuration dialog)
+- [ ] Delete chart
+- [ ] Export chart as PNG/SVG
+
+### Phase 21e: Integration
+- [ ] Charts update when source data changes
+- [ ] Charts included in PDF export
+- [ ] Charts saved/loaded with workbook
+- [ ] Menu: Insert → Chart
+- [ ] Toolbar button for quick chart insertion
+
+---
+
+## Phase 22: Conditional Formatting — PLANNED 📋
+*Apply dynamic formatting rules based on cell values or formulas.*
+
+### Phase 22a: Rule Types
+- [ ] **Greater Than / Less Than** — highlight cells above/below a threshold
+- [ ] **Between / Not Between** — highlight cells within a range
+- [ ] **Equal To / Not Equal To** — highlight cells matching a value
+- [ ] **Text Contains** — highlight cells containing specific text
+- [ ] **Duplicate Values** — highlight duplicate entries in a range
+- [ ] **Top/Bottom N** — highlight top or bottom N values
+- [ ] **Above/Below Average** — highlight cells relative to range average
+- [ ] **Color Scales** — gradient fill based on value (2-color or 3-color scale)
+- [ ] **Data Bars** — in-cell horizontal bars proportional to value
+- [ ] **Icon Sets** — arrows, traffic lights, stars based on value thresholds
+
+### Phase 22b: Formula-Based Rules
+- [ ] Custom formula condition (e.g., `=AND(A1>100, A1<200)`)
+- [ ] Reference relative to active cell in selection
+- [ ] Formula evaluates per-cell in applied range
+
+### Phase 22c: Rule Management
+- [ ] ConditionalFormatting modal (Format menu or toolbar)
+- [ ] Rule list with priority ordering (stop-if-true support)
+- [ ] Edit existing rules
+- [ ] Delete rules
+- [ ] Apply to range selector (use current selection or manual entry)
+- [ ] Preview rule effect before applying
+
+### Phase 22d: Rendering
+- [ ] Layer conditional formatting on top of cell styles
+- [ ] Evaluate rules on every cell value change
+- [ ] Efficient batch evaluation for large ranges
+- [ ] Support overlapping rules (priority order determines winner)
+
+### Phase 22e: Integration
+- [ ] Menu: Format → Conditional Formatting
+- [ ] Rules saved/loaded with workbook
+- [ ] Rules included in PDF export (formatting visible)
+
+---
+
+## Phase 23: Data Validation — PLANNED 📋
+*Restrict cell input to predefined criteria with custom error alerts.*
+
+### Phase 23a: Validation Types
+- **Whole Number** — integer only, with min/max constraints
+- **Decimal** — floating point, with min/max constraints
+- **List** — dropdown selection from a list of values (static or range reference)
+- **Date** — valid date within a range
+- **Time** — valid time within a range
+- **Text Length** — string length within min/max
+- **Custom** — formula-based validation (e.g., `=A1>B1`)
+
+### Phase 23b: Validation Criteria
+- [ ] Between / Not Between — value within two bounds
+- [ ] Equal / Not Equal — value matches/doesn't match
+- [ ] Greater Than / Greater Than or Equal
+- [ ] Less Than / Less Than or Equal
+- [ ] List source from comma-separated values or cell range (`=A1:A10`)
+
+### Phase 23c: Error Alert Styling
+- [ ] **Stop** — reject invalid input with error message
+- [ ] **Warning** — warn but allow user to proceed
+- [ ] **Information** — show informational message, allow override
+- [ ] Custom error title and message
+
+### Phase 23d: Input Message
+- [ ] Show hint message when cell is selected
+- [ ] Custom title and message text
+- [ ] Useful for guiding users on expected input
+
+### Phase 23e: Validation UI
+- [ ] Data Validation dialog (Data menu or toolbar)
+- [ ] Settings tab (validation criteria)
+- [ ] Input Message tab
+- [ ] Error Alert tab
+- [ ] Apply to range selector
+- [ ] Clear Validation button
+
+### Phase 23f: Validation Enforcement
+- [ ] Validate on cell commit (in FSM commit path)
+- [ ] Highlight invalid cells (red border or indicator)
+- [ ] Circle invalid cells tool (audit all validation errors)
+- [ ] Prevent navigation from invalid cell (Stop style)
+
+### Phase 23g: Integration
+- [ ] Menu: Data → Data Validation
+- [ ] Validation rules saved/loaded with workbook
+- [ ] Dropdown arrow shown for list-validated cells
+- [ ] Validation included in copy/paste (rules follow data)
 
 ---
 
