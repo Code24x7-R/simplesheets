@@ -455,3 +455,126 @@ describe('useFormulaWizard - breadcrumb', () => {
     expect(result.current.wizard.nodeMap.size).toBe(2);
   });
 });
+
+describe('useFormulaWizard - importFormula', () => {
+  it('imports a simple formula successfully', () => {
+    const { result } = renderHook(() => useFormulaWizard());
+    let success: boolean = false;
+    act(() => {
+      success = result.current.importFormula('=SUM(B4:D4)', 'E3');
+    });
+    expect(success).toBe(true);
+    expect(result.current.wizard.state).toBe('WIZARD_ROOT');
+    expect(result.current.wizard.isOpen).toBe(true);
+    expect(result.current.wizard.activeNode?.functionName).toBe('SUM');
+    expect(result.current.wizard.targetCellRef).toBe('E3');
+  });
+
+  it('populates parameter values from imported formula', () => {
+    const { result } = renderHook(() => useFormulaWizard());
+    act(() => {
+      result.current.importFormula('=SUM(B4:D4)');
+    });
+    const number1 = result.current.wizard.activeNode?.parameterValues['number1'];
+    expect(number1).toBeDefined();
+    expect(number1?.rawValue).toBe('B4:D4');
+  });
+
+  it('imports nested functions', () => {
+    const { result } = renderHook(() => useFormulaWizard());
+    act(() => {
+      result.current.importFormula('=IF(A1>0, SUM(B4:D4), 0)');
+    });
+    expect(result.current.wizard.activeNode?.functionName).toBe('IF');
+    expect(result.current.wizard.nodeMap.size).toBe(2);
+
+    // Check nested SUM node
+    const trueVal = result.current.wizard.activeNode?.parameterValues['true_val'];
+    expect(trueVal?.isNestedFunction).toBe(true);
+    const sumNode = result.current.wizard.nodeMap.get(trueVal?.nestedNodeId ?? '');
+    expect(sumNode?.functionName).toBe('SUM');
+    expect(sumNode?.parameterValues['number1']?.rawValue).toBe('B4:D4');
+  });
+
+  it('compiles formula from imported tree', () => {
+    const { result } = renderHook(() => useFormulaWizard());
+    act(() => {
+      result.current.importFormula('=SUM(B4:D4)');
+    });
+    expect(result.current.wizard.compiledFormula).toBe('SUM(B4:D4)');
+  });
+
+  it('returns false for non-importable formula (binary op)', () => {
+    const { result } = renderHook(() => useFormulaWizard());
+    let success: boolean = true;
+    act(() => {
+      success = result.current.importFormula('=A1+B1');
+    });
+    expect(success).toBe(false);
+    expect(result.current.wizard.isOpen).toBe(false);
+  });
+
+  it('returns false for literal formula', () => {
+    const { result } = renderHook(() => useFormulaWizard());
+    let success: boolean = true;
+    act(() => {
+      success = result.current.importFormula('=5');
+    });
+    expect(success).toBe(false);
+  });
+
+  it('returns false for empty formula', () => {
+    const { result } = renderHook(() => useFormulaWizard());
+    let success: boolean = true;
+    act(() => {
+      success = result.current.importFormula('');
+    });
+    expect(success).toBe(false);
+  });
+
+  it('returns false for syntax error', () => {
+    const { result } = renderHook(() => useFormulaWizard());
+    let success: boolean = true;
+    act(() => {
+      success = result.current.importFormula('=SUM(');
+    });
+    expect(success).toBe(false);
+  });
+});
+
+describe('useFormulaWizard - openWithAutocomplete', () => {
+  it('opens wizard in AUTOCOMPLETE state', () => {
+    const { result } = renderHook(() => useFormulaWizard());
+    act(() => {
+      result.current.openWithAutocomplete('E3');
+    });
+    expect(result.current.wizard.state).toBe('AUTOCOMPLETE');
+    expect(result.current.wizard.isOpen).toBe(true);
+    expect(result.current.wizard.targetCellRef).toBe('E3');
+  });
+
+  it('does not create any AST nodes', () => {
+    const { result } = renderHook(() => useFormulaWizard());
+    act(() => {
+      result.current.openWithAutocomplete();
+    });
+    expect(result.current.wizard.nodeMap.size).toBe(0);
+    expect(result.current.wizard.activeNode).toBeNull();
+    expect(result.current.wizard.nestingDepth).toBe(0);
+  });
+
+  it('can transition from AUTOCOMPLETE to WIZARD_ROOT via openWizard', () => {
+    const { result } = renderHook(() => useFormulaWizard());
+    act(() => {
+      result.current.openWithAutocomplete('E3');
+    });
+    expect(result.current.wizard.state).toBe('AUTOCOMPLETE');
+
+    // User picks a function from autocomplete
+    act(() => {
+      result.current.openWizard('SUM', 'E3');
+    });
+    expect(result.current.wizard.state).toBe('WIZARD_ROOT');
+    expect(result.current.wizard.activeNode?.functionName).toBe('SUM');
+  });
+});

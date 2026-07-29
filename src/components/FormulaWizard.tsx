@@ -4,6 +4,8 @@ import { getAllFunctionSchemas } from '../utils/formulaWizardSchema';
 import { validateParameter, checkCircularReference } from '../utils/formulaWizardCompiler';
 import type { WizardStateData } from '../hooks/useFormulaWizard';
 import type { ReferenceFormat } from '../hooks/useReferenceFormat';
+import { FunctionPicker } from './FunctionPicker';
+import { compileASTNodeToString } from '../utils/formulaWizardCompiler';
 
 /**
  * Color palette for parameter highlighting.
@@ -27,6 +29,8 @@ interface FormulaWizardProps {
   setParameter: (paramId: string, value: string, isNestedFunction?: boolean, nestedNodeId?: string) => void;
   /** Navigate into a nested function parameter */
   enterNested: (paramId: string, functionName: string) => void;
+  /** Navigate into an existing nested function (from imported formula) */
+  enterExistingNested?: (nestedNodeId: string) => void;
   /** Navigate back to the parent function */
   goBack: () => void;
   /** Start point selection for a parameter */
@@ -45,6 +49,8 @@ interface FormulaWizardProps {
   targetCol?: number;
   /** Live computed result preview */
   computedResult?: string | number | null;
+  /** Callback when user picks a function from the autocomplete picker */
+  onFunctionSelect?: (functionName: string) => void;
 }
 
 /**
@@ -59,6 +65,7 @@ export function FormulaWizard({
   wizard,
   setParameter,
   enterNested,
+  enterExistingNested,
   goBack,
   startPointSelection,
   cancelPointSelection,
@@ -68,6 +75,7 @@ export function FormulaWizard({
   targetRow,
   targetCol,
   computedResult,
+  onFunctionSelect,
 }: FormulaWizardProps) {
   const [nestedFunctionPicker, setNestedFunctionPicker] = useState<string | null>(null);
 
@@ -90,6 +98,26 @@ export function FormulaWizard({
     const formula = `=${wizard.compiledFormula}`;
     return checkCircularReference(formula, targetRow, targetCol);
   }, [wizard.compiledFormula, targetRow, targetCol]);
+
+  // Helper to get the display value for a parameter (handles nested functions)
+  const getParamDisplayValue = useCallback(
+    (param: FunctionParameter): { value: string; hasNested: boolean; nestedId?: string } => {
+      const paramVal = wizard.activeNode?.parameterValues[param.id];
+      if (!paramVal) return { value: '', hasNested: false };
+
+      if (paramVal.isNestedFunction && paramVal.nestedNodeId) {
+        // Get the compiled formula from the nested node
+        const nestedNode = wizard.nodeMap.get(paramVal.nestedNodeId);
+        if (nestedNode) {
+          const compiled = compileASTNodeToString(nestedNode, wizard.nodeMap);
+          return { value: compiled, hasNested: true, nestedId: paramVal.nestedNodeId };
+        }
+      }
+
+      return { value: paramVal.rawValue, hasNested: false };
+    },
+    [wizard.activeNode, wizard.nodeMap],
+  );
 
   // Handle parameter value change
   const handleParamChange = useCallback(
@@ -116,6 +144,14 @@ export function FormulaWizard({
     [enterNested]
   );
 
+  // Handle clicking on an existing nested function to navigate into it
+  const handleEnterNestedFunction = useCallback(
+    (nestedNodeId: string) => {
+      enterExistingNested?.(nestedNodeId);
+    },
+    [enterExistingNested]
+  );
+
   // Handle apply
   const handleApply = useCallback(() => {
     const formula = `=${wizard.compiledFormula}`;
@@ -127,7 +163,22 @@ export function FormulaWizard({
     return getAllFunctionSchemas().slice(0, 20); // Limit for dropdown
   }, []);
 
-  if (!wizard.isOpen || !schema) return null;
+  if (!wizard.isOpen) return null;
+
+  // Show autocomplete picker when no formula was imported
+  if (wizard.state === 'AUTOCOMPLETE') {
+    return (
+      <FunctionPicker
+        isOpen={true}
+        onSelect={(functionName) => {
+          onFunctionSelect?.(functionName);
+        }}
+        onClose={closeWizard}
+      />
+    );
+  }
+
+  if (!schema) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
@@ -191,7 +242,9 @@ export function FormulaWizard({
               key={param.id}
               param={param}
               _paramIndex={index}
-              value={wizard.activeNode?.parameterValues[param.id]?.rawValue ?? ''}
+              value={getParamDisplayValue(param).value}
+              hasNestedFunction={getParamDisplayValue(param).hasNested}
+              nestedNodeId={getParamDisplayValue(param).nestedId}
               color={PARAM_COLORS[index % PARAM_COLORS.length]}
               isPointSelection={isPointSelection && wizard.pointSelectionParamIndex === index}
               onChange={(value) => handleParamChange(param.id, value)}
@@ -202,6 +255,7 @@ export function FormulaWizard({
               availableFunctions={availableFunctions}
               nestedFunctionPicker={nestedFunctionPicker}
               setNestedFunctionPicker={setNestedFunctionPicker}
+              onEnterNested={handleEnterNestedFunction}
             />
           ))}
 
@@ -296,6 +350,12 @@ interface ParameterInputProps {
   availableFunctions: FunctionDefinition[];
   nestedFunctionPicker: string | null;
   setNestedFunctionPicker: (paramId: string | null) => void;
+  /** Whether this parameter has a nested function (for imported formulas) */
+  hasNestedFunction?: boolean;
+  /** ID of the nested function node (for navigation) */
+  nestedNodeId?: string;
+  /** Callback when user clicks on the nested function value */
+  onEnterNested?: (nestedNodeId: string) => void;
 }
 
 function ParameterInput({
@@ -312,6 +372,9 @@ function ParameterInput({
   availableFunctions,
   nestedFunctionPicker,
   setNestedFunctionPicker,
+  hasNestedFunction,
+  nestedNodeId,
+  onEnterNested,
 }: ParameterInputProps) {
   const validationError = validateParameter(value, param.type);
   const showPicker = nestedFunctionPicker === param.id;
@@ -331,25 +394,36 @@ function ParameterInput({
 
         {/* Input field */}
         <div className="flex-1 relative">
-          <input
-            type="text"
-            className={`w-full px-2 py-1.5 text-xs font-mono border rounded outline-none transition-colors ${
-              isPointSelection
-                ? 'border-yellow-400 bg-yellow-50 ring-2 ring-yellow-200'
-                : validationError
-                ? 'border-red-300 bg-red-50'
-                : 'border-gray-200 bg-white focus:border-blue-300 focus:ring-1 focus:ring-blue-100'
-            }`}
-            style={
-              value && !validationError
-                ? { borderColor: color.border, backgroundColor: color.bg }
-                : undefined
-            }
-            placeholder={param.description}
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            readOnly={isPointSelection}
-          />
+          {hasNestedFunction && nestedNodeId && onEnterNested ? (
+            // Nested function — show as clickable button-like element
+            <button
+              className="w-full px-2 py-1.5 text-xs font-mono border rounded text-left text-blue-700 bg-blue-50 border-blue-200 hover:bg-blue-100 transition-colors cursor-pointer"
+              onClick={() => onEnterNested(nestedNodeId)}
+              title="Click to edit nested function"
+            >
+              {value || `${param.name} (nested)`}
+            </button>
+          ) : (
+            <input
+              type="text"
+              className={`w-full px-2 py-1.5 text-xs font-mono border rounded outline-none transition-colors ${
+                isPointSelection
+                  ? 'border-yellow-400 bg-yellow-50 ring-2 ring-yellow-200'
+                  : validationError
+                  ? 'border-red-300 bg-red-50'
+                  : 'border-gray-200 bg-white focus:border-blue-300 focus:ring-1 focus:ring-blue-100'
+              }`}
+              style={
+                value && !validationError
+                  ? { borderColor: color.border, backgroundColor: color.bg }
+                  : undefined
+              }
+              placeholder={param.description}
+              value={value}
+              onChange={(e) => onChange(e.target.value)}
+              readOnly={isPointSelection}
+            />
+          )}
 
           {/* Range picker button */}
           {(param.type === 'RANGE' || param.type === 'ANY') && (

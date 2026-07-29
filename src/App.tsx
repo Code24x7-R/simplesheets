@@ -162,9 +162,12 @@ function WorkbookView() {
   const {
     wizard: formulaWizard,
     openWizard: openFormulaWizard,
+    importFormula: importFormulaToWizard,
+    openWithAutocomplete: openWizardWithAutocomplete,
     closeWizard: closeFormulaWizard,
     setParameter: setWizardParameter,
     enterNested: enterWizardNested,
+    enterExistingNested: enterWizardExistingNested,
     goBack: goWizardBack,
     startPointSelection: startWizardPointSelection,
     cancelPointSelection: cancelWizardPointSelection,
@@ -401,21 +404,26 @@ function WorkbookView() {
   /**
    * Handle fx button click — opens FormulaWizard, pre-populating with
    * the current cell's formula if it starts with a known function name.
+   * If no formula exists, shows the autocomplete picker instead.
    */
   const handleFxClick = useCallback(
     (currentValue: string) => {
-      // Extract function name from current value (e.g., "=SUM(A1:A5)" → "SUM")
-      let functionName = 'SUM'; // Default fallback
-      const match = currentValue?.match(/^=([A-Z][A-Z0-9]*)\s*\(/i);
-      if (match) {
-        functionName = match[1].toUpperCase();
-      }
       const targetCellRef = activeCell
         ? `${colToLetter(activeCell.col)}${activeCell.row + 1}`
         : undefined;
-      openFormulaWizard(functionName, targetCellRef);
+
+      // Try to import the existing formula
+      if (currentValue && currentValue.startsWith('=')) {
+        const imported = importFormulaToWizard(currentValue, targetCellRef);
+        if (imported) {
+          return; // Successfully imported — wizard is open with pre-populated data
+        }
+      }
+
+      // No formula to import — show autocomplete picker
+      openWizardWithAutocomplete(targetCellRef);
     },
-    [activeCell, openFormulaWizard]
+    [activeCell, importFormulaToWizard, openWizardWithAutocomplete]
   );
 
   // ─── Raw Event Handlers for FormulaBar ──────────────────────────
@@ -1900,11 +1908,19 @@ function WorkbookView() {
         wizard={formulaWizard}
         setParameter={setWizardParameter}
         enterNested={enterWizardNested}
+        enterExistingNested={enterWizardExistingNested}
         goBack={goWizardBack}
         startPointSelection={startWizardPointSelection}
         cancelPointSelection={cancelWizardPointSelection}
         closeWizard={closeFormulaWizard}
         onApply={handleWizardApply}
+        onFunctionSelect={(functionName) => {
+          // User picked a function from autocomplete — open wizard with that function
+          const targetCellRef = activeCell
+            ? `${colToLetter(activeCell.col)}${activeCell.row + 1}`
+            : undefined;
+          openFormulaWizard(functionName, targetCellRef);
+        }}
         targetRow={activeCell?.row}
         targetCol={activeCell?.col}
       />

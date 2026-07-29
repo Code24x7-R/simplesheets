@@ -41,11 +41,13 @@ const defaultProps = {
   wizard: createWizardState(),
   setParameter: jest.fn(),
   enterNested: jest.fn(),
+  enterExistingNested: jest.fn(),
   goBack: jest.fn(),
   startPointSelection: jest.fn(),
   cancelPointSelection: jest.fn(),
   closeWizard: jest.fn(),
   onApply: jest.fn(),
+  onFunctionSelect: jest.fn(),
   targetRow: 0,
   targetCol: 0,
 };
@@ -239,5 +241,123 @@ describe('FormulaWizard', () => {
     const buttons = screen.getAllByRole('button', { name: 'IF' });
     fireEvent.click(buttons[0]);
     expect(goBack).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('FormulaWizard - Imported Formula Display', () => {
+  it('shows imported parameter values', () => {
+    const wizard = createWizardState({
+      activeNode: {
+        id: 'node_1',
+        functionName: 'SUM',
+        parameterValues: {
+          number1: { parameterId: 'number1', rawValue: 'B4:D4', isNestedFunction: false },
+        },
+      },
+      compiledFormula: 'SUM(B4:D4)',
+    });
+    render(<FormulaWizard {...defaultProps} wizard={wizard} />);
+    // The input should have the imported value
+    const inputs = screen.getAllByRole('textbox') as HTMLInputElement[];
+    expect(inputs[0].value).toBe('B4:D4');
+  });
+
+  it('shows nested function as clickable element', () => {
+    const wizard = createWizardState({
+      activeNode: {
+        id: 'node_1',
+        functionName: 'IF',
+        parameterValues: {
+          condition: { parameterId: 'condition', rawValue: 'A1>0', isNestedFunction: false },
+          true_val: { parameterId: 'true_val', rawValue: '', isNestedFunction: true, nestedNodeId: 'node_2' },
+        },
+      },
+      nodeMap: new Map<string, FormulaASTNode>([
+        ['node_1', { id: 'node_1', functionName: 'IF', parameterValues: {
+          condition: { parameterId: 'condition', rawValue: 'A1>0', isNestedFunction: false },
+          true_val: { parameterId: 'true_val', rawValue: '', isNestedFunction: true, nestedNodeId: 'node_2' },
+        } } as FormulaASTNode],
+        ['node_2', { id: 'node_2', parentId: 'node_1', functionName: 'SUM', parameterValues: {
+          number1: { parameterId: 'number1', rawValue: 'B4:D4', isNestedFunction: false },
+        } } as FormulaASTNode],
+      ]),
+      compiledFormula: 'IF(A1>0, SUM(B4:D4), 0)',
+      activeSchema: {
+        name: 'IF',
+        category: 'LOGICAL',
+        description: 'Conditional: if true then A else B',
+        returnType: 'ANY',
+        syntaxTemplate: 'IF(condition, true_val, [false_val])',
+        parameters: [
+          { id: 'condition', name: 'Condition', description: 'Expression that evaluates to TRUE or FALSE', type: 'BOOLEAN', isRequired: true, allowNestedFunction: true },
+          { id: 'true_val', name: 'True_val', description: 'Value returned when condition is TRUE', type: 'ANY', isRequired: true, allowNestedFunction: true },
+          { id: 'false_val', name: 'False_val', description: 'Value returned when condition is FALSE', type: 'ANY', isRequired: false, allowNestedFunction: true },
+        ],
+      },
+    });
+    render(<FormulaWizard {...defaultProps} wizard={wizard} />);
+    // The nested function should be shown as a clickable button
+    const nestedButton = screen.getByText('SUM(B4:D4)');
+    expect(nestedButton.tagName).toBe('BUTTON');
+  });
+
+  it('navigates into nested function when clicked', () => {
+    const enterExistingNested = jest.fn();
+    const wizard = createWizardState({
+      activeNode: {
+        id: 'node_1',
+        functionName: 'IF',
+        parameterValues: {
+          true_val: { parameterId: 'true_val', rawValue: '', isNestedFunction: true, nestedNodeId: 'node_2' },
+        },
+      },
+      nodeMap: new Map([
+        ['node_2', { id: 'node_2', parentId: 'node_1', functionName: 'SUM', parameterValues: {
+          number1: { parameterId: 'number1', rawValue: 'B4:D4', isNestedFunction: false },
+        } }],
+      ]),
+      compiledFormula: 'IF(A1>0, SUM(B4:D4), 0)',
+      activeSchema: {
+        name: 'IF',
+        category: 'LOGICAL',
+        description: 'Conditional: if true then A else B',
+        returnType: 'ANY',
+        syntaxTemplate: 'IF(condition, true_val, [false_val])',
+        parameters: [
+          { id: 'condition', name: 'Condition', description: 'Expression that evaluates to TRUE or FALSE', type: 'BOOLEAN', isRequired: true, allowNestedFunction: true },
+          { id: 'true_val', name: 'True_val', description: 'Value returned when condition is TRUE', type: 'ANY', isRequired: true, allowNestedFunction: true },
+          { id: 'false_val', name: 'False_val', description: 'Value returned when condition is FALSE', type: 'ANY', isRequired: false, allowNestedFunction: true },
+        ],
+      },
+    });
+    render(<FormulaWizard {...defaultProps} wizard={wizard} enterExistingNested={enterExistingNested} />);
+    // Click the nested function button
+    const nestedButton = screen.getByText('SUM(B4:D4)');
+    fireEvent.click(nestedButton);
+    expect(enterExistingNested).toHaveBeenCalledWith('node_2');
+  });
+});
+
+describe('FormulaWizard - Autocomplete Integration', () => {
+  it('shows FunctionPicker when state is AUTOCOMPLETE', () => {
+    const wizard = createWizardState({ state: 'AUTOCOMPLETE' });
+    render(<FormulaWizard {...defaultProps} wizard={wizard} />);
+    expect(screen.getByText('Choose a Function')).toBeInTheDocument();
+  });
+
+  it('calls onFunctionSelect when function is picked', () => {
+    const onFunctionSelect = jest.fn();
+    const wizard = createWizardState({ state: 'AUTOCOMPLETE' });
+    render(<FormulaWizard {...defaultProps} wizard={wizard} onFunctionSelect={onFunctionSelect} />);
+    fireEvent.click(screen.getByText('SUM'));
+    expect(onFunctionSelect).toHaveBeenCalledWith('SUM');
+  });
+
+  it('calls closeWizard when FunctionPicker is closed', () => {
+    const closeWizard = jest.fn();
+    const wizard = createWizardState({ state: 'AUTOCOMPLETE' });
+    render(<FormulaWizard {...defaultProps} wizard={wizard} closeWizard={closeWizard} />);
+    fireEvent.click(screen.getByTitle('Close'));
+    expect(closeWizard).toHaveBeenCalled();
   });
 });

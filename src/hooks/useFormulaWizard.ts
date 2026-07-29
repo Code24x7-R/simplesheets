@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import type { FormulaASTNode, FunctionDefinition } from '../utils/formulaWizardSchema';
 import { getFunctionSchema } from '../utils/formulaWizardSchema';
 import { compileASTNodeToString } from '../utils/formulaWizardCompiler';
+import { importFormulaToWizard } from '../utils/formulaWizardImport';
 
 /**
  * Wizard state machine states.
@@ -9,6 +10,7 @@ import { compileASTNodeToString } from '../utils/formulaWizardCompiler';
  */
 export type WizardState =
   | 'INACTIVE'      // Spreadsheet in SELECT or EDIT
+  | 'AUTOCOMPLETE'  // Showing function picker (no formula to import)
   | 'WIZARD_ROOT'   // Top-level function parameter
   | 'NESTED_STEP'   // Evaluating child parameter (depth N)
   | 'POINT_SELECTION'; // Grid mouse/keyboard range mode
@@ -53,12 +55,18 @@ export interface UseFormulaWizardResult {
   wizard: WizardStateData;
   /** Open the wizard with a function */
   openWizard: (functionName: string, targetCellRef?: string) => void;
+  /** Import an existing formula into the wizard */
+  importFormula: (formula: string, targetCellRef?: string) => boolean;
+  /** Open the wizard with autocomplete picker (for cells without formulas) */
+  openWithAutocomplete: (targetCellRef?: string) => void;
   /** Close the wizard */
   closeWizard: () => void;
   /** Set a parameter value */
   setParameter: (paramId: string, value: string, isNestedFunction?: boolean, nestedNodeId?: string) => void;
   /** Navigate into a nested function parameter */
   enterNested: (paramId: string, functionName: string) => void;
+  /** Navigate into an existing nested function (from imported formula) */
+  enterExistingNested: (nestedNodeId: string) => void;
   /** Navigate back to the parent function */
   goBack: () => void;
   /** Start point selection for a parameter */
@@ -117,6 +125,53 @@ export function useFormulaWizard(): UseFormulaWizardResult {
       targetCellRef: targetCellRef ?? null,
       pointSelectionParamIndex: null,
       activeSchema: schema,
+    });
+  }, []);
+
+  const importFormula = useCallback(
+    (formula: string, targetCellRef?: string): boolean => {
+      const result = importFormulaToWizard(formula);
+      if (!result) {
+        // Could not import — return false so caller can fall back to autocomplete
+        return false;
+      }
+
+      const { root, nodeMap } = result;
+      const schema = getFunctionSchema(root.functionName);
+
+      // Compile the formula from the imported tree
+      const compiled = compileASTNodeToString(root, nodeMap);
+
+      setWizard({
+        state: 'WIZARD_ROOT',
+        nodeStack: [root],
+        nodeMap,
+        activeNode: root,
+        nestingDepth: 1,
+        compiledFormula: compiled,
+        isOpen: true,
+        targetCellRef: targetCellRef ?? null,
+        pointSelectionParamIndex: null,
+        activeSchema: schema,
+      });
+
+      return true;
+    },
+    [],
+  );
+
+  const openWithAutocomplete = useCallback((targetCellRef?: string) => {
+    setWizard({
+      state: 'AUTOCOMPLETE',
+      nodeStack: [],
+      nodeMap: new Map(),
+      activeNode: null,
+      nestingDepth: 0,
+      compiledFormula: '',
+      isOpen: true,
+      targetCellRef: targetCellRef ?? null,
+      pointSelectionParamIndex: null,
+      activeSchema: null,
     });
   }, []);
 
@@ -229,6 +284,28 @@ export function useFormulaWizard(): UseFormulaWizardResult {
     });
   }, []);
 
+  const enterExistingNested = useCallback((nestedNodeId: string) => {
+    setWizard((prev) => {
+      const nestedNode = prev.nodeMap.get(nestedNodeId);
+      if (!nestedNode) return prev;
+
+      const nestedSchema = getFunctionSchema(nestedNode.functionName);
+
+      // Push nested node onto stack
+      const newStack = [...prev.nodeStack, nestedNode];
+
+      return {
+        ...prev,
+        state: 'NESTED_STEP' as const,
+        nodeStack: newStack,
+        activeNode: nestedNode,
+        nestingDepth: prev.nestingDepth + 1,
+        activeSchema: nestedSchema,
+        compiledFormula: compileASTNodeToString(nestedNode, prev.nodeMap),
+      };
+    });
+  }, []);
+
   const goBack = useCallback(() => {
     setWizard((prev) => {
       if (prev.nodeStack.length <= 1) return prev;
@@ -331,9 +408,12 @@ export function useFormulaWizard(): UseFormulaWizardResult {
   return {
     wizard,
     openWizard,
+    importFormula,
+    openWithAutocomplete,
     closeWizard,
     setParameter,
     enterNested,
+    enterExistingNested,
     goBack,
     startPointSelection,
     cancelPointSelection,

@@ -15,6 +15,7 @@ Achieve a clean, clutter-free UI with standardized dropdown menus, formula wizar
 - Phase 16 complete: Keyboard Shortcut Gaps (Ctrl+Enter, Alt+Enter, Ctrl+Left/Right, End key)
 - Phase 20 complete: Number Formatting Enhancements (auto-align numbers/dates/times, Accounting format)
 - Phase 24 complete: Formula Wizard Wiring (fx button, Ctrl+Shift+F, Insert menu)
+- Phase 25 in progress: Formula Wizard Import & Smart Open (pre-populate from cell formula, autocomplete fallback)
 
 ---
 
@@ -1177,3 +1178,326 @@ preserves newlines
 ---
 
 
+
+## Phase 25: FormulaWizard Formula Import & Smart Open
+
+### Goal
+
+When the user opens the FormulaWizard (via fx button, Ctrl+Shift+F, or Insert menu), the wizard should be **pre-populated with the current cell's formula** if one exists. If the cell has no formula, show an **autocomplete picker** to let the user choose a function.
+
+### Current State
+
+- FormulaWizard opens blank with a default function (SUM)
+- `handleFxClick` extracts function name from regex but only uses it to select the schema — it does NOT import the formula's parameters
+- No support for pre-populating parameter values from an existing formula
+- No autocomplete fallback when cell has no formula
+
+### Design
+
+#### Workflow 1: Cell Has Formula (e.g., `=SUM(B4:D4)`)
+
+```
+User selects E3 with =SUM(B4:D4) → presses Ctrl+Shift+F
+    ↓
+Wizard opens showing:
+    ┌─────────────────────────────────────┐
+    │ Nested Formula Wizard               │
+    │ f(x) SUM                            │
+    │                                     │
+    │ Number1: [B4:D4]          🗗        │
+    │ Number2: [    ] (optional) 🗗        │
+    │                                     │
+    │ Result: 15          =SUM(B4:D4)     │
+    │                                     │
+    │ [Cancel]              [Apply to Cell]│
+    └─────────────────────────────────────┘
+```
+
+#### Workflow 2: Cell Has Nested Formula (e.g., `=IF(A1>0, SUM(B4:D4), 0)`)
+
+```
+User opens wizard
+    ↓
+Wizard opens at root level showing:
+    ┌─────────────────────────────────────┐
+    │ Nested Formula Wizard               │
+    │ f(x) IF                             │
+    │                                     │
+    │ Condition: [A1>0]                   │
+    │ True_val:  [SUM(B4:D4)]  ← nested   │
+    │ False_val: [0]                      │
+    └─────────────────────────────────────┘
+    ↓
+User clicks "SUM(B4:D4)" breadcrumb or drills in:
+    ┌─────────────────────────────────────┐
+    │ Nested Formula Wizard               │
+    │ f(x) IF > f(x) SUM                  │
+    │                                     │
+    │ Number1: [B4:D4]          🗗        │
+    └─────────────────────────────────────┘
+```
+
+#### Workflow 3: Cell Has No Formula
+
+```
+User selects empty cell → presses Ctrl+Shift+F
+    ↓
+Autocomplete dropdown appears:
+    ┌─────────────────────────────────────┐
+    │ Choose a function:                  │
+    │ ┌─────────────────────────────────┐ │
+    │ │ SUM      SUM(number1, ...) Math │ │
+    │ │ AVERAGE  AVERAGE(number1, ...)  │ │
+    │ │ IF       IF(condition, ...)     │ │
+    │ │ COUNT    COUNT(value1, ...)     │ │
+    │ │ ...                             │ │
+    │ └─────────────────────────────────┘ │
+    └─────────────────────────────────────┘
+    ↓
+User picks SUM → wizard opens with blank SUM parameters
+```
+
+### Key Design Decisions
+
+#### 1. Import Strategy: Function-Rooted Tree
+
+The wizard's AST model represents **functions with parameters**. Each parameter can be:
+- A literal value (string, number, boolean)
+- A cell reference or range
+- A nested function
+
+Binary operators (`+`, `-`, `>`, `&`, etc.) are **NOT** natively supported in the wizard's parameter model. When importing a formula like `=IF(A1>0, SUM(B4:D4), 0)`:
+- `condition` parameter gets rawValue `"A1>0"` (binary op as string)
+- `true_val` parameter becomes a nested SUM function
+- `false_val` parameter gets rawValue `"0"`
+
+This is consistent with how the wizard already works — users can type any expression in parameter inputs.
+
+#### 2. What Can Be Imported
+
+| Formula Pattern | Import Behavior |
+|-----------------|-----------------|
+| `=SUM(B4:D4)` | ✅ Full import — parameters populated |
+| `=IF(A1>0, SUM(B4:D4), 0)` | ✅ Full import with nested functions |
+| `=A1+B1` | ❌ No outer function → show autocomplete |
+| `=5` | ❌ Literal → show autocomplete |
+| `=A1` | ❌ Cell ref → show autocomplete |
+| `=-A1` | ❌ Unary → show autocomplete |
+| `=SUM(A1:A10)+1` | ⚠️ Partial — import SUM(A1:A10), the `+1` is lost (wizard can't represent it) |
+| `=UNKNOWN_FUNC(X)` | ⚠️ Import as raw value if function not in schema |
+
+#### 3. Autocomplete for No-Formula Case
+
+When the cell has no importable formula:
+- Show a dropdown list of all 45 wizard-supported functions
+- Search/filter as user types (reuse `searchFunctions` from `formulaAutocomplete.ts`)
+- Selecting a function opens the wizard with that function's schema
+- User can still browse categories (Math, Logical, Text, etc.)
+
+#### 4. AST Conversion Architecture
+
+```
+parseFormula("=IF(A1>0, SUM(B4:D4), 0)")
+    ↓
+Parser AST (IF function node)
+    ↓
+importFormulaToWizard() converts to:
+    ↓
+Wizard AST:
+  root: IF node
+    ├── condition: "A1>0" (raw string)
+    ├── true_val: nested SUM node
+    │     └── number1: "B4:D4"
+    └── false_val: "0" (raw string)
+```
+
+### Stages & Subtasks
+
+---
+
+#### Stage 25a: Formula Import Utility
+
+**Goal**: Create `formulaWizardImport.ts` to convert parsed formulas into wizard AST.
+
+- [ ] **25a.1**: Create `src/utils/formulaWizardImport.ts` with:
+  - `importFormulaToWizard(formula: string): FormulaASTNode | null` — main entry point
+  - Handles the case where formula doesn't start with a function (returns null)
+  - Recursively walks the parser AST and builds wizard AST
+  - Maps `FunctionNode` → `FormulaASTNode` with nested children
+  - Maps `CellRefNode`/`RangeNode` → string rawValue (e.g., "B4:D4")
+  - Maps `NumberNode`/`StringNode`/`BooleanNode` → string rawValue
+  - Maps `BinaryOpNode`/`UnaryOpNode` → string rawValue (e.g., "A1>0")
+  - Handles absolute references ($A$1) correctly
+  - Handles cross-sheet references (Sheet1!A1)
+  - Handles unknown functions gracefully (import as raw text or skip)
+
+- [ ] **25a.2**: Write unit tests for `formulaWizardImport.ts`:
+  - Import simple function: `=SUM(B4:D4)`
+  - Import nested function: `=IF(A1>0, SUM(B4:D4), 0)`
+  - Import deeply nested: `=IF(A1>0, IF(B1>0, SUM(C1:C10), 0), -1)`
+  - Import with multiple args: `=VLOOKUP(A1, B1:D10, 2, FALSE)`
+  - Import with no function: `=A1+B1` → returns null
+  - Import with literal: `=5` → returns null
+  - Import with unknown function: `=CUSTOM(A1)` → handle gracefully
+  - Import with absolute refs: `=$A$1+$B$2` → string representation
+  - Import with cross-sheet ref: `=Sheet1!A1` → string representation
+
+---
+
+#### Stage 25b: Enhance useFormulaWizard Hook
+
+**Goal**: Add `importFormula` method to the hook.
+
+- [ ] **25b.1**: Add `importFormula(formula: string, targetCellRef?: string)` method to `useFormulaWizard`:
+  - Calls `importFormulaToWizard()` to build the AST tree
+  - Sets initial state with root node and full nested tree
+  - Handles the case where import returns null (fall back to autocomplete)
+  - Sets `nestingDepth` to 1 (at root level)
+  - Compiles the formula for preview
+
+- [ ] **25b.2**: Add `openWithAutocomplete(targetCellRef?: string)` method:
+  - Sets state to show autocomplete dropdown
+  - Doesn't create any AST nodes yet
+  - Waits for user to pick a function
+
+- [ ] **25b.3**: Update hook return type to include new methods
+
+- [ ] **25b.4**: Write unit tests for new hook methods:
+  - `importFormula` populates AST correctly
+  - `importFormula` with null result triggers autocomplete
+  - `openWithAutocomplete` shows autocomplete state
+
+---
+
+#### Stage 25c: Autocomplete Picker Component
+
+**Goal**: Create `FunctionPicker` component for when cell has no formula.
+
+- [ ] **25c.1**: Create `src/components/FunctionPicker.tsx`:
+  - Modal overlay similar to FormulaWizard
+  - Search input at top
+  - Scrollable list of functions grouped by category
+  - Each item shows: name, signature, description, category
+  - Keyboard navigation (arrows + Enter to select)
+  - Click to select and open wizard
+  - Reuse `searchFunctions` from `formulaAutocomplete.ts`
+
+- [ ] **25c.2**: Style consistently with FormulaWizard (same modal look)
+
+- [ ] **25c.3**: Write unit tests:
+  - Renders function list
+  - Filters as user types
+  - Keyboard navigation works
+  - Clicking item calls onSelect
+
+---
+
+#### Stage 25d: Enhance FormulaWizard Component
+
+**Goal**: Update FormulaWizard to handle imported formulas and nested navigation.
+
+- [ ] **25d.1**: Update `FormulaWizard.tsx` to display imported parameter values:
+  - When opened with pre-populated AST, show parameter values from import
+  - Parameters with nested functions show function name as value (e.g., "SUM(B4:D4)")
+  - Clicking a nested function value navigates into it (reuses existing breadcrumb logic)
+
+- [ ] **25d.2**: Add `FunctionPicker` integration:
+  - When wizard state is `AUTOCOMPLETE`, show `FunctionPicker` instead of parameter form
+  - When user picks a function, transition to `WIZARD_ROOT` with that function
+
+- [ ] **25d.3**: Update breadcrumb to show imported nested path:
+  - When formula has nested functions, breadcrumb shows full path
+  - User can click any level to navigate back
+
+- [ ] **25d.4**: Write/update tests:
+  - Wizard shows imported parameter values
+  - Clicking nested function navigates into it
+  - FunctionPicker appears when no formula imported
+
+---
+
+#### Stage 25e: Wire Triggers in App.tsx
+
+**Goal**: Update `handleFxClick` and related handlers to use import.
+
+- [ ] **25e.1**: Update `handleFxClick` in `App.tsx`:
+  - Check if current cell value starts with `=` and contains a function
+  - If yes → call `importFormula(currentValue, targetCellRef)`
+  - If no → call `openWithAutocomplete(targetCellRef)`
+
+- [ ] **25e.2**: Update menu handler (`onFormulaWizard`) with same logic
+
+- [ ] **25e.3**: Update Ctrl+Shift+F handler with same logic
+
+- [ ] **25e.4**: Update `getActiveCellValue` to return the full formula string (including `=`)
+
+---
+
+#### Stage 25f: Documentation & Polish
+
+**Goal**: Update docs and ensure quality.
+
+- [ ] **25f.1**: Update README:
+  - Document that opening wizard on a formula pre-populates it
+  - Document the autocomplete fallback for empty cells
+  - Show nested formula example
+
+- [ ] **25f.2**: Update PLAN.md:
+  - Add Phase 25 with completion status
+  - Update "Current State" section
+
+- [ ] **25f.3**: Run full verification:
+  - `npm test` — all tests pass
+  - `npm run lint` — 0 warnings
+  - `npm run type-check` — clean
+  - `npm run build` — clean
+
+- [ ] **25f.4**: Manual smoke test:
+  - Open wizard on cell with `=SUM(B4:D4)` → parameters populated
+  - Open wizard on cell with `=IF(A1>0, SUM(B4:D4), 0)` → nested navigation works
+  - Open wizard on empty cell → autocomplete appears
+  - Open wizard on cell with `=A1+B1` → autocomplete appears
+  - Edit parameter in wizard → formula updates
+  - Navigate into nested function → breadcrumb works
+  - Apply → formula committed to cell
+
+---
+
+### Files to Create/Modify
+
+| File | Action | Description |
+|------|--------|-------------|
+| `src/utils/formulaWizardImport.ts` | **NEW** | Convert parsed formulas to wizard AST |
+| `src/utils/formulaWizardImport.test.ts` | **NEW** | Unit tests for import utility |
+| `src/hooks/useFormulaWizard.ts` | MODIFY | Add `importFormula`, `openWithAutocomplete` |
+| `src/components/FunctionPicker.tsx` | **NEW** | Autocomplete function picker modal |
+| `src/components/FunctionPicker.test.tsx` | **NEW** | Tests for picker |
+| `src/components/FormulaWizard.tsx` | MODIFY | Show imported values, integrate FunctionPicker |
+| `src/App.tsx` | MODIFY | Update `handleFxClick` to use import logic |
+| `README.md` | UPDATE | Document new behavior |
+| `PLAN.md` | UPDATE | Add Phase 25 |
+
+### Test Plan
+
+| Test Type | Count | Focus |
+|-----------|-------|-------|
+| Unit | ~15 | `formulaWizardImport` utility |
+| Unit | ~5 | `useFormulaWizard` new methods |
+| Unit | ~6 | `FunctionPicker` component |
+| Integration | ~6 | `FormulaWizard` with imported data |
+| Integration | ~4 | `App.tsx` trigger wiring |
+| **Total New** | **~36** | |
+
+### Estimated Test Count
+
+- Current: 1929
+- After Phase 25: ~1965
+
+### Dependencies
+
+- `formulaParser.ts` (existing) — parse formulas to AST
+- `formulaWizardSchema.ts` (existing) — wizard AST types
+- `formulaWizardCompiler.ts` (existing) — compile wizard AST to formula string
+- `formulaAutocomplete.ts` (existing) — function search for picker
+- `FormulaWizard.tsx` (existing) — main wizard component
+- `useFormulaWizard.ts` (existing) — wizard state hook
