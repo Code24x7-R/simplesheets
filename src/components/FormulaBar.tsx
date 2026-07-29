@@ -278,8 +278,12 @@ export function FormulaBar({
     if (suppressFocus.current) {
       return;
     }
+    // Don't commit if we're already in SELECT state (e.g., Enter/Tab already committed)
+    if (session.state === 'SELECT') {
+      return;
+    }
     onRawBlur();
-  }, [onRawBlur]);
+  }, [onRawBlur, session.state]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     // ── Expand/Collapse Formula Bar (Ctrl + Shift + U) ────────────────

@@ -5,9 +5,10 @@ import type { Sheet, Selection } from '../types';
 import { cellKey, colToLetter } from '../types';
 import type { HighlightedRange } from './FormulaBar';
 import type { ReferenceFormat } from '../hooks/useReferenceFormat';
+import type { EditingSession } from '../hooks/useCellEditing';
 import { ResizeHandle } from './ResizeHandle';
 import { FilterDropdown } from './FilterDropdown';
-import { formatNumberValue, isNumberFormat, isNumericValue } from '../utils/numberFormat';
+import { formatNumberValue, isNumberFormat, isNumericValue, isAccountingFormat, shouldRightAlign } from '../utils/numberFormat';
 import { hasClipboardData } from '../utils/clipboard';
 import type { ColumnFilter } from '../utils/sheetFilter';
 import { HIGHLIGHT_COLORS, HIGHLIGHT_BORDER_COLORS } from '../utils/highlightColors';
@@ -80,12 +81,16 @@ interface GridProps {
   onClearClipboard?: () => void;
   /** When true, display formulas instead of computed values (Ctrl + `). */
   showFormulas?: boolean;
-  /** Called when the cell editing value changes (for FormulaBar autocomplete). */
-  onCellEditChange?: (value: string) => void;
-  /** Called when a key is pressed during POINT mode in cell edit (for arrow key navigation).
-   * Returns the new buffer value if the FSM updated it (e.g., after arrow navigation
-   * or closing parenthesis), so the Grid can sync its editValue. */
-  onPointKeyDown?: (key: string, shiftKey: boolean, ctrlKey: boolean, altKey: boolean) => string | undefined;
+  /** The current editing session from the FSM. */
+  session?: EditingSession;
+  /** Start editing a cell (ENTER mode — replaces content with a character). */
+  onStartEnter?: (row: number, col: number, char: string) => void;
+  /** Start editing a cell (EDIT mode — preserves existing content). */
+  onStartEdit?: (row: number, col: number) => void;
+  /** Forward a raw key down event to the FSM for processing. */
+  onRawKeyDown?: (e: React.KeyboardEvent) => void;
+  /** Forward a raw change event to the FSM (value + caret position). */
+  onRawChange?: (value: string, caretPos: number) => void;
   /** Callback when the fill handle is dragged.
    * Provides the source range (the selection being extended) and the target end cell.
    * The parent computes the fill values based on pattern detection. */
@@ -117,16 +122,14 @@ export interface GridHandle {
  * Supports 10,000+ rows with smooth scrolling.
  */
 export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
-  { sheet, onCellChange, onCellsChange, onSelect, selectedCell, highlightedRanges = [], isPointMode = false, pointSelection = null, onCellPick, onHeaderSelect, onSelectionChange, onColumnResize, onRowResize, referenceFormat = 'A1', onInsertRowAbove, onInsertRowBelow, onDeleteRow, onInsertColLeft, onInsertColRight, onDeleteCol, clipboardRange, onClearClipboard, showFormulas = false, onCellEditChange, onPointKeyDown, onFillSeries, filterState = null, onApplyFilter },
+  { sheet, onCellChange, onCellsChange, onSelect, selectedCell, highlightedRanges = [], isPointMode = false, pointSelection = null, onCellPick, onHeaderSelect, onSelectionChange, onColumnResize, onRowResize, referenceFormat = 'A1', onInsertRowAbove, onInsertRowBelow, onDeleteRow, onInsertColLeft, onInsertColRight, onDeleteCol, clipboardRange, onClearClipboard, showFormulas = false, session, onStartEnter, onStartEdit, onRawKeyDown, onRawChange, onFillSeries, filterState = null, onApplyFilter },
   ref
 ) {
   const parentRef = useRef<HTMLDivElement>(null);
   const [selection, setSelection] = useState<Selection | null>(null);
-  const [editingCell, setEditingCell] = useState<string | null>(null);
-  const [editValue, setEditValue] = useState('');
   const editInputRef = useRef<HTMLInputElement>(null);
-  const editingCellRef = useRef<string | null>(null);
-  editingCellRef.current = editingCell;
+  // Track whether we were editing (for focus management when editing ends)
+  const wasEditingRef = useRef(false);
 
   // Expose focus() to parent for restoring keyboard navigation after paste
   useImperativeHandle(ref, () => ({
@@ -198,10 +201,54 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
   const selectionRef = useRef<Selection | null>(null);
   selectionRef.current = selection ?? effectiveSelection;
 
+  // ─── Editing State (derived from FSM session) ──────────────────────────
+  // Grid is now a pure view — all editing state comes from the FSM session.
+  // A cell is being edited when the session is in ENTER/EDIT/POINT state and
+  // the session's row/col matches this cell.
+  const isEditingCell = useCallback(
+    (row: number, col: number): boolean => {
+      if (!session) return false;
+      return session.state !== 'SELECT' && session.row === row && session.col === col;
+    },
+    [session],
+  );
+  const isEditing = session ? session.state !== 'SELECT' : false;
+  const editBuffer = session ? session.buffer : '';
+
   // Notify parent when the internal selection changes (for style application on ranges)
   useEffect(() => {
     onSelectionChange?.(selection);
   }, [selection, onSelectionChange]);
+
+  // Sync internal selection with selectedCell prop from parent.
+  // This is critical: when the FSM navigates (e.g., after commit via onNavigate),
+  // the parent updates activeCell → selectedCell, but the Grid's internal selection
+  // would otherwise remain stale, causing arrow keys to navigate from the wrong cell.
+  // IMPORTANT: Only sync when the Grid's selection is a single cell (not a range).
+  // Range selections (from shift+arrow) must NOT be overwritten.
+  useEffect(() => {
+    if (selectedCell && !isPointMode) {
+      setSelection((prev) => {
+        // Only sync single-cell selections, never overwrite ranges
+        const isSingleCell = prev && prev.type === 'cell'
+          && prev.startRow === prev.endRow && prev.startCol === prev.endCol;
+        if (!isSingleCell) return prev;
+        // Only update if different to avoid infinite loops
+        if (prev.startRow === selectedCell.row && prev.startCol === selectedCell.col) {
+          return prev;
+        }
+        return {
+          type: 'cell' as const,
+          startRow: selectedCell.row,
+          startCol: selectedCell.col,
+          endRow: selectedCell.row,
+          endCol: selectedCell.col,
+          anchorRow: selectedCell.row,
+          anchorCol: selectedCell.col,
+        };
+      });
+    }
+  }, [selectedCell, isPointMode]);
 
   const { defaultRowHeight, defaultColWidth, columnWidths, rowHeights, rowCount, columnCount, cells, frozenColumns, frozenRows } = sheet;
 
@@ -211,20 +258,6 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
   const isRowFrozen = (row: number) => frozenRows > 0 && row < frozenRows;
   const isColFrozen = (col: number) => frozenColumns > 0 && col < frozenColumns;
   const isCellFrozen = (row: number, col: number) => isRowFrozen(row) || isColFrozen(col);
-
-  // ─── Insert at Cursor Helper ─────────────────────────────────────
-  // Inserts text at the cursor position in an input element, replacing
-  // any selected text. Falls back to appending at the end.
-  const insertAtCursor = useCallback((input: HTMLInputElement, text: string) => {
-    const start = input.selectionStart ?? editValue.length;
-    const end = input.selectionEnd ?? editValue.length;
-    const newValue = editValue.slice(0, start) + text + editValue.slice(end);
-    setEditValue(newValue);
-    // Move cursor after inserted text (deferred to after state update)
-    requestAnimationFrame(() => {
-      input.selectionStart = input.selectionEnd = start + text.length;
-    });
-  }, [editValue]);
 
   // ─── Display Value Helper ─────────────────────────────────────────
   // Returns the display string for a cell, applying number formatting if the cell
@@ -330,6 +363,42 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
     return () => clearTimeout(timer);
   }, [isPointMode, pointSelection, rowVirtualizer, columnVirtualizer]);
 
+  // ─── Cursor Sync Effect ───────────────────────────────────────────
+  // Keeps the input caret position in sync with the FSM's caretPos.
+  // Only syncs when there's no active selection to avoid clearing the
+  // user's text selection.
+  useEffect(() => {
+    const input = editInputRef.current;
+    if (!input || !session || document.activeElement !== input) return;
+    const hasSelection = input.selectionStart !== input.selectionEnd;
+    if (!hasSelection && session.caretPos >= 0) {
+      const pos = Math.min(session.caretPos, editBuffer.length);
+      input.setSelectionRange(pos, pos);
+    }
+  }, [session?.caretPos, editBuffer, session]);
+
+  // ─── Focus Management ──────────────────────────────────────────────
+  // When editing ends (session transitions to SELECT), focus the grid
+  // container so keyboard navigation continues to work.
+  // Uses requestAnimationFrame to ensure the input has fully unmounted
+  // before restoring focus to the grid container.
+  useEffect(() => {
+    if (!session) return;
+    if (session.state === 'SELECT' && wasEditingRef.current) {
+      wasEditingRef.current = false;
+      // Use rAF to wait for the browser to paint (input unmounts) before focusing
+      const rafId = requestAnimationFrame(() => {
+        // Double-check we're still in SELECT state and input is gone
+        if (session.state === 'SELECT' && !editInputRef.current) {
+          parentRef.current?.focus();
+        }
+      });
+      return () => cancelAnimationFrame(rafId);
+    } else if (session.state !== 'SELECT') {
+      wasEditingRef.current = true;
+    }
+  }, [session]);
+
   // ─── Global Clipboard Shortcuts ──────────────────────────────────────────
   // Handles Ctrl+C/X/V at the window level so they work regardless of which
   // element has focus (formula bar, menu, etc.). Uses selectionRef to avoid
@@ -339,13 +408,15 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
   // The native input handles Ctrl+C/X/V for text-level operations (copy/cut/paste
   // within the cell). This prevents the "copy cell" behavior from activating
   // when the user wants to copy text within the cell.
+  const isEditingRef = useRef(false);
+  isEditingRef.current = isEditing;
   useEffect(() => {
     const handleGlobalClipboardKey = (e: KeyboardEvent) => {
       if (!e.ctrlKey && !e.metaKey) return;
 
       // When editing a cell, let the native input handle clipboard keys
       // for text-level operations (copy/cut/paste within the cell)
-      if (editingCellRef.current) return;
+      if (isEditingRef.current) return;
 
       const sel = selectionRef.current;
       if (!sel) return;
@@ -425,6 +496,7 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
         anchorCol: col,
       };
       setSelection(sel);
+      selectionRef.current = sel; // synchronous update for next keydown in batch
       onSelect?.(row, col);
     },
     [onSelect]
@@ -435,7 +507,6 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
    */
   const handleRowHeaderClick = useCallback(
     (row: number, shiftKey: boolean) => {
-      if (editingCell) setEditingCell(null);
       onHeaderSelect?.({ type: 'row', index: row });
 
       if (shiftKey && selection?.type === 'row') {
@@ -465,7 +536,7 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
       }
       onSelect?.(row, 0);
     },
-    [selection, editingCell, columnCount, onSelect, onHeaderSelect]
+    [selection, columnCount, onSelect, onHeaderSelect]
   );
 
   /**
@@ -473,7 +544,6 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
    */
   const handleColHeaderClick = useCallback(
     (col: number, shiftKey: boolean) => {
-      if (editingCell) setEditingCell(null);
       onHeaderSelect?.({ type: 'col', index: col });
 
       if (shiftKey && selection?.type === 'col') {
@@ -502,7 +572,7 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
       }
       onSelect?.(0, col);
     },
-    [selection, editingCell, rowCount, onSelect, onHeaderSelect]
+    [selection, rowCount, onSelect, onHeaderSelect]
   );
 
   /**
@@ -560,21 +630,6 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [headerContextMenu]);
-
-  /**
-   * Starts editing a cell (on double-click or Enter).
-   */
-  const handleCellEdit = useCallback(
-    (row: number, col: number) => {
-      const key = cellKey(row, col);
-      const cell = cells[key];
-      setEditingCell(key);
-      setEditValue(cell?.rawValue ?? '');
-      // Update the active cell so the FSM uses the correct row/col for POINT mode
-      onSelect?.(row, col);
-    },
-    [cells, onSelect]
-  );
 
   /**
    * Handles range selection with shift-click.
@@ -840,75 +895,6 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
   /**
    * Commits the current edit, notifies the parent, and exits editing mode.
    */
-  // Flag to prevent onBlur from committing when Escape is pressed
-  const cancelRef = useRef(false);
-
-  const commitEdit = useCallback(() => {
-    if (cancelRef.current) {
-      cancelRef.current = false;
-      return;
-    }
-    if (editingCell && onCellChange) {
-      const [rowStr, colStr] = editingCell.split(':');
-      const row = parseInt(rowStr, 10);
-      const col = parseInt(colStr, 10);
-      onCellChange(row, col, editValue);
-    }
-    setEditingCell(null);
-  }, [editingCell, editValue, onCellChange]);
-
-  /**
-   * Moves the selection in the specified direction after committing an edit.
-   * Wraps around row boundaries (e.g., moving right from last column goes to
-   * first column of next row).
-   */
-  const moveSelection = useCallback(
-    (direction: 'up' | 'down' | 'left' | 'right') => {
-      const sel = selectionRef.current;
-      if (!sel) return;
-      let row = sel.endRow;
-      let col = sel.endCol;
-      switch (direction) {
-        case 'up':
-          row = Math.max(0, row - 1);
-          break;
-        case 'down':
-          row = Math.min(rowCount - 1, row + 1);
-          break;
-        case 'left':
-          if (col > 0) {
-            col = col - 1;
-          } else if (row > 0) {
-            row = row - 1;
-            col = columnCount - 1;
-          }
-          break;
-        case 'right':
-          if (col < columnCount - 1) {
-            col = col + 1;
-          } else if (row < rowCount - 1) {
-            row = row + 1;
-            col = 0;
-          }
-          break;
-      }
-      setSelection({
-        type: 'cell',
-        startRow: row,
-        startCol: col,
-        endRow: row,
-        endCol: col,
-        anchorRow: row,
-        anchorCol: col,
-      });
-      onSelect?.(row, col);
-      // Scroll the new cell into view
-      rowVirtualizer.scrollToIndex(row);
-      columnVirtualizer.scrollToIndex(col);
-    },
-    [rowCount, columnCount, onSelect, rowVirtualizer, columnVirtualizer]
-  );
-
   /**
    * Starts a resize drag — records original size in a ref (not state) and
    * toggles handle visibility. No re-render of grid content.
@@ -1027,29 +1013,13 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
   }, []);
 
   /**
-   * Starts editing a cell with an initial character (Excel-like direct entry).
-   */
-  const handleCellEditWithChar = useCallback(
-    (row: number, col: number, char: string) => {
-      // Typing in a new cell clears the clipboard (marching ants)
-      onClearClipboard?.();
-      const key = cellKey(row, col);
-      setEditingCell(key);
-      setEditValue(char);
-      // Notify parent so the FSM enters ENTER mode
-      onCellEditChange?.(char);
-    },
-    [onClearClipboard, onCellEditChange]
-  );
-
-  /**
    * Handles keyboard navigation within the grid.
    * Implements Excel-like editing: typing a character starts editing immediately.
    */
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
-      // If already editing, let the input field handle keys
-      if (editingCell) return;
+      // If the FSM is handling editing (ENTER/EDIT/POINT), let the cell input handle keys
+      if (isEditing) return;
 
       // Ctrl+ shortcuts handled by global listeners in App.tsx (works regardless of focus).
       // Skip them here to avoid double-firing (e.g., Ctrl+B toggling bold AND typing 'b').
@@ -1081,11 +1051,12 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
       // Clear clipboard on Esc (spec: marching ants disappear when you press Esc)
       if (e.key === 'Escape') {
         onClearClipboard?.();
-        setEditingCell(null);
         return;
       }
 
-      const activeSelection = effectiveSelection;
+      // Use selectionRef for synchronous access to latest selection
+      // (effectiveSelection is a useMemo value that may be stale within a batch)
+      const activeSelection = selectionRef.current;
       if (!activeSelection) return;
 
       // For range selections, use endRow/endCol as the active position
@@ -1097,7 +1068,8 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
       if (isPrintableKey(e.key) && activeSelection.type === 'cell') {
         e.preventDefault();
         handleCellSelect(row, col);
-        handleCellEditWithChar(row, col, e.key);
+        onClearClipboard?.();
+        onStartEnter?.(row, col, e.key);
         return;
       }
 
@@ -1140,10 +1112,9 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
           case 'Enter':
           case 'F2':
             handleCellSelect(row, 0);
-            handleCellEdit(row, 0);
+            onStartEdit?.(row, 0);
             return;
           case 'Escape':
-            setEditingCell(null);
             return;
           default:
             return;
@@ -1201,10 +1172,9 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
           case 'Enter':
           case 'F2':
             handleCellSelect(0, col);
-            handleCellEdit(0, col);
+            onStartEdit?.(0, col);
             return;
           case 'Escape':
-            setEditingCell(null);
             return;
           default:
             return;
@@ -1284,7 +1254,7 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
         case 'Enter':
         case 'F2':
           handleCellSelect(row, col);
-          handleCellEdit(row, col);
+          onStartEdit?.(row, col);
           return;
         case 'Tab':
           // Tab moves right, wrapping to next row; Shift+Tab moves left
@@ -1312,7 +1282,6 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
           // This requires the formula bar context — handled by FormulaBar
           return;
         case 'Escape':
-          setEditingCell(null);
           return;
         case 'Delete':
         case 'Backspace':
@@ -1349,26 +1318,30 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
 
       // Shift+arrow expands the selection range instead of moving the anchor
       if (e.shiftKey && (e.key.startsWith('Arrow'))) {
-        setSelection({
-          type: 'cell',
+        const newSel = {
+          type: 'cell' as const,
           startRow: activeSelection.anchorRow,
           startCol: activeSelection.anchorCol,
           endRow: row,
           endCol: col,
           anchorRow: activeSelection.anchorRow,
           anchorCol: activeSelection.anchorCol,
-        });
+        };
+        setSelection(newSel);
+        selectionRef.current = newSel; // synchronous update for next keydown in batch
         onSelect?.(row, col);
       } else {
-        setSelection({
-          type: 'cell',
+        const newSel = {
+          type: 'cell' as const,
           startRow: row,
           startCol: col,
           endRow: row,
           endCol: col,
           anchorRow: row,
           anchorCol: col,
-        });
+        };
+        setSelection(newSel);
+        selectionRef.current = newSel; // synchronous update for next keydown in batch
         onSelect?.(row, col);
       }
 
@@ -1380,7 +1353,7 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
       columnVirtualizer.scrollToIndex(col, { align: colAlign });
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [effectiveSelection, editingCell, rowCount, columnCount, handleCellSelect, handleCellEdit, handleCellEditWithChar, isPrintableKey, rowVirtualizer, columnVirtualizer, onSelect, onCellChange, onCellsChange, onClearClipboard]
+    [effectiveSelection, isEditing, rowCount, columnCount, handleCellSelect, isPrintableKey, rowVirtualizer, columnVirtualizer, onSelect, onCellChange, onCellsChange, onClearClipboard, onStartEdit, onStartEnter]
   );
 
   /**
@@ -1533,7 +1506,6 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
               const key = cellKey(row, col);
               const cell = cells[key];
               const isSelected = isCellSelected(row, col);
-              const isEditing = editingCell === key;
               const highlightIdx = getCellHighlight(row, col);
               const inPointSelection = isInPointSelection(row, col);
               const cellStyle: React.CSSProperties = {
@@ -1611,6 +1583,7 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
                 }
               }
               const cellFrozen = isCellFrozen(row, col);
+              const cellEditing = isEditingCell(row, col);
               return (
                 <div
                   key={`cell-${key}`}
@@ -1618,116 +1591,87 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
                   className={`grid-cell ${cellFrozen ? 'grid-cell-frozen' : 'absolute'} ${isSelected ? 'grid-cell-selected' : ''}`}
                   style={cellStyle}
                   onMouseDown={(e) => handleCellMouseDown(row, col, e.shiftKey)}
-                  onDoubleClick={() => handleCellEdit(row, col)}
+                  onDoubleClick={() => onStartEdit?.(row, col)}
                 >
-                  {isEditing ? (
+                  {cellEditing ? (
                     <input
                       ref={editInputRef}
                       autoFocus
                       className="w-full h-full outline-none bg-white border border-blue-500 px-1 font-mono text-sm"
-                      value={editValue}
+                      value={editBuffer}
                       onChange={(e) => {
-                        setEditValue(e.target.value);
-                        onCellEditChange?.(e.target.value);
+                        const newPos = e.target.selectionStart ?? e.target.value.length;
+                        onRawChange?.(e.target.value, newPos);
                       }}
                       onPaste={(e) => {
-                        // When editing, always intercept paste and insert at cursor
-                        // to prevent the native behavior of replacing all text
+                        // Explicitly handle paste to ensure consistent behavior
+                        // across browsers and test environments (JSDOM doesn't
+                        // trigger onChange after native paste).
                         const text = e.clipboardData?.getData('text/plain');
                         if (text) {
                           e.preventDefault();
-                          insertAtCursor(e.currentTarget, text);
+                          const input = e.currentTarget;
+                          const selStart = input.selectionStart ?? editBuffer.length;
+                          const selEnd = input.selectionEnd ?? editBuffer.length;
+                          const newValue = editBuffer.slice(0, selStart) + text + editBuffer.slice(selEnd);
+                          const newPos = selStart + text.length;
+                          onRawChange?.(newValue, newPos);
                         }
                       }}
-                      onBlur={commitEdit}
                       onKeyDown={(e) => {
-                        // ── POINT mode: forward keys to FSM ────────────────────
-                        // When pointing at cells for a formula, ALL keys except
-                        // Enter/Tab (commit+navigate) and Escape (cancel) should
-                        // go to the FSM for POINT mode processing.
-                        if (isPointMode && onPointKeyDown) {
-                          // Enter and Tab commit the reference and navigate
-                          // Escape cancels POINT mode
-                          // All other keys (arrows, ), :, ,, operators, etc.) go to FSM
-                          if (e.key === 'Enter' || e.key === 'Tab') {
-                            // Let the native handler below commit and navigate
-                          } else if (e.key === 'Escape') {
-                            // Let the native handler below cancel
-                          } else {
-                            e.preventDefault();
-                            const newBuffer = onPointKeyDown(e.key, e.shiftKey, e.ctrlKey, e.altKey);
-                            // Sync FSM buffer back to Grid's editValue
-                            if (newBuffer !== undefined) {
-                              setEditValue(newBuffer);
-                            }
-                            return;
-                          }
+                        // ── Let native input handle text selection ──────────
+                        // Shift+Arrow creates text selection in ENTER/EDIT mode
+                        const isEditingText = session?.state === 'EDIT' || session?.state === 'ENTER';
+                        if (isEditingText && e.shiftKey && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+                          return;
                         }
+                        // Ctrl+A: select all text in the cell
                         if ((e.ctrlKey || e.metaKey) && (e.key === 'a' || e.key === 'A')) {
-                          // Ctrl+A: select all text in the cell
                           e.preventDefault();
                           e.currentTarget.select();
-                        } else if (e.key === 'Enter' && e.altKey) {
-                          // Alt+Enter: insert line break at cursor
-                          e.preventDefault();
-                          const input = e.currentTarget;
-                          const selStart = input.selectionStart ?? editValue.length;
-                          const selEnd = input.selectionEnd ?? editValue.length;
-                          const newValue = editValue.slice(0, selStart) + '\n' + editValue.slice(selEnd);
-                          setEditValue(newValue);
-                          // Sync to FSM via onCellEditChange
-                          onCellEditChange?.(newValue);
-                          // Move cursor after the newline
-                          requestAnimationFrame(() => {
-                            input.setSelectionRange(selStart + 1, selStart + 1);
-                          });
-                        } else if (e.key === 'Enter') {
-                          e.preventDefault();
-                          commitEdit();
-                          // Move selection down (or up with Shift+Enter)
-                          if (e.shiftKey) {
-                            moveSelection('up');
-                          } else {
-                            moveSelection('down');
-                          }
-                          parentRef.current?.focus();
-                        } else if (e.key === 'Tab') {
-                          e.preventDefault();
-                          commitEdit();
-                          // Move selection right (or left with Shift+Tab)
-                          if (e.shiftKey) {
-                            moveSelection('left');
-                          } else {
-                            moveSelection('right');
-                          }
-                          parentRef.current?.focus();
-                        } else if (e.key === 'F2') {
-                          // F2 toggles edit mode off (Excel behavior)
-                          e.preventDefault();
-                          commitEdit();
-                          parentRef.current?.focus();
-                        } else if (e.key === 'Escape') {
-                          e.preventDefault();
-                          cancelRef.current = true;
-                          setEditingCell(null);
-                          parentRef.current?.focus();
+                          return;
                         }
+                        // ── Forward all other keys to FSM ───────────────────
+                        // The FSM decides what to do based on its current state:
+                        // - ENTER/EDIT: character insertion, caret movement, commit, cancel
+                        // - POINT: arrow navigation, reference insertion, commit, cancel
+                        e.preventDefault();
+                        onRawKeyDown?.(e);
                       }}
                     />
-                  ) : (
-                    <span
-                      className={`block w-full h-full px-1 ${
-                        cell?.style?.whiteSpace === 'normal'
-                          ? 'whitespace-normal break-words'
-                          : cell?.style?.whiteSpace === 'pre'
-                          ? 'whitespace-pre-wrap break-words'
-                          : 'overflow-hidden text-ellipsis'
-                      }`}
-                      style={cell?.style?.textAlign ? { textAlign: cell.style.textAlign } : undefined}
-                    >
-                      {getDisplayValue(cell)}
-                    </span>
-                  )}
+                  ) : (() => {
+                    const isAccounting = cell?.style?.numberFormat && isAccountingFormat(cell.style.numberFormat);
+                    const displayValue = getDisplayValue(cell);
+                    // For accounting format, strip the leading $ and spaces to get just the number
+                    const accountingNum = isAccounting ? displayValue.replace(/^\$\s*/, '') : displayValue;
+                    return isAccounting ? (
+                      <span
+                        className="flex w-full h-full px-1 items-center justify-between"
+                      >
+                        <span className="flex-shrink-0">$</span>
+                        <span className="flex-shrink-0">{accountingNum}</span>
+                      </span>
+                    ) : (
+                      <span
+                        className={`block w-full h-full px-1 ${
+                          cell?.style?.whiteSpace === 'normal'
+                            ? 'whitespace-normal break-words'
+                            : cell?.style?.whiteSpace === 'pre'
+                            ? 'whitespace-pre-wrap break-words'
+                            : 'overflow-hidden text-ellipsis'
+                        }`}
+                        style={{
+                          textAlign: cell?.style?.textAlign
+                            ? cell.style.textAlign
+                            : shouldRightAlign(cell)
+                            ? 'right'
+                            : undefined,
+                        }}
+                      >
+                        {displayValue}
+                      </span>
+                    );
+                  })()}
                 </div>
               );
             })}

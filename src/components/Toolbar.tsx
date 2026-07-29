@@ -402,6 +402,13 @@ export function Toolbar(props: ToolbarProps) {
         </button>
         <button
           className="toolbar-btn text-xs"
+          onClick={() => props.onSetNumberFormat('_($*#,##0.00_);_($*(#,##0.00);_($* "-"??_);_(@_)')}
+          title="Accounting format (left-aligned $, right-aligned number, dash for zero)"
+        >
+          Acct
+        </button>
+        <button
+          className="toolbar-btn text-xs"
           onClick={() => props.onSetNumberFormat('0.00%')}
           title="Percent format"
         >

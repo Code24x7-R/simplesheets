@@ -22,6 +22,8 @@ A lightweight, browser‑based spreadsheet for small businesses. No server, no a
 - 🔢 **R1C1 reference format** — toggle between A1 and R1C1 notation by clicking the cell reference
 - 🧙 **Formula Wizard** — interactive step-by-step formula builder with nested function support, breadcrumb navigation, and live preview
 - 🔍 **Find & Replace** — search across cells with options for case sensitivity, exact match, formulas, and multi-sheet scope
+- 📐 **Smart cell alignment** — numbers, dates, and times auto-right-aligned; text stays left-aligned
+- 💰 **Accounting format** — left-aligned `$` symbol, right-aligned numbers, dash for zero values, decimal points align perfectly
 
 ---
 
@@ -70,6 +72,29 @@ SimpleSheet uses a clean, menu-based interface:
 | `F4` | Cycle reference absolute/relative |
 | `Enter` | Commit edit |
 | `Escape` | Cancel edit |
+
+### Number Formatting
+
+SimpleSheet supports Excel-style number formatting, accessible from the toolbar:
+
+| Button | Format | Example |
+|--------|--------|---------|
+| Gen | General (no formatting) | `42.5` |
+| 123 | Number (2 decimals) | `42.50` |
+| $ | Currency | `$42.50` |
+| Acct | Accounting | `$         42.50` (left-aligned $, right-aligned number, dash for zero) |
+| % | Percentage | `42.50%` |
+
+**Smart alignment**: Numbers, dates, and times are automatically right-aligned in cells. Text remains left-aligned. The Accounting format pins the `$` to the far-left edge and the number to the far-right edge, with decimal points aligning perfectly down the column. Zero values display as `-` for better readability.
+
+Supported format patterns include:
+- **Number**: `0`, `0.00`, `#,##0`, `#,##0.00`
+- **Currency**: `$#,##0.00`
+- **Accounting**: `_($* #,##0.00_);...` (Excel-compatible)
+- **Percentage**: `0%`, `0.00%`
+- **Date**: `mm/dd/yyyy`, `mm/dd/yy`, `yyyy-mm-dd`
+- **Time**: `hh:mm`, `hh:mm:ss`
+- **Scientific**: `0.00E+00`
 
 ### Reference Format Toggle
 
