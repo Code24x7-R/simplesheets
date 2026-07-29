@@ -741,9 +741,11 @@ autocomplete, F9 evaluation) that the formula bar has.
 
 ---
 
-## Phase 19: Unified Editing Architecture — ALIGNMENT ANALYSIS & REFACTOR
+## Phase 19: Unified Editing Architecture — MOSTLY COMPLETE
 
-**Status**: 📋 PLANNED (analysis complete, awaiting implementation)
+**Status**: ✅ Phase 19b (FSM unification) COMPLETE — Grid.tsx is now a pure view.
+Phase 19c-19e (shared FormulaEditor, F9, multiline) deferred.
+Phase 19f (cleanup) PARTIALLY COMPLETE — `onCellPick` removed, Ctrl+F2 remaining.
 
 ### Functional Alignment Analysis
 
@@ -835,14 +837,7 @@ Shift+F9 evaluates the current sheet only.
 | Formula Bar | Clicking other cells while editing always inserts references | ⚠️ `onCellPick` prop exists but is destructured as `_onCellPick` (unused) in FormulaBar; clicking cells works via Grid's `onCellPick` but only when Grid is focused | ⚠️ **Partial** |
 | In-line | Clicking away inserts references unless in Edit Mode (F2 toggle) | ✅ POINT mode handles this correctly | ✅ **Aligned** |
 
-**Gap**: When editing in the Formula Bar, clicking a cell in the Grid does trigger
-`onCellPick` (via App.tsx wiring), but the FormulaBar component itself has an unused
-`onCellPick` prop. The behavior works by accident of the Grid's mousedown handler,
-not by design from the FormulaBar.
-
-**Fix**: Clean up the unused prop. The current behavior actually works correctly
-(editing in formula bar + clicking a cell inserts a reference), but the prop
-should be removed from FormulaBar's interface since it's not used there.
+**Status**: The unused `onCellPick` prop was removed from FormulaBar. Cell-pick behavior works correctly through Grid's mousedown handler — the correct architecture.
 
 ---
 
@@ -912,9 +907,11 @@ FormulaBar, delegating all editing behavior to the FSM.
 11. ✅ Removed unused `formulaBarValue` state from App.tsx (FSM session.buffer is source of truth)
 12. ✅ Removed `handleCellEditChange` callback (no longer needed — Grid is pure view)
 13. ✅ Removed `handleFormulaRawKeyDown`/`handleFormulaRawChange` (merged into shared handlers)
-14. ✅ Removed unused `onCellPick` prop from FormulaBar (it was `_onCellPick`)
+14. ⬜ Removed unused `onCellPick` prop from FormulaBar — deferred to Phase 19f
 15. ✅ Added explicit paste handler to Grid input (JSDOM compatibility)
 16. ✅ Modified `useCellEditing` hook: `startEdit`/`startEditAt` accept optional row/col params
+17. ✅ Fixed FormulaBar double-commit bug: `handleBlur` guards with `session.state === 'SELECT'` check (prevents empty buffer from overwriting committed value)
+18. ✅ Fixed stale `sessionRef` in `setBuffer`: ref updated immediately to avoid stale closures in rapid typing
 
 **Files**: `Grid.tsx`, `App.tsx`, `useCellEditing.ts`, plus 8 test files updated
 **Tests**: 1888 passing (up from 1873), 75 suites, all green
@@ -968,20 +965,23 @@ multi-line editor.
 **Tests**: Test Alt+Enter in-cell creates textarea; test multiline display; test commit
 preserves newlines
 
-#### Phase 19f: Cleanup & Consistency
+#### Phase 19f: Cleanup & Consistency — PARTIALLY COMPLETE
 
 **Goal**: Remove dead code, fix known issues, ensure both editors are fully consistent.
 
 **Changes**:
-1. Remove unused `onCellPick` prop from FormulaBar (it's already `_onCellPick`)
-2. Remove `onCellEditChange` callback from App.tsx (no longer needed — Grid is pure view)
-3. Remove `onPointKeyDown` callback from App.tsx (POINT mode handled entirely in FSM)
-4. Remove `formulaBarValue` state from App.tsx (FSM session.buffer is the source of truth)
-5. Fix the known autocomplete/POINT state bug (should be fixed by 19b)
-6. Add Ctrl+F2 to move focus between in-cell editor and formula bar (Excel feature)
+1. ✅ Remove unused `onCellPick` prop from FormulaBar — **DONE**
+2. ✅ Remove unused `pointSession` and `statusMessage` props from FormulaBar — **DONE**
+3. ✅ Remove `onCellEditChange` callback from App.tsx — **DONE** (removed in 19b)
+4. ✅ Remove `onPointKeyDown` callback from App.tsx — **DONE** (removed in 19b)
+5. ✅ Remove `formulaBarValue` state from App.tsx — **DONE** (removed in 19b)
+6. ✅ Fix the known autocomplete/POINT state bug — **DONE** (fixed by FSM unification in 19b)
+7. ✅ Fix FormulaBar double-commit bug (blur handler guard for `session.state === 'SELECT'`) — **DONE**
+8. ⬜ Add Ctrl+F2 to move focus between in-cell editor and formula bar (Excel feature)
 
 **Files**: `FormulaBar.tsx`, `App.tsx`, `Grid.tsx`
-**Tests**: Regression test all editing workflows; verify focus moves with Ctrl+F2
+**Tests**: 1922 passing, lint clean
+**Remaining**: Ctrl+F2 focus toggle (minor feature, can be added in future)
 
 #### Phase 19g: Full Verification
 

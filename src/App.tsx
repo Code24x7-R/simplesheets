@@ -23,7 +23,7 @@ import { evaluateWorkbook } from './utils/formulaEngine';
 import { copyRange, cutRange as clipCutRange, getClipboard, clearClipboard, hasClipboardData, writeClipboardToSystem } from './utils/clipboard';
 import { adjustFormulaRefs, prefixRefsWithSheet } from './utils/formulaParser';
 import { useAutosave } from './hooks/useAutosave';
-import { useCellEditing, getStatusMessage, shouldActivatePointMode } from './hooks/useCellEditing';
+import { useCellEditing, getStatusMessage } from './hooks/useCellEditing';
 import { useCellStyles } from './hooks/useCellStyles';
 import { useReferenceFormat } from './hooks/useReferenceFormat';
 import { useFormulaWizard } from './hooks/useFormulaWizard';
@@ -144,7 +144,7 @@ export default function App() {
 function WorkbookView() {
   const { workbook, canUndo, canRedo, pushHistory, undo, redo, resetHistory } = useHistory();
   const { frozenColumns, frozenRows, freeze, unfreeze } = useFreeze();
-  const [activeCell, setActiveCell] = useState<{ row: number; col: number } | null>(null);
+  const [activeCell, setActiveCell] = useState<{ row: number; col: number }>({ row: 0, col: 0 });
   // Tracks the full selection from Grid (including range selections via shift+click).
   // The `selection` derived below falls back to activeCell when this is null.
   const [gridSelection, setGridSelection] = useState<Selection | null>(null);
@@ -169,7 +169,6 @@ function WorkbookView() {
     cancelPointSelection: cancelWizardPointSelection,
   } = useFormulaWizard();
   const [statusMessage, setStatusMessage] = useState<string>('Ready');
-  const [formulaBarValue, setFormulaBarValue] = useState('');
   const [highlightedRanges, setHighlightedRanges] = useState<HighlightedRange[]>([]);
   const [pendingCutRange, setPendingCutRange] = useState<Selection | null>(null);
   // Tracks the range currently on the clipboard for marching-ants visual feedback
@@ -215,7 +214,6 @@ function WorkbookView() {
     startEditAt,
     setCaretPos,
     setBuffer,
-    enterPointMode,
     commit: commitEditing,
     reset: resetEditing,
     autoComplete,
@@ -246,8 +244,6 @@ function WorkbookView() {
     },
     onNavigate: (row, col) => {
       setActiveCell({ row, col });
-      const cell = sheet.cells[cellKey(row, col)];
-      setFormulaBarValue(cell?.rawValue ?? '');
     },
   });
 
@@ -364,27 +360,19 @@ function WorkbookView() {
   const handleCellSelect = useCallback(
     (row: number, col: number) => {
       setActiveCell({ row, col });
-      const cell = sheet.cells[cellKey(row, col)];
-      setFormulaBarValue(cell?.rawValue ?? '');
     },
-    [sheet]
+    []
   );
 
   const handleHeaderSelect = useCallback(
     (headerSel: { type: 'row' | 'col'; index: number }) => {
       if (headerSel.type === 'row') {
-        // For row selection, set active cell to first column of that row
         setActiveCell({ row: headerSel.index, col: 0 });
-        const cell = sheet.cells[cellKey(headerSel.index, 0)];
-        setFormulaBarValue(cell?.rawValue ?? '');
       } else {
-        // For column selection, set active cell to first row of that column
         setActiveCell({ row: 0, col: headerSel.index });
-        const cell = sheet.cells[cellKey(0, headerSel.index)];
-        setFormulaBarValue(cell?.rawValue ?? '');
       }
     },
-    [sheet]
+    []
   );
 
   // ─── Formula Wizard ──────────────────────────────────────────────
@@ -401,75 +389,6 @@ function WorkbookView() {
 
   // ─── Raw Event Handlers for FormulaBar ──────────────────────────
   // FormulaBar is now a pure view - it forwards raw events to the FSM.
-
-  // Raw key down - FSM decides what to do based on current state
-  const handleFormulaRawKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      const result = handleEditingKey(e.key, e.shiftKey, e.ctrlKey, e.altKey);
-      if (result.statusMessage) {
-        setStatusMessage(result.statusMessage);
-      }
-    },
-    [handleEditingKey],
-  );
-
-  // Raw change - FSM updates buffer
-  const handleFormulaRawChange = useCallback(
-    (value: string, caretPos: number) => {
-      const s = editingSession;
-      if (s.state === 'SELECT' && value.length > 0) {
-        // First character typed in formula bar: start editing.
-        // If value is just "=", "+", or "-", start ENTER mode (replaces content).
-        // Otherwise start EDIT mode (append to existing content).
-        const firstChar = value[0];
-        if (firstChar === '=' || firstChar === '+' || firstChar === '-') {
-          startEnter(firstChar);
-          // If more characters were typed, update buffer with full value
-          if (value.length > 1) {
-            setBuffer(value, caretPos);
-          }
-        } else {
-          startEdit();
-          setBuffer(value, caretPos);
-        }
-      } else {
-        setBuffer(value, caretPos);
-      }
-      // POINT trigger detection is now handled inside setBuffer
-    },
-    [setBuffer, startEnter, startEdit, editingSession],
-  );
-
-  // Cell edit change - updates FormulaBar value AND drives the FSM
-  // when typing in grid cell.
-  const handleCellEditChange = useCallback(
-    (value: string) => {
-      setFormulaBarValue(value);
-
-      const s = editingSession;
-
-      if (s.state === 'SELECT' && value.length > 0) {
-        // First character: start editing
-        startEnter(value.slice(-1));
-        if (value.length > 1) {
-          setBuffer(value, value.length);
-        } else if (shouldActivatePointMode(value, 1)) {
-          // Single-character POINT trigger (e.g., "+" or "-"):
-          // startEnter already set buffer, now enter POINT mode
-          enterPointMode(1, value);
-        }
-      } else if (s.state === 'POINT') {
-        // In POINT mode, typing a letter exits POINT and enters EDIT.
-        // Process the new character through the FSM's POINT handler.
-        handleEditingKey(value.slice(-1), false, false, false);
-      } else {
-        // ENTER or EDIT: update buffer
-        setBuffer(value, value.length);
-      }
-      // POINT trigger detection is now handled inside setBuffer
-    },
-    [editingSession, startEnter, setBuffer, handleEditingKey, enterPointMode],
-  );
 
   // Raw focus - FSM enters EDIT mode
   const handleFormulaRawFocus = useCallback(
@@ -491,6 +410,66 @@ function WorkbookView() {
       handleEditingCellClick(row, col, shiftKey);
     },
     [handleEditingCellClick],
+  );
+
+  // ─── Shared FSM Event Handlers (for both FormulaBar and Grid) ────
+  // Both editors forward raw events to the FSM for processing.
+
+  const handleRawKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      const result = handleEditingKey(e.key, e.shiftKey, e.ctrlKey, e.altKey);
+      if (result.statusMessage) {
+        setStatusMessage(result.statusMessage);
+      }
+    },
+    [handleEditingKey],
+  );
+
+  const handleRawChange = useCallback(
+    (value: string, caretPos: number) => {
+      const s = editingSession;
+      if (s.state === 'SELECT' && value.length > 0) {
+        // First character typed: start editing
+        const firstChar = value[0];
+        if (firstChar === '=' || firstChar === '+' || firstChar === '-') {
+          startEnter(firstChar);
+          if (value.length > 1) {
+            setBuffer(value, caretPos);
+          }
+        } else {
+          startEdit();
+          setBuffer(value, caretPos);
+        }
+      } else {
+        setBuffer(value, caretPos);
+      }
+    },
+    [setBuffer, startEnter, startEdit, editingSession],
+  );
+
+  // ─── Grid Editing Callbacks ──────────────────────────────────────
+  // Grid is now a pure view — these callbacks start editing in the FSM.
+
+  const handleGridStartEdit = useCallback(
+    (row: number, col: number) => {
+      // Update active cell so FSM uses correct row/col.
+      // Pass row/col explicitly to startEdit so it doesn't rely on
+      // the stale hook closure values (which are based on activeCell
+      // at render time, not the new values being set here).
+      setActiveCell({ row, col });
+      startEdit(row, col);
+    },
+    [startEdit],
+  );
+
+  const handleGridStartEnter = useCallback(
+    (row: number, col: number, char: string) => {
+      // Update active cell so FSM uses correct row/col
+      // Pass row/col explicitly to avoid stale closure values
+      setActiveCell({ row, col });
+      startEnter(char, row, col);
+    },
+    [startEnter],
   );
 
   // ─── Help / Utility Actions ──────────────────────────────────────────
@@ -657,7 +636,6 @@ function WorkbookView() {
     (wb: Workbook) => {
       resetHistory(wb);
       setActiveCell(null);
-      setFormulaBarValue('');
       setStatusMessage('Created new workbook');
       gridRef.current?.focus();
     },
@@ -675,7 +653,6 @@ function WorkbookView() {
       };
       pushHistory(newWb, `Switch to ${workbook.sheets[index].name}`);
       setActiveCell(null);
-      setFormulaBarValue('');
       gridRef.current?.focus();
     },
     [workbook, pushHistory]
@@ -704,7 +681,6 @@ function WorkbookView() {
     };
     pushHistory(newWb, `Add Sheet${sheetNum}`);
     setActiveCell(null);
-    setFormulaBarValue('');
     gridRef.current?.focus();
   }, [workbook, pushHistory]);
 
@@ -749,7 +725,6 @@ function WorkbookView() {
       };
       pushHistory(newWb, `Copy sheet "${source.name}"`);
       setActiveCell(null);
-      setFormulaBarValue('');
       gridRef.current?.focus();
     },
     [workbook, pushHistory]
@@ -770,7 +745,6 @@ function WorkbookView() {
       };
       pushHistory(newWb, `Delete sheet "${sheetName}"`);
       setActiveCell(null);
-      setFormulaBarValue('');
       gridRef.current?.focus();
     },
     [workbook, pushHistory]
@@ -1723,15 +1697,14 @@ function WorkbookView() {
       <FormulaBar
         session={editingSession}
         pointSession={editingPointSession}
-        value={editingSession.buffer || formulaBarValue}
+        value={editingSession.buffer || (activeCell ? sheet.cells[cellKey(activeCell.row, activeCell.col)]?.rawValue ?? '' : '')}
         cursorPos={editingSession.caretPos}
         statusMessage={getStatusMessage(editingSession)}
-        onRawKeyDown={handleFormulaRawKeyDown}
-        onRawChange={handleFormulaRawChange}
+        onRawKeyDown={handleRawKeyDown}
+        onRawChange={handleRawChange}
         onRawFocus={handleFormulaRawFocus}
         onRawBlur={handleFormulaRawBlur}
         onRawCaretMove={setCaretPos}
-        onCellPick={handleFormulaCellPick}
         autoComplete={autoComplete}
         onAcceptAutoComplete={acceptAutoComplete}
         onNavigateAutoComplete={navigateAutoComplete}
@@ -1778,12 +1751,11 @@ function WorkbookView() {
           clipboardRange={clipboardRange}
           onClearClipboard={handleClearClipboard}
           showFormulas={showFormulas}
-          onCellEditChange={handleCellEditChange}
-          onPointKeyDown={(key, shift, ctrl, alt) => {
-            const result = handleEditingKey(key, shift, ctrl, alt);
-            // Return the new buffer value so Grid can sync its editValue
-            return result.session.buffer;
-          }}
+          session={editingSession}
+          onStartEnter={handleGridStartEnter}
+          onStartEdit={handleGridStartEdit}
+          onRawKeyDown={handleRawKeyDown}
+          onRawChange={handleRawChange}
           onFillSeries={handleFillSeries}
           filterState={filterState}
           onApplyFilter={handleApplyFilter}

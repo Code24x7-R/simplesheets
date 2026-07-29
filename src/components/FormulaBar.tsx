@@ -2,7 +2,7 @@ import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { parseFormula, type ASTNode } from '../utils/formulaParser';
 import { validateFormula, type ValidationResult } from '../utils/formulaValidation';
 import { type FunctionInfo } from '../utils/formulaAutocomplete';
-import type { EditingSession, PointSession } from '../hooks/useCellEditing';
+import type { EditingSession } from '../hooks/useCellEditing';
 import type { ReferenceFormat } from '../hooks/useReferenceFormat';
 import { colToLetter } from '../types';
 import { HIGHLIGHT_COLORS, HIGHLIGHT_BORDER_COLORS } from '../utils/highlightColors';
@@ -20,14 +20,10 @@ export interface FormulaBarProps {
   // ── Read-only state from FSM ─────────────────────────────────────────
   /** Current editing session state. */
   session: EditingSession;
-  /** Current POINT session (null if not in POINT mode). */
-  pointSession: PointSession | null;
   /** Current display value (formula buffer or cell value). */
   value: string;
   /** Current cursor position within the buffer. */
   cursorPos: number;
-  /** Status message derived from FSM state. */
-  statusMessage: string;
 
   // ── Raw event handlers (FSM decides what to do) ─────────────────────
   /** Raw key down event - FSM processes based on current state. */
@@ -40,10 +36,6 @@ export interface FormulaBarProps {
   onRawBlur: () => void;
   /** Caret moved (click) - FSM updates caret position. */
   onRawCaretMove: (caretPos: number) => void;
-
-  // ── Grid interaction for POINT mode ─────────────────────────────────
-  /** Cell clicked during POINT mode - FSM updates selection. */
-  onCellPick: (row: number, col: number, shiftKey: boolean) => void;
 
   // ── Auto-complete state from FSM ──────────────────────────────────
   /** Auto-complete state derived from the current buffer and caret. */
@@ -173,16 +165,13 @@ function AutoCompleteDropdown({
  */
 export function FormulaBar({
   session,
-  pointSession: _pointSession,
   value,
   cursorPos,
-  statusMessage: _statusMessage,
   onRawKeyDown,
   onRawChange,
   onRawFocus,
   onRawBlur,
   onRawCaretMove,
-  onCellPick: _onCellPick,
   autoComplete,
   onAcceptAutoComplete,
   onNavigateAutoComplete,
