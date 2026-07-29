@@ -172,6 +172,13 @@ function WorkbookView() {
     startPointSelection: startWizardPointSelection,
     cancelPointSelection: cancelWizardPointSelection,
   } = useFormulaWizard();
+
+  // Wrapper that restores focus to grid after wizard closes
+  const handleCloseWizard = useCallback(() => {
+    closeFormulaWizard();
+    // Restore focus to grid after modal closes
+    setTimeout(() => gridRef.current?.focus(), 0);
+  }, [closeFormulaWizard]);
   const [statusMessage, setStatusMessage] = useState<string>('Ready');
   const [highlightedRanges, setHighlightedRanges] = useState<HighlightedRange[]>([]);
   const [pendingCutRange, setPendingCutRange] = useState<Selection | null>(null);
@@ -187,6 +194,9 @@ function WorkbookView() {
   const gridRef = useRef<GridHandle>(null);
   // Ref to focus the formula bar input (Ctrl+F2)
   const formulaBarRef = useRef<{ focusInput: () => void }>(null);
+  // Ref to track latest activeCell (avoids stale closures in wizard apply)
+  const activeCellRef = useRef(activeCell);
+  activeCellRef.current = activeCell;
 
   // Paste Special options
   const [pasteSkipBlanks, setPasteSkipBlanks] = useState(false);
@@ -385,12 +395,13 @@ function WorkbookView() {
 
   const handleWizardApply = useCallback(
     (formula: string) => {
-      if (activeCell) {
-        handleCellChange(activeCell.row, activeCell.col, formula);
+      const cell = activeCellRef.current;
+      if (cell) {
+        handleCellChange(cell.row, cell.col, formula);
       }
-      closeFormulaWizard();
+      handleCloseWizard();
     },
-    [activeCell, handleCellChange, closeFormulaWizard]
+    [handleCellChange, handleCloseWizard]
   );
 
   /**
@@ -1912,7 +1923,7 @@ function WorkbookView() {
         goBack={goWizardBack}
         startPointSelection={startWizardPointSelection}
         cancelPointSelection={cancelWizardPointSelection}
-        closeWizard={closeFormulaWizard}
+        closeWizard={handleCloseWizard}
         onApply={handleWizardApply}
         onFunctionSelect={(functionName) => {
           // User picked a function from autocomplete — open wizard with that function

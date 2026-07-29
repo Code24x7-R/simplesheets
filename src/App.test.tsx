@@ -477,4 +477,133 @@ describe('App - Global Keyboard Shortcuts', () => {
     // Formula Wizard should be open (check for wizard title)
     expect(screen.getByText('Nested Formula Wizard')).toBeInTheDocument();
   });
+
+  it('Ctrl+Shift+F opens wizard with cell formula imported', () => {
+    render(<App />);
+
+    // Enter a formula in the formula bar (default cell is A1)
+    const formulaBarInput = screen.getByPlaceholderText(/Enter a value or formula/) as HTMLInputElement;
+
+    act(() => {
+      formulaBarInput.focus();
+    });
+    act(() => {
+      fireEvent.change(formulaBarInput, { target: { value: '=SUM(B1:B3)' } });
+    });
+
+    // Press Enter to commit (selection moves down to A2)
+    act(() => {
+      fireEvent.keyDown(formulaBarInput, { key: 'Enter' });
+    });
+
+    // Navigate back to A1 (row 0, col 0)
+    const cells = document.querySelectorAll('.grid-cell');
+    act(() => {
+      fireEvent.mouseDown(cells[0]);
+    });
+
+    // Formula bar should show A1's formula
+    expect(formulaBarInput.value).toBe('=SUM(B1:B3)');
+
+    // Now press Ctrl+Shift+F to open wizard for A1
+    act(() => {
+      fireGlobalKeyDown('F', { ctrlKey: true, shiftKey: true });
+    });
+
+    // Wizard should be open
+    expect(screen.getByText('Nested Formula Wizard')).toBeInTheDocument();
+
+    // Number1 parameter should show B1:B3 (imported from the formula)
+    const inputs = screen.getAllByRole('textbox') as HTMLInputElement[];
+    const number1Input = inputs.find(i => i.value === 'B1:B3');
+    expect(number1Input).toBeDefined();
+  });
+
+  it('FormulaWizard Apply commits to correct cell and shows correct status', () => {
+    render(<App />);
+
+    // Enter a formula in the formula bar (default cell is A1)
+    const formulaBarInput = screen.getByPlaceholderText(/Enter a value or formula/) as HTMLInputElement;
+
+    act(() => {
+      formulaBarInput.focus();
+    });
+    act(() => {
+      fireEvent.change(formulaBarInput, { target: { value: '=SUM(B1:B3)' } });
+    });
+
+    // Press Enter to commit (selection moves down to A2)
+    act(() => {
+      fireEvent.keyDown(formulaBarInput, { key: 'Enter' });
+    });
+
+    // Navigate back to A1
+    const cells = document.querySelectorAll('.grid-cell');
+    act(() => {
+      fireEvent.mouseDown(cells[0]);
+    });
+
+    // Open wizard for A1
+    act(() => {
+      fireGlobalKeyDown('F', { ctrlKey: true, shiftKey: true });
+    });
+
+    expect(screen.getByText('Nested Formula Wizard')).toBeInTheDocument();
+
+    // Click Apply to Cell
+    act(() => {
+      fireEvent.click(screen.getByText('Apply to Cell'));
+    });
+
+    // Wizard should be closed
+    expect(screen.queryByText('Nested Formula Wizard')).not.toBeInTheDocument();
+
+    // Status message should say Updated A1 (not A2 or any other cell)
+    const status = screen.getByTestId('status-message');
+    expect(status.textContent).toContain('Updated A1');
+  });
+
+  it('FormulaWizard Cancel closes without committing', () => {
+    render(<App />);
+
+    // Enter a formula in the formula bar (default cell is A1)
+    const formulaBarInput = screen.getByPlaceholderText(/Enter a value or formula/) as HTMLInputElement;
+
+    act(() => {
+      formulaBarInput.focus();
+    });
+    act(() => {
+      fireEvent.change(formulaBarInput, { target: { value: '=SUM(B1:B3)' } });
+    });
+
+    // Press Enter to commit
+    act(() => {
+      fireEvent.keyDown(formulaBarInput, { key: 'Enter' });
+    });
+
+    // Navigate back to A1
+    const cells = document.querySelectorAll('.grid-cell');
+    act(() => {
+      fireEvent.mouseDown(cells[0]);
+    });
+
+    // Open wizard for A1
+    act(() => {
+      fireGlobalKeyDown('F', { ctrlKey: true, shiftKey: true });
+    });
+
+    expect(screen.getByText('Nested Formula Wizard')).toBeInTheDocument();
+
+    // Click Cancel
+    act(() => {
+      fireEvent.click(screen.getByText('Cancel'));
+    });
+
+    // Wizard should be closed
+    expect(screen.queryByText('Nested Formula Wizard')).not.toBeInTheDocument();
+
+    // Status should NOT say Updated (cancel doesn't commit)
+    const status = screen.getByTestId('status-message');
+    expect(status.textContent).not.toContain('Updated');
+  });
 });

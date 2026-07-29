@@ -45,6 +45,13 @@ describe('formulaWizardImport', () => {
       expect(number1.isNestedFunction).toBe(false);
     });
 
+    it('imports lowercase function =sum(B3:D3)', () => {
+      const result = importFormulaToWizard('=sum(B3:D3)');
+      expect(result).not.toBeNull();
+      expect(result!.root.functionName).toBe('SUM');
+      expect(result!.root.parameterValues['number1']?.rawValue).toBe('B3:D3');
+    });
+
     it('imports function without leading = (SUM(B4:D4))', () => {
       const result = importFormulaToWizard('SUM(B4:D4)');
       expect(result).not.toBeNull();
