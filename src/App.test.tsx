@@ -275,8 +275,9 @@ describe('App', () => {
 });
 
 describe('App - Global Keyboard Shortcuts', () => {
-  function fireGlobalKeyDown(key: string, ctrl = true, shift = false) {
-    fireEvent.keyDown(window, { key, ctrlKey: ctrl, shiftKey: shift, metaKey: false });
+  function fireGlobalKeyDown(key: string, options: { ctrlKey?: boolean; shiftKey?: boolean; metaKey?: boolean } = {}) {
+    const { ctrlKey = true, shiftKey = false, metaKey = false } = options;
+    fireEvent.keyDown(window, { key, ctrlKey, shiftKey, metaKey });
   }
 
   it('Ctrl+N creates a new workbook', () => {
@@ -423,5 +424,23 @@ describe('App - Global Keyboard Shortcuts', () => {
 
     // Cell should show computed value again
     expect(cell.textContent).toBe('2');
+  });
+
+  it('Ctrl+F2 handler fires from window keydown without error', () => {
+    render(<App />);
+
+    // Ctrl+F2 should not throw and should trigger the focus toggle handler
+    expect(() => {
+      act(() => {
+        fireGlobalKeyDown('F2', { ctrlKey: true });
+      });
+    }).not.toThrow();
+
+    // Press Ctrl+F2 again to toggle back
+    expect(() => {
+      act(() => {
+        fireGlobalKeyDown('F2', { ctrlKey: true });
+      });
+    }).not.toThrow();
   });
 });

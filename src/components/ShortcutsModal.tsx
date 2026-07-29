@@ -24,6 +24,7 @@ const SHORTCUT_GROUPS: ShortcutGroup[] = [
     title: 'Editing',
     shortcuts: [
       { keys: 'F2', description: 'Enter edit mode for current cell' },
+      { keys: 'Ctrl + F2', description: 'Toggle focus between formula bar and grid' },
       { keys: 'Enter', description: 'Commit value, move down' },
       { keys: 'Shift + Enter', description: 'Commit value, move up' },
       { keys: 'Escape', description: 'Cancel edit, restore value' },

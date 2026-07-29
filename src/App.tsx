@@ -23,7 +23,7 @@ import { evaluateWorkbook } from './utils/formulaEngine';
 import { copyRange, cutRange as clipCutRange, getClipboard, clearClipboard, hasClipboardData, writeClipboardToSystem } from './utils/clipboard';
 import { adjustFormulaRefs, prefixRefsWithSheet } from './utils/formulaParser';
 import { useAutosave } from './hooks/useAutosave';
-import { useCellEditing, getStatusMessage } from './hooks/useCellEditing';
+import { useCellEditing } from './hooks/useCellEditing';
 import { useCellStyles } from './hooks/useCellStyles';
 import { useReferenceFormat } from './hooks/useReferenceFormat';
 import { useFormulaWizard } from './hooks/useFormulaWizard';
@@ -181,6 +181,8 @@ function WorkbookView() {
   } | null>(null);
   // Ref to restore focus to grid after paste operations
   const gridRef = useRef<GridHandle>(null);
+  // Ref to focus the formula bar input (Ctrl+F2)
+  const formulaBarRef = useRef<{ focusInput: () => void }>(null);
 
   // Paste Special options
   const [pasteSkipBlanks, setPasteSkipBlanks] = useState(false);
@@ -1576,6 +1578,20 @@ function WorkbookView() {
           }
         }
       }
+      // Ctrl+F2 toggles focus between formula bar and grid (Excel feature)
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === 'F2') {
+        e.preventDefault();
+        const target = e.target as HTMLElement;
+        const isInInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA';
+        if (isInInput) {
+          // Focus is in formula bar → move to grid
+          gridRef.current?.focus();
+        } else {
+          // Focus is in grid/elsewhere → move to formula bar
+          formulaBarRef.current?.focusInput();
+        }
+        return;
+      }
       // Ctrl+Shift+Z also triggers redo (common alternative)
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'Z') {
         e.preventDefault();
@@ -1695,11 +1711,10 @@ function WorkbookView() {
 
       {/* Formula Bar */}
       <FormulaBar
+        ref={formulaBarRef}
         session={editingSession}
-        pointSession={editingPointSession}
         value={editingSession.buffer || (activeCell ? sheet.cells[cellKey(activeCell.row, activeCell.col)]?.rawValue ?? '' : '')}
         cursorPos={editingSession.caretPos}
-        statusMessage={getStatusMessage(editingSession)}
         onRawKeyDown={handleRawKeyDown}
         onRawChange={handleRawChange}
         onRawFocus={handleFormulaRawFocus}

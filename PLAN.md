@@ -684,8 +684,8 @@ autocomplete, F9 evaluation) that the formula bar has.
 - [x] Implementation status legend (✅/⚠️/❌)
 - [x] Updated version to 1.2.0
 
-### Phase 16c: Remaining Gaps (Future)
-- [ ] **Ctrl+F2**: Move focus between in-cell editor and formula bar
+### Phase 16c: Remaining Gaps
+- [x] **Ctrl+F2**: Move focus between in-cell editor and formula bar — **DONE** (Phase 19f)
 - [ ] **Shift+Home/End**: Select text to beginning/end (currently native input behavior)
 - [ ] **Ctrl+Shift+Arrows**: Select word left/right (currently native input behavior)
 
@@ -741,11 +741,11 @@ autocomplete, F9 evaluation) that the formula bar has.
 
 ---
 
-## Phase 19: Unified Editing Architecture — MOSTLY COMPLETE
+## Phase 19: Unified Editing Architecture — COMPLETE ✅
 
 **Status**: ✅ Phase 19b (FSM unification) COMPLETE — Grid.tsx is now a pure view.
-Phase 19c-19e (shared FormulaEditor, F9, multiline) deferred.
-Phase 19f (cleanup) PARTIALLY COMPLETE — `onCellPick` removed, Ctrl+F2 remaining.
+✅ Phase 19f (cleanup) COMPLETE — dead code removed, Ctrl+F2 added.
+Phase 19c-19e (shared FormulaEditor, F9, multiline) deferred to future.
 
 ### Functional Alignment Analysis
 
@@ -977,11 +977,11 @@ preserves newlines
 5. ✅ Remove `formulaBarValue` state from App.tsx — **DONE** (removed in 19b)
 6. ✅ Fix the known autocomplete/POINT state bug — **DONE** (fixed by FSM unification in 19b)
 7. ✅ Fix FormulaBar double-commit bug (blur handler guard for `session.state === 'SELECT'`) — **DONE**
-8. ⬜ Add Ctrl+F2 to move focus between in-cell editor and formula bar (Excel feature)
+8. ✅ Add Ctrl+F2 to move focus between in-cell editor and formula bar (Excel feature) — **DONE**
 
-**Files**: `FormulaBar.tsx`, `App.tsx`, `Grid.tsx`
-**Tests**: 1922 passing, lint clean
-**Remaining**: Ctrl+F2 focus toggle (minor feature, can be added in future)
+**Files**: `FormulaBar.tsx`, `App.tsx`, `Grid.tsx`, `ShortcutsModal.tsx`
+**Tests**: 1923 passing, lint clean
+**Status**: Phase 19f FULLY COMPLETE
 
 #### Phase 19g: Full Verification
 

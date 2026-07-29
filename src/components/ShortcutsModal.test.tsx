@@ -53,6 +53,7 @@ describe('ShortcutsModal', () => {
   it('displays specific shortcuts', () => {
     render(<ShortcutsModal isOpen={true} onClose={jest.fn()} />);
     expect(screen.getByText('F2')).toBeInTheDocument();
+    expect(screen.getByText('Ctrl + F2')).toBeInTheDocument();
     expect(screen.getByText('Escape')).toBeInTheDocument();
     expect(screen.getByText('Ctrl + Z')).toBeInTheDocument();
     expect(screen.getByText('Ctrl + C')).toBeInTheDocument();

@@ -15,16 +15,13 @@ const defaultSession: EditingSession = {
 describe('FormulaBar', () => {
   const defaultProps = {
     session: defaultSession,
-    pointSession: null,
     value: '',
     cursorPos: 0,
-    statusMessage: 'Ready',
     onRawKeyDown: jest.fn(),
     onRawChange: jest.fn(),
     onRawFocus: jest.fn(),
     onRawBlur: jest.fn(),
     onRawCaretMove: jest.fn(),
-    onCellPick: jest.fn(),
     autoComplete: { open: false, matches: [], index: 0, tokenStart: 0 },
     onAcceptAutoComplete: jest.fn(),
     onNavigateAutoComplete: jest.fn(),
@@ -79,30 +76,49 @@ describe('FormulaBar', () => {
     expect(onRawFocus).toHaveBeenCalled();
   });
 
-  it('calls onRawBlur when input loses focus', () => {
+  it('calls onRawBlur when input loses focus while editing', () => {
     const onRawBlur = jest.fn();
-    render(<FormulaBar {...defaultProps} onRawBlur={onRawBlur} />);
+    render(
+      <FormulaBar
+        {...defaultProps}
+        onRawBlur={onRawBlur}
+        session={{ ...defaultSession, state: 'EDIT', buffer: 'test' }}
+      />,
+    );
     const input = screen.getByPlaceholderText(/Enter a value or formula/);
 
     fireEvent.focus(input);
     fireEvent.blur(input);
     expect(onRawBlur).toHaveBeenCalled();
   });
+
+  it('does NOT call onRawBlur when input loses focus while in SELECT state', () => {
+    const onRawBlur = jest.fn();
+    render(
+      <FormulaBar
+        {...defaultProps}
+        onRawBlur={onRawBlur}
+        session={{ ...defaultSession, state: 'SELECT' }}
+      />,
+    );
+    const input = screen.getByPlaceholderText(/Enter a value or formula/);
+
+    fireEvent.focus(input);
+    fireEvent.blur(input);
+    expect(onRawBlur).not.toHaveBeenCalled();
+  });
 });
 
 describe('FormulaBar - Formula Editing', () => {
   const defaultProps = {
     session: { ...defaultSession, state: 'EDIT', buffer: '=SUM(A1:A10)', isFormula: true } as EditingSession,
-    pointSession: null,
     value: '=SUM(A1:A10)',
     cursorPos: 11,
-    statusMessage: 'Edit',
     onRawKeyDown: jest.fn(),
     onRawChange: jest.fn(),
     onRawFocus: jest.fn(),
     onRawBlur: jest.fn(),
     onRawCaretMove: jest.fn(),
-    onCellPick: jest.fn(),
     autoComplete: { open: false, matches: [], index: 0, tokenStart: 0 },
     onAcceptAutoComplete: jest.fn(),
     onNavigateAutoComplete: jest.fn(),
@@ -148,16 +164,13 @@ describe('FormulaBar - Formula Editing', () => {
 describe('FormulaBar - keyboard shortcuts', () => {
   const defaultProps = {
     session: { ...defaultSession, state: 'EDIT', buffer: '=SUM(A1:A10)', isFormula: true } as EditingSession,
-    pointSession: null,
     value: '=SUM(A1:A10)',
     cursorPos: 11,
-    statusMessage: 'Edit',
     onRawKeyDown: jest.fn(),
     onRawChange: jest.fn(),
     onRawFocus: jest.fn(),
     onRawBlur: jest.fn(),
     onRawCaretMove: jest.fn(),
-    onCellPick: jest.fn(),
     autoComplete: { open: false, matches: [], index: 0, tokenStart: 0 },
     onAcceptAutoComplete: jest.fn(),
     onNavigateAutoComplete: jest.fn(),
@@ -218,16 +231,13 @@ describe('FormulaBar - keyboard shortcuts', () => {
 describe('FormulaBar - Error Display', () => {
   const defaultProps = {
     session: { ...defaultSession, state: 'EDIT', buffer: '=SUM(A1:A10)', isFormula: true } as EditingSession,
-    pointSession: null,
     value: '=SUM(A1:A10)',
     cursorPos: 11,
-    statusMessage: 'Edit',
     onRawKeyDown: jest.fn(),
     onRawChange: jest.fn(),
     onRawFocus: jest.fn(),
     onRawBlur: jest.fn(),
     onRawCaretMove: jest.fn(),
-    onCellPick: jest.fn(),
     autoComplete: { open: false, matches: [], index: 0, tokenStart: 0 },
     onAcceptAutoComplete: jest.fn(),
     onNavigateAutoComplete: jest.fn(),

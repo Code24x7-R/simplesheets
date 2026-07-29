@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import { useState, useCallback, useMemo, useRef, useEffect, useImperativeHandle, forwardRef } from 'react';
 import { parseFormula, type ASTNode } from '../utils/formulaParser';
 import { validateFormula, type ValidationResult } from '../utils/formulaValidation';
 import { type FunctionInfo } from '../utils/formulaAutocomplete';
@@ -163,7 +163,11 @@ function AutoCompleteDropdown({
 /**
  * Formula bar with live range highlighting, auto-complete, validation, and point mode.
  */
-export function FormulaBar({
+export interface FormulaBarHandle {
+  focusInput: () => void;
+}
+
+export const FormulaBar = forwardRef<FormulaBarHandle, FormulaBarProps>(function FormulaBar({
   session,
   value,
   cursorPos,
@@ -179,11 +183,24 @@ export function FormulaBar({
   referenceFormat = 'A1',
   onToggleReferenceFormat,
   onHighlightsChange,
-}: FormulaBarProps) {
+}, ref) {
   const [expanded, setExpanded] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   // Track whether focus event should be ignored (used during Alt+Enter expansion)
   const suppressFocus = useRef(false);
+
+  // Expose focusInput to parent for Ctrl+F2 toggle
+  useImperativeHandle(ref, () => ({
+    focusInput: () => {
+      const input = inputRef.current;
+      if (input) {
+        input.focus();
+        // Move caret to end of existing content
+        const len = input.value.length;
+        input.setSelectionRange(len, len);
+      }
+    },
+  }), []);
 
   // Derive editing mode from FSM session state
   const isEditing = session.state !== 'SELECT';
@@ -603,4 +620,4 @@ export function FormulaBar({
       )}
     </div>
   );
-}
+});
