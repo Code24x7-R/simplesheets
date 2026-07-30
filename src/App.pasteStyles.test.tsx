@@ -35,7 +35,7 @@ jest.mock('@tanstack/react-virtual', () => ({
 
 // Helper: get the cell element at (row, col) in the grid
 function getCell(row: number, col: number): HTMLElement | null {
-  const cells = Array.from(document.querySelectorAll('.grid-cell'));
+  const cells = Array.from(document.querySelectorAll('.grid-cell')) as HTMLElement[];
   return cells[row * 5 + col] ?? null;
 }
 
