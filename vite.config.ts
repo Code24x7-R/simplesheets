@@ -1,8 +1,12 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
+// When building for GitHub Pages, serve from /<repo-name>/ subpath
+const isGithubPages = process.env.GITHUB_PAGES === 'true';
+
 export default defineConfig({
   plugins: [react()],
+  base: isGithubPages ? '/simplesheets/' : '/',
   server: {
     port: 3000,
     open: false,
