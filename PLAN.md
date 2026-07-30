@@ -1603,9 +1603,9 @@ Improve how ranges are copied, pasted, and edited within and across sheets. Curr
 
 ---
 
-## Phase 27: POINT Mode & Modal Interaction — PLANNED 📋
+## Phase 27: POINT Mode & Modal Interaction — COMPLETE ✅ (2026-07-30)
 
-**Status**: Not started. Bug fix for FormulaWizard/FunctionPicker modal blocking POINT range selection.
+**Status**: All 4 stages (27a-27d) complete. +38 tests added.
 
 ### Goal
 
@@ -1669,14 +1669,17 @@ Fix bugs where the FormulaWizard modal (or FunctionPicker modal) interferes with
 
 ---
 
-#### Stage 27d: Fix Escape Key Behavior — PLANNED 📋
+#### Stage 27d: Fix Escape Key Behavior — COMPLETE ✅ (2026-07-30)
 
 **Goal**: Esc cancels POINT mode first, then closes modal on second press.
 
-- [ ] **27d.1**: Intercept Esc in FormulaWizard when FSM is in POINT state
-- [ ] **27d.2**: First Esc → exit POINT mode, return to EDIT/SELECT (keep modal open)
-- [ ] **27d.3**: Second Esc → close modal (if FSM is SELECT)
-- [ ] **27d.4**: Write tests for double-Esc behavior
+- [x] **27d.1**: Esc in FormulaWizard intercepted when FSM is in POINT state
+- [x] **27d.2**: First Esc → exit POINT mode (calls cancelPointSelection), modal stays open
+- [x] **27d.3**: Second Esc → close modal (calls closeWizard)
+- [x] **27d.4**: Wrote **4 tests** for double-Esc behavior
+
+**Modified:** `src/components/FormulaWizard.tsx` (handleKeyDown on modal overlay)
+**Tests:** `src/components/FormulaWizard.escape.test.tsx`
 
 ---
 

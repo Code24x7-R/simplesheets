@@ -163,6 +163,22 @@ export function FormulaWizard({
     return getAllFunctionSchemas().slice(0, 20); // Limit for dropdown
   }, []);
 
+  // Handle Escape key: cancel POINT mode first, then close modal
+  // (Must be before conditional returns - React hooks rule)
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        if (wizard.state === 'POINT_SELECTION') {
+          cancelPointSelection();
+        } else {
+          closeWizard();
+        }
+      }
+    },
+    [wizard.state, cancelPointSelection, closeWizard]
+  );
+
   if (!wizard.isOpen) return null;
 
   // Show autocomplete picker when no formula was imported
@@ -190,7 +206,7 @@ export function FormulaWizard({
     : 'bg-white rounded-lg shadow-2xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto';
 
   return (
-    <div className={overlayClass}>
+    <div className={overlayClass} onKeyDown={handleKeyDown}>
       <div className={modalClass}>
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-gray-50 rounded-t-lg">
