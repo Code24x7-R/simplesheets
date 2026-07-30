@@ -4,20 +4,12 @@
 Achieve a clean, clutter-free UI with standardized dropdown menus, formula wizard, formula bar, and R1C1 reference format.
 
 ## Current State
-- **2007 tests** across **80 suites**, All passing
+- **2076 tests** across **80 suites**, All passing
 - Lint clean (0 warnings), Type-check clean, Build clean
-- Coverage: **94.12% stmts, 85.69% branches, 95.46% funcs, 95.47% lines**
-- Phases 1-10 complete: Menu system, Formula bar, R1C1 toggle, pdfExport, Layout polish, Nested Formula Wizard
-- Phase 11 complete: Cell Style System (Bold, Italic, Underline, Colors, Alignment)
-- Phase 12 complete: Search & Replace (find/replace with case, exact match, formula scope, multi-sheet)
-- Phase 13 complete: Paste Experience Improvements (bounds checking, classification, wrapping, inline editing, preview, formula adjustment)
-- Phase 14 complete: Keyboard Shortcut Audit & Fixes (global shortcuts, grid navigation, shortcuts modal)
-- Phase 16 complete: Keyboard Shortcut Gaps (Ctrl+Enter, Alt+Enter, Ctrl+Left/Right, End key)
-- Phase 19 complete: Unified Editing Architecture (FSM is single source of truth, Grid pure view, Ctrl+F2 focus toggle)
-- Phase 20 complete: Number Formatting Enhancements (auto-align numbers/dates/times, Accounting format)
-- Phase 24 complete: Formula Wizard Wiring (fx button, Ctrl+Shift+F, Insert menu)
-- Phase 25 complete: Formula Wizard Import & Smart Open (pre-populate from cell formula, autocomplete fallback, live result preview)
-- Recent fixes (2026-07-30): Ctrl+Shift+F no longer sticks FSM in ENTER state; FormulaWizard Result preview shows computed value; App.tsx activeCell nullable type
+- Coverage: **94.7% stmts, 86.8% branches, 95.88% funcs, 96.03% lines**
+- Phases 1-25 complete: All planned features implemented and verified
+- Phase 25f.1 complete (2026-07-30): README documents FormulaWizard import + live preview
+- Recent fixes (2026-07-30): Ctrl+Shift+F no longer sticks FSM in ENTER state; FormulaWizard Result preview shows computed value; App.tsx activeCell nullable type; AGENTS.md branch target set to 85%+
 
 ---
 
@@ -196,21 +188,19 @@ Achieve a clean, clutter-free UI with standardized dropdown menus, formula wizar
 
 ---
 
-## 🔴 CURRENT PRIORITY: Close Coverage Gaps & Finish Phase 8
+## 🔴 CURRENT PRIORITY: Phase 21 — Charts
 
-**Status**: Phases 19 and 25 are **complete**. The remaining work is:
-1. **Phase 25f.1** — README documentation for FormulaWizard import/preview (quick)
-2. **Branch coverage** — weakest metric at **85.69%** (target ≥85%, but fragile)
-3. **Phase 8** — Final Verification (close remaining gaps in App.tsx, formulaEngine.ts, Grid.tsx)
+**Status**: Phases 1–25 are **complete** ✅. Branch coverage at **86.8%** (target 85%+ met).
 
-### Immediate Next Steps (in order)
+### Next Phase: Phase 21 — Charts
 
-| Priority | Task | Impact |
-|----------|------|--------|
-| 1 | Phase 25f.1: Document FormulaWizard import + live preview in README | Completes Phase 25 |
-| 2 | Branch coverage on formulaEngine.ts (76.04%) and App.tsx (76.04%) | Weakest metric |
-| 3 | HistoryContext.tsx branches (75%) | Low-hanging fruit |
-| 4 | Phase 8: Verify all files at target coverage | Final sign-off |
+| Stage | Description |
+|-------|-------------|
+| 21a | Chart Types (bar, column, line, pie, area, scatter) |
+| 21b | Chart Configuration (title, axes, legend, colors, data range) |
+| 21c | Chart Rendering Engine (pure SVG, responsive, grid lines) |
+| 21d | Chart UI & Interaction (insert dialog, edit, delete, export) |
+| 21e | Integration (live updates, PDF export, workbook save/load) |
 
 **Problem**: The Formula Bar Editor and In-Line Grid Cell Editor have overlapping,
 poorly-designed implementations that diverge from Excel's functional model. The FSM
@@ -1443,10 +1433,10 @@ Wizard AST:
 
 **Goal**: Update docs and ensure quality.
 
-- [ ] **25f.1**: Update README:
-  - Document that opening wizard on a formula pre-populates it
-  - Document the autocomplete fallback for empty cells
-  - Show nested formula example
+- [x] **25f.1**: Update README:
+  - Document that opening wizard on a formula pre-populates it ✅
+  - Document the autocomplete fallback for empty cells ✅
+  - Show nested formula example ✅
 
 - [x] **25f.2**: Update PLAN.md:
   - Add Phase 25 with completion status ✅
