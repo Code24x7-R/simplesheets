@@ -1641,16 +1641,16 @@ Fix bugs where the FormulaWizard modal (or FunctionPicker modal) interferes with
 
 ---
 
-#### Stage 27b: Fix Modal Transparency for Range Selection — PLANNED 📋
+#### Stage 27b: Fix Modal Transparency for Range Selection — COMPLETE ✅ (2026-07-30)
 
 **Goal**: Make the modal non-blocking when in POINT mode.
 
-- [ ] **27b.1**: When entering POINT mode, add CSS class to modal that:
-  - Makes modal background semi-transparent
-  - Allows click-through to grid (pointer-events: none on overlay, auto on modal content)
-  - Moves modal to side or shrinks to reveal grid
-- [ ] **27b.2**: When POINT mode is active, show a compact "Selecting range..." indicator in the formula bar
-- [ ] **27b.3**: Restore full modal opacity when POINT mode exits (range committed)
+- [x] **27b.1**: When entering POINT mode, modal overlay gets `pointer-events-none` and `bg-black/10`; modal content gets `opacity-75` and `pointer-events-auto`
+- [x] **27b.2**: Modal is semi-transparent (`opacity-75`) in POINT mode, fully opaque otherwise
+- [x] **27b.3**: Exiting POINT mode restores full opacity and normal click behavior
+
+**Modified:** `src/components/FormulaWizard.tsx` (dynamic overlay/modal classes based on POINT mode)
+**Tests:** `src/components/FormulaWizard.transparency.test.tsx` (7 tests)
 
 ---
 

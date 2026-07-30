@@ -180,9 +180,18 @@ export function FormulaWizard({
 
   if (!schema) return null;
 
+  // When in POINT mode, make modal transparent and click-through
+  const isPointMode = wizard.state === 'POINT_SELECTION';
+  const overlayClass = isPointMode
+    ? 'fixed inset-0 z-50 flex items-center justify-center bg-black/10 pointer-events-none'
+    : 'fixed inset-0 z-50 flex items-center justify-center bg-black/30';
+  const modalClass = isPointMode
+    ? 'bg-white rounded-lg shadow-2xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto opacity-75 pointer-events-auto'
+    : 'bg-white rounded-lg shadow-2xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto';
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-      <div className="bg-white rounded-lg shadow-2xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+    <div className={overlayClass}>
+      <div className={modalClass}>
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-gray-50 rounded-t-lg">
           <h2 className="text-sm font-semibold text-gray-700">Nested Formula Wizard</h2>
