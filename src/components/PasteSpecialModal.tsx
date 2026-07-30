@@ -1,17 +1,25 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+
+export type PasteMode = 'all' | 'formulas' | 'values' | 'formatting';
+
+export interface PasteSpecialOptions {
+  mode: PasteMode;
+  transpose: boolean;
+  skipBlanks: boolean;
+}
 
 interface PasteSpecialModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onApply: (options: { skipBlanks: boolean }) => void;
+  onApply: (options: PasteSpecialOptions) => void;
   skipBlanks: boolean;
   onSkipBlanksChange: (value: boolean) => void;
 }
 
 /**
  * Paste Special modal — lets the user configure paste options
- * before applying. Currently supports "Skip blanks" which prevents
- * empty source cells from overwriting existing destination data.
+ * before applying. Supports paste modes (Everything, Formulas,
+ * Values, Formatting), transpose, and skip blanks.
  */
 export function PasteSpecialModal({
   isOpen,
@@ -21,6 +29,8 @@ export function PasteSpecialModal({
   onSkipBlanksChange,
 }: PasteSpecialModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
+  const [mode, setMode] = useState<PasteMode>('all');
+  const [transpose, setTranspose] = useState(false);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -37,7 +47,7 @@ export function PasteSpecialModal({
   };
 
   const handleApply = () => {
-    onApply({ skipBlanks });
+    onApply({ mode, transpose, skipBlanks });
     onClose();
   };
 
@@ -57,7 +67,44 @@ export function PasteSpecialModal({
       >
         <h2 className="text-base font-semibold text-gray-800 mb-3">Paste Special</h2>
 
-        <div className="space-y-3 mb-4">
+        {/* Paste mode radio buttons */}
+        <div className="space-y-2 mb-4">
+          <p className="text-xs font-medium text-gray-600 uppercase tracking-wide">Paste</p>
+          {([
+            { value: 'all', label: 'Everything' },
+            { value: 'formulas', label: 'Formulas' },
+            { value: 'values', label: 'Values' },
+            { value: 'formatting', label: 'Formatting' },
+          ] as const).map((option) => (
+            <label key={option.value} className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+              <input
+                type="radio"
+                name="paste-mode"
+                value={option.value}
+                checked={mode === option.value}
+                onChange={() => setMode(option.value)}
+                className="w-4 h-4 text-blue-600 focus:ring-blue-500"
+              />
+              <span>{option.label}</span>
+            </label>
+          ))}
+        </div>
+
+        {/* Transpose checkbox */}
+        <div className="mb-4">
+          <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={transpose}
+              onChange={(e) => setTranspose(e.target.checked)}
+              className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            />
+            <span>Transpose</span>
+          </label>
+        </div>
+
+        {/* Skip blanks checkbox */}
+        <div className="space-y-2 mb-4">
           <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
             <input
               type="checkbox"

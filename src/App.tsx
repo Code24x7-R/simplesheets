@@ -33,6 +33,8 @@ import { downloadJson } from './services/jsonService';
 import type { Cell, Selection, Sheet } from './types';
 import { insertRow, deleteRow, insertCol, deleteCol } from './utils/sheetOperations';
 import { computeFillSeries } from './utils/fillSeries';
+import { applyPasteOptions } from './utils/pasteSpecial';
+import type { PasteMode } from './utils/pasteSpecial';
 import { sortRange } from './utils/sheetSort';
 import {
   createFilterState,
@@ -949,9 +951,14 @@ function WorkbookView() {
 
     const handlePasteEvent = (e: Event) => {
       const detail = (e as CustomEvent).detail;
-      const clipboard = getClipboard();
+      const rawClipboard = getClipboard();
       /* istanbul ignore next - defensive null check */
-      if (!clipboard || !detail) return;
+      if (!rawClipboard || !detail) return;
+
+      // Apply paste special options (mode, transpose) to clipboard data
+      const pasteMode = (detail.pasteMode as PasteMode) ?? 'all';
+      const pasteTranspose = detail.pasteTranspose ?? false;
+      const clipboard = applyPasteOptions(rawClipboard, { mode: pasteMode, transpose: pasteTranspose });
 
       const targetRow = detail.startRow;
       const targetCol = detail.startCol;
@@ -1360,15 +1367,17 @@ function WorkbookView() {
   }, [selection]);
 
   const handlePasteSpecialApply = useCallback(
-    (options: { skipBlanks: boolean }) => {
+    (options: { mode: string; transpose: boolean; skipBlanks: boolean }) => {
       if (!selection || !pendingPasteDetail) return;
-      // Pass skipBlanks through event detail so handler uses it directly
+      // Pass paste options through event detail so handler uses them directly
       window.dispatchEvent(new CustomEvent('simplesheets:paste', {
         detail: {
           startRow: pendingPasteDetail.targetRow,
           startCol: pendingPasteDetail.targetCol,
           selectionType: selection.type,
           skipBlanks: options.skipBlanks,
+          pasteMode: options.mode,
+          pasteTranspose: options.transpose,
         },
       }));
       setPendingPasteDetail(null);

@@ -1528,19 +1528,20 @@ Improve how ranges are copied, pasted, and edited within and across sheets. Curr
 
 ---
 
-#### Stage 26b: Paste Special — PLANNED 📋
+#### Stage 26b: Paste Special — COMPLETE ✅ (2026-07-30)
 
 **Goal**: Add paste modal with options (formulas, values, formatting, transpose).
 
-- [ ] **26b.1**: Create `PasteSpecialModal.tsx` — radio/select options:
-  - Everything (default)
-  - Formulas only
-  - Values only
-  - Formatting only
-  - Transpose (rows↔columns)
-- [ ] **26b.2**: Wire `PasteSpecialModal` into paste handler in App.tsx
-- [ ] **26b.3**: Implement transpose logic in paste
-- [ ] **26b.4**: Write tests for each paste mode
+- [x] **26b.1**: Extended `PasteSpecialModal.tsx` with radio options (Everything/Formulas/Values/Formatting) and transpose checkbox
+- [x] **26b.2**: Wired `PasteSpecialModal` into paste handler in App.tsx — `applyPasteOptions()` transforms clipboard data before paste
+- [x] **26b.3**: Implemented transpose logic in `pasteSpecial.ts` — swaps rows/cols after mode transformation
+- [x] **26b.4**: Wrote **32 tests** for paste modes + **21 tests** for modal UI = **53 total**
+  - `pasteSpecial.test.ts`: 32 unit tests for `applyPasteOptions()` utility
+  - `PasteSpecialModal.test.tsx`: 12 tests (updated for new signature)
+  - `PasteSpecialModal.extended.test.tsx`: 19 tests for new options
+
+**New files:** `src/utils/pasteSpecial.ts`
+**Modified:** `src/components/PasteSpecialModal.tsx`, `src/App.tsx`
 
 ---
 

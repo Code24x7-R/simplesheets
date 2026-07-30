@@ -36,21 +36,26 @@ describe('PasteSpecialModal', () => {
 
   it('checkbox reflects skipBlanks prop', () => {
     render(<PasteSpecialModal {...defaultProps} skipBlanks={true} />);
-    const checkbox = screen.getByRole('checkbox') as HTMLInputElement;
-    expect(checkbox.checked).toBe(true);
+    // The skip blanks checkbox is the third checkbox (after mode radios)
+    const checkboxes = screen.getAllByRole('checkbox') as HTMLInputElement[];
+    const skipBlanksCheckbox = checkboxes.find((cb) => cb.nextSibling?.textContent === 'Skip blanks');
+    expect(skipBlanksCheckbox?.checked).toBe(true);
   });
 
-  it('calls onSkipBlanksChange when checkbox is toggled', () => {
+  it('calls onSkipBlanksChange when skip blanks checkbox is toggled', () => {
     render(<PasteSpecialModal {...defaultProps} />);
-    const checkbox = screen.getByRole('checkbox') as HTMLInputElement;
-    fireEvent.click(checkbox);
+    const checkboxes = screen.getAllByRole('checkbox') as HTMLInputElement[];
+    const skipBlanksCheckbox = checkboxes.find((cb) => cb.nextSibling?.textContent === 'Skip blanks');
+    fireEvent.click(skipBlanksCheckbox!);
     expect(defaultProps.onSkipBlanksChange).toHaveBeenCalledWith(true);
   });
 
   it('calls onApply with options when Paste is clicked', () => {
     render(<PasteSpecialModal {...defaultProps} skipBlanks={true} />);
-    fireEvent.click(screen.getByText('Paste'));
-    expect(defaultProps.onApply).toHaveBeenCalledWith({ skipBlanks: true });
+    fireEvent.click(screen.getByRole('button', { name: /^Paste$/i }));
+    expect(defaultProps.onApply).toHaveBeenCalledWith(
+      expect.objectContaining({ skipBlanks: true })
+    );
   });
 
   it('calls onClose when Cancel is clicked', () => {
