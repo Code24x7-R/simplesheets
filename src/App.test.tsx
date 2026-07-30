@@ -295,17 +295,28 @@ describe('App - Global Keyboard Shortcuts', () => {
   });
 
   it('Ctrl+S triggers save', () => {
+    URL.createObjectURL = jest.fn(() => 'blob:mock');
+    URL.revokeObjectURL = jest.fn();
     render(<App />);
-    // Press Ctrl+S (should not throw)
+    // Press Ctrl+S (triggers download)
     fireGlobalKeyDown('s');
+    // Verify download was triggered
+    expect(URL.createObjectURL).toHaveBeenCalled();
     // Verify app still renders
     expect(screen.getByText('SimpleSheet')).toBeInTheDocument();
   });
 
   it('Ctrl+O triggers load', () => {
     render(<App />);
-    // Press Ctrl+O (should not throw)
+    const dispatchSpy = jest.spyOn(window, 'dispatchEvent');
+    // Press Ctrl+O (dispatches open event)
     fireGlobalKeyDown('o');
+    // Verify open event was dispatched
+    const openCalls = dispatchSpy.mock.calls.filter(
+      ([e]) => e.type === 'simplesheets:open'
+    );
+    expect(openCalls.length).toBe(1);
+    dispatchSpy.mockRestore();
     // Verify app still renders
     expect(screen.getByText('SimpleSheet')).toBeInTheDocument();
   });

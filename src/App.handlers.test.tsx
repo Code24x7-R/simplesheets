@@ -315,15 +315,18 @@ describe('App - New Sheet', () => {
 });
 
 describe('App - Save Button', () => {
-  it('shows save status via File menu', () => {
+  it('triggers download via File menu', () => {
+    URL.createObjectURL = jest.fn(() => 'blob:mock');
+    URL.revokeObjectURL = jest.fn();
     render(<App />);
     // Use File menu
     fireEvent.click(screen.getByText('File'));
     fireEvent.click(screen.getByText('Save'));
 
-    // Status should update (currently just shows a message to use the Save button)
+    // Should show saved status and trigger download
     const statusBar = screen.getByTestId('status-message');
-    expect(statusBar?.textContent).toContain('Save');
+    expect(statusBar?.textContent).toContain('Saved');
+    expect(URL.createObjectURL).toHaveBeenCalled();
   });
 });
 

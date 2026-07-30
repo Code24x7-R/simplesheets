@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, forwardRef } from 'react';
 import { downloadExcel } from '../services/excelExport';
 import type { Workbook } from '../types';
 
@@ -9,14 +9,16 @@ interface ExportExcelButtonProps {
 /**
  * Button that exports the current workbook to an .xlsx file download.
  */
-export function ExportExcelButton({ workbook }: ExportExcelButtonProps) {
-  const handleClick = useCallback(() => {
-    downloadExcel(workbook);
-  }, [workbook]);
+export const ExportExcelButton = forwardRef<HTMLButtonElement, ExportExcelButtonProps>(
+  function ExportExcelButton({ workbook }, ref) {
+    const handleClick = useCallback(() => {
+      downloadExcel(workbook);
+    }, [workbook]);
 
-  return (
-    <button className="toolbar-btn" onClick={handleClick} title="Export to Excel format">
-      📤 Export Excel
-    </button>
-  );
-}
+    return (
+      <button ref={ref} className="toolbar-btn" onClick={handleClick} title="Export to Excel format">
+        📤 Export Excel
+      </button>
+    );
+  },
+);

@@ -52,11 +52,14 @@ describe('App - Menu Handlers', () => {
     expect(screen.getByText('Ready')).toBeInTheDocument();
   });
 
-  it('File → Save shows status message', () => {
+  it('File → Save triggers download and shows status message', () => {
+    URL.createObjectURL = jest.fn(() => 'blob:mock');
+    URL.revokeObjectURL = jest.fn();
     render(<App />);
     fireEvent.click(screen.getByText('File'));
     fireEvent.click(screen.getByText('Save'));
-    expect(screen.getByText(/Save button in the toolbar/)).toBeInTheDocument();
+    const statusBar = screen.getByTestId('status-message');
+    expect(statusBar?.textContent).toContain('Saved');
   });
 
   it('Format → Bold toggles bold formatting', () => {

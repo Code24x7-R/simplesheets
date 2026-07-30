@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, forwardRef } from 'react';
 import { downloadCsv } from '../services/csvService';
 import type { Sheet } from '../types';
 
@@ -9,14 +9,16 @@ interface ExportCsvButtonProps {
 /**
  * Button that exports the current sheet to a CSV file download.
  */
-export function ExportCsvButton({ sheet }: ExportCsvButtonProps) {
-  const handleClick = useCallback(() => {
-    downloadCsv(sheet);
-  }, [sheet]);
+export const ExportCsvButton = forwardRef<HTMLButtonElement, ExportCsvButtonProps>(
+  function ExportCsvButton({ sheet }, ref) {
+    const handleClick = useCallback(() => {
+      downloadCsv(sheet);
+    }, [sheet]);
 
-  return (
-    <button className="toolbar-btn" onClick={handleClick} title="Export to CSV format">
-      📄 Export CSV
-    </button>
-  );
-}
+    return (
+      <button ref={ref} className="toolbar-btn" onClick={handleClick} title="Export to CSV format">
+        📄 Export CSV
+      </button>
+    );
+  },
+);

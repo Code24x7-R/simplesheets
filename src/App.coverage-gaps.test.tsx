@@ -172,13 +172,18 @@ describe('App - Search & Replace Apply', () => {
 });
 
 describe('App - Load Menu Handler', () => {
-  it('shows load message when File > Load is selected', () => {
+  it('dispatches open event when File > Open is selected', () => {
     render(<App />);
+    const dispatchSpy = jest.spyOn(window, 'dispatchEvent');
     fireEvent.click(screen.getByText('File'));
     fireEvent.click(screen.getByText('Open…'));
 
-    const statusBar = screen.getByTestId('status-message');
-    expect(statusBar?.textContent).toContain('Open');
+    // Should dispatch the open event (triggers file picker)
+    const openCalls = dispatchSpy.mock.calls.filter(
+      ([e]) => e.type === 'simplesheets:open'
+    );
+    expect(openCalls.length).toBe(1);
+    dispatchSpy.mockRestore();
   });
 });
 

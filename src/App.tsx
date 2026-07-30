@@ -29,6 +29,7 @@ import { useReferenceFormat } from './hooks/useReferenceFormat';
 import { useFormulaWizard } from './hooks/useFormulaWizard';
 import { FormulaWizard } from './components/FormulaWizard';
 import { loadAutosave } from './services/storageService';
+import { downloadJson } from './services/jsonService';
 import type { Cell, Selection, Sheet } from './types';
 import { insertRow, deleteRow, insertCol, deleteCol } from './utils/sheetOperations';
 import { computeFillSeries } from './utils/fillSeries';
@@ -551,11 +552,12 @@ function WorkbookView() {
   // ─── Save / Load Triggers (for menu) ──────────────────────────────────
 
   const handleSaveMenu = useCallback(() => {
-    setStatusMessage('Use the Save button in the toolbar to save');
-  }, []);
+    downloadJson(workbook);
+    setStatusMessage(`Saved "${workbook.title}" — download started`);
+  }, [workbook]);
 
   const handleLoadMenu = useCallback(() => {
-    setStatusMessage('Use the Open button to load a saved workbook');
+    window.dispatchEvent(new CustomEvent('simplesheets:open'));
   }, []);
 
   // Import / Export triggers — dispatch events that the hidden import buttons listen for

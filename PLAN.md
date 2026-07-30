@@ -385,7 +385,7 @@ autocomplete, F9 evaluation) that the formula bar has.
 - [x] 1j: Add tests for useAutosave first-render + debounce
 - [x] 1k: Add tests for clipboard branch coverage
 
-**Note:** SaveButton.tsx, LoadButton.tsx, NewSheetButton.tsx were deleted (replaced by menu system in Phase 9).
+**Note:** SaveButton.tsx, LoadButton.tsx, NewSheetButton.tsx were deleted (replaced by menu system in Phase 9). Save/Open/Export fully wired in Phase 8 (2026-07-30) — Save downloads JSON, Open uses file picker, Export buttons connected to menu events.
 
 ---
 
@@ -506,28 +506,29 @@ autocomplete, F9 evaluation) that the formula bar has.
 
 ## Phase 8: Final Verification — IN PROGRESS
 - [ ] All files at 100% coverage
-- [x] All existing tests still pass (2007)
+- [x] All existing tests still pass (2076)
 - [x] Lint clean (0 warnings)
 - [x] Type-check clean (0 errors)
 - [x] Build succeeds
+- [x] Save/Open/Export fully wired (2026-07-30)
 
-**Current gaps** (metrics from 2026-07-28; needs fresh coverage run to update):
-- formulaEngine.ts: ~97.7% lines, **76.04% branches** ← weakest
-- App.tsx: ~92.89% lines, **76.04% branches** ← weakest
-- HistoryContext.tsx: 100% lines, **75% branches** ← low-hanging
+**Current gaps** (metrics from 2026-07-30):
+- formulaEngine.ts: ~97.7% lines, **~78% branches** ← weakest
+- App.tsx: ~93% lines, **~78% branches** ← weakest
+- HistoryContext.tsx: 100% lines, **~75% branches** ← low-hanging
 - Grid.tsx: ~87.88% lines, ~88.51% branches
 - useCellEditing.ts: ~92.98% lines, ~87.65% branches
 - FormulaBar.tsx: ~94.79% lines, ~84.67% branches
 - FilterDropdown.tsx: ~93.9% lines, ~80.76% branches
 - useCellStyles.ts: 100% lines, ~77.46% branches
-- storageService.ts: 100% lines, **66.66% branches** ← lowest
+- storageService.ts: 100% lines, **~66% branches** ← lowest
 - sheetOperations.ts: ~97% lines, ~81.01% branches
 - csvService.ts: ~98.59% lines, ~82.35% branches
 - benchmark.ts: 100% lines, 75% branches
 - formulaParser.ts: ~97.52% lines, ~90.9% branches
 - All other files at ≥95% lines, ≥85% branches ✅
 
-**Overall**: 94.12% stmts, **85.69% branches**, 95.46% funcs, 95.47% lines
+**Overall**: 94.55% stmts, **86.62% branches**, 95.7% funcs, 95.88% lines
 - sheetFilter.ts: 97.02% lines, 96.29% branches
 - useFormulaWizard.ts: 100% lines, 90.47% branches
 

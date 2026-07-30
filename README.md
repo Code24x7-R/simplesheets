@@ -2,6 +2,8 @@
 
 A lightweight, browser‑based spreadsheet no bloat — just a fast, offline‑capable grid that reads and writes Excel files.
 
+**🌐 Live demo:** [https://code24x7-r.github.io/simplesheets/](https://code24x7-r.github.io/simplesheets/)
+
 ---
 
 ## Features

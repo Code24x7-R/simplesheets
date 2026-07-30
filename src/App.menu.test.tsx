@@ -113,20 +113,28 @@ describe('App - Menu Handlers', () => {
     expect(unfreezeItem?.classList.contains('menu-item-disabled')).toBe(true);
   });
 
-  it('handles File > Save (shows status)', () => {
+  it('handles File > Save (triggers download)', () => {
+    URL.createObjectURL = jest.fn(() => 'blob:mock');
+    URL.revokeObjectURL = jest.fn();
     render(<App />);
     fireEvent.click(screen.getByText('File'));
     fireEvent.click(screen.getByText('Save'));
     const statusBar = screen.getByTestId('status-message');
-    expect(statusBar?.textContent).toContain('Save');
+    expect(statusBar?.textContent).toContain('Saved');
+    expect(URL.createObjectURL).toHaveBeenCalled();
   });
 
-  it('handles File > Open (shows status)', () => {
+  it('handles File > Open (dispatches open event)', () => {
     render(<App />);
+    const dispatchSpy = jest.spyOn(window, 'dispatchEvent');
     fireEvent.click(screen.getByText('File'));
     fireEvent.click(screen.getByText('Open…'));
-    const statusBar = screen.getByTestId('status-message');
-    expect(statusBar?.textContent).toContain('Open');
+    // Should dispatch the open event (triggers file picker)
+    const openCalls = dispatchSpy.mock.calls.filter(
+      ([e]) => e.type === 'simplesheets:open'
+    );
+    expect(openCalls.length).toBe(1);
+    dispatchSpy.mockRestore();
   });
 
   it('opens Page Setup modal from File menu', () => {
