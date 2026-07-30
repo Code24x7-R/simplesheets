@@ -112,8 +112,22 @@ Open the interactive Formula Wizard using any of these methods:
 
 The wizard intelligently adapts based on the current cell's contents:
 
-- **Cell has a formula** (e.g., `=SUM(B4:D4)`) — Wizard opens with all parameters pre-populated from the formula. Nested functions like `=IF(A1>0, SUM(B4:D4), 0)` are shown as clickable elements you can drill into.
+- **Cell has a formula** (e.g., `=SUM(B4:D4)`) — Wizard opens with all parameters pre-populated from the formula. Nested functions are shown as clickable elements you can drill into.
 - **Cell is empty** (or has a non-formula like `=A1+B1`) — A **Function Picker** appears with a searchable list of all 50+ functions. Pick one to start building.
+
+#### Import Example
+
+Opening the wizard on a cell containing `=IF(A1>0, SUM(B4:D4), 0)`:
+
+1. Wizard opens at root level showing IF parameters:
+   - `Condition`: `A1>0`
+   - `True_val`: `SUM(B4:D4)` (clickable — drills into nested SUM)
+   - `False_val`: `0`
+2. Click `SUM(B4:D4)` to navigate into the nested function:
+   - Breadcrumb shows: `f(x) IF > f(x) SUM`
+   - `Number1`: `B4:D4`
+3. Result preview updates in real-time as you edit parameters.
+4. Click **Apply to Cell** to commit the formula back to the cell.
 
 The wizard guides you through building complex formulas step-by-step:
 
@@ -200,7 +214,7 @@ npm run preview
 npm test
 ```
 
-Current test suite: **1347 tests** across 51 suites with **~92% line coverage**.
+Current test suite: **2076 tests** across 80 suites with **~96% line coverage**.
 
 ---
 
