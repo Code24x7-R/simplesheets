@@ -1,6 +1,5 @@
 # Dependencies
 node_modules/
-package-lock.json
 yarn.pnpm-lock.yaml
 
 # Build output
