@@ -324,6 +324,84 @@ function collectRangeValues(node: Extract<ASTNode, { type: 'range' }>, ctx: Eval
   return values;
 }
 
+// ── Helper: Convert Excel serial number to Date ─────────────────
+function dateFromSerial(serial: number): Date {
+  // Excel serial date: days since 1900-01-01 (with the 1900 leap year bug)
+  const excelEpoch = new Date(1899, 11, 30);
+  const d = new Date(excelEpoch.getTime() + serial * 86400000);
+  return d;
+}
+
+// ── Helper: Format a date using Excel-style format codes ────────
+function formatDate(d: Date, fmt: string): string {
+  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const dayNamesShort = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  const monthNamesShort = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const day = d.getDate();
+  const month = d.getMonth();
+  const year = d.getFullYear();
+  const weekday = d.getDay();
+  const hours = d.getHours();
+  const minutes = d.getMinutes();
+  const seconds = d.getSeconds();
+
+  // Count consecutive format characters
+  const countChars = (s: string, start: number, char: string): number => {
+    let count = 0;
+    for (let i = start; i < s.length; i++) {
+      if (s[i] === char) count++;
+      else break;
+    }
+    return count;
+  };
+
+  let result = '';
+  let i = 0;
+  while (i < fmt.length) {
+    const ch = fmt[i];
+    if (ch === 'd') {
+      const n = countChars(fmt, i, 'd');
+      if (n <= 2) result += String(day).padStart(n, '0');
+      else if (n === 3 || n >= 5) result += dayNamesShort[weekday]; // ddd or ddddd = abbreviated
+      else result += dayNames[weekday]; // dddd = full
+      i += n;
+    } else if (ch === 'm') {
+      const n = countChars(fmt, i, 'm');
+      if (n <= 2) result += String(month + 1).padStart(n, '0');
+      else if (n === 3 || n >= 5) result += monthNamesShort[month]; // mmm or mmmmm = abbreviated
+      else result += monthNames[month]; // mmmm = full
+      i += n;
+    } else if (ch === 'y') {
+      const n = countChars(fmt, i, 'y');
+      if (n <= 2) result += String(year).slice(-2);
+      else result += String(year).padStart(4, '0');
+      i += n;
+    } else if (ch === 'h') {
+      const n = countChars(fmt, i, 'h');
+      const h12 = hours % 12 || 12;
+      result += String(h12).padStart(n, '0');
+      i += n;
+    } else if (ch === 'H') {
+      const n = countChars(fmt, i, 'H');
+      result += String(hours).padStart(n, '0');
+      i += n;
+    } else if (ch === 'M') {
+      const n = countChars(fmt, i, 'M');
+      result += String(minutes).padStart(n, '0');
+      i += n;
+    } else if (ch === 's') {
+      const n = countChars(fmt, i, 's');
+      result += String(seconds).padStart(n, '0');
+      i += n;
+    } else {
+      result += ch;
+      i++;
+    }
+  }
+  return result;
+}
+
 /**
  * Evaluates a function call node.
  */
@@ -689,6 +767,14 @@ function evaluateFunction(node: Extract<ASTNode, { type: 'function' }>, ctx: Eva
       const val = flatValues[0];
       const fmt = toString(flatValues[1] ?? '0');
       if (typeof val === 'number') {
+        // Check if format is a date format (contains date-related codes)
+        if (/[dmyhsDMyHsS]/.test(fmt)) {
+          // Treat number as a date serial number and format as date
+          const d = dateFromSerial(val);
+          if (!isNaN(d.getTime())) {
+            return formatDate(d, fmt);
+          }
+        }
         if (fmt === '0') return String(Math.round(val));
         if (fmt === '0.00') return val.toFixed(2);
         if (fmt.includes('%')) return (val * 100).toFixed(fmt.split('%')[0].split('.')[1]?.length ?? 0) + '%';
@@ -859,6 +945,7 @@ function evaluateFunction(node: Extract<ASTNode, { type: 'function' }>, ctx: Eva
       const d = new Date(toString(flatValues[0] ?? ''));
       return isNaN(d.getTime()) ? ERR_VALUE : d.getFullYear();
     }
+
     case 'MONTH': {
       const d = new Date(toString(flatValues[0] ?? ''));
       return isNaN(d.getTime()) ? ERR_VALUE : d.getMonth() + 1;
