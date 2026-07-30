@@ -43,6 +43,7 @@ function astNodeToString(node: ASTNode): string {
       const args = node.args.map(astNodeToString).join(', ');
       return `${node.name}(${args})`;
     }
+    /* istanbul ignore next - parser only produces known node types */
     default:
       return '';
   }

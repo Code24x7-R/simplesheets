@@ -214,6 +214,25 @@ describe('formulaWizardImport', () => {
     });
   });
 
+  describe('variadic function import', () => {
+    it('imports function with extra args beyond defined params (SUM with 3 args)', () => {
+      const result = importFormulaToWizard('=SUM(B4:D4, E1:F1, G1:H1)');
+      expect(result).not.toBeNull();
+      // SUM has 2 defined params (number1, number2 variadic). Third arg goes into variadic slot.
+      const values = Object.values(result?.root.parameterValues ?? {});
+      expect(values.length).toBeGreaterThanOrEqual(3);
+    });
+
+    it('imports variadic function with nested function in extra arg', () => {
+      // 3 args, 2 params → variadic handling triggers for 3rd arg (nested SUM)
+      const result = importFormulaToWizard('=SUM(B4:D4, E1:F1, SUM(G1:G10))');
+      expect(result).not.toBeNull();
+      // The 3rd arg (SUM nested) should be imported as a nested function node
+      const nestedParam = Object.values(result?.root.parameterValues ?? {}).find((p) => p.isNestedFunction);
+      expect(nestedParam).toBeDefined();
+    });
+  });
+
   describe('canImportFormula', () => {
     it('returns true for importable formula', () => {
       expect(canImportFormula('=SUM(B4:D4)')).toBe(true);

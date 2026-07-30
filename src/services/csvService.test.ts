@@ -31,6 +31,14 @@ describe('CSV Service', () => {
       expect(result.success).toBe(false);
     });
 
+    it('returns error for malformed CSV with no valid data', () => {
+      // A single unclosed quote produces parse errors with zero data rows
+      const csv = '"';
+      const result = importCsv(csv);
+      expect(result.success).toBe(false);
+      expect(result.error).toBeDefined();
+    });
+
     it('respects custom delimiter', () => {
       const csv = 'a;b;c\n1;2;3';
       const result = importCsv(csv, { delimiter: ';' });

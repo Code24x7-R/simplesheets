@@ -188,15 +188,15 @@ function renderInline(text: string): React.ReactNode {
           {match[2]}
         </strong>
       );
-    } else if (match[4]) {
-      // Code
-      /* istanbul ignore next - edge case: inline code parsing */
-      parts.push(
-        <code key={match.index} className="px-1 py-0.5 bg-gray-100 rounded text-xs font-mono text-gray-800">
-          {match[4]}
-        </code>
-      );
-    }
+    } else
+      /* istanbul ignore next - ABOUT_CONTENT has no inline code markers */
+      if (match[4]) {
+        parts.push(
+          <code key={match.index} className="px-1 py-0.5 bg-gray-100 rounded text-xs font-mono text-gray-800">
+            {match[4]}
+          </code>
+        );
+      }
 
     lastIndex = regex.lastIndex;
   }

@@ -1,4 +1,4 @@
-import { evaluateWorkbook, buildDependencyGraph, detectCircularReferences } from './formulaEngine';
+import { evaluateWorkbook, buildDependencyGraph, detectCircularReferences, evaluateFormulaPreview } from './formulaEngine';
 import type { Sheet, Cell, Workbook } from '../types';
 
 /**
@@ -1973,5 +1973,410 @@ describe('evaluateWorkbook - cross-sheet references', () => {
     // These reference each other but are on different sheets — no intra-sheet cycle
     // (Each cell reads the other which has no formula producing a value, so result is 0)
     expect(result.circularRefs.length).toBe(0);
+  });
+
+  describe('evaluateFormulaPreview', () => {
+    it('evaluates a simple arithmetic formula', () => {
+      const sheet = createSheet({ '0:0': '10', '1:0': '20' });
+      const wb = sheetToWorkbook(sheet);
+      expect(evaluateFormulaPreview('1+2', wb, 0)).toBe(3);
+    });
+
+    it('evaluates a formula referencing cells', () => {
+      const sheet = createSheet({ '0:0': '10', '0:1': '20' });
+      const wb = sheetToWorkbook(sheet);
+      expect(evaluateFormulaPreview('A1+B1', wb, 0)).toBe(30);
+    });
+
+    it('evaluates a SUM function', () => {
+      const sheet = createSheet({ '0:0': '1', '1:0': '2', '2:0': '3' });
+      const wb = sheetToWorkbook(sheet);
+      expect(evaluateFormulaPreview('SUM(A1:A3)', wb, 0)).toBe(6);
+    });
+
+    it('returns null for an empty formula', () => {
+      const sheet = createSheet({});
+      const wb = sheetToWorkbook(sheet);
+      expect(evaluateFormulaPreview('', wb, 0)).toBeNull();
+    });
+
+    it('returns null for an invalid sheet index', () => {
+      const sheet = createSheet({});
+      const wb = sheetToWorkbook(sheet);
+      expect(evaluateFormulaPreview('1+1', wb, 5)).toBeNull();
+    });
+
+    it('returns null for a formula that fails to parse', () => {
+      const sheet = createSheet({});
+      const wb = sheetToWorkbook(sheet);
+      expect(evaluateFormulaPreview('+++', wb, 0)).toBeNull();
+    });
+
+    it('resolves cross-sheet references', () => {
+      const sheet1 = createSheet({ '0:0': '42' }, { name: 'Sheet1' });
+      const sheet2 = createSheet({}, { name: 'Sheet2' });
+      const wb = createMultiSheetWorkbook([sheet1, sheet2]);
+      expect(evaluateFormulaPreview('Sheet1!A1', wb, 1)).toBe(42);
+    });
+
+    it('evaluates a formula that depends on another formula cell', () => {
+      const sheet = createSheet({ '0:0': '5', '1:0': '=A1*2', '2:0': '=A2+1' });
+      const wb = sheetToWorkbook(sheet);
+      expect(evaluateFormulaPreview('A3+10', wb, 0)).toBe(21);
+    });
+  });
+
+  // ─── String Comparison Operators (branch coverage) ──────────────
+
+  describe('String comparison operators', () => {
+    it('evaluates string less-than (<)', () => {
+      const sheet = createSheet({ '0:0': '="a"<"b"' });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue).toBe(true);
+    });
+
+    it('evaluates string greater-than (>)', () => {
+      const sheet = createSheet({ '0:0': '="b">"a"' });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue).toBe(true);
+    });
+
+    it('evaluates string less-than-or-equal (<=)', () => {
+      const sheet = createSheet({ '0:0': '="a"<="a"' });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue).toBe(true);
+    });
+
+    it('evaluates string greater-than-or-equal (>=)', () => {
+      const sheet = createSheet({ '0:0': '="b">="a"' });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue).toBe(true);
+    });
+  });
+
+  // ─── NOT / XOR / SWITCH / TEXT / VALUE branches ──────────────────
+
+  describe('Logical function branches', () => {
+    it('NOT returns true for numeric 0', () => {
+      const sheet = createSheet({ '0:0': '=NOT(0)' });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue).toBe(true);
+    });
+
+    it('NOT returns false for non-zero number', () => {
+      const sheet = createSheet({ '0:0': '=NOT(42)' });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue).toBe(false);
+    });
+
+    it('XOR with odd true count returns true', () => {
+      const sheet = createSheet({ '0:0': '=XOR(TRUE, FALSE, FALSE)' });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue).toBe(true);
+    });
+
+    it('XOR with even true count returns false', () => {
+      const sheet = createSheet({ '0:0': '=XOR(TRUE, TRUE)' });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue).toBe(false);
+    });
+
+    it('SWITCH finds a matching case', () => {
+      const sheet = createSheet({ '0:0': '=SWITCH("b", "a", 1, "b", 2, 0)' });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue).toBe(2);
+    });
+
+    it('SWITCH returns default when no match', () => {
+      const sheet = createSheet({ '0:0': '=SWITCH("z", "a", 1, "b", 2, 99)' });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue).toBe(99);
+    });
+
+    it('TEXT formats number with "0.00"', () => {
+      const sheet = createSheet({ '0:0': '=TEXT(3.14159, "0.00")' });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue).toBe('3.14');
+    });
+
+    it('TEXT formats number with percentage', () => {
+      const sheet = createSheet({ '0:0': '=TEXT(0.25, "0%")' });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue).toBe('25%');
+    });
+
+    it('VALUE returns error for non-numeric string', () => {
+      const sheet = createSheet({ '0:0': '=VALUE("abc")' });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue).toBe('#VALUE!');
+    });
+
+    it('VALUE converts numeric string', () => {
+      const sheet = createSheet({ '0:0': '=VALUE("42.5")' });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue).toBe(42.5);
+    });
+  });
+
+  // ─── ROWS / COLUMNS with range argument ─────────────────────────
+
+  describe('ROWS and COLUMNS with range', () => {
+    it('ROWS counts rows in a range argument', () => {
+      const sheet = createSheet({ '0:0': '=ROWS(B1:C5)' });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue).toBe(5);
+    });
+
+    it('COLUMNS counts columns in a range argument', () => {
+      const sheet = createSheet({ '0:0': '=COLUMNS(B1:E1)' });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue).toBe(4);
+    });
+  });
+
+  // ─── COUNTIF / SUMIF with NaN comparison ────────────────────────
+
+  describe('COUNTIF/SUMIF comparison edge cases', () => {
+    it('COUNTIF with non-numeric criterion returns 0', () => {
+      const sheet = createSheet({
+        '0:0': '10',
+        '1:0': '20',
+        '2:0': '=COUNTIF(A1:A2, ">foo")',
+      });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['2:0'].computedValue).toBe(0);
+    });
+
+    it('SUMIF with non-numeric criterion returns 0', () => {
+      const sheet = createSheet({
+        '0:0': '10',
+        '1:0': '20',
+        '2:0': '=SUMIF(A1:A2, ">foo")',
+      });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['2:0'].computedValue).toBe(0);
+    });
+  });
+
+  // ─── evaluateWorkbook bounds check ──────────────────────────────
+
+  describe('evaluateWorkbook bounds check', () => {
+    it('returns error result for negative sheet index', () => {
+      const sheet = createSheet({ '0:0': '42' });
+      const wb = sheetToWorkbook(sheet);
+      const result = evaluateWorkbook(wb, -1);
+      expect(result.success).toBe(false);
+      expect(result.cells).toEqual({});
+    });
+
+    it('returns error result for out-of-bounds sheet index', () => {
+      const sheet = createSheet({ '0:0': '42' });
+      const wb = sheetToWorkbook(sheet);
+      const result = evaluateWorkbook(wb, 99);
+      expect(result.success).toBe(false);
+      expect(result.cells).toEqual({});
+    });
+  });
+
+  // ─── String inequality / NOT string / IFNA / TEXT non-number ────
+
+  describe('Additional uncovered branches', () => {
+    it('evaluates string inequality (<>)', () => {
+      const sheet = createSheet({ '0:0': '="a"<>"b"' });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue).toBe(true);
+    });
+
+    it('evaluates string inequality (<>) false case', () => {
+      const sheet = createSheet({ '0:0': '="a"<>"a"' });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue).toBe(false);
+    });
+
+    it('NOT returns false for string "TRUE"', () => {
+      const sheet = createSheet({ '0:0': '=NOT("TRUE")' });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue).toBe(false);
+    });
+
+    it('NOT returns true for non-TRUE string', () => {
+      const sheet = createSheet({ '0:0': '=NOT("hello")' });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue).toBe(true);
+    });
+
+    it('IFNA returns val when not an error', () => {
+      const sheet = createSheet({ '0:0': '=IFNA(42, "fallback")' });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue).toBe(42);
+    });
+
+    it('IFNA returns fallback when val is error', () => {
+      const sheet = createSheet({
+        '0:0': '=1/0',
+        '1:0': '=IFNA(A1, "fallback")',
+      });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['1:0'].computedValue).toBe('fallback');
+    });
+
+    it('TEXT with non-number value returns toString', () => {
+      const sheet = createSheet({ '0:0': '=TEXT("hello", "0")' });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue).toBe('hello');
+    });
+
+    it('ROWS without range arg uses flatValues', () => {
+      const sheet = createSheet({ '0:0': '5', '1:0': '=ROWS(A1)' });
+      // A1 is a cell ref, not a range → flatValues path → toNumber(5) = 5
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['1:0'].computedValue).toBe(5);
+    });
+
+    it('COLUMNS without range arg uses flatValues', () => {
+      const sheet = createSheet({ '0:0': '5', '1:0': '=COLUMNS(A1)' });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['1:0'].computedValue).toBe(5);
+    });
+
+    it('COUNTIF with < operator', () => {
+      const sheet = createSheet({
+        '0:0': '1',
+        '1:0': '5',
+        '2:0': '3',
+        '3:0': '=COUNTIF(A1:A3, "<3")',
+      });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['3:0'].computedValue).toBe(1);
+    });
+
+    it('SUMIF with < operator', () => {
+      const sheet = createSheet({
+        '0:0': '1',
+        '1:0': '5',
+        '2:0': '3',
+        '3:0': '=SUMIF(A1:A3, "<3")',
+      });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['3:0'].computedValue).toBe(1);
+    });
+  });
+
+  // ─── Additional function coverage (math, trig, string, date, stats) ──
+
+  describe('Additional function coverage', () => {
+    it('LOG computes logarithm with custom base', () => {
+      const sheet = createSheet({ '0:0': '=LOG(8, 2)' });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue).toBe(3);
+    });
+
+    it('LOG10 computes base-10 logarithm', () => {
+      const sheet = createSheet({ '0:0': '=LOG10(100)' });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue).toBe(2);
+    });
+
+    it('PI returns π', () => {
+      const sheet = createSheet({ '0:0': '=PI()' });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue).toBe(Math.PI);
+    });
+
+    it('RANDBETWEEN returns integer in range', () => {
+      const sheet = createSheet({ '0:0': '=RANDBETWEEN(1, 6)' });
+      const val = evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue as number;
+      expect(val).toBeGreaterThanOrEqual(1);
+      expect(val).toBeLessThanOrEqual(6);
+      expect(Number.isInteger(val)).toBe(true);
+    });
+
+    it('SIGN returns -1 for negative', () => {
+      const sheet = createSheet({ '0:0': '=SIGN(-5)' });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue).toBe(-1);
+    });
+
+    it('SIGN returns 0 for zero', () => {
+      const sheet = createSheet({ '0:0': '=SIGN(0)' });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue).toBe(0);
+    });
+
+    it('TRUNC truncates to digits', () => {
+      const sheet = createSheet({ '0:0': '=TRUNC(3.14159, 2)' });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue).toBe(3.14);
+    });
+
+    it('SIN computes sine', () => {
+      const sheet = createSheet({ '0:0': '=SIN(0)' });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue).toBe(0);
+    });
+
+    it('COS computes cosine', () => {
+      const sheet = createSheet({ '0:0': '=COS(0)' });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue).toBe(1);
+    });
+
+    it('ASIN returns error for out-of-range', () => {
+      const sheet = createSheet({ '0:0': '=ASIN(2)' });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue).toBe('#VALUE!');
+    });
+
+    it('STRING functions: LEN, LOWER, UPPER, TRIM', () => {
+      const sheet = createSheet({
+        '0:0': '=LEN("hello")',
+        '1:0': '=LOWER("HELLO")',
+        '2:0': '=UPPER("hello")',
+        '3:0': '=TRIM("  hi  ")',
+      });
+      const res = evaluateWorkbook(sheetToWorkbook(sheet), 0).cells;
+      expect(res['0:0'].computedValue).toBe(5);
+      expect(res['1:0'].computedValue).toBe('hello');
+      expect(res['2:0'].computedValue).toBe('HELLO');
+      expect(res['3:0'].computedValue).toBe('hi');
+    });
+
+    it('RIGHT and MID extract substrings', () => {
+      const sheet = createSheet({
+        '0:0': '=RIGHT("hello", 2)',
+        '1:0': '=MID("hello", 2, 3)',
+      });
+      const res = evaluateWorkbook(sheetToWorkbook(sheet), 0).cells;
+      expect(res['0:0'].computedValue).toBe('lo');
+      expect(res['1:0'].computedValue).toBe('ell');
+    });
+
+    it('ISNUMBER and ISTEXT detect types', () => {
+      const sheet = createSheet({
+        '0:0': '=ISNUMBER(42)',
+        '1:0': '=ISNUMBER("hi")',
+        '2:0': '=ISTEXT("hi")',
+        '3:0': '=ISTEXT(42)',
+      });
+      const res = evaluateWorkbook(sheetToWorkbook(sheet), 0).cells;
+      expect(res['0:0'].computedValue).toBe(true);
+      expect(res['1:0'].computedValue).toBe(false);
+      expect(res['2:0'].computedValue).toBe(true);
+      expect(res['3:0'].computedValue).toBe(false);
+    });
+
+    it('REPT repeats string', () => {
+      const sheet = createSheet({ '0:0': '=REPT("ab", 3)' });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue).toBe('ababab');
+    });
+
+    it('DATE creates date value', () => {
+      const sheet = createSheet({ '0:0': '=DATE(2024, 1, 15)' });
+      const val = evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue;
+      expect(val).toContain('2024');
+    });
+
+    it('YEAR, MONTH, DAY extract date parts', () => {
+      const sheet = createSheet({
+        '0:0': '=YEAR(DATE(2024, 3, 15))',
+        '1:0': '=MONTH(DATE(2024, 3, 15))',
+        '2:0': '=DAY(DATE(2024, 3, 15))',
+      });
+      const res = evaluateWorkbook(sheetToWorkbook(sheet), 0).cells;
+      expect(res['0:0'].computedValue).toBe(2024);
+      expect(res['1:0'].computedValue).toBe(3);
+      expect(res['2:0'].computedValue).toBe(15);
+    });
+
+    it('ISBLANK detects blank cells', () => {
+      const sheet = createSheet({
+        '0:0': '42',
+        '1:0': '=ISBLANK(A1)',
+        '2:0': '=ISBLANK(B1)',
+      });
+      const res = evaluateWorkbook(sheetToWorkbook(sheet), 0).cells;
+      expect(res['1:0'].computedValue).toBe(false);
+    });
+
+    it('ISERROR detects errors', () => {
+      const sheet = createSheet({
+        '0:0': '=1/0',
+        '1:0': '=ISERROR(A1)',
+        '2:0': '=ISERROR(42)',
+      });
+      const res = evaluateWorkbook(sheetToWorkbook(sheet), 0).cells;
+      expect(res['1:0'].computedValue).toBe(true);
+      expect(res['2:0'].computedValue).toBe(false);
+    });
+
+    it('ISBLANK detects blank vs non-blank', () => {
+      const sheet = createSheet({
+        '0:0': '42',
+        '1:0': '=ISBLANK(A1)',
+      });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['1:0'].computedValue).toBe(false);
+    });
   });
 });

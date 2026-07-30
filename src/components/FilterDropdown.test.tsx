@@ -349,5 +349,38 @@ describe('FilterDropdown', () => {
         logic: 'AND',
       });
     });
+
+    it('handles custom filter with greaterOrEqual condition', () => {
+      render(<FilterDropdown {...defaultProps} />);
+      fireEvent.click(screen.getByText('Custom filter'));
+      fireEvent.change(screen.getByTestId('filter-custom-type'), { target: { value: 'greaterOrEqual' } });
+      fireEvent.change(screen.getByTestId('filter-custom-value'), { target: { value: '100' } });
+      fireEvent.click(screen.getByTestId('filter-apply'));
+      expect(defaultProps.onApply).toHaveBeenCalledWith({
+        conditions: [{ type: 'greaterOrEqual', value: 100 }],
+        logic: 'AND',
+      });
+    });
+  });
+
+  // ── Outside click and tab switching ─────────────────────────────────
+
+  describe('outside click and tab switching', () => {
+    it('closes when clicking outside the dropdown', () => {
+      render(<FilterDropdown {...defaultProps} />);
+      // Simulate mousedown outside the dropdown
+      fireEvent.mouseDown(document.body);
+      expect(defaultProps.onClose).toHaveBeenCalled();
+    });
+
+    it('switches back to value list via "Filter by values" tab', () => {
+      render(<FilterDropdown {...defaultProps} />);
+      // Switch to custom filter first
+      fireEvent.click(screen.getByText('Custom filter'));
+      expect(screen.getByTestId('filter-custom-type')).toBeInTheDocument();
+      // Switch back to value list
+      fireEvent.click(screen.getByText('Filter by values'));
+      expect(screen.getByTestId('filter-search-input')).toBeInTheDocument();
+    });
   });
 });

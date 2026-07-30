@@ -48,7 +48,7 @@ interface FormulaWizardProps {
   /** Target cell column (for circular reference check) */
   targetCol?: number;
   /** Live computed result preview */
-  computedResult?: string | number | null;
+  computedResult?: string | number | boolean | null;
   /** Callback when user picks a function from the autocomplete picker */
   onFunctionSelect?: (functionName: string) => void;
 }

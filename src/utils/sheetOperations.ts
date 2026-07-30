@@ -93,6 +93,7 @@ function adjustFormulaForStructuralChange(
         if (newCol >= 0) {
           return `${dollarCol}${colToLetter(newCol)}${absRow ? '$' : ''}${rowStr}`;
         }
+        /* istanbul ignore next - unreachable: delta is ±1, colNum > index implies newCol >= index >= 0 */
         return match;
       }
 

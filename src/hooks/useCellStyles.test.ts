@@ -551,6 +551,88 @@ describe('useCellStyles', () => {
 
       expect(mockPushHistory).not.toHaveBeenCalled();
     });
+
+    it('setBorderAll returns early when no cells updated', () => {
+      const workbook = createTestWorkbook();
+      const selection: Selection = {
+        type: 'cell',
+        startRow: 10, startCol: 10, endRow: 12, endCol: 12,
+        anchorRow: 10, anchorCol: 10,
+      };
+      const { result } = renderCellStyles(workbook, { row: 10, col: 10 }, selection);
+
+      act(() => {
+        result.current.setBorderAll();
+      });
+
+      expect(mockPushHistory).not.toHaveBeenCalled();
+    });
+
+    it('setBorderOutside returns early when no cells updated', () => {
+      const workbook = createTestWorkbook();
+      const selection: Selection = {
+        type: 'cell',
+        startRow: 10, startCol: 10, endRow: 12, endCol: 12,
+        anchorRow: 10, anchorCol: 10,
+      };
+      const { result } = renderCellStyles(workbook, { row: 10, col: 10 }, selection);
+
+      act(() => {
+        result.current.setBorderOutside();
+      });
+
+      expect(mockPushHistory).not.toHaveBeenCalled();
+    });
+
+    it('clearBorders returns early when no cells updated', () => {
+      const workbook = createTestWorkbook();
+      const selection: Selection = {
+        type: 'cell',
+        startRow: 10, startCol: 10, endRow: 12, endCol: 12,
+        anchorRow: 10, anchorCol: 10,
+      };
+      const { result } = renderCellStyles(workbook, { row: 10, col: 10 }, selection);
+
+      act(() => {
+        result.current.clearBorders();
+      });
+
+      expect(mockPushHistory).not.toHaveBeenCalled();
+    });
+
+    it('clearBorders skips cells without borders', () => {
+      const workbook = createTestWorkbook();
+      // Cell 0:0 exists but has no border — clearBorders should not count it
+      const selection: Selection = {
+        type: 'cell',
+        startRow: 0, startCol: 0, endRow: 0, endCol: 0,
+        anchorRow: 0, anchorCol: 0,
+      };
+      const { result } = renderCellStyles(workbook, { row: 0, col: 0 }, selection);
+
+      act(() => {
+        result.current.clearBorders();
+      });
+
+      // cellsUpdated stays 0 because cell 0:0 has no borders → no history push
+      expect(mockPushHistory).not.toHaveBeenCalled();
+    });
+
+    it('clearCellStyles returns early when no cells updated', () => {
+      const workbook = createTestWorkbook();
+      const selection: Selection = {
+        type: 'cell',
+        startRow: 10, startCol: 10, endRow: 12, endCol: 12,
+        anchorRow: 10, anchorCol: 10,
+      };
+      const { result } = renderCellStyles(workbook, { row: 10, col: 10 }, selection);
+
+      act(() => {
+        result.current.clearCellStyles();
+      });
+
+      expect(mockPushHistory).not.toHaveBeenCalled();
+    });
   });
 
   describe('toggleStrikethroughStyle', () => {

@@ -140,6 +140,30 @@ describe('SearchReplaceModal', () => {
     expect(description).toContain('Replace All');
   });
 
+  it('Replace All across multiple sheets uses multi-sheet label', () => {
+    const onUpdate = jest.fn();
+    render(
+      <SearchReplaceModal
+        isOpen={true}
+        onClose={jest.fn()}
+        workbook={makeWorkbook()}
+        activeSheetIndex={0}
+        onUpdate={onUpdate}
+      />,
+    );
+    // Enable "Search all sheets" so replace spans both sheets
+    fireEvent.click(screen.getByLabelText(/Search all sheets/));
+    fireEvent.change(screen.getByLabelText('Find'), { target: { value: 'hello' } });
+    fireEvent.change(screen.getByLabelText('Replace with'), { target: { value: 'hi' } });
+    fireEvent.click(screen.getByText('🔍 Search'));
+    fireEvent.click(screen.getByText('Replace All'));
+    expect(onUpdate).toHaveBeenCalledTimes(1);
+    const [, description] = onUpdate.mock.calls[0];
+    // Multi-sheet label format (not single-sheet "Replace in Sheet1")
+    expect(description).toContain('Replace All "hello"');
+    expect(description).toContain('cell(s)');
+  });
+
   it('Replace All button is disabled when no query', () => {
     render(
       <SearchReplaceModal

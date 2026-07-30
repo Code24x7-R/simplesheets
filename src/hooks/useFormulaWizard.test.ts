@@ -504,6 +504,37 @@ describe('useFormulaWizard - importFormula', () => {
     expect(result.current.wizard.compiledFormula).toBe('SUM(B4:D4)');
   });
 
+  it('enterExistingNested navigates into an existing nested node', () => {
+    const { result } = renderHook(() => useFormulaWizard());
+    act(() => {
+      result.current.importFormula('=IF(A1>0, SUM(B4:D4), 0)');
+    });
+    // Get the nested SUM node ID
+    const trueVal = result.current.wizard.activeNode?.parameterValues['true_val'];
+    expect(trueVal?.isNestedFunction).toBe(true);
+    const nestedNodeId = trueVal?.nestedNodeId ?? '';
+
+    // Navigate into the existing nested SUM node
+    act(() => {
+      result.current.enterExistingNested(nestedNodeId);
+    });
+    expect(result.current.wizard.state).toBe('NESTED_STEP');
+    expect(result.current.wizard.activeNode?.functionName).toBe('SUM');
+    expect(result.current.wizard.nestingDepth).toBe(2);
+  });
+
+  it('enterExistingNested does nothing for invalid node ID', () => {
+    const { result } = renderHook(() => useFormulaWizard());
+    act(() => {
+      result.current.importFormula('=IF(A1>0, SUM(B4:D4), 0)');
+    });
+    act(() => {
+      result.current.enterExistingNested('nonexistent-id');
+    });
+    // State should remain unchanged (still at root IF level)
+    expect(result.current.wizard.activeNode?.functionName).toBe('IF');
+  });
+
   it('returns false for non-importable formula (binary op)', () => {
     const { result } = renderHook(() => useFormulaWizard());
     let success: boolean = true;

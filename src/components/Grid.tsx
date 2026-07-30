@@ -1030,6 +1030,8 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
           case 'b': case 'B': case 'i': case 'I': case 'u': case 'U':
           case 'h': case 'H': case 'n': case 'N': case 's': case 'S':
           case 'o': case 'O':
+          case 'f': case 'F':
+          case 'l': case 'L':
             return;
           case 'a': case 'A':
             // Ctrl+A: select all cells in the sheet

@@ -19,7 +19,7 @@ import { SheetTabs } from './components/SheetTabs';
 import { MenuBar } from './components/MenuBar';
 import { Toolbar } from './components/Toolbar';
 import { ImportExportBridge } from './components/ImportExportBridge';
-import { evaluateWorkbook } from './utils/formulaEngine';
+import { evaluateWorkbook, evaluateFormulaPreview } from './utils/formulaEngine';
 import { copyRange, cutRange as clipCutRange, getClipboard, clearClipboard, hasClipboardData, writeClipboardToSystem } from './utils/clipboard';
 import { adjustFormulaRefs, prefixRefsWithSheet } from './utils/formulaParser';
 import { useAutosave } from './hooks/useAutosave';
@@ -144,7 +144,7 @@ export default function App() {
 function WorkbookView() {
   const { workbook, canUndo, canRedo, pushHistory, undo, redo, resetHistory } = useHistory();
   const { frozenColumns, frozenRows, freeze, unfreeze } = useFreeze();
-  const [activeCell, setActiveCell] = useState<{ row: number; col: number }>({ row: 0, col: 0 });
+  const [activeCell, setActiveCell] = useState<{ row: number; col: number } | null>({ row: 0, col: 0 });
   // Tracks the full selection from Grid (including range selections via shift+click).
   // The `selection` derived below falls back to activeCell when this is null.
   const [gridSelection, setGridSelection] = useState<Selection | null>(null);
@@ -822,6 +822,16 @@ function WorkbookView() {
       anchorCol: activeCell.col,
     };
   }, [gridSelection, activeCell]);
+
+  // Live computed result preview for the FormulaWizard
+  const wizardComputedResult = useMemo(() => {
+    if (!formulaWizard.isOpen || !formulaWizard.compiledFormula) return null;
+    return evaluateFormulaPreview(
+      formulaWizard.compiledFormula,
+      workbook,
+      workbook.activeSheetIndex,
+    );
+  }, [formulaWizard.isOpen, formulaWizard.compiledFormula, workbook]);
 
   // ─── Status Bar: Cell Mode + Quick Calculations ──────────────────────────
 
@@ -1925,6 +1935,7 @@ function WorkbookView() {
         cancelPointSelection={cancelWizardPointSelection}
         closeWizard={handleCloseWizard}
         onApply={handleWizardApply}
+        computedResult={wizardComputedResult}
         onFunctionSelect={(functionName) => {
           // User picked a function from autocomplete — open wizard with that function
           const targetCellRef = activeCell

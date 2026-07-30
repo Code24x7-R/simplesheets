@@ -195,6 +195,23 @@ describe('deleteCol', () => {
     const result = deleteCol(sheet, 0);
     expect(result.columnWidths[0]).toBe(80);   // old col 1 → col 0
   });
+
+  it('shifts non-formula cells left of the deleted column', () => {
+    const sheet = createTestSheet();
+    // Delete col 1 — cells at col 0 (plain values) should shift unchanged
+    const result = deleteCol(sheet, 1);
+    // A1 (0:0) is a plain value '10', left of deleted col 1 → stays at 0:0
+    expect(result.cells['0:0']?.rawValue).toBe('10');
+  });
+
+  it('shifts non-formula cells right of the deleted column', () => {
+    const sheet = createTestSheet();
+    // Add a plain cell at col 2
+    sheet.cells['0:2'] = { rawValue: 'hello' };
+    const result = deleteCol(sheet, 1);
+    // Col 2 shifts to col 1
+    expect(result.cells['0:1']?.rawValue).toBe('hello');
+  });
 });
 
 describe('frozen panes adjustment', () => {

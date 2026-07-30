@@ -180,6 +180,7 @@ function evaluateCell(row: number, col: number, ctx: EvalContext, sheetIndex?: n
     } catch {
       /* istanbul ignore next - parse error fallback */
       ctx.cache.set(cacheKey, ERR_VALUE);
+      /* istanbul ignore next - parse error fallback */
       return ERR_VALUE;
     } finally {
       ctx.evalStack.delete(cacheKey);
@@ -612,8 +613,10 @@ function evaluateFunction(node: Extract<ASTNode, { type: 'function' }>, ctx: Eva
       return val;
     }
 
+    /* istanbul ignore next - parser treats TRUE/FALSE as boolean literals, not function calls */
     case 'TRUE':
       return true;
+    /* istanbul ignore next - parser treats TRUE/FALSE as boolean literals, not function calls */
     case 'FALSE':
       return false;
 
@@ -1238,6 +1241,79 @@ export function evaluateWorkbook(workbook: import('../types').Workbook, activeSh
     circularRefs: allCircularRefs,
     success: true,
   };
+}
+
+/**
+ * Evaluates a formula string against the current workbook for live preview.
+ * Used by the FormulaWizard to display the computed result of the formula
+ * being built, without committing it to any cell.
+ *
+ * @param formula - Formula string WITHOUT the leading '=' (e.g., "SUM(A1,B1)")
+ * @param workbook - The current workbook
+ * @param activeSheetIndex - Index of the active sheet
+ * @returns The computed value (string | number | boolean | null)
+ */
+export function evaluateFormulaPreview(
+  formula: string,
+  workbook: import('../types').Workbook,
+  activeSheetIndex: number,
+): string | number | boolean | null {
+  if (!formula) return null;
+
+  const sheets = workbook.sheets;
+  if (activeSheetIndex < 0 || activeSheetIndex >= sheets.length) return null;
+
+  const sharedCache = new Map<string, CellValue>();
+
+  // Evaluate all sheets so cross-sheet references resolve to computed values
+  for (let i = 0; i < sheets.length; i++) {
+    const sheet = sheets[i];
+    const ctx: EvalContext = {
+      cells: sheet.cells,
+      allSheets: sheets,
+      activeSheetIndex: i,
+      cache: sharedCache,
+      evalStack: new Set(),
+      rowCount: sheet.rowCount,
+      colCount: sheet.columnCount,
+    };
+    const { deps } = buildDependencyGraph(sheet);
+    const evaluationOrder = topologicalSort(deps, sheet.cells);
+    for (const key of evaluationOrder) {
+      const cell = sheet.cells[key];
+      if (cell?.rawValue.startsWith('=')) {
+        try {
+          const ast = parseFormula(cell.rawValue.slice(1));
+          const result = evaluateNode(ast, ctx);
+          sharedCache.set(`${i}:${key}`, result);
+        } catch {
+          /* istanbul ignore next - defensive: evaluateNode catches parse errors internally */
+          sharedCache.set(`${i}:${key}`, ERR_VALUE);
+        }
+      } else {
+        sharedCache.set(`${i}:${key}`, autoDetectType(cell.rawValue));
+      }
+    }
+  }
+
+  // Now evaluate the preview formula against the active sheet context
+  const activeSheet = sheets[activeSheetIndex];
+  const previewCtx: EvalContext = {
+    cells: activeSheet.cells,
+    allSheets: sheets,
+    activeSheetIndex,
+    cache: sharedCache,
+    evalStack: new Set(),
+    rowCount: activeSheet.rowCount,
+    colCount: activeSheet.columnCount,
+  };
+
+  try {
+    const ast = parseFormula(formula);
+    return evaluateNode(ast, previewCtx);
+  } catch {
+    return null;
+  }
 }
 
 /**

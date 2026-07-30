@@ -282,6 +282,55 @@ describe('Grid - Cell Editing Input', () => {
     expect(document.querySelector('.grid-cell input')).not.toBeInTheDocument();
   });
 
+  it('Ctrl+Shift+F does NOT start cell editing (opens formula wizard instead)', () => {
+    const onCellChange = jest.fn();
+    render(
+      <GridWithEditing
+        sheet={createTestSheet()}
+        onCellChange={onCellChange}
+        onSelect={jest.fn()}
+      />,
+    );
+
+    // Click a cell first to establish a cell-type selection
+    const cell = document.querySelector('.grid-cell') as HTMLElement;
+    fireEvent.mouseDown(cell);
+
+    // Focus the grid container
+    const grid = document.querySelector('[tabindex="0"]') as HTMLElement;
+    grid.focus();
+
+    // Press Ctrl+Shift+F — should NOT start editing the cell
+    fireEvent.keyDown(grid, { key: 'f', ctrlKey: true, shiftKey: true });
+
+    // No edit input should appear (FSM must stay in SELECT)
+    expect(document.querySelector('.grid-cell input')).not.toBeInTheDocument();
+  });
+
+  it('Ctrl+Shift+L does NOT start cell editing (toggles filter instead)', () => {
+    const onCellChange = jest.fn();
+    render(
+      <GridWithEditing
+        sheet={createTestSheet()}
+        onCellChange={onCellChange}
+        onSelect={jest.fn()}
+      />,
+    );
+
+    // Click a cell first to establish a cell-type selection
+    const cell = document.querySelector('.grid-cell') as HTMLElement;
+    fireEvent.mouseDown(cell);
+
+    const grid = document.querySelector('[tabindex="0"]') as HTMLElement;
+    grid.focus();
+
+    // Press Ctrl+Shift+L — should NOT start editing the cell
+    fireEvent.keyDown(grid, { key: 'l', ctrlKey: true, shiftKey: true });
+
+    // No edit input should appear (FSM must stay in SELECT)
+    expect(document.querySelector('.grid-cell input')).not.toBeInTheDocument();
+  });
+
   it('handles paste during editing by inserting at cursor', () => {
     const onCellChange = jest.fn();
     render(
