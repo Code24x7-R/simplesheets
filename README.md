@@ -1,6 +1,6 @@
 # SimpleSheet
 
-A lightweight, browser‑based spreadsheet for small businesses. No server, no account, no bloat — just a fast, offline‑capable grid that reads and writes Excel files.
+A lightweight, browser‑based spreadsheet no bloat — just a fast, offline‑capable grid that reads and writes Excel files.
 
 ---
 
@@ -18,7 +18,7 @@ A lightweight, browser‑based spreadsheet for small businesses. No server, no a
 - 📑 **Multi-sheet workbooks** — add, rename, copy, delete sheets with cross-sheet formula references
 - ⚡ **Virtualized grid** — smooth scrolling for 100 k+ rows × unlimited columns
 - 🎯 **Clean menu-based UI** — File, Edit, View, Insert, Format, Help dropdown menus
-- 📌 **Function bar** — one-click access to common functions (SUM, AVERAGE, COUNT, MAX, MIN, IF, etc.)
+- 📌 **Tool bar** — one-click access to common functions
 - 🔢 **R1C1 reference format** — toggle between A1 and R1C1 notation by clicking the cell reference
 - 🧙 **Formula Wizard** — interactive step-by-step formula builder with nested function support, breadcrumb navigation, and live preview
 - 🔍 **Find & Replace** — search across cells with options for case sensitivity, exact match, formulas, and multi-sheet scope
@@ -298,6 +298,171 @@ simplesheets/
 
 ---
 
+## Desktop Installer (Tauri)
+
+SimpleSheet can be packaged as a native Windows desktop app with an installer using [Tauri](https://v2.tauri.app/). Tauri produces a lightweight `.msi` installer — no Electron bloat, the app uses the system webview.
+
+### Prerequisites
+
+| Tool | Purpose | Install |
+|------|---------|---------|
+| Rust | Tauri's backend + toolchain | [rustup.rs](https://rustup.rs/) (install `stable-msvc`) |
+| Windows SDK | MSVC build tools | Included with Visual Studio Build Tools |
+| Node.js ≥ 18 | Frontend build | Already required by SimpleSheet |
+
+> **Note:** The Rust + MSVC toolchain is ~4 GB. The initial Tauri build will take several minutes; subsequent builds are incremental and much faster.
+
+### Add Tauri to the project
+
+```bash
+# Install the Tauri CLI and dependencies
+npm install -D @tauri-apps/cli@latest
+npm install @tauri-apps/api@latest
+
+# Initialize Tauri (creates src-tauri/ with default config)
+npx tauri init \
+  --app-name simplesheets \
+  --dev-url http://localhost:5173 \
+  --dist-dir ../dist \
+  --before-dev-command "npm run dev" \
+  --before-build-command "npm run build"
+```
+
+After init, update `src-tauri/tauri.conf.json` to match the project:
+
+```json
+{
+  "productName": "SimpleSheet",
+  "version": "0.1.0",
+  "identifier": "com.simplesheets.app",
+  "build": {
+    "beforeBuildCommand": "npm run build",
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:5173",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "SimpleSheet",
+        "width": 1200,
+        "height": 800,
+        "minWidth": 800,
+        "minHeight": 600,
+        "resizable": true,
+        "fullscreen": false
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["msi", "nsis"],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "resources": [],
+    "externalBin": [],
+    "category": "Productivity",
+    "shortDescription": "Lightweight spreadsheet for small businesses",
+    "longDescription": "A fast, offline-capable spreadsheet that reads and writes Excel files. No server, no account — just your data."
+  }
+}
+```
+
+### Generate app icons
+
+Tauri requires icons in multiple formats. Place them in `src-tauri/icons/`:
+
+```bash
+# Using the Tauri CLI (recommended)
+npx tauri icon path/to/source-image.png
+
+# Or manually create the icons/ directory with:
+#   32x32.png, 128x128.png, 128x128@2x.png, icon.icns, icon.ico
+```
+
+### Build the Windows installer
+
+```bash
+# Build the MSI installer (production)
+npx tauri build
+```
+
+Output:
+
+| Artifact | Path | Notes |
+|----------|------|-------|
+| MSI installer | `src-tauri/target/release/bundle/msi/` | Double-click to install per-user |
+| NSIS installer | `src-tauri/target/release/bundle/nsis/` | Classic installer with wizard |
+| Portable exe | `src-tauri/target/release/simplesheets.exe` | Standalone executable |
+
+The MSI is ~5–8 MB (vs ~150+ MB for Electron) because it uses the system WebView2.
+
+### Development with Tauri
+
+```bash
+# Run the app natively with hot reload
+npm run tauri dev
+```
+
+This starts the Vite dev server, then opens a native window pointing at it. All keyboard shortcuts, menus, and grid interactions work identically to the browser version.
+
+### CI/CD (GitHub Actions)
+
+Add a workflow to build and publish the Windows installer automatically:
+
+```yaml
+# .github/workflows/tauri-release.yml
+name: Release Desktop App
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable-msvc
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: v__VERSION__
+          releaseName: "SimpleSheet v__VERSION__"
+          releaseBody: "Windows desktop installer for SimpleSheet."
+          releaseDraft: true
+          prerelease: false
+```
+
+Pushing a `v*` tag builds the MSI and creates a GitHub Release with the installer attached.
+
+### Permissions
+
+SimpleSheet needs no special Tauri capabilities — it's a pure frontend app. No filesystem, clipboard, or dialog permissions are required because:
+
+- File I/O uses the browser's native `<input type="file">` and Blob downloads
+- Clipboard uses the standard `navigator.clipboard` API
+- No native dialogs needed
+
+The default `tauri.conf.json` (with no capability permissions) is sufficient.
+
+---
+
 ## Deployment
 
 The production build (`dist/`) is a static site that can be hosted anywhere:
@@ -306,6 +471,7 @@ The production build (`dist/`) is a static site that can be hosted anywhere:
 - **Vercel:** `vercel --prod`.
 - **GitHub Pages:** Push `dist/` to `gh-pages` branch.
 - **Any static host:** Upload the `dist/` folder.
+- **Desktop:** See [Desktop Installer (Tauri)](#desktop-installer-tauri) above.
 
 ---
 
