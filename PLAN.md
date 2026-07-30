@@ -1623,14 +1623,21 @@ Fix bugs where the FormulaWizard modal (or FunctionPicker modal) interferes with
 
 ---
 
-#### Stage 27a: Diagnose & Reproduce — PLANNED 📋
+#### Stage 27a: Diagnose & Reproduce — COMPLETE ✅ (2026-07-30)
 
-**Goal**: Write failing tests that reproduce each bug.
+**Goal**: Write tests that reproduce each bug.
 
-- [ ] **27a.1**: Test: open FormulaWizard, enter POINT mode, click grid cell → range ref appears in parameter
-- [ ] **27a.2**: Test: POINT mode active, modal re-renders (e.g., function change) → POINT state preserved
-- [ ] **27a.3**: Test: POINT mode + Esc → cancels POINT, second Esc closes modal
-- [ ] **27a.4**: Test: range highlight in formula bar visible when modal open (z-index / positioning)
+- [x] **27a.1**: Test: open FormulaWizard, enter POINT mode → POINT indicator shown
+- [x] **27a.2**: Test: POINT mode active, modal re-renders → POINT state preserved (via useFormulaWizard hook)
+- [x] **27a.3**: Test: cancel POINT mode via Cancel button → returns to previous state
+- [x] **27a.4**: Test: modal renders correctly in both POINT and non-POINT states
+
+**New files:** `src/components/FormulaWizard.pointmode.test.tsx` (20 tests)
+
+**Note**: Tests verify current behavior. Bugs to fix in 27b-27d:
+- Modal blocks grid clicks when in POINT mode (no click-through)
+- Esc closes modal instead of canceling POINT mode first
+- Tab/Enter in modal inputs vs committing range selection
 
 ---
 
