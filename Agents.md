@@ -24,13 +24,15 @@ This project uses an **iterative, test-driven, coverage-focused** workflow — N
 
 ### 2.2 Priority Order
 
-| Priority | Focus | Rationale |
-|----------|-------|-----------|
-| 1 | **Branch coverage** | Weakest metric at 85.03% — biggest room for improvement |
-| 2 | **App.tsx branches** (76.04%) | Root component — most user-facing edge cases live here |
-| 3 | **formulaEngine.ts branches** (76.04%) | Core engine — defensive branches and error paths |
-| 4 | **HistoryContext.tsx branches** (75%) | Undo/redo — edge cases in stack management |
-| 5 | **Remaining Phase 8 gaps** | See PLAN.md "Phase 8: Final Verification" for the full list |
+**Target: ≥85% branch coverage (currently 86.78%).** Attack files below 85% branches first.
+
+| Priority | File | Branches | Approach |
+|----------|------|----------|----------|
+| 1 | **formulaEngine.ts** | ~78% | Many uncovered branches: math, trig, string, date, IS functions |
+| 2 | **App.tsx** | ~78% | Largest file — many handler branches |
+| 3 | **HistoryContext.tsx** | ~75% | Lines 140-148 are defensive (istanbul-ignored) — verify only |
+
+> Files at ≥85% branches: useCellStyles, Grid, useCellEditing, fillSeries, sheetOperations, useFormulaWizard, csvService, clipboardParse, excelExport, sheetSort, numberFormat, formulaParser, formulaValidation, formulaWizardCompiler, formulaWizardImport, FilterDropdown, DropdownMenu, Toolbar, PasteModal, SheetTabs, FreezeContext, PrintSetupContext, MenuBar, ShortcutsModal, and all export buttons.
 
 ---
 
@@ -59,10 +61,12 @@ npm test && npm run lint && npm run type-check && npm run build
 
 ### 4.1 Test Coverage Targets
 
-- **Lines:** ≥ 95% (currently 95.31%)
-- **Branches:** ≥ 85% (currently 85.03% — **weakest metric, prioritize this**)
-- **Functions:** ≥ 95% (currently 95.76%)
-- **Statements:** ≥ 93% (currently 93.94%)
+- **Lines:** ≥ 95% (currently 95.72%)
+- **Branches:** ≥ 85% (currently 86.78%)
+- **Functions:** ≥ 95% (currently 95.67%)
+- **Statements:** ≥ 93% (currently 94.4%)
+
+> **Note:** The project-wide branch coverage target is 85%. Files below 85% branches are listed in the priority table in §2.2.
 
 ### 4.2 Istanbul Ignore Comments
 
@@ -152,19 +156,15 @@ start coverage/lcov-report/index.html  # macOS: open coverage/lcov-report/index.
 - Look for early returns that are never triggered
 - Look for error-handling paths (`catch` blocks, error callbacks)
 
-### 7.3 Files with Lowest Branch Coverage (attack these first)
+### 7.3 Files Below 85% Branch Coverage (attack these first)
 
 | File | Branches | Lines | Priority |
 |------|----------|-------|----------|
-| App.tsx | 76.04% | 91.05% | 🔴 High |
-| formulaEngine.ts | 76.04% | 97.53% | 🔴 High |
-| HistoryContext.tsx | 75% | 100% | 🔴 High |
-| storageService.ts | 66.66% | 100% | 🟡 Medium |
-| FilterDropdown.tsx | 80.76% | 93.9% | 🟡 Medium |
-| useCellStyles.ts | 77.46% | 100% | 🟡 Medium |
-| sheetOperations.ts | 81.01% | 97% | 🟡 Medium |
-| SearchReplaceModal.tsx | 83.33% | 100% | 🟢 Lower |
-| FormulaBar.tsx | 84.55% | 94.73% | 🟢 Lower |
+| formulaEngine.ts | ~78% | ~98% | 🔴 Many testable branches (math, trig, string, date, IS functions) |
+| App.tsx | ~78% | ~93% | 🔴 Largest file — many handler branches |
+| HistoryContext.tsx | ~75% | 100% | 🟡 Mostly istanbul-ignored defensive code |
+
+> Files **at or above 85%** branches: benchmark, useCellStyles, fillSeries, useCellEditing, sheetOperations, Grid, useFormulaWizard, SearchReplaceModal, csvService, FilterDropdown, clipboardParse, excelExport, sheetSort, numberFormat, formulaParser, formulaValidation, formulaWizardCompiler, formulaWizardImport, DropdownMenu, Toolbar, PasteModal, SheetTabs, FreezeContext, PrintSetupContext, MenuBar, ShortcutsModal, and all export buttons.
 
 ---
 
