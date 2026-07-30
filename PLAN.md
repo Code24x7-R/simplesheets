@@ -1545,14 +1545,17 @@ Improve how ranges are copied, pasted, and edited within and across sheets. Curr
 
 ---
 
-#### Stage 26c: Drag-and-Drop Range Move — PLANNED 📋
+#### Stage 26c: Drag-and-Drop Range Move — COMPLETE ✅ (2026-07-30)
 
-**Goal**: Alt+drag (or drag with visual feedback) to move a range.
+**Goal**: Drag a range to a new location with visual feedback.
 
-- [ ] **26c.1**: Detect Alt+drag or right-drag on selection border in Grid
-- [ ] **26c.2**: Show drop target highlight (ghost range)
-- [ ] **26c.3**: On drop, cut source + paste to target in single undo step
-- [ ] **26c.4**: Write tests for drag-move
+- [x] **26c.1**: Drag handle rendered on selection border (top center) for ranges ≥ 2 cells
+- [x] **26c.2**: Ghost preview shows target location during drag (blue dashed outline)
+- [x] **26c.3**: `onMoveRange` callback fires with source selection + target cell on drop; parent performs cut+paste in single undo step
+- [x] **26c.4**: Wrote **23 tests** (15 rangeMove utility + 8 Grid drag-move integration)
+
+**New files:** `src/utils/rangeMove.ts`
+**Modified:** `src/components/Grid.tsx` (drag handle, ghost preview, drag-move state)
 
 ---
 

@@ -95,6 +95,10 @@ interface GridProps {
    * Provides the source range (the selection being extended) and the target end cell.
    * The parent computes the fill values based on pattern detection. */
   onFillSeries?: (sourceStartRow: number, sourceStartCol: number, sourceEndRow: number, sourceEndCol: number, targetEndRow: number, targetEndCol: number) => void;
+  /** Callback when a range is dragged to a new location (drag-move).
+   * Provides the source selection and the target top-left cell.
+   * The parent performs the cut+paste as a single undo step. */
+  onMoveRange?: (source: Selection, targetRow: number, targetCol: number) => void;
   /** Filter state for auto-filter feature. */
   filterState?: {
     active: boolean;
@@ -122,7 +126,7 @@ export interface GridHandle {
  * Supports 10,000+ rows with smooth scrolling.
  */
 export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
-  { sheet, onCellChange, onCellsChange, onSelect, selectedCell, highlightedRanges = [], isPointMode = false, pointSelection = null, onCellPick, onHeaderSelect, onSelectionChange, onColumnResize, onRowResize, referenceFormat = 'A1', onInsertRowAbove, onInsertRowBelow, onDeleteRow, onInsertColLeft, onInsertColRight, onDeleteCol, clipboardRange, onClearClipboard, showFormulas = false, session, onStartEnter, onStartEdit, onRawKeyDown, onRawChange, onFillSeries, filterState = null, onApplyFilter },
+  { sheet, onCellChange, onCellsChange, onSelect, selectedCell, highlightedRanges = [], isPointMode = false, pointSelection = null, onCellPick, onHeaderSelect, onSelectionChange, onColumnResize, onRowResize, referenceFormat = 'A1', onInsertRowAbove, onInsertRowBelow, onDeleteRow, onInsertColLeft, onInsertColRight, onDeleteCol, clipboardRange, onClearClipboard, showFormulas = false, session, onStartEnter, onStartEdit, onRawKeyDown, onRawChange, onFillSeries, onMoveRange, filterState = null, onApplyFilter },
   ref
 ) {
   const parentRef = useRef<HTMLDivElement>(null);
@@ -161,6 +165,22 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
   } | null>(null);
   // Force re-render during fill drag to update target range visual.
   const [, forceFillRender] = useState(0);
+
+  // ─── Drag-move state ───────────────────────────────────────────────
+  // Tracks when the user is dragging a range to move it (drag handle on selection border).
+  const dragMoveRef = useRef<{
+    startX: number;
+    startY: number;
+    sourceRow: number;
+    sourceCol: number;
+    targetRow: number;
+    targetCol: number;
+    rowCount: number;
+    colCount: number;
+    moved: boolean;
+  } | null>(null);
+  // Force re-render during drag-move to update ghost position.
+  const [, forceDragRender] = useState(0);
 
   // ─── Filter dropdown state ────────────────────────────────────────────
   const [activeFilterColumn, setActiveFilterColumn] = useState<number | null>(null);
@@ -811,6 +831,80 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
       window.addEventListener('mouseup', onMouseUp);
     },
     [selection, sheet.defaultColWidth, sheet.defaultRowHeight, sheet.rowCount, sheet.columnCount, onFillSeries]
+  );
+
+  /**
+   * Handles drag handle mouse down — starts the range move operation.
+   * The drag handle appears on the selection border when a range is selected.
+   * User drags to a new location and the range is moved (cut + paste).
+   */
+  const handleDragHandleMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!selection || selection.type !== 'cell' || !onMoveRange) return;
+      const minRow = Math.min(selection.startRow, selection.endRow);
+      const maxRow = Math.max(selection.startRow, selection.endRow);
+      const minCol = Math.min(selection.startCol, selection.endCol);
+      const maxCol = Math.max(selection.startCol, selection.endCol);
+      const rowCount = maxRow - minRow + 1;
+      const colCount = maxCol - minCol + 1;
+
+      dragMoveRef.current = {
+        startX: e.clientX,
+        startY: e.clientY,
+        sourceRow: minRow,
+        sourceCol: minCol,
+        targetRow: minRow,
+        targetCol: minCol,
+        rowCount,
+        colCount,
+        moved: false,
+      };
+
+      const onMouseMove = (moveEvent: MouseEvent) => {
+        if (!dragMoveRef.current) return;
+        const deltaX = moveEvent.clientX - dragMoveRef.current.startX;
+        const deltaY = moveEvent.clientY - dragMoveRef.current.startY;
+        const avgColWidth = sheet.defaultColWidth;
+        const avgRowHeight = sheet.defaultRowHeight;
+        const dCol = Math.round(deltaX / avgColWidth);
+        const dRow = Math.round(deltaY / avgRowHeight);
+        const newTargetRow = Math.max(0, dragMoveRef.current.sourceRow + dRow);
+        const newTargetCol = Math.max(0, dragMoveRef.current.sourceCol + dCol);
+        dragMoveRef.current.targetRow = newTargetRow;
+        dragMoveRef.current.targetCol = newTargetCol;
+        dragMoveRef.current.moved = dRow !== 0 || dCol !== 0;
+        forceDragRender((n) => n + 1);
+      };
+
+      const onMouseUp = () => {
+        window.removeEventListener('mousemove', onMouseMove);
+        window.removeEventListener('mouseup', onMouseUp);
+        if (dragMoveRef.current) {
+          const drag = dragMoveRef.current;
+          // Only trigger if actually moved
+          if (drag.moved) {
+            const sourceSel: Selection = {
+              startRow: drag.sourceRow,
+              startCol: drag.sourceCol,
+              endRow: drag.sourceRow + drag.rowCount - 1,
+              endCol: drag.sourceCol + drag.colCount - 1,
+              anchorRow: drag.sourceRow,
+              anchorCol: drag.sourceCol,
+              type: 'cell',
+            };
+            onMoveRange(sourceSel, drag.targetRow, drag.targetCol);
+          }
+        }
+        dragMoveRef.current = null;
+        forceDragRender((n) => n + 1);
+      };
+
+      window.addEventListener('mousemove', onMouseMove);
+      window.addEventListener('mouseup', onMouseUp);
+    },
+    [selection, sheet.defaultColWidth, sheet.defaultRowHeight, onMoveRange]
   );
 
   /**
@@ -1773,6 +1867,88 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
                     height: cellPos.height,
                     backgroundColor: 'rgba(37, 99, 235, 0.15)',
                     border: '1px dashed #2563eb',
+                  }}
+                />
+              );
+            })}
+          </div>
+        );
+      })()}
+
+      {/* Drag handle — appears on selection border when range is selected (for drag-move) */}
+      {(() => {
+        if (!selection || selection.type !== 'cell' || !onMoveRange) return null;
+        const minRow = Math.min(selection.startRow, selection.endRow);
+        const maxRow = Math.max(selection.startRow, selection.endRow);
+        const minCol = Math.min(selection.startCol, selection.endCol);
+        const maxCol = Math.max(selection.startCol, selection.endCol);
+        const rowCount = maxRow - minRow + 1;
+        const colCount = maxCol - minCol + 1;
+        // Only show drag handle for ranges (not single cells)
+        if (rowCount < 2 && colCount < 2) return null;
+        // Position at center of selection top border
+        const topPos = getCellPixelPosition(minRow, minCol, sheet, rowVirtualizer, columnVirtualizer);
+        if (!topPos) return null;
+        // Calculate center of the top border
+        const lastColPos = getCellPixelPosition(minRow, maxCol, sheet, rowVirtualizer, columnVirtualizer);
+        if (!lastColPos) return null;
+        const centerLeft = topPos.left + (lastColPos.left + lastColPos.width - topPos.left) / 2;
+        return (
+          <div
+            data-testid="drag-handle"
+            className="drag-handle"
+            onMouseDown={handleDragHandleMouseDown}
+            style={{
+              position: 'absolute',
+              top: topPos.top - 4,
+              left: centerLeft - 12,
+              width: 24,
+              height: 8,
+              backgroundColor: '#2563eb',
+              border: '1px solid white',
+              borderRadius: 2,
+              cursor: 'move',
+              zIndex: 25,
+              boxShadow: '0 1px 2px rgba(0,0,0,0.2)',
+            }}
+          />
+        );
+      })()}
+
+      {/* Drag-move ghost preview — shows where the range will land */}
+      {dragMoveRef.current && dragMoveRef.current.moved && (() => {
+        const drag = dragMoveRef.current;
+        const ghostCells: Array<{ row: number; col: number }> = [];
+        for (let r = 0; r < drag.rowCount; r++) {
+          for (let c = 0; c < drag.colCount; c++) {
+            ghostCells.push({ row: drag.targetRow + r, col: drag.targetCol + c });
+          }
+        }
+        return (
+          <div
+            data-testid="drag-ghost"
+            style={{
+              position: 'absolute',
+              top: defaultRowHeight,
+              left: 0,
+              pointerEvents: 'none',
+              zIndex: 5,
+            }}
+          >
+            {ghostCells.map(({ row, col }) => {
+              const cellPos = getCellPixelPosition(row, col, sheet, rowVirtualizer, columnVirtualizer);
+              if (!cellPos) return null;
+              return (
+                <div
+                  key={`drag-ghost-${row}-${col}`}
+                  style={{
+                    position: 'absolute',
+                    top: cellPos.top,
+                    left: cellPos.left,
+                    width: cellPos.width,
+                    height: cellPos.height,
+                    backgroundColor: 'rgba(37, 99, 235, 0.15)',
+                    border: '2px dashed #2563eb',
                   }}
                 />
               );
