@@ -1493,9 +1493,9 @@ Wizard AST:
 
 ---
 
-## Phase 26: Range Operations Improvements — PLANNED 📋
+## Phase 26: Range Operations Improvements — COMPLETE ✅ (2026-07-30)
 
-**Status**: Not started. Depends on Phase 25 (FormulaWizard) and Stage 5b (cross-sheet paste).
+**Status**: All 5 stages (26a-26e) complete. +129 tests added.
 
 ### Goal
 
@@ -1572,14 +1572,16 @@ Improve how ranges are copied, pasted, and edited within and across sheets. Curr
 
 ---
 
-#### Stage 26e: Fill Handle for Ranges — PLANNED 📋
+#### Stage 26e: Fill Handle for Ranges — COMPLETE ✅ (2026-07-30)
 
 **Goal**: Drag fill handle on a range to auto-fill series (numbers, dates, custom lists).
 
-- [ ] **26e.1**: Detect fill handle drag (bottom-right corner of selection)
-- [ ] **26e.2**: Reuse `computeFillSeries` logic for range fill
-- [ ] **26e.3**: Respect filtered/hidden rows (skip hidden, fill visible)
-- [ ] **26e.4**: Write tests for fill handle on ranges
+- [x] **26e.1**: Fill handle already detected at selection bottom-right corner
+- [x] **26e.2**: `computeFillRange()` reuses `computeFillSeries` per-column/per-row for 2D fills
+- [x] **26e.3**: Respects filtered/hidden rows (skips them via `hiddenRows` parameter)
+- [x] **26e.4**: Wrote **11 tests** for `computeFillRange()`
+
+**New files:** `src/utils/fillRange.ts`
 
 ---
 
