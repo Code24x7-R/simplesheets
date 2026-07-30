@@ -190,7 +190,14 @@ Achieve a clean, clutter-free UI with standardized dropdown menus, formula wizar
 
 ## 🔴 CURRENT PRIORITY: Phase 21 — Charts
 
-**Status**: Phases 1–25 are **complete** ✅. Branch coverage at **86.8%** (target 85%+ met).
+**Status**: Phases 1–27 defined; Phases 1–25 **complete** ✅. Branch coverage at **86.62%** (target 85%+ met).
+
+### New Phases Added (2026-07-30)
+
+| Phase | Description |
+|-------|-------------|
+| **Phase 26** | Range Operations Improvements (copy styles, paste special, drag-move, fill handle) |
+| **Phase 27** | POINT Mode & Modal Interaction (FormulaWizard modal blocking range selection) |
 
 ### Next Phase: Phase 21 — Charts
 
@@ -1483,3 +1490,189 @@ Wizard AST:
 
 - `formulaParser.ts`, `formulaWizardSchema.ts`, `formulaWizardCompiler.ts`
 - `formulaAutocomplete.ts`, `FormulaWizard.tsx`, `useFormulaWizard.ts`
+
+---
+
+## Phase 26: Range Operations Improvements — PLANNED 📋
+
+**Status**: Not started. Depends on Phase 25 (FormulaWizard) and Stage 5b (cross-sheet paste).
+
+### Goal
+
+Improve how ranges are copied, pasted, and edited within and across sheets. Current behavior is basic — paste adjusts relative references (Stage 5b) but lacks several spreadsheet-expected behaviors.
+
+### Current Limitations
+
+1. **No drag-and-drop range move** — must cut then paste
+2. **No fill handle for ranges** — can't drag to auto-fill series across a selected range
+3. **Paste doesn't adapt range formulas intelligently** — `=SUM(A1:A10)` pasted to B1 becomes `=SUM(B1:B10)` (correct) but pasted to a different sheet should use cross-sheet refs only when source was cross-sheet
+4. **No paste-special options** — can't paste values-only, formulas-only, or formatting-only
+5. **Copy/paste of merged cells or styled ranges** — styles lost on paste
+6. **Cross-sheet paste doesn't bring formatting** — only rawValues and formulas
+7. **No range transpose** — can't paste a row as a column
+8. **Fill handle doesn't work across filtered/hidden rows**
+
+### Stages & Subtasks
+
+---
+
+#### Stage 26a: Range Copy Enhancements — COMPLETE ✅ (2026-07-30)
+
+**Goal**: Include formatting and metadata when copying ranges.
+
+**Finding**: Already implemented — `ClipboardData.cells` is `(Cell | null)[][]`, `Cell` has `style?: CellStyle`, and `copyRange` copies full Cell objects. Paste handler applies `style: cell?.style` to destination.
+
+- [x] **26a.1**: Extend `ClipboardData` to include cell styles — already supported by `Cell.style`
+- [x] **26a.2**: Update `copyRange` to capture styles — already copies full Cell objects
+- [x] **26a.3**: Write tests for style-preserving copy — **19 tests** added (clipboard.styles.test.ts + App.pasteStyles.test.tsx)
+
+---
+
+#### Stage 26b: Paste Special — PLANNED 📋
+
+**Goal**: Add paste modal with options (formulas, values, formatting, transpose).
+
+- [ ] **26b.1**: Create `PasteSpecialModal.tsx` — radio/select options:
+  - Everything (default)
+  - Formulas only
+  - Values only
+  - Formatting only
+  - Transpose (rows↔columns)
+- [ ] **26b.2**: Wire `PasteSpecialModal` into paste handler in App.tsx
+- [ ] **26b.3**: Implement transpose logic in paste
+- [ ] **26b.4**: Write tests for each paste mode
+
+---
+
+#### Stage 26c: Drag-and-Drop Range Move — PLANNED 📋
+
+**Goal**: Alt+drag (or drag with visual feedback) to move a range.
+
+- [ ] **26c.1**: Detect Alt+drag or right-drag on selection border in Grid
+- [ ] **26c.2**: Show drop target highlight (ghost range)
+- [ ] **26c.3**: On drop, cut source + paste to target in single undo step
+- [ ] **26c.4**: Write tests for drag-move
+
+---
+
+#### Stage 26d: Cross-Sheet Paste with Formatting — PLANNED 📋
+
+**Goal**: When pasting across sheets, carry cell styles and column widths.
+
+- [ ] **26d.1**: Update cross-sheet paste to apply captured styles from 26a
+- [ ] **26d.2**: Optionally carry column widths (configurable in paste modal)
+- [ ] **26d.3**: Write tests for cross-sheet formatted paste
+
+---
+
+#### Stage 26e: Fill Handle for Ranges — PLANNED 📋
+
+**Goal**: Drag fill handle on a range to auto-fill series (numbers, dates, custom lists).
+
+- [ ] **26e.1**: Detect fill handle drag (bottom-right corner of selection)
+- [ ] **26e.2**: Reuse `computeFillSeries` logic for range fill
+- [ ] **26e.3**: Respect filtered/hidden rows (skip hidden, fill visible)
+- [ ] **26e.4**: Write tests for fill handle on ranges
+
+---
+
+### Files Expected
+
+| File | Action |
+|------|--------|
+| `src/utils/clipboard.ts` | Extend ClipboardData with styles |
+| `src/utils/pasteSpecial.ts` | NEW — paste mode logic |
+| `src/components/PasteSpecialModal.tsx` | NEW |
+| `src/App.tsx` | Wire paste special + drag-move |
+| `src/components/Grid.tsx` | Fill handle + drag-drop UI |
+| Tests | New suites for each stage |
+
+### Dependencies
+
+- `clipboard.ts` (Stage 5b), `computeFillSeries` (existing)
+- `useCellStyles` / `useCellStyle` (Phase 19)
+
+---
+
+## Phase 27: POINT Mode & Modal Interaction — PLANNED 📋
+
+**Status**: Not started. Bug fix for FormulaWizard/FunctionPicker modal blocking POINT range selection.
+
+### Goal
+
+Fix bugs where the FormulaWizard modal (or FunctionPicker modal) interferes with POINT-mode range selection in the formula bar. The modal UI physically covers the grid, making it impossible to click cells to select a range.
+
+### Current Bugs
+
+1. **POINT mode + modal open** — User opens FormulaWizard, starts typing a formula with a parameter that needs a range, clicks the grid to select a range → the modal intercepts/blocks the click or the selection is lost when modal re-renders
+2. **Formula bar range highlight obscured** — The range highlight in the formula bar (colored cell refs) is covered by the modal, so the user can't see what they're selecting
+3. **POINT state lost on modal re-render** — Any modal state change (function switch, breadcrumb navigation) resets POINT mode back to SELECT
+4. **Escape behavior** — Esc closes the modal instead of canceling POINT mode first
+5. **Tab/Enter in modal parameters** — Tab moves focus to next modal input instead of committing the range selection
+
+### Stages & Subtasks
+
+---
+
+#### Stage 27a: Diagnose & Reproduce — PLANNED 📋
+
+**Goal**: Write failing tests that reproduce each bug.
+
+- [ ] **27a.1**: Test: open FormulaWizard, enter POINT mode, click grid cell → range ref appears in parameter
+- [ ] **27a.2**: Test: POINT mode active, modal re-renders (e.g., function change) → POINT state preserved
+- [ ] **27a.3**: Test: POINT mode + Esc → cancels POINT, second Esc closes modal
+- [ ] **27a.4**: Test: range highlight in formula bar visible when modal open (z-index / positioning)
+
+---
+
+#### Stage 27b: Fix Modal Transparency for Range Selection — PLANNED 📋
+
+**Goal**: Make the modal non-blocking when in POINT mode.
+
+- [ ] **27b.1**: When entering POINT mode, add CSS class to modal that:
+  - Makes modal background semi-transparent
+  - Allows click-through to grid (pointer-events: none on overlay, auto on modal content)
+  - Moves modal to side or shrinks to reveal grid
+- [ ] **27b.2**: When POINT mode is active, show a compact "Selecting range..." indicator in the formula bar
+- [ ] **27b.3**: Restore full modal opacity when POINT mode exits (range committed)
+
+---
+
+#### Stage 27c: Fix POINT State Preservation — PLANNED 📋
+
+**Goal**: Modal re-renders must not reset POINT mode.
+
+- [ ] **27c.1**: Ensure `useFormulaWizard` hook preserves POINT state across re-renders
+- [ ] **27c.2**: Grid's `onRangeSelect` callback commits the range ref to the correct modal parameter without resetting FSM
+- [ ] **27c.3**: Breadcrumb navigation in FormulaWizard doesn't reset active parameter's POINT state
+- [ ] **27c.4**: Write tests for state preservation across modal re-renders
+
+---
+
+#### Stage 27d: Fix Escape Key Behavior — PLANNED 📋
+
+**Goal**: Esc cancels POINT mode first, then closes modal on second press.
+
+- [ ] **27d.1**: Intercept Esc in FormulaWizard when FSM is in POINT state
+- [ ] **27d.2**: First Esc → exit POINT mode, return to EDIT/SELECT (keep modal open)
+- [ ] **27d.3**: Second Esc → close modal (if FSM is SELECT)
+- [ ] **27d.4**: Write tests for double-Esc behavior
+
+---
+
+### Files Expected
+
+| File | Action |
+|------|--------|
+| `src/components/FormulaWizard.tsx` | POINT-aware modal styling + Esc handling |
+| `src/components/FormulaBar.tsx` | Range highlight z-index + POINT indicator |
+| `src/hooks/useFormulaWizard.ts` | POINT state preservation |
+| `src/components/Grid.tsx` | `onRangeSelect` without FSM reset |
+| `src/App.tsx` | Wire onRangeSelect into wizard parameter commit |
+| Tests | 27a repro tests + fix verification tests |
+
+### Dependencies
+
+- Phase 25 (FormulaWizard + FunctionPicker)
+- useCellEditing FSM (POINT mode)
+- formulaWizardCompiler (parameter commit)
