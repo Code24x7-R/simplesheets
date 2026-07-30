@@ -1654,14 +1654,18 @@ Fix bugs where the FormulaWizard modal (or FunctionPicker modal) interferes with
 
 ---
 
-#### Stage 27c: Fix POINT State Preservation — PLANNED 📋
+#### Stage 27c: Fix POINT State Preservation — COMPLETE ✅ (2026-07-30)
 
 **Goal**: Modal re-renders must not reset POINT mode.
 
-- [ ] **27c.1**: Ensure `useFormulaWizard` hook preserves POINT state across re-renders
-- [ ] **27c.2**: Grid's `onRangeSelect` callback commits the range ref to the correct modal parameter without resetting FSM
-- [ ] **27c.3**: Breadcrumb navigation in FormulaWizard doesn't reset active parameter's POINT state
-- [ ] **27c.4**: Write tests for state preservation across modal re-renders
+**Finding**: POINT state preservation already works correctly in the current implementation. The `useFormulaWizard` hook preserves `pointSelectionParamIndex` across re-renders.
+
+- [x] **27c.1**: `useFormulaWizard` hook preserves POINT state (verified by tests)
+- [x] **27c.2**: Grid's `onRangeSelect` callback commits range ref correctly
+- [x] **27c.3**: Breadcrumb navigation preserves POINT state
+- [x] **27c.4**: Wrote **7 tests** for state preservation verification
+
+**Tests:** `src/components/FormulaWizard.statepreserv.test.tsx`
 
 ---
 
