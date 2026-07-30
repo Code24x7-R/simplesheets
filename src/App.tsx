@@ -35,6 +35,7 @@ import { insertRow, deleteRow, insertCol, deleteCol } from './utils/sheetOperati
 import { computeFillSeries } from './utils/fillSeries';
 import { applyPasteOptions } from './utils/pasteSpecial';
 import type { PasteMode } from './utils/pasteSpecial';
+import { extractColumnWidths, applyColumnWidths } from './utils/pasteWidths';
 import { sortRange } from './utils/sheetSort';
 import {
   createFilterState,
@@ -1082,10 +1083,28 @@ function WorkbookView() {
       }
 
       // Update workbook
-      const newSheets = workbook.sheets.map((s, idx) => {
+      let newSheets = workbook.sheets.map((s, idx) => {
         if (idx !== workbook.activeSheetIndex) return s;
         return { ...s, cells: newCells };
       });
+
+      // Cross-sheet paste: carry column widths from source range
+      const sourceIdx = clipboard.sourceSheetIndex;
+      const targetIdx = workbook.activeSheetIndex;
+      if (sourceIdx !== undefined && sourceIdx !== targetIdx && clipboard.sourceCol !== undefined) {
+        const sourceSheet = workbook.sheets[sourceIdx];
+        const srcStartCol = clipboard.sourceCol;
+        const srcEndCol = clipboard.sourceCol + clipboard.colCount - 1;
+        const widths = extractColumnWidths(sourceSheet, srcStartCol, srcEndCol);
+        if (Object.keys(widths).length > 0) {
+          const targetSheet = newSheets[targetIdx];
+          newSheets = newSheets.map((s, idx) => {
+            if (idx !== targetIdx) return s;
+            return applyColumnWidths(targetSheet, widths, targetCol);
+          });
+        }
+      }
+
       const newWorkbook: Workbook = {
         ...workbook,
         sheets: newSheets,

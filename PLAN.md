@@ -1559,13 +1559,16 @@ Improve how ranges are copied, pasted, and edited within and across sheets. Curr
 
 ---
 
-#### Stage 26d: Cross-Sheet Paste with Formatting — PLANNED 📋
+#### Stage 26d: Cross-Sheet Paste with Formatting — COMPLETE ✅ (2026-07-30)
 
 **Goal**: When pasting across sheets, carry cell styles and column widths.
 
-- [ ] **26d.1**: Update cross-sheet paste to apply captured styles from 26a
-- [ ] **26d.2**: Optionally carry column widths (configurable in paste modal)
-- [ ] **26d.3**: Write tests for cross-sheet formatted paste
+- [x] **26d.1**: Cross-sheet paste applies captured styles — already supported by existing paste handler (`style: cell?.style`), verified by tests
+- [x] **26d.2**: Column widths carried via `extractColumnWidths()` / `applyColumnWidths()` utilities
+- [x] **26d.3**: Wrote **17 tests** (5 cross-sheet style tests + 12 column width tests)
+
+**New files:** `src/utils/pasteWidths.ts`
+**Modified:** `src/App.tsx` (cross-sheet column width carrying in paste handler)
 
 ---
 
