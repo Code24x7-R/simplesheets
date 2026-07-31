@@ -4,12 +4,12 @@
 Achieve a clean, clutter-free UI with standardized dropdown menus, formula wizard, formula bar, and R1C1 reference format.
 
 ## Current State
-- **2076 tests** across **80 suites**, All passing
+- **2293 tests** across **97 suites**, All passing
 - Lint clean (0 warnings), Type-check clean, Build clean
 - Coverage: **94.7% stmts, 86.8% branches, 95.88% funcs, 96.03% lines**
-- Phases 1-25 complete: All planned features implemented and verified
-- Phase 25f.1 complete (2026-07-30): README documents FormulaWizard import + live preview
-- Recent fixes (2026-07-30): Ctrl+Shift+F no longer sticks FSM in ENTER state; FormulaWizard Result preview shows computed value; App.tsx activeCell nullable type; AGENTS.md branch target set to 85%+
+- Phases 1-28 complete: All planned features implemented and verified
+- Phase 28 complete (2026-07-31): Mobile platform enhancements (touch-friendly POINT mode, formula placement fix, false circular reference fix, focus restoration)
+- Recent fixes (2026-07-31): FormulaWizard Accept button for touch devices; B-011 formula placement fix; B-012 false circular reference fix; focus returns to active cell after wizard closes
 
 ---
 
@@ -1697,5 +1697,105 @@ Fix bugs where the FormulaWizard modal (or FunctionPicker modal) interferes with
 ### Dependencies
 
 - Phase 25 (FormulaWizard + FunctionPicker)
+- useCellEditing FSM (POINT mode)
+- formulaWizardCompiler (parameter commit)
+
+---
+
+## Phase 28: Feature Enhancements — Mobility Platforms — COMPLETE ✅ (2026-07-31)
+
+**Status**: All 4 stages (28a-28d) complete. +16 tests added.
+
+### Goal
+
+Improve FormulaWizard usability on mobile/touch platforms (iOS Safari, Android Chrome) and fix related bugs discovered during mobile testing.
+
+### Completed Stages
+
+---
+
+#### Stage 28a: Touch-Friendly POINT Mode Accept Button — COMPLETE ✅ (2026-07-31)
+
+**Goal**: Add Accept button for touch devices that can't press Enter.
+
+- [x] **28a.1**: Added Accept button to POINT mode indicator (alongside Cancel)
+- [x] **28a.2**: Accept button triggers same logic as Enter key on grid
+- [x] **28a.3**: Added `acceptPointSelection` and `getSelection` methods to `GridHandle`
+- [x] **28a.4**: Added `onAcceptPointSelection` prop to FormulaWizard
+- [x] **28a.5**: Updated POINT mode text: "Select a range on the grid, then press Enter or tap Accept."
+
+**Modified:** `src/components/FormulaWizard.tsx`, `src/components/Grid.tsx`, `src/App.tsx`
+**Tests:** `src/components/FormulaWizard.test.tsx` (new Accept button test)
+
+---
+
+#### Stage 28b: Formula Placement Fix (B-011) — COMPLETE ✅ (2026-07-31)
+
+**Goal**: Fix formula being placed in wrong cell after wizard range selection.
+
+- [x] **28b.1**: Added `wizardTargetCell` state to capture target cell when wizard opens
+- [x] **28b.2**: `handleWizardApply` uses `wizardTargetCell` instead of `activeCellRef.current`
+- [x] **28b.3**: `targetRow`/`targetCol` props use `wizardTargetCell` (not `activeCell`)
+- [x] **28b.4**: Reset `wizardTargetCell` when wizard closes
+
+**Root cause**: `activeCell` changes during POINT mode range selection, causing formula to be placed in last selected cell instead of target cell.
+
+**Modified:** `src/App.tsx`
+**Tests:** `src/App.test.tsx` (B-011 test: formula placed in target cell)
+
+---
+
+#### Stage 28c: False Circular Reference Warning Fix (B-012) — COMPLETE ✅ (2026-07-31)
+
+**Goal**: Fix false "circular dependency" warning when ranges don't include target cell.
+
+- [x] **28c.1**: Rewrote `checkCircularReference` with proper numeric range containment
+- [x] **28c.2**: Added `parseCellRef` helper to parse cell references into {row, col}
+- [x] **28c.3**: Added `isCellInRange` helper for proper range containment check
+- [x] **28c.4**: Updated "Apply to Cell" button to show target cell (e.g., "Apply to Cell: E4")
+
+**Root cause**: Old implementation used `String.includes()` for range checks, causing false substring matches.
+
+**Modified:** `src/utils/formulaWizardCompiler.ts`, `src/components/FormulaWizard.tsx`
+**Tests:** `src/utils/formulaWizardCompiler.test.ts` (5 new range containment tests)
+
+---
+
+#### Stage 28d: Focus Restoration After Wizard Closes — COMPLETE ✅ (2026-07-31)
+
+**Goal**: Return focus to active cell after FormulaWizard completes.
+
+- [x] **28d.1**: Added `focusCell(row, col)` method to `GridHandle`
+- [x] **28d.2**: `handleCloseWizard` calls `focusCell` with target cell
+- [x] **28d.3**: Added auto-focus to wizard modal when it opens
+- [x] **28d.4**: Used `handleCellSelectRef` pattern to avoid hook ordering issues
+
+**Modified:** `src/components/Grid.tsx`, `src/App.tsx`, `src/components/FormulaWizard.tsx`
+
+---
+
+### iOS Issues Identified
+
+| Issue | Status |
+|-------|--------|
+| No Accept button for touch users (can't press Enter) | ✅ FIXED (28a) |
+| Grid uses `onMouseDown` (works on iOS but may have 300ms delay) | ⚠️ Future improvement |
+| Range picker button touch target is small (10px font) | ⚠️ Future improvement |
+| No touch-and-drag range selection on grid | ⚠️ Future improvement |
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `src/components/FormulaWizard.tsx` | Accept button, `onAcceptPointSelection` prop, auto-focus modal, button shows target cell |
+| `src/components/Grid.tsx` | `acceptPointSelection`, `getSelection`, `focusCell` methods in GridHandle |
+| `src/App.tsx` | `wizardTargetCell` state, `onAcceptPointSelection` callback, `focusCell` in `handleCloseWizard` |
+| `src/utils/formulaWizardCompiler.ts` | Proper range containment check with `parseCellRef` and `isCellInRange` |
+| Tests | 16 new tests across 4 test files |
+
+### Dependencies
+
+- Phase 25 (FormulaWizard + FunctionPicker)
+- Phase 27 (POINT Mode & Modal Interaction)
 - useCellEditing FSM (POINT mode)
 - formulaWizardCompiler (parameter commit)
