@@ -7,9 +7,10 @@
 ### 2026-07-31 [BUGFIX] B-008 — FormulaWizard Modal Blocking POINT Mode Range Selection
 - **Symptom**: The FormulaWizard modal form was blocking POINT mode range selection. The modal (centered, pointer-events-auto) captured clicks on grid cells behind it.
 - **Root cause**: The overlay had pointer-events-none but the modal content had pointer-events-auto, so the modal still captured clicks in the center of the screen.
-- **Fix**: Changed modal to pointer-events-none in POINT mode. Moved POINT mode indicator out of modal to a fixed element at top of screen (pointer-events-auto) so Cancel remains clickable.
-- **Files**: `src/components/FormulaWizard.tsx`, `src/components/FormulaWizard.transparency.test.tsx`, `src/components/FormulaWizard.pointmode.test.tsx`
-- **Tests**: 2274 pass (was 2272), lint clean, type-check clean, build clean
+- **Initial fix**: Changed modal to pointer-events-none in POINT mode. Moved POINT mode indicator out of modal to a fixed element at top of screen (pointer-events-auto) so Cancel remains clickable.
+- **Enhanced fix (streamlined UX)**: Modal now completely hides in POINT mode (only indicator visible). Modal reappears when range is accepted (Enter) or cancelled. Connected wizard POINT mode to grid selection via wizardPointMode/onWizardPointSelection props. Grid Enter key accepts selection and calls applyPointSelection. State preserved between interactions.
+- **Files**: `src/components/FormulaWizard.tsx`, `src/components/Grid.tsx` (wizardPointMode + onWizardPointSelection), `src/App.tsx` (isWizardPointMode + handleWizardPointSelection), `src/components/FormulaWizard.transparency.test.tsx`, `src/components/FormulaWizard.pointmode.test.tsx`, `src/components/FormulaWizard.escape.test.tsx`, `src/components/FormulaWizard.statepreserv.test.tsx`, `src/components/Grid.interactions.test.tsx` (2 new tests)
+- **Tests**: 2277 pass (was 2272), lint clean, type-check clean, build clean
 
 ### 2026-07-31 [BUGFIX] B-004 — In-Cell Editor Lacks Syntax Highlighting
 - **Symptom**: Formula bar showed colored cell reference overlays while editing. The in-cell editor was a plain `<input>` with no visual formula aid — inconsistent UX.

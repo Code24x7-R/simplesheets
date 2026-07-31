@@ -116,7 +116,7 @@ describe('FormulaWizard — POINT Mode Interaction', () => {
     expect(screen.getByText('Nested Formula Wizard')).toBeInTheDocument();
   });
 
-  it('modal does not block POINT mode range selection (B-006 fix)', () => {
+  it('modal is completely hidden in POINT mode (B-008 fix)', () => {
     const props = {
       ...defaultProps,
       wizard: {
@@ -127,12 +127,11 @@ describe('FormulaWizard — POINT Mode Interaction', () => {
     };
     render(<FormulaWizard {...props} />);
 
-    // The modal content should be pointer-events-none so clicks pass through to grid
+    // The modal should NOT be rendered in POINT mode (completely hidden)
     const modal = document.querySelector('.bg-white.rounded-lg');
-    expect(modal).toBeInTheDocument();
-    expect(modal?.classList.contains('pointer-events-none')).toBe(true);
+    expect(modal).not.toBeInTheDocument();
 
-    // The POINT mode indicator should be clickable (outside the modal)
+    // The POINT mode indicator should be visible and clickable
     const indicator = document.querySelector('.fixed.top-4.left-1\\/2');
     expect(indicator).toBeInTheDocument();
     expect(indicator?.classList.contains('pointer-events-auto')).toBe(true);
@@ -143,6 +142,26 @@ describe('FormulaWizard — POINT Mode Interaction', () => {
     expect(pointCancelBtn).toBeDefined();
     fireEvent.click(pointCancelBtn!);
     expect(props.cancelPointSelection).toHaveBeenCalled();
+  });
+
+  it('modal reappears after POINT mode is cancelled', () => {
+    const props = {
+      ...defaultProps,
+      wizard: {
+        ...defaultProps.wizard,
+        state: 'POINT_SELECTION' as const,
+        pointSelectionParamIndex: 0,
+      },
+    };
+    const { rerender } = render(<FormulaWizard {...props} />);
+
+    // Modal is hidden in POINT mode
+    expect(document.querySelector('.bg-white.rounded-lg')).not.toBeInTheDocument();
+
+    // After cancelling POINT mode, modal reappears
+    rerender(<FormulaWizard {...{ ...props, wizard: { ...props.wizard, state: 'WIZARD_ROOT' } }} />);
+    expect(document.querySelector('.bg-white.rounded-lg')).toBeInTheDocument();
+    expect(screen.getByText('Nested Formula Wizard')).toBeInTheDocument();
   });
 });
 

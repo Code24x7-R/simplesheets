@@ -54,9 +54,9 @@ describe('FormulaWizard — Escape Key Behavior', () => {
   it('first Esc in POINT mode cancels POINT (keeps modal open)', () => {
     render(<FormulaWizard {...defaultProps} wizard={createWizardState({ state: 'POINT_SELECTION', pointSelectionParamIndex: 0 })} />);
 
-    // Find the modal overlay and press Escape
-    const overlay = document.querySelector('.fixed.inset-0.z-50')!;
-    fireEvent.keyDown(overlay, { key: 'Escape' });
+    // In POINT mode, only the indicator is rendered (modal is hidden)
+    const indicator = document.querySelector('.fixed.top-4.left-1\\/2')!;
+    fireEvent.keyDown(indicator, { key: 'Escape' });
 
     // Should cancel POINT selection, NOT close modal
     expect(defaultProps.cancelPointSelection).toHaveBeenCalled();
@@ -76,8 +76,8 @@ describe('FormulaWizard — Escape Key Behavior', () => {
   it('Esc does not propagate to grid when modal is open', () => {
     render(<FormulaWizard {...defaultProps} wizard={createWizardState({ state: 'POINT_SELECTION', pointSelectionParamIndex: 0 })} />);
 
-    const overlay = document.querySelector('.fixed.inset-0.z-50')!;
-    fireEvent.keyDown(overlay, { key: 'Escape' });
+    const indicator = document.querySelector('.fixed.top-4.left-1\\/2')!;
+    fireEvent.keyDown(indicator, { key: 'Escape' });
 
     // cancelPointSelection should be called (proving the handler intercepted it)
     expect(defaultProps.cancelPointSelection).toHaveBeenCalled();
@@ -89,13 +89,13 @@ describe('FormulaWizard — Escape Key Behavior', () => {
       <FormulaWizard {...defaultProps} wizard={createWizardState({ state: 'POINT_SELECTION', pointSelectionParamIndex: 0 })} />
     );
 
-    let overlay = document.querySelector('.fixed.inset-0.z-50')!;
-    fireEvent.keyDown(overlay, { key: 'Escape' });
+    const indicator = document.querySelector('.fixed.top-4.left-1\\/2')!;
+    fireEvent.keyDown(indicator, { key: 'Escape' });
     expect(defaultProps.cancelPointSelection).toHaveBeenCalled();
 
     // Simulate state change after cancel
     rerender(<FormulaWizard {...defaultProps} wizard={createWizardState({ state: 'WIZARD_ROOT' })} />);
-    overlay = document.querySelector('.fixed.inset-0.z-50')!;
+    const overlay = document.querySelector('.fixed.inset-0.z-50')!;
     fireEvent.keyDown(overlay, { key: 'Escape' });
     expect(defaultProps.closeWizard).toHaveBeenCalled();
   });

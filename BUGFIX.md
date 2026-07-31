@@ -37,7 +37,7 @@ This file tracks bugs in **existing** code, functions, and UI elements. New feat
 
 ## B-008: FormulaWizard Modal Blocking POINT Mode Range Selection — ✅ FIXED (see Recently Fixed below)
 - ~~Symptom~~: ~~The form is blocking POINT mode range selection~~
-- **Status**: Fixed 2026-07-31 — see B-008 entry in Recently Fixed
+- **Status**: Fixed 2026-07-31 (enhanced 2026-07-31) — see B-008 entry in Recently Fixed
 
 ---
 
@@ -50,10 +50,11 @@ This file tracks bugs in **existing** code, functions, and UI elements. New feat
 ### 2026-07-31: B-008 — FormulaWizard Modal Blocking POINT Mode Range Selection ✅ VERIFIED
 - **Symptom**: The FormulaWizard modal form was blocking POINT mode range selection. When the user clicked the range picker button to select a range on the grid, the modal (positioned in the center of the screen with `pointer-events-auto`) captured clicks on the grid cells behind it, preventing range selection.
 - **Root cause**: The overlay had `pointer-events-none` (click-through) but the modal content had `pointer-events-auto`, so the modal still captured clicks in the center of the screen. The user couldn't select cells behind the modal.
-- **Fix**: (1) Changed the modal to `pointer-events-none` in POINT mode so clicks pass through to the grid. (2) Moved the POINT mode indicator OUT of the modal and rendered it as a separate fixed element at the top of the screen (`fixed top-4 left-1/2 -translate-x-1/2 z-[60]`) with `pointer-events-auto` so the Cancel button remains clickable. (3) Updated tests to verify the modal is click-through and the indicator is clickable.
-- **Files**: `src/components/FormulaWizard.tsx` (modal pointer-events-none + separate indicator), `src/components/FormulaWizard.transparency.test.tsx` (updated test + new test), `src/components/FormulaWizard.pointmode.test.tsx` (new test)
-- **Tests**: 2274 pass (was 2272)
-- **Verification**: New tests verify modal is pointer-events-none in POINT mode, indicator is clickable at top of screen, and Cancel button still works.
+- **Initial fix**: (1) Changed the modal to `pointer-events-none` in POINT mode so clicks pass through to the grid. (2) Moved the POINT mode indicator OUT of the modal and rendered it as a separate fixed element at the top of the screen (`fixed top-4 left-1/2 -translate-x-1/2 z-[60]`) with `pointer-events-auto` so the Cancel button remains clickable.
+- **Enhanced fix (streamlined UX)**: (1) Modal now **completely hides** in POINT mode (not just click-through) — only the POINT mode indicator is visible at the top of the screen. (2) Modal **reappears** when the range is accepted (Enter) or cancelled (Escape/Cancel button). (3) Connected the wizard's POINT mode to the grid's selection mechanism via new `wizardPointMode` and `onWizardPointSelection` props. (4) Grid's Enter key accepts the current selection as the range and calls `applyPointSelection` which updates the parameter value and returns to WIZARD_ROOT state. (5) State is preserved between interactions — the wizard remembers which parameter is being edited.
+- **Files**: `src/components/FormulaWizard.tsx` (modal hides in POINT mode + indicator), `src/components/Grid.tsx` (wizardPointMode + onWizardPointSelection props + Enter key handling), `src/App.tsx` (isWizardPointMode + handleWizardPointSelection + applyWizardPointSelection wiring), `src/components/FormulaWizard.transparency.test.tsx` (updated tests), `src/components/FormulaWizard.pointmode.test.tsx` (updated tests), `src/components/FormulaWizard.escape.test.tsx` (updated tests), `src/components/FormulaWizard.statepreserv.test.tsx` (updated tests), `src/components/Grid.interactions.test.tsx` (2 new tests)
+- **Tests**: 2277 pass (was 2272)
+- **Verification**: New tests verify modal is hidden in POINT mode, modal reappears after cancel, grid Enter key accepts range selection, and wizardPointMode properly connected.
 
 ### 2026-07-31: B-004 — In-Cell Editor Lacks Syntax Highlighting ✅ VERIFIED
 - **Symptom**: Formula bar showed colored cell reference overlays and function highlighting while editing. The in-cell editor was a plain `<input>` with no visual formula aid — inconsistent UX.

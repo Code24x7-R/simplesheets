@@ -1,4 +1,4 @@
-import { render } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { FormulaWizard } from './FormulaWizard';
 
 const createWizardState = (overrides: Record<string, unknown> = {}) => ({
@@ -57,39 +57,32 @@ describe('FormulaWizard — Modal Transparency for POINT Mode', () => {
     expect(overlay?.classList.contains('pointer-events-none')).toBe(false);
   });
 
-  it('modal overlay IS click-through when in POINT mode', () => {
+  it('modal is completely hidden in POINT mode (only indicator visible)', () => {
     render(<FormulaWizard {...defaultProps} wizard={createWizardState({ state: 'POINT_SELECTION', pointSelectionParamIndex: 0 })} />);
+    // Modal and overlay should NOT be rendered in POINT mode
     const overlay = document.querySelector('.fixed.inset-0.z-50');
-    expect(overlay).toBeInTheDocument();
-    // Overlay SHOULD have pointer-events-none class in POINT mode
-    expect(overlay?.classList.contains('pointer-events-none')).toBe(true);
+    expect(overlay).not.toBeInTheDocument();
+    const modal = document.querySelector('.bg-white.rounded-lg');
+    expect(modal).not.toBeInTheDocument();
   });
 
-  it('modal content is click-through in POINT mode (so grid is accessible)', () => {
+  it('POINT mode indicator is shown at top of screen in POINT mode', () => {
     render(<FormulaWizard {...defaultProps} wizard={createWizardState({ state: 'POINT_SELECTION', pointSelectionParamIndex: 0 })} />);
-    const content = document.querySelector('.bg-white.rounded-lg');
-    expect(content).toBeInTheDocument();
-    // Content SHOULD have pointer-events-none so clicks reach the grid
-    expect(content?.classList.contains('pointer-events-none')).toBe(true);
-  });
-
-  it('POINT mode indicator is clickable (positioned at top, outside modal)', () => {
-    render(<FormulaWizard {...defaultProps} wizard={createWizardState({ state: 'POINT_SELECTION', pointSelectionParamIndex: 0 })} />);
-    // The POINT mode indicator is rendered outside the modal with pointer-events-auto
-    const indicator = document.querySelector('.fixed.top-4.left-1\\/2.-translate-x-1\\/2.z-\\[60\\]');
+    // The POINT mode indicator is rendered at the top of the screen
+    const indicator = document.querySelector('.fixed.top-4.left-1\\/2');
     expect(indicator).toBeInTheDocument();
     expect(indicator?.classList.contains('pointer-events-auto')).toBe(true);
+    // Verify it's positioned at the top (not centered like the modal)
+    expect(indicator?.classList.contains('top-4')).toBe(true);
   });
 
-  it('modal is semi-transparent in POINT mode', () => {
+  it('POINT mode indicator shows instructions and Cancel button', () => {
     render(<FormulaWizard {...defaultProps} wizard={createWizardState({ state: 'POINT_SELECTION', pointSelectionParamIndex: 0 })} />);
-    const modal = document.querySelector('.bg-white.rounded-lg');
-    expect(modal).toBeInTheDocument();
-    // Modal should have reduced opacity in POINT mode
-    expect(modal?.classList.contains('opacity-75') || modal?.classList.contains('opacity-50')).toBe(true);
+    expect(screen.getByText(/POINT mode:/i)).toBeInTheDocument();
+    expect(screen.getByText('Cancel')).toBeInTheDocument();
   });
 
-  it('modal is fully opaque when not in POINT mode', () => {
+  it('modal is fully visible when not in POINT mode', () => {
     render(<FormulaWizard {...defaultProps} />);
     const modal = document.querySelector('.bg-white.rounded-lg');
     expect(modal).toBeInTheDocument();
@@ -97,24 +90,25 @@ describe('FormulaWizard — Modal Transparency for POINT Mode', () => {
     expect(modal?.classList.contains('opacity-75') || modal?.classList.contains('opacity-50')).toBe(false);
   });
 
-  it('exiting POINT mode restores full opacity', () => {
-    // Start in POINT mode
+  it('exiting POINT mode restores the modal', () => {
+    // Start in POINT mode — modal is hidden
     const { rerender } = render(
       <FormulaWizard {...defaultProps} wizard={createWizardState({ state: 'POINT_SELECTION', pointSelectionParamIndex: 0 })} />
     );
-    let modal = document.querySelector('.bg-white.rounded-lg');
-    expect(modal?.classList.contains('opacity-75') || modal?.classList.contains('opacity-50')).toBe(true);
+    expect(document.querySelector('.bg-white.rounded-lg')).not.toBeInTheDocument();
 
-    // Exit POINT mode
+    // Exit POINT mode — modal reappears
     rerender(<FormulaWizard {...defaultProps} wizard={createWizardState({ state: 'WIZARD_ROOT' })} />);
-    modal = document.querySelector('.bg-white.rounded-lg');
-    expect(modal?.classList.contains('opacity-75') || modal?.classList.contains('opacity-50')).toBe(false);
+    expect(document.querySelector('.bg-white.rounded-lg')).toBeInTheDocument();
   });
 
-  it('grid receives click events when modal is in POINT mode', () => {
+  it('grid is fully accessible in POINT mode (no overlay blocking)', () => {
     render(<FormulaWizard {...defaultProps} wizard={createWizardState({ state: 'POINT_SELECTION', pointSelectionParamIndex: 0 })} />);
+    // No overlay is rendered, so the grid is fully accessible
     const overlay = document.querySelector('.fixed.inset-0.z-50');
-    // pointer-events-none means clicks pass through to grid
-    expect(overlay?.classList.contains('pointer-events-none')).toBe(true);
+    expect(overlay).not.toBeInTheDocument();
+    // Only the indicator is rendered at the top
+    const indicator = document.querySelector('.fixed.top-4.left-1\\/2');
+    expect(indicator).toBeInTheDocument();
   });
 });

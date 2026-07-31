@@ -179,6 +179,7 @@ function WorkbookView() {
     goBack: goWizardBack,
     startPointSelection: startWizardPointSelection,
     cancelPointSelection: cancelWizardPointSelection,
+    applyPointSelection: applyWizardPointSelection,
   } = useFormulaWizard();
 
   // Wrapper that restores focus to grid after wizard closes
@@ -289,6 +290,9 @@ function WorkbookView() {
         endCol: editingPointSession.currentCol,
       }
     : null;
+
+  // Derive wizard POINT mode from the wizard state
+  const isWizardPointMode = formulaWizard.state === 'POINT_SELECTION';
 
   // Update frozen state in sheet
   const updatedSheet = useMemo(
@@ -418,6 +422,19 @@ function WorkbookView() {
       handleCloseWizard();
     },
     [handleCellChange, handleCloseWizard]
+  );
+
+  /**
+   * Handle wizard POINT mode range selection accepted.
+   * Called when the user selects a range on the grid and presses Enter.
+   * The wizard's applyPointSelection updates the parameter value and
+   * returns to the WIZARD_ROOT state, causing the modal to reappear.
+   */
+  const handleWizardPointSelection = useCallback(
+    (range: string) => {
+      applyWizardPointSelection(range);
+    },
+    [applyWizardPointSelection]
   );
 
   /**
@@ -1978,6 +1995,8 @@ function WorkbookView() {
           onAcceptAutoComplete={acceptAutoComplete}
           onNavigateAutoComplete={navigateAutoComplete}
           onDismissAutoComplete={dismissAutoComplete}
+          wizardPointMode={isWizardPointMode}
+          onWizardPointSelection={handleWizardPointSelection}
         />
       </div>
 

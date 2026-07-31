@@ -988,3 +988,50 @@ describe('Grid - Syntax Highlighting in Cell Editor', () => {
     expect(input!.className).toContain('text-transparent');
   });
 });
+
+describe('Grid — Wizard POINT Mode Range Selection', () => {
+  it('calls onWizardPointSelection with single cell range when Enter pressed', () => {
+    const onWizardPointSelection = jest.fn();
+    render(
+      <GridWithEditing
+        sheet={createTestSheet({})}
+        onCellChange={jest.fn()}
+        onSelect={jest.fn()}
+        selectedCell={{ row: 0, col: 0 }}
+        wizardPointMode={true}
+        onWizardPointSelection={onWizardPointSelection}
+      />,
+    );
+
+    // Find the grid container and press Enter
+    const gridContainer = document.querySelector('.overflow-auto') as HTMLElement;
+    fireEvent.keyDown(gridContainer, { key: 'Enter' });
+
+    // Should be called with the current selection as a range string
+    expect(onWizardPointSelection).toHaveBeenCalled();
+    // The call should be with a valid cell reference like "A1"
+    const callArg = onWizardPointSelection.mock.calls[0][0];
+    expect(callArg).toMatch(/^[A-Z]+\d+$/);
+  });
+
+  it('does not call onWizardPointSelection when wizardPointMode is false', () => {
+    const onWizardPointSelection = jest.fn();
+    render(
+      <GridWithEditing
+        sheet={createTestSheet({})}
+        onCellChange={jest.fn()}
+        onSelect={jest.fn()}
+        selectedCell={{ row: 0, col: 0 }}
+        wizardPointMode={false}
+        onWizardPointSelection={onWizardPointSelection}
+      />,
+    );
+
+    // Find the grid container and press Enter
+    const gridContainer = document.querySelector('.overflow-auto') as HTMLElement;
+    fireEvent.keyDown(gridContainer, { key: 'Enter' });
+
+    // Should NOT be called when wizardPointMode is false
+    expect(onWizardPointSelection).not.toHaveBeenCalled();
+  });
+});

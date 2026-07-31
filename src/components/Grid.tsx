@@ -126,6 +126,10 @@ interface GridProps {
   onNavigateAutoComplete?: (delta: number) => void;
   /** Dismiss the auto-complete dropdown without accepting. */
   onDismissAutoComplete?: () => void;
+  /** Whether the FormulaWizard is in POINT mode (selecting a range for a function parameter). */
+  wizardPointMode?: boolean;
+  /** Callback when the user accepts the range selection in wizard POINT mode. */
+  onWizardPointSelection?: (range: string) => void;
 }
 
 const ROW_WIDTH = 50; // Width of row number column
@@ -142,7 +146,7 @@ export interface GridHandle {
  * Supports 10,000+ rows with smooth scrolling.
  */
 export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
-  { sheet, onCellChange, onCellsChange, onSelect, selectedCell, highlightedRanges = [], isPointMode = false, pointSelection = null, onCellPick, onHeaderSelect, onSelectionChange, onColumnResize, onRowResize, referenceFormat = 'A1', onInsertRowAbove, onInsertRowBelow, onDeleteRow, onInsertColLeft, onInsertColRight, onDeleteCol, clipboardRange, onClearClipboard, showFormulas = false, session, onStartEnter, onStartEdit, onRawKeyDown, onRawChange, onFillSeries, onMoveRange, filterState = null, onApplyFilter, autoComplete, onAcceptAutoComplete, onNavigateAutoComplete, onDismissAutoComplete },
+  { sheet, onCellChange, onCellsChange, onSelect, selectedCell, highlightedRanges = [], isPointMode = false, pointSelection = null, onCellPick, onHeaderSelect, onSelectionChange, onColumnResize, onRowResize, referenceFormat = 'A1', onInsertRowAbove, onInsertRowBelow, onDeleteRow, onInsertColLeft, onInsertColRight, onDeleteCol, clipboardRange, onClearClipboard, showFormulas = false, session, onStartEnter, onStartEdit, onRawKeyDown, onRawChange, onFillSeries, onMoveRange, filterState = null, onApplyFilter, autoComplete, onAcceptAutoComplete, onNavigateAutoComplete, onDismissAutoComplete, wizardPointMode = false, onWizardPointSelection },
   ref
 ) {
   const parentRef = useRef<HTMLDivElement>(null);
@@ -1199,6 +1203,23 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
       // Clear clipboard on Esc (spec: marching ants disappear when you press Esc)
       if (e.key === 'Escape') {
         onClearClipboard?.();
+        return;
+      }
+
+      // Wizard POINT mode: Enter accepts the current selection as the range
+      if (wizardPointMode && e.key === 'Enter') {
+        e.preventDefault();
+        const activeSelection = selectionRef.current;
+        if (activeSelection && onWizardPointSelection) {
+          const startRow = Math.min(activeSelection.startRow, activeSelection.endRow);
+          const endRow = Math.max(activeSelection.startRow, activeSelection.endRow);
+          const startCol = Math.min(activeSelection.startCol, activeSelection.endCol);
+          const endCol = Math.max(activeSelection.startCol, activeSelection.endCol);
+          const rangeStr = startRow === endRow && startCol === endCol
+            ? `${colToLetter(startCol)}${startRow + 1}`
+            : `${colToLetter(startCol)}${startRow + 1}:${colToLetter(endCol)}${endRow + 1}`;
+          onWizardPointSelection(rangeStr);
+        }
         return;
       }
 

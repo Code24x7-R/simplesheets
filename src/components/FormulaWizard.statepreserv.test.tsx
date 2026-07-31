@@ -117,9 +117,22 @@ describe('FormulaWizard — POINT State UI Preservation', () => {
     expect(screen.queryByText(/POINT mode:/i)).not.toBeInTheDocument();
   });
 
-  it('renders parameter inputs in POINT mode', () => {
+  it('modal is hidden in POINT mode (parameter inputs not visible)', () => {
     render(<FormulaWizard {...defaultProps} />);
-    // Parameters should still be editable
+    // In POINT mode, the modal is completely hidden — only the indicator is shown
+    expect(screen.queryByText('Number1')).not.toBeInTheDocument();
+    expect(screen.queryByText('Number2')).not.toBeInTheDocument();
+    // The POINT mode indicator is shown instead
+    expect(screen.getByText(/POINT mode:/i)).toBeInTheDocument();
+  });
+
+  it('parameter inputs reappear after POINT mode is exited', () => {
+    const { rerender } = render(<FormulaWizard {...defaultProps} />);
+    // In POINT mode, parameter inputs are hidden
+    expect(screen.queryByText('Number1')).not.toBeInTheDocument();
+
+    // After exiting POINT mode, parameter inputs reappear
+    rerender(<FormulaWizard {...defaultProps} wizard={createWizardState({ state: 'WIZARD_ROOT' })} />);
     expect(screen.getByText('Number1')).toBeInTheDocument();
     expect(screen.getByText('Number2')).toBeInTheDocument();
   });

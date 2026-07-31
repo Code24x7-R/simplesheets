@@ -196,22 +196,21 @@ export function FormulaWizard({
 
   if (!schema) return null;
 
-  // When in POINT mode, make modal fully click-through so the user can
-  // select a range on the grid without the form blocking cells.
+  // When in POINT mode, hide the modal completely so the user can
+  // select a range on the grid without any visual obstruction.
+  // The modal will reappear when the range is accepted or cancelled.
   const isPointMode = wizard.state === 'POINT_SELECTION';
-  const overlayClass = isPointMode
-    ? 'fixed inset-0 z-50 flex items-center justify-center bg-black/10 pointer-events-none'
-    : 'fixed inset-0 z-50 flex items-center justify-center bg-black/30';
-  const modalClass = isPointMode
-    ? 'bg-white rounded-lg shadow-2xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto opacity-75 pointer-events-none'
-    : 'bg-white rounded-lg shadow-2xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto';
 
-  // POINT mode indicator — rendered OUTSIDE the modal so it stays
-  // clickable even when the modal is pointer-events-none.
+  // POINT mode indicator — shown at top of screen during range selection.
+  // This is the ONLY visible element when in POINT mode.
   const pointModeIndicator = isPointSelection && (
-    <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[60] px-4 py-2 bg-yellow-50 border border-yellow-200 rounded-lg shadow-lg text-xs text-yellow-700 pointer-events-auto">
-      <span className="font-semibold">POINT mode:</span> Select a range on the grid, then click
-      "Apply Range" or press Enter.
+    <div
+      className="fixed top-4 left-1/2 -translate-x-1/2 z-[60] px-4 py-2 bg-yellow-50 border border-yellow-200 rounded-lg shadow-lg text-xs text-yellow-700 pointer-events-auto"
+      tabIndex={-1}
+      onKeyDown={handleKeyDown}
+    >
+      <span className="font-semibold">POINT mode:</span> Select a range on the grid, then press
+      Enter or click to accept.
       <button
         className="ml-2 text-yellow-600 underline hover:text-yellow-800"
         onClick={cancelPointSelection}
@@ -221,9 +220,16 @@ export function FormulaWizard({
     </div>
   );
 
+  // In POINT mode, render only the indicator (modal is hidden)
+  if (isPointMode) {
+    return pointModeIndicator;
+  }
+
+  const overlayClass = 'fixed inset-0 z-50 flex items-center justify-center bg-black/30';
+  const modalClass = 'bg-white rounded-lg shadow-2xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto';
+
   return (
     <div className={overlayClass} onKeyDown={handleKeyDown}>
-      {pointModeIndicator}
       <div className={modalClass}>
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-gray-50 rounded-t-lg">
