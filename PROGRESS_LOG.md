@@ -4,6 +4,13 @@
 
 ---
 
+### 2026-07-31 [BUGFIX] Toggle formula view — Ctrl+` overwrites cell content
+- **Symptom**: Ctrl+` was overwriting the active cell content with the backtick character.
+- **Root cause**: Grid's Ctrl+ exclusion switch didn't include the backtick character. The ` key fell through to `isPrintableKey` check, starting editing with `` ` `` as buffer.
+- **Fix**: Added `case '\`':` to the Ctrl+ exclusion switch in Grid's handleKeyDown.
+- **Files**: `src/components/Grid.tsx`, `src/components/Grid.handlers.test.tsx`
+- **Tests**: 2278 pass (was 2277), lint clean, type-check clean, build clean
+
 ### 2026-07-31 [BUGFIX] B-008 — FormulaWizard Modal Blocking POINT Mode Range Selection
 - **Symptom**: The FormulaWizard modal form was blocking POINT mode range selection. The modal (centered, pointer-events-auto) captured clicks on grid cells behind it.
 - **Root cause**: The overlay had pointer-events-none but the modal content had pointer-events-auto, so the modal still captured clicks in the center of the screen.

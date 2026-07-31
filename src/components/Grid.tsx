@@ -1182,6 +1182,7 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
           case 'o': case 'O':
           case 'f': case 'F':
           case 'l': case 'L':
+          case '`': // Ctrl+`: toggle formula view (handled by global listener)
             return;
           case 'a': case 'A':
             // Ctrl+A: select all cells in the sheet

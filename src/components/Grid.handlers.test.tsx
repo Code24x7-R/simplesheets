@@ -375,6 +375,17 @@ describe('Grid - Keyboard Navigation', () => {
     fireEvent.keyDown(document, { ctrlKey: true, key: 'Home' });
     expect(cell).toBeTruthy();
   });
+
+  it('Ctrl+` does not start editing with backtick character', () => {
+    render(<GridWrapper />);
+    const cell = document.querySelector('.grid-cell') as HTMLElement;
+    fireEvent.mouseDown(cell);
+    // Press Ctrl+` - should toggle formula view globally, NOT start editing
+    fireEvent.keyDown(document, { ctrlKey: true, key: '`' });
+    // The grid should NOT have entered editing mode (no input element visible)
+    const input = document.querySelector('.grid-cell input');
+    expect(input).not.toBeInTheDocument();
+  });
 });
 
 describe('Grid - Freeze Panes', () => {

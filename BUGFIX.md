@@ -35,17 +35,23 @@ This file tracks bugs in **existing** code, functions, and UI elements. New feat
 
 <!-- Bugs being actively diagnosed — root cause not yet confirmed -->
 
-## B-008: FormulaWizard Modal Blocking POINT Mode Range Selection — ✅ FIXED (see Recently Fixed below)
-- ~~Symptom~~: ~~The form is blocking POINT mode range selection~~
-- **Status**: Fixed 2026-07-31 (enhanced 2026-07-31) — see B-008 entry in Recently Fixed
-
----
+## Toggle formula view — ✅ FIXED (see Recently Fixed below)
+- ~~Symptom~~: ~~Ctrl+` is overwriting the content of the Active cell with the '`' character.~~
+- **Status**: Fixed 2026-07-31 — see Toggle formula view entry in Recently Fixed
 
 ---
 
 ## ✅ Recently Fixed
 
 <!-- Bugs resolved in this session or recent past. Newest first. -->
+
+### 2026-07-31: Toggle formula view — Ctrl+` overwrites cell content ✅ VERIFIED
+- **Symptom**: Pressing Ctrl+` (to toggle formula view) was overwriting the content of the active cell with the `` ` `` character.
+- **Root cause**: The Grid's Ctrl+ shortcut exclusion switch did not include the backtick character `` ` ``. When Ctrl+` was pressed, the global handler in App.tsx toggled formula view (correct), BUT the Grid's keydown handler also fired and did not recognize `` ` `` as a Ctrl+ shortcut to exclude. The `` ` `` character fell through to the `isPrintableKey` check (ASCII 96 is in printable range 32-126), which started editing with `` ` `` as the buffer content — overwriting the existing cell value.
+- **Fix**: Added `case '\`':` to the Ctrl+ exclusion switch in Grid's `handleKeyDown` handler. The grid now correctly skips Ctrl+` and lets the global listener handle it.
+- **Files**: `src/components/Grid.tsx` (added backtick to Ctrl+ exclusion switch), `src/components/Grid.handlers.test.tsx` (new test)
+- **Tests**: 2278 pass (was 2277)
+- **Verification**: New test confirms Ctrl+` does not start editing (no input element rendered).
 
 ### 2026-07-31: B-008 — FormulaWizard Modal Blocking POINT Mode Range Selection ✅ VERIFIED
 - **Symptom**: The FormulaWizard modal form was blocking POINT mode range selection. When the user clicked the range picker button to select a range on the grid, the modal (positioned in the center of the screen with `pointer-events-auto`) captured clicks on the grid cells behind it, preventing range selection.
