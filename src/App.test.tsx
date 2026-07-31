@@ -579,7 +579,8 @@ describe('App - Global Keyboard Shortcuts', () => {
 
     // Click Apply to Cell
     act(() => {
-      fireEvent.click(screen.getByText('Apply to Cell'));
+      const applyButton = screen.getByRole('button', { name: /Apply to Cell/ });
+      fireEvent.click(applyButton);
     });
 
     // Wizard should be closed
@@ -678,7 +679,8 @@ describe('App - Global Keyboard Shortcuts', () => {
 
     // Click Apply to Cell
     act(() => {
-      fireEvent.click(screen.getByText('Apply to Cell'));
+      const applyButton = screen.getByRole('button', { name: /Apply to Cell/ });
+      fireEvent.click(applyButton);
     });
 
     // Wizard should be closed

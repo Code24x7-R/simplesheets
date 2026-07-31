@@ -4,6 +4,13 @@
 
 ---
 
+### 2026-07-31 [BUGFIX] B-012 — False circular reference warning in FormulaWizard
+- **Symptom**: Building `=SUM(D4:D9, F4:F6)` in E4 showed false circular ref warning for D4:D8 and F4:F6.
+- **Root cause**: `targetRow`/`targetCol` used `activeCell` (changes during POINT mode). `checkCircularReference` used substring matching.
+- **Fix**: Use `wizardTargetCell` state for targetRow/targetCol. Rewrote check to use proper numeric range containment. Button now shows "Apply to Cell: E4".
+- **Files**: `src/App.tsx`, `src/utils/formulaWizardCompiler.ts`, `src/components/FormulaWizard.tsx`, `src/utils/formulaWizardCompiler.test.ts`
+- **Tests**: 2292 pass (was 2287), lint clean, type-check clean, build clean
+
 ### 2026-07-31 [BUGFIX] B-011 — Formula placed in wrong cell after wizard range selection
 - **Symptom**: Building `=SUM(D5:D11, F5:F10)` in E5 placed formula in F10 (range end) instead of E5.
 - **Root cause**: `handleWizardApply` used `activeCellRef.current` which changes during POINT mode range selection.

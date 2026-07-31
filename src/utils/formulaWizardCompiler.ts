@@ -213,38 +213,81 @@ export function checkCircularReference(
   const targetRef = colToLetter(targetCol) + (targetRow + 1);
   const targetRefLower = targetRef.toLowerCase();
 
-  // Simple regex check for the target cell reference
-  // This is a basic check - a full implementation would parse the AST
+  // Check for direct cell reference to target
   const cellRefRegex = /\$?[a-z]+\$?\d+/gi;
   const matches = body.match(cellRefRegex);
 
-  if (!matches) return false;
-
-  for (const match of matches) {
-    if (match.toLowerCase() === targetRefLower) {
-      return true;
+  if (matches) {
+    for (const match of matches) {
+      if (match.toLowerCase() === targetRefLower) {
+        return true;
+      }
     }
   }
 
-  // Also check ranges
+  // Check if target is within any range
   const rangeRegex = /\$?[a-z]+\$?\d+:\$?[a-z]+\$?\d+/gi;
   const rangeMatches = body.match(rangeRegex);
 
   if (rangeMatches) {
     for (const range of rangeMatches) {
-      const parts = range.split(':');
-      if (parts.length === 2) {
-        const start = parts[0].toLowerCase();
-        const end = parts[1].toLowerCase();
-        // Check if target is within range (simplified)
-        if (start.includes(targetRefLower) || end.includes(targetRefLower)) {
-          return true;
-        }
+      if (isCellInRange(targetRefLower, range)) {
+        return true;
       }
     }
   }
 
   return false;
+}
+
+/**
+ * Parses a cell reference string (e.g., "$B$5") into {row, col}.
+ * Returns null if the string is not a valid cell reference.
+ */
+function parseCellRef(ref: string): { row: number; col: number } | null {
+  const match = ref.match(/^\$?([a-z]+)\$?(\d+)$/i);
+  if (!match) return null;
+
+  const colStr = match[1].toLowerCase();
+  const row = parseInt(match[2], 10) - 1; // Convert to 0-indexed
+
+  // Convert column letters to 0-indexed column number
+  let col = 0;
+  for (let i = 0; i < colStr.length; i++) {
+    col = col * 26 + (colStr.charCodeAt(i) - 'a'.charCodeAt(0) + 1);
+  }
+  col -= 1; // Convert to 0-indexed
+
+  return { row, col };
+}
+
+/**
+ * Checks if a target cell is within a range (e.g., "A1:B5").
+ * Uses proper numeric comparison instead of substring matching.
+ */
+function isCellInRange(targetRefLower: string, range: string): boolean {
+  const parts = range.split(':');
+  if (parts.length !== 2) return false;
+
+  const start = parseCellRef(parts[0]);
+  const end = parseCellRef(parts[1]);
+  const target = parseCellRef(targetRefLower);
+
+  if (!start || !end || !target) return false;
+
+  // Normalize range bounds (start might be greater than end)
+  const minRow = Math.min(start.row, end.row);
+  const maxRow = Math.max(start.row, end.row);
+  const minCol = Math.min(start.col, end.col);
+  const maxCol = Math.max(start.col, end.col);
+
+  // Check if target is within the range bounds
+  return (
+    target.row >= minRow &&
+    target.row <= maxRow &&
+    target.col >= minCol &&
+    target.col <= maxCol
+  );
 }
 
 /**

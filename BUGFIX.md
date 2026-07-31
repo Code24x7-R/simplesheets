@@ -39,6 +39,14 @@ This file tracks bugs in **existing** code, functions, and UI elements. New feat
 
 <!-- Bugs resolved in this session or recent past. Newest first. -->
 
+### 2026-07-31: B-012 - False circular reference warning in FormulaWizard ✅ VERIFIED
+- **Symptom**: Building `=SUM(D4:D9, F4:F6)` in E4 showed "selected range includes target cell and may cause circular dependency" warning after picking D4:D8 and F4:F6. These ranges don't include E4, so the warning was incorrect.
+- **Root cause**: (1) `targetRow` and `targetCol` props were derived from `activeCell`, which changes during POINT mode range selection. (2) `checkCircularReference` used `String.includes()` for range checks, causing false substring matches.
+- **Fix**: (1) `targetRow`/`targetCol` now use `wizardTargetCell` state (captured when wizard opens). (2) Rewrote `checkCircularReference` to use proper numeric range containment with `parseCellRef` and `isCellInRange` helpers. (3) "Apply to Cell" button now shows target cell (e.g., "Apply to Cell: E4").
+- **Files**: `src/App.tsx` (use wizardTargetCell for targetRow/targetCol), `src/utils/formulaWizardCompiler.ts` (proper range containment check), `src/components/FormulaWizard.tsx` (button shows target cell), `src/utils/formulaWizardCompiler.test.ts` (5 new tests)
+- **Tests**: 2292 pass (was 2287)
+- **Verification**: New tests verify ranges that don't contain target return false, ranges that do contain target return true.
+
 ### 2026-07-31: B-011 - Formula placed in wrong cell after wizard range selection ✅ VERIFIED
 - **Symptom**: Building `=SUM(D5:D11, F5:F10)` in E5 resulted in the formula being placed in F10 (the last cell of the selected range) instead of E5. This overwrote the contents of F10 and created a circular reference.
 - **Root cause**: `handleWizardApply` used `activeCellRef.current` to determine where to place the formula. During wizard POINT mode, clicking cells to select a range changes the `activeCell`. So when the formula was applied, it was placed in the last cell of the selected range instead of the original target cell.

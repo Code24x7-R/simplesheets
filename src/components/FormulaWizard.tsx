@@ -459,8 +459,9 @@ export function FormulaWizard({
             <button
               className="px-4 py-1.5 text-xs text-white bg-blue-600 rounded hover:bg-blue-700 transition-colors font-semibold"
               onClick={handleApply}
+              title={`Apply formula to ${wizard.targetCellRef ?? 'active cell'}`}
             >
-              Apply to Cell
+              Apply to Cell{wizard.targetCellRef ? `: ${wizard.targetCellRef}` : ''}
             </button>
           </div>
         </div>

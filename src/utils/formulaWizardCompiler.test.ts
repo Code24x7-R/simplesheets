@@ -258,6 +258,31 @@ describe('formulaWizardCompiler', () => {
     it('returns false for empty formula', () => {
       expect(checkCircularReference('', 0, 0)).toBe(false);
     });
+
+    it('B-012: returns false when target is NOT in range (different column)', () => {
+      // Target E4 (row 3, col 4) is NOT in range D4:D8 (col 3)
+      expect(checkCircularReference('=SUM(D4:D8)', 3, 4)).toBe(false);
+    });
+
+    it('B-012: returns false when target is NOT in range (different row)', () => {
+      // Target E4 (row 3, col 4) is NOT in range F4:F6 (col 5)
+      expect(checkCircularReference('=SUM(F4:F6)', 3, 4)).toBe(false);
+    });
+
+    it('B-012: returns false for multiple ranges not containing target', () => {
+      // Target E4 (row 3, col 4) is NOT in D4:D8 or F4:F6
+      expect(checkCircularReference('=SUM(D4:D8, F4:F6)', 3, 4)).toBe(false);
+    });
+
+    it('B-012: returns true when target IS in one of multiple ranges', () => {
+      // Target D5 (row 4, col 3) IS in range D4:D8
+      expect(checkCircularReference('=SUM(D4:D8, F4:F6)', 4, 3)).toBe(true);
+    });
+
+    it('B-012: returns true when target is within range bounds (not just start/end)', () => {
+      // Target A5 (row 4, col 0) is within A1:A10
+      expect(checkCircularReference('=SUM(A1:A10)', 4, 0)).toBe(true);
+    });
   });
 
   describe('generateNodeId', () => {

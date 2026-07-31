@@ -129,7 +129,9 @@ describe('FormulaWizard', () => {
   it('calls onApply when Apply to Cell is clicked', () => {
     const onApply = jest.fn();
     render(<FormulaWizard {...defaultProps} onApply={onApply} wizard={createWizardState({ compiledFormula: 'SUM(A1:A10)' })} />);
-    fireEvent.click(screen.getByText('Apply to Cell'));
+    // Button text includes target cell ref (e.g., "Apply to Cell: A1")
+    const applyButton = screen.getByRole('button', { name: /Apply to Cell/ });
+    fireEvent.click(applyButton);
     expect(onApply).toHaveBeenCalledWith('=SUM(A1:A10)');
   });
 
