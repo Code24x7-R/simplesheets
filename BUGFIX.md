@@ -18,14 +18,9 @@ This file tracks bugs in **existing** code, functions, and UI elements. New feat
 - **Impact**: Low — power-user feature, not commonly expected
 - **Fix direction**: Add `evaluateSelection(buffer, selStart, selEnd)` to formulaEngine, wire F9 key in both editors (deferred to Phase 19d)
 
-(None currently)
-
-### B-004: In-Cell Editor Lacks Syntax Highlighting
-- **Symptom**: Formula bar shows colored cell reference overlays and function highlighting while editing. The in-cell editor is a plain `<input>` with no visual formula aid.
-- **Suspected file**: `src/components/Grid.tsx` (plain `<input>`, no `formulaDisplay` overlay)
-- **Discovered**: 2026-07-28 (documented in PLAN.md Phase 19 analysis)
-- **Impact**: Medium — formula bar has it, in-cell doesn't; inconsistent UX
-- **Fix direction**: Extract formula highlighting overlay from FormulaBar into shared `FormulaEditor` wrapper (deferred to Phase 19c)
+### B-004: In-Cell Editor Lacks Syntax Highlighting — ✅ FIXED (see Recently Fixed below)
+- ~~Symptom~~: ~~Formula bar shows colored cell reference overlays and function highlighting while editing. The in-cell editor is a plain `<input>` with no visual formula aid.~~
+- **Status**: Fixed 2026-07-31 — see B-004 entry in Recently Fixed
 
 ### B-005: storageService.ts Branch Coverage ~66% (Lowest in Project)
 - **Symptom**: Defensive branches in storageService are untested, leaving potential edge cases uncovered (corrupt localStorage, quota exceeded, etc.).
@@ -47,6 +42,14 @@ This file tracks bugs in **existing** code, functions, and UI elements. New feat
 ## ✅ Recently Fixed
 
 <!-- Bugs resolved in this session or recent past. Newest first. -->
+
+### 2026-07-31: B-004 — In-Cell Editor Lacks Syntax Highlighting ✅ VERIFIED
+- **Symptom**: Formula bar showed colored cell reference overlays and function highlighting while editing. The in-cell editor was a plain `<input>` with no visual formula aid — inconsistent UX.
+- **Root cause**: The highlighting overlay (`formulaDisplay`) was computed inside FormulaBar's render function and never shared with the Grid's cell editor.
+- **Fix**: (1) Extracted the highlighting logic into a shared `FormulaHighlightOverlay` component (`src/components/FormulaHighlightOverlay.tsx`), (2) FormulaBar now uses this shared component instead of inline useMemo, (3) Grid's cell editor (both frozen and scrollable) now renders `FormulaHighlightOverlay` underneath the input/textarea when editing a formula, (4) Input/textarea gets `text-transparent` class when editing a formula so the colored overlay shows through (matching FormulaBar behavior).
+- **Files**: `src/components/FormulaHighlightOverlay.tsx` (new shared component), `src/components/FormulaBar.tsx` (uses shared component), `src/components/Grid.tsx` (overlay + text-transparent in cell editor), `src/components/Grid.interactions.test.tsx` (3 new tests)
+- **Tests**: 2272 pass (was 2269)
+- **Verification**: New tests verify overlay renders for formulas, doesn't render for plain values, and input gets text-transparent class.
 
 ### 2026-07-31: B-007 — String Concatenation with `&` Traps Editor in POINT Mode ✅ VERIFIED
 - **Symptom**: Typing `=A1 & " " & B1` in the formula bar failed — the `&` triggered POINT mode, and subsequent characters (`"`, ` `) were silently swallowed. The formula `=(A1) & "" "" & (B1)` worked because `)` committed the reference and exited POINT mode before the next `&`.

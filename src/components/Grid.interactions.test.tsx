@@ -916,3 +916,75 @@ describe('Grid - AutoComplete Dropdown in Cell Editor', () => {
     expect(onAcceptAutoComplete).toHaveBeenCalledWith(1);
   });
 });
+
+describe('Grid - Syntax Highlighting in Cell Editor', () => {
+  it('renders highlight overlay when editing a formula', () => {
+    render(
+      <GridWithEditing
+        sheet={createTestSheet({ cells: { '0:0': { rawValue: '=A1+B2' } } })}
+        onCellChange={jest.fn()}
+        onSelect={jest.fn()}
+      />,
+    );
+
+    const cell = document.querySelector('.grid-cell') as HTMLElement;
+    fireEvent.doubleClick(cell);
+
+    // Set the buffer to a formula via change event
+    const input = cell.querySelector('input') as HTMLInputElement;
+    fireEvent.change(input, { target: { value: '=A1+B2' } });
+
+    // The cell editor container should have the highlight overlay
+    const editorContainer = cell.querySelector('.relative.w-full.h-full');
+    expect(editorContainer).toBeInTheDocument();
+
+    // The overlay renders colored spans for cell references
+    const overlay = editorContainer!.querySelector('.pointer-events-none');
+    expect(overlay).toBeInTheDocument();
+
+    // Should contain colored spans for A1 and B2
+    const coloredSpans = overlay!.querySelectorAll('span[style*="background-color"]');
+    expect(coloredSpans.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('does not render highlight overlay when editing a plain value', () => {
+    render(
+      <GridWithEditing
+        sheet={createTestSheet({ cells: { '0:0': { rawValue: 'Hello' } } })}
+        onCellChange={jest.fn()}
+        onSelect={jest.fn()}
+      />,
+    );
+
+    const cell = document.querySelector('.grid-cell') as HTMLElement;
+    fireEvent.doubleClick(cell);
+
+    // Set the buffer to a plain value via change event
+    const input = cell.querySelector('input') as HTMLInputElement;
+    fireEvent.change(input, { target: { value: 'Hello' } });
+
+    // The overlay should NOT be present for non-formula values
+    const overlay = cell.querySelector('.pointer-events-none');
+    expect(overlay).not.toBeInTheDocument();
+  });
+
+  it('input has text-transparent class when editing formula', () => {
+    render(
+      <GridWithEditing
+        sheet={createTestSheet({ cells: { '0:0': { rawValue: '=SUM(A1:A10)' } } })}
+        onCellChange={jest.fn()}
+        onSelect={jest.fn()}
+      />,
+    );
+
+    const cell = document.querySelector('.grid-cell') as HTMLElement;
+    fireEvent.doubleClick(cell);
+
+    // Set the buffer to a formula via change event
+    const input = cell.querySelector('input') as HTMLInputElement;
+    fireEvent.change(input, { target: { value: '=SUM(A1:A10)' } });
+
+    expect(input).toBeInTheDocument();
+    expect(input!.className).toContain('text-transparent');
+  });
+});

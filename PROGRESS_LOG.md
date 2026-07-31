@@ -4,6 +4,13 @@
 
 ---
 
+### 2026-07-31 [BUGFIX] B-004 — In-Cell Editor Lacks Syntax Highlighting
+- **Symptom**: Formula bar showed colored cell reference overlays while editing. The in-cell editor was a plain `<input>` with no visual formula aid — inconsistent UX.
+- **Root cause**: The highlighting overlay was computed inside FormulaBar's render function and never shared with the Grid's cell editor.
+- **Fix**: Extracted highlighting logic into shared `FormulaHighlightOverlay` component. FormulaBar uses it. Grid's cell editor now renders it underneath the input/textarea when editing a formula. Input/textarea gets `text-transparent` class so the colored overlay shows through.
+- **Files**: `src/components/FormulaHighlightOverlay.tsx` (new), `src/components/FormulaBar.tsx`, `src/components/Grid.tsx`, `src/components/Grid.interactions.test.tsx` (3 new tests)
+- **Tests**: 2272 pass (was 2269), lint clean, type-check clean, build clean
+
 ### 2026-07-31 [BUGFIX] B-007 — String Concatenation with `&` Traps Editor in POINT Mode
 - **Symptom**: Typing `=A1 & " " & B1` in the formula bar failed — the `&` triggered POINT mode, and subsequent characters (`"`, ` `) were silently swallowed. The formula `=(A1) & "" "" & (B1)` worked because `)` committed the reference and exited POINT mode before the next `&`.
 - **Root cause**: `&` is in `POINT_TRIGGER_CHARS`, so typing it enters POINT mode. But the POINT state handler only exits to EDIT for `[A-Za-z0-9$]` chars (cell reference chars), `)`, `:`, operators, and Enter/Tab. Characters like `"` and ` ` (space) fell through all handlers and were silently ignored — they never made it into the buffer.

@@ -5,7 +5,8 @@ import { type FunctionInfo } from '../utils/formulaAutocomplete';
 import type { EditingSession } from '../hooks/useCellEditing';
 import type { ReferenceFormat } from '../hooks/useReferenceFormat';
 import { colToLetter } from '../types';
-import { HIGHLIGHT_COLORS, HIGHLIGHT_BORDER_COLORS } from '../utils/highlightColors';
+import { FormulaHighlightOverlay } from './FormulaHighlightOverlay';
+import { HIGHLIGHT_COLORS } from '../utils/highlightColors';
 
 /** Represents a highlighted range with a color index. */
 export interface HighlightedRange {
@@ -451,68 +452,6 @@ export const FormulaBar = forwardRef<FormulaBarHandle, FormulaBarProps>(function
     onRawCaretMove(caretPos);
   }, [onRawCaretMove, value.length]);
 
-  // Build the colored reference display overlay
-  const formulaDisplay = useMemo(() => {
-    if (!isEditing || !value) return null;
-    if (!value.startsWith('=')) return null;
-
-    try {
-      const formula = value.slice(1);
-      const segments: Array<{ text: string; colorIndex: number | null }> = [];
-      let colorIdx = 0;
-
-      const tokenRegex = /(\$?[A-Za-z]+\$?\d+:?|\$?[A-Za-z]+|[0-9.]+|[+\-*/(),&^=<>]|"[^"]*"|[A-Za-z]+)/gi;
-      let match;
-
-      while ((match = tokenRegex.exec(formula)) !== null) {
-        const token = match[0];
-        if (/^\$?[A-Za-z]+\$?\d+$/i.test(token)) {
-          segments.push({
-            text: token,
-            colorIndex: colorIdx % HIGHLIGHT_COLORS.length,
-          });
-          colorIdx++;
-        } else if (/^\$?[A-Za-z]+\$?\d+:\$?[A-Za-z]+\$?\d+$/i.test(token)) {
-          segments.push({
-            text: token,
-            colorIndex: colorIdx % HIGHLIGHT_COLORS.length,
-          });
-          colorIdx++;
-        } else {
-          segments.push({ text: token, colorIndex: null });
-        }
-      }
-
-      if (segments.length === 0) return null;
-
-      return (
-        <div className="absolute inset-0 pointer-events-none font-mono text-sm flex items-center px-1 whitespace-nowrap min-w-full">
-          {segments.map((seg, i) => (
-            <span
-              key={i}
-              style={
-                seg.colorIndex !== null
-                  ? {
-                      backgroundColor: HIGHLIGHT_COLORS[seg.colorIndex],
-                      border: `1px solid ${HIGHLIGHT_BORDER_COLORS[seg.colorIndex]}`,
-                      borderRadius: '2px',
-                      padding: '0 2px',
-                      fontWeight: 600,
-                      color: HIGHLIGHT_BORDER_COLORS[seg.colorIndex],
-                    }
-                  : undefined
-              }
-            >
-              {seg.text}
-            </span>
-          ))}
-        </div>
-      );
-    } catch {
-      return null;
-    }
-  }, [isEditing, value]);
-
   // Build error display
   const errorDisplay = useMemo(() => {
     if (isEditing && validation.errors.length > 0) {
@@ -577,13 +516,13 @@ export const FormulaBar = forwardRef<FormulaBarHandle, FormulaBarProps>(function
         {/* Formula input area */}
         <div className={`flex-1 relative ${expanded ? 'min-h-[80px]' : ''} overflow-x-auto`}>
           {/* Colored display layer (underlay) */}
-          {formulaDisplay}
+          <FormulaHighlightOverlay value={value} isEditing={isEditing} />
           {/* Actual input — horizontal scroll for long content */}
           {expanded ? (
             <textarea
               ref={inputRef as unknown as React.RefObject<HTMLTextAreaElement>}
               className={`outline-none font-mono text-sm relative bg-transparent min-w-full formula-input-scroll resize-y ${
-                formulaDisplay ? 'text-transparent selection:bg-blue-200' : ''
+                value.startsWith('=') ? 'text-transparent selection:bg-blue-200' : ''
               }`}
               style={{ caretColor: '#000', minWidth: '100%', minHeight: '80px' }}
               placeholder="Enter a value or formula (e.g., =SUM(A1:A10))"
@@ -600,7 +539,7 @@ export const FormulaBar = forwardRef<FormulaBarHandle, FormulaBarProps>(function
               ref={inputRef}
               type="text"
               className={`outline-none font-mono text-sm relative bg-transparent min-w-full formula-input-scroll ${
-                formulaDisplay ? 'text-transparent selection:bg-blue-200' : ''
+                value.startsWith('=') ? 'text-transparent selection:bg-blue-200' : ''
               }`}
               style={{ caretColor: '#000', minWidth: '100%' }}
               placeholder="Enter a value or formula (e.g., =SUM(A1:A10))"

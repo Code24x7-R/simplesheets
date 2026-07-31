@@ -5,6 +5,7 @@ import type { Sheet, Selection } from '../types';
 import { cellKey, colToLetter } from '../types';
 import type { HighlightedRange } from './FormulaBar';
 import { AutoCompleteDropdown } from './FormulaBar';
+import { FormulaHighlightOverlay } from './FormulaHighlightOverlay';
 import type { ReferenceFormat } from '../hooks/useReferenceFormat';
 import type { EditingSession } from '../hooks/useCellEditing';
 import type { FunctionInfo } from '../utils/formulaAutocomplete';
@@ -1670,12 +1671,17 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
                   const cellFrozen = true;
                   const cellEditing = isEditingCell(row, col);
 
+                  const isEditingFormula = cellEditing && editBuffer.startsWith('=');
+
                   // Build the cell editor element (input or textarea based on multiline)
                   const editorElement = editBuffer.includes('\n') ? (
                     <textarea
                       ref={editInputRef as React.RefObject<HTMLTextAreaElement>}
                       autoFocus
-                      className="w-full h-full outline-none bg-white border border-blue-500 px-1 font-mono text-sm resize-none"
+                      className={`w-full h-full outline-none bg-white border border-blue-500 px-1 font-mono text-sm resize-none ${
+                        isEditingFormula ? 'text-transparent selection:bg-blue-200' : ''
+                      }`}
+                      style={{ caretColor: '#000' }}
                       value={editBuffer}
                       rows={Math.min(editBuffer.split('\n').length + 1, 5)}
                       onChange={(e) => {
@@ -1712,7 +1718,10 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
                     <input
                       ref={editInputRef as React.RefObject<HTMLInputElement>}
                       autoFocus
-                      className="w-full h-full outline-none bg-white border border-blue-500 px-1 font-mono text-sm"
+                      className={`w-full h-full outline-none bg-white border border-blue-500 px-1 font-mono text-sm ${
+                        isEditingFormula ? 'text-transparent selection:bg-blue-200' : ''
+                      }`}
+                      style={{ caretColor: '#000' }}
                       value={editBuffer}
                       onChange={(e) => {
                         const newPos = e.target.selectionStart ?? e.target.value.length;
@@ -1773,6 +1782,7 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
                     >
                       {cellEditing ? (
                         <div className="relative w-full h-full">
+                          <FormulaHighlightOverlay value={editBuffer} isEditing={true} />
                           {editorElement}
                           {autoComplete?.open && autoComplete.matches.length > 0 && (
                             <AutoCompleteDropdown
@@ -1951,13 +1961,17 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
               }
               const cellFrozen = isCellFrozen(row, col);
               const cellEditing = isEditingCell(row, col);
+              const isEditingFormula = cellEditing && editBuffer.startsWith('=');
 
               // Build the cell editor element (input or textarea based on multiline)
               const editorElement = editBuffer.includes('\n') ? (
                 <textarea
                   ref={editInputRef as React.RefObject<HTMLTextAreaElement>}
                   autoFocus
-                  className="w-full h-full outline-none bg-white border border-blue-500 px-1 font-mono text-sm resize-none"
+                  className={`w-full h-full outline-none bg-white border border-blue-500 px-1 font-mono text-sm resize-none ${
+                    isEditingFormula ? 'text-transparent selection:bg-blue-200' : ''
+                  }`}
+                  style={{ caretColor: '#000' }}
                   value={editBuffer}
                   rows={Math.min(editBuffer.split('\n').length + 1, 5)}
                   onChange={(e) => {
@@ -2011,7 +2025,10 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
                 <input
                   ref={editInputRef as React.RefObject<HTMLInputElement>}
                   autoFocus
-                  className="w-full h-full outline-none bg-white border border-blue-500 px-1 font-mono text-sm"
+                  className={`w-full h-full outline-none bg-white border border-blue-500 px-1 font-mono text-sm ${
+                    isEditingFormula ? 'text-transparent selection:bg-blue-200' : ''
+                  }`}
+                  style={{ caretColor: '#000' }}
                   value={editBuffer}
                   onChange={(e) => {
                     const newPos = e.target.selectionStart ?? e.target.value.length;
@@ -2087,6 +2104,7 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
                 >
                   {cellEditing ? (
                     <div className="relative w-full h-full">
+                      <FormulaHighlightOverlay value={editBuffer} isEditing={true} />
                       {editorElement}
                       {autoComplete?.open && autoComplete.matches.length > 0 && (
                         <AutoCompleteDropdown
