@@ -1,6 +1,12 @@
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import App from './App';
 
+// Mock URL.createObjectURL for export tests
+beforeAll(() => {
+  URL.createObjectURL = jest.fn(() => 'blob:mock');
+  URL.revokeObjectURL = jest.fn();
+});
+
 // Mock the virtualizer
 jest.mock('@tanstack/react-virtual', () => ({
   useVirtualizer: (options: { horizontal?: boolean }) => {

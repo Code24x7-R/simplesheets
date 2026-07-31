@@ -61,7 +61,7 @@ export function ImportExportBridge({ workbook, sheet, onImport, onError }: Impor
     const handleImportCsv = () => csvRef.current?.click();
     const handleImportJson = () => jsonRef.current?.click();
     const handleExportExcel = () => exportExcelRef.current?.click();
-    const handleExportCsv = () => exportCsvRef.current?.click();
+    const handleExportCsv = () => { try { exportCsvRef.current?.click(); } catch { /* ref not ready */ } }
     const handleExportJson = () => exportJsonRef.current?.click();
     const handleExportPdf = () => exportPdfRef.current?.click();
 
