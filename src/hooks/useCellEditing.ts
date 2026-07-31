@@ -1429,6 +1429,20 @@ export function useCellEditing({
         return result;
       }
 
+      // Any other printable character exits POINT mode and inserts —
+      // this handles quotes, spaces, punctuation, etc. that aren't cell
+      // reference chars, operators, or structural chars. Without this,
+      // typing =A1 & " " would trap the editor in POINT mode after &
+      // and silently swallow the quote and space characters.
+      if (isPrintableChar(key)) {
+        const newBuffer = s.buffer.slice(0, s.caretPos) + key + s.buffer.slice(s.caretPos);
+        setSession((prev) => ({ ...prev, state: 'EDIT', buffer: newBuffer, caretPos: s.caretPos + 1 }));
+        setPointSession(null);
+        result.session = { ...s, state: 'EDIT', buffer: newBuffer, caretPos: s.caretPos + 1 };
+        result.pointSession = null;
+        return result;
+      }
+
       /* istanbul ignore next - defensive return for unhandled keys */
       return result;
     }

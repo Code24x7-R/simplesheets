@@ -11,13 +11,6 @@ This file tracks bugs in **existing** code, functions, and UI elements. New feat
      - Suspected file/component
      - Date discovered -->
 
-### B-001: In-Cell Editor Lacks Multiline Support
-- **Symptom**: Pressing Alt+Enter in the in-cell editor inserts `\n` into the buffer, but the user never sees it because the editor is a single-line `<input>`. Content after the newline is invisible.
-- **Suspected file**: `src/components/Grid.tsx` (in-cell editor rendering)
-- **Discovered**: 2026-07-28 (documented in PLAN.md Phase 19 analysis)
-- **Impact**: Medium — Alt+Enter is a documented shortcut (Phase 16a) but doesn't work visually in-cell
-- **Fix direction**: Switch from `<input>` to `<textarea>` when `\n` is detected in buffer or Alt+Enter is pressed (deferred to Phase 19e)
-
 ### B-002: F9 Formula Evaluation Not Implemented
 - **Symptom**: Pressing F9 while editing a formula does nothing. Excel/Sheets highlights the selected sub-expression and shows the evaluated result in-place.
 - **Suspected file**: `src/components/FormulaBar.tsx`, `src/components/Grid.tsx`, `src/utils/formulaEngine.ts`
@@ -25,12 +18,7 @@ This file tracks bugs in **existing** code, functions, and UI elements. New feat
 - **Impact**: Low — power-user feature, not commonly expected
 - **Fix direction**: Add `evaluateSelection(buffer, selStart, selEnd)` to formulaEngine, wire F9 key in both editors (deferred to Phase 19d)
 
-### B-003: In-Cell Editor Lacks Autocomplete
-- **Symptom**: Typing `=` in the formula bar shows function autocomplete dropdown, but typing `=` in the in-cell editor does NOT show autocomplete. The FSM computes `autoComplete` state but only FormulaBar renders the dropdown.
-- **Suspected file**: `src/components/Grid.tsx` (no AutoCompleteDropdown rendered)
-- **Discovered**: 2026-07-28 (documented in PLAN.md Phase 19 analysis)
-- **Impact**: High — autocomplete is a core editing feature; inconsistent behavior between editors
-- **Fix direction**: Render AutoCompleteDropdown in Grid when `autoComplete.open` is true and session is in-cell editing
+(None currently)
 
 ### B-004: In-Cell Editor Lacks Syntax Highlighting
 - **Symptom**: Formula bar shows colored cell reference overlays and function highlighting while editing. The in-cell editor is a plain `<input>` with no visual formula aid.
@@ -59,6 +47,29 @@ This file tracks bugs in **existing** code, functions, and UI elements. New feat
 ## ✅ Recently Fixed
 
 <!-- Bugs resolved in this session or recent past. Newest first. -->
+
+### 2026-07-31: B-007 — String Concatenation with `&` Traps Editor in POINT Mode ✅ VERIFIED
+- **Symptom**: Typing `=A1 & " " & B1` in the formula bar failed — the `&` triggered POINT mode, and subsequent characters (`"`, ` `) were silently swallowed. The formula `=(A1) & "" "" & (B1)` worked because `)` committed the reference and exited POINT mode before the next `&`.
+- **Root cause**: `&` is in `POINT_TRIGGER_CHARS`, so typing it enters POINT mode. But the POINT state handler only exits to EDIT for `[A-Za-z0-9$]` chars (cell reference chars), `)`, `:`, operators, and Enter/Tab. Characters like `"` and ` ` (space) fell through all handlers and were silently ignored — they never made it into the buffer.
+- **Fix**: Added a catch-all at the end of the POINT state handler: any unhandled printable character exits POINT mode and inserts into the buffer. This matches Excel behavior where typing any non-navigation character after an operator resumes normal editing.
+- **Files**: `src/hooks/useCellEditing.ts` (POINT state catch-all), `src/App.pointmode.test.tsx` (2 new tests)
+- **Tests**: 2269 pass (was 2267)
+- **Verification**: New tests verify `=A1 & " " & B1` types correctly with spaces around `&`, and `(` after `&` enters POINT mode (correct behavior for function call).
+
+### 2026-07-31: B-003 — In-Cell Editor Lacks Autocomplete ✅ VERIFIED
+- **Symptom**: Typing `=` in the formula bar showed function autocomplete dropdown, but typing `=` in the in-cell editor did NOT show autocomplete. The FSM computed `autoComplete` state but only FormulaBar rendered the dropdown.
+- **Root cause**: The `AutoCompleteDropdown` component was defined inside `FormulaBar.tsx` and only rendered there. The Grid had no access to autoComplete state or the dropdown component.
+- **Fix**: (1) Exported `AutoCompleteDropdown` from FormulaBar.tsx, (2) Added autoComplete props to Grid (state + callbacks), (3) Grid now renders `AutoCompleteDropdown` when `autoComplete.open` is true and cell is being edited, (4) Passed autoComplete props from App.tsx to Grid.
+- **Files**: `src/components/Grid.tsx` (autoComplete props + dropdown rendering), `src/components/FormulaBar.tsx` (exported AutoCompleteDropdown), `src/App.tsx` (pass autoComplete props), `src/components/Grid.interactions.test.tsx` (2 new tests)
+- **Tests**: 2265 pass (was 2263)
+
+### 2026-07-31: B-001 — In-Cell Editor Lacks Multiline Support ✅ VERIFIED
+- **Symptom**: Pressing Alt+Enter in the in-cell editor inserted `\n` into the buffer, but the user never saw it because the editor was a single-line `<input>`. Content after the newline was invisible.
+- **Root cause**: The FSM correctly handled Alt+Enter by inserting `\n` at the caret position, but the Grid rendered a single-line `<input>` element which cannot display newlines.
+- **Fix**: Grid now conditionally renders a `<textarea>` when the buffer contains `\n`. The `<textarea>` auto-sizes based on line count (up to 5 visible rows). Alt+Enter in `<input>` forwards to FSM (which inserts `\n`), triggering the switch to `<textarea>`. Enter in `<textarea>` (without modifiers) commits and exits edit mode (forwarded to FSM). All other keys are forwarded to the FSM as before.
+- **Files**: `src/components/Grid.tsx` (conditional `<input>`/`<textarea>` rendering + Alt+Enter handling in both cell editors), `src/components/Grid.interactions.test.tsx` (3 new tests)
+- **Tests**: 2263 pass (was 2260)
+- **Verification**: All new tests pass — textarea renders on newline, Alt+Enter inserts newline, Enter in textarea doesn't preventDefault.
 
 ### 2026-07-31: B-006 — Grid Cell Editor Selection Replacement ✅ VERIFIED
 - **Symptom**: Double-clicking a formula token (e.g., `AVERAGE` in `=AVERAGE(B6:D6)`) to select it in the Grid cell editor, then typing a replacement character (e.g., `M`), appended the character at the end (`=AVERAGE(B6:D6)M`) instead of replacing the selection (`=M(B6:D6)`). The FormulaBar worked correctly but the in-cell editor did not.

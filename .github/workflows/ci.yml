@@ -37,3 +37,6 @@ jobs:
 
       - name: Build
         run: npm run build
+        env:
+          BUILD_TIMESTAMP: ${{ github.event.head_commit.timestamp }}
+          GITHUB_SHA: ${{ github.sha }}

@@ -583,9 +583,12 @@ function WorkbookView() {
     openFilenameModal('Save Workbook', defaultName, 'json', (filename) => {
       downloadJson(workbook, filename);
       setStatusMessage(`Saved "${filename}.json" — download started`);
+      // Update the workbook title to the saved filename (without extension)
+      const updatedWb: Workbook = { ...workbook, title: filename, lastModified: Date.now() };
+      pushHistory(updatedWb, `Saved as "${filename}"`);
       closeFilenameModal();
     });
-  }, [workbook, openFilenameModal, closeFilenameModal]);
+  }, [workbook, pushHistory, openFilenameModal, closeFilenameModal]);
 
   const handleLoadMenu = useCallback(() => {
     window.dispatchEvent(new CustomEvent('simplesheets:open'));
@@ -745,11 +748,26 @@ function WorkbookView() {
     setStatusMessage('Panes unfrozen');
   }, [unfreeze]);
 
+  /**
+   * Strips the file extension from a filename (e.g., "budget.json" -> "budget").
+   * Returns the original string if no extension is found.
+   */
+  const stripExtension = (filename: string): string => {
+    const lastDot = filename.lastIndexOf('.');
+    if (lastDot <= 0) return filename; // no dot, or dot is first char (hidden file)
+    return filename.slice(0, lastDot);
+  };
+
   /* istanbul ignore next - handleImport requires file upload (tested in ImportButtons.test.tsx) */
   const handleImport = useCallback(
-    (importedWb: Workbook) => {
-      pushHistory(importedWb, 'Import file');
-      setStatusMessage(`Imported "${importedWb.title}" — ${importedWb.sheets.length} sheet(s)`);
+    (importedWb: Workbook, filename?: string) => {
+      // If a filename is provided (from file picker), use it as the title (sans extension)
+      const title = filename ? stripExtension(filename) : importedWb.title;
+      const wbWithTitle: Workbook = title !== importedWb.title
+        ? { ...importedWb, title, lastModified: Date.now() }
+        : importedWb;
+      pushHistory(wbWithTitle, 'Import file');
+      setStatusMessage(`Imported "${title}" — ${wbWithTitle.sheets.length} sheet(s)`);
     },
     [pushHistory]
   );
@@ -1956,6 +1974,10 @@ function WorkbookView() {
           onFillSeries={handleFillSeries}
           filterState={filterState}
           onApplyFilter={handleApplyFilter}
+          autoComplete={autoComplete}
+          onAcceptAutoComplete={acceptAutoComplete}
+          onNavigateAutoComplete={navigateAutoComplete}
+          onDismissAutoComplete={dismissAutoComplete}
         />
       </div>
 

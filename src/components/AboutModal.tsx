@@ -7,20 +7,22 @@ interface AboutModalProps {
 
 const APP_VERSION = packageJson.version;
 
-function getBuildInfo(): { date: string; time: string; raw: string } {
+function getBuildInfo(): { date: string; time: string; raw: string; commit: string } {
   const ts = typeof __BUILD_TIMESTAMP__ !== 'undefined' ? __BUILD_TIMESTAMP__ : '';
-  if (!ts) return { date: 'dev', time: '', raw: '' };
+  const commit = typeof __GIT_COMMIT_HASH__ !== 'undefined' ? __GIT_COMMIT_HASH__ : 'unknown';
+  if (!ts) return { date: 'dev', time: '', raw: '', commit };
   const d = new Date(ts);
   return {
     date: d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }),
     time: d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
     raw: ts,
+    commit,
   };
 }
 
 const ABOUT_CONTENT = `# SimpleSheet
 
-A lightweight, browser-based spreadsheet for small businesses. No server, no account, no bloat — just a fast, offline-capable grid that reads and writes Excel files.
+A lightweight, browser-based spreadsheet for small businesses. No bloat — just a fast, offline-capable grid that reads and writes Excel files.
 
 ---
 
@@ -243,7 +245,7 @@ export function AboutModal({ isOpen, onClose }: AboutModalProps) {
           <div className="flex items-center gap-3">
             <h2 className="text-lg font-bold">About SimpleSheet</h2>
             <span className="text-xs font-mono text-gray-400 bg-gray-100 px-2 py-0.5 rounded">v{APP_VERSION}</span>
-            <span className="text-xs text-gray-400" title={build.raw}>build {build.date}{build.time ? ` ${build.time}` : ''}</span>
+            <span className="text-xs text-gray-400" title={`${build.raw} (${build.commit})`}>build {build.date}{build.time ? ` ${build.time}` : ''} ({build.commit})</span>
           </div>
           <button
             onClick={onClose}

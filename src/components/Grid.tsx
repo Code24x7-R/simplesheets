@@ -4,8 +4,10 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import type { Sheet, Selection } from '../types';
 import { cellKey, colToLetter } from '../types';
 import type { HighlightedRange } from './FormulaBar';
+import { AutoCompleteDropdown } from './FormulaBar';
 import type { ReferenceFormat } from '../hooks/useReferenceFormat';
 import type { EditingSession } from '../hooks/useCellEditing';
+import type { FunctionInfo } from '../utils/formulaAutocomplete';
 import { ResizeHandle } from './ResizeHandle';
 import { FilterDropdown } from './FilterDropdown';
 import { formatNumberValue, isNumberFormat, isNumericValue, isAccountingFormat, shouldRightAlign } from '../utils/numberFormat';
@@ -110,6 +112,19 @@ interface GridProps {
   } | null;
   /** Callback when a filter is applied to a column. */
   onApplyFilter?: (column: number, filter: ColumnFilter | undefined) => void;
+  /** Auto-complete state derived from the current buffer and caret position. */
+  autoComplete?: {
+    open: boolean;
+    matches: FunctionInfo[];
+    index: number;
+    tokenStart: number;
+  };
+  /** Accept the auto-complete suggestion at the given index. */
+  onAcceptAutoComplete?: (index: number) => void;
+  /** Navigate the auto-complete selection by delta (+1 = down, -1 = up). */
+  onNavigateAutoComplete?: (delta: number) => void;
+  /** Dismiss the auto-complete dropdown without accepting. */
+  onDismissAutoComplete?: () => void;
 }
 
 const ROW_WIDTH = 50; // Width of row number column
@@ -126,12 +141,12 @@ export interface GridHandle {
  * Supports 10,000+ rows with smooth scrolling.
  */
 export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
-  { sheet, onCellChange, onCellsChange, onSelect, selectedCell, highlightedRanges = [], isPointMode = false, pointSelection = null, onCellPick, onHeaderSelect, onSelectionChange, onColumnResize, onRowResize, referenceFormat = 'A1', onInsertRowAbove, onInsertRowBelow, onDeleteRow, onInsertColLeft, onInsertColRight, onDeleteCol, clipboardRange, onClearClipboard, showFormulas = false, session, onStartEnter, onStartEdit, onRawKeyDown, onRawChange, onFillSeries, onMoveRange, filterState = null, onApplyFilter },
+  { sheet, onCellChange, onCellsChange, onSelect, selectedCell, highlightedRanges = [], isPointMode = false, pointSelection = null, onCellPick, onHeaderSelect, onSelectionChange, onColumnResize, onRowResize, referenceFormat = 'A1', onInsertRowAbove, onInsertRowBelow, onDeleteRow, onInsertColLeft, onInsertColRight, onDeleteCol, clipboardRange, onClearClipboard, showFormulas = false, session, onStartEnter, onStartEdit, onRawKeyDown, onRawChange, onFillSeries, onMoveRange, filterState = null, onApplyFilter, autoComplete, onAcceptAutoComplete, onNavigateAutoComplete, onDismissAutoComplete },
   ref
 ) {
   const parentRef = useRef<HTMLDivElement>(null);
   const [selection, setSelection] = useState<Selection | null>(null);
-  const editInputRef = useRef<HTMLInputElement>(null);
+  const editInputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
   // Track whether we were editing (for focus management when editing ends)
   const wasEditingRef = useRef(false);
 
@@ -1654,6 +1669,76 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
                   const highlightIdx = getCellHighlight(row, col);
                   const cellFrozen = true;
                   const cellEditing = isEditingCell(row, col);
+
+                  // Build the cell editor element (input or textarea based on multiline)
+                  const editorElement = editBuffer.includes('\n') ? (
+                    <textarea
+                      ref={editInputRef as React.RefObject<HTMLTextAreaElement>}
+                      autoFocus
+                      className="w-full h-full outline-none bg-white border border-blue-500 px-1 font-mono text-sm resize-none"
+                      value={editBuffer}
+                      rows={Math.min(editBuffer.split('\n').length + 1, 5)}
+                      onChange={(e) => {
+                        const newPos = e.target.selectionStart ?? e.target.value.length;
+                        onRawChange?.(e.target.value, newPos);
+                      }}
+                      onKeyDown={(e) => {
+                        // Auto-complete navigation (takes priority when dropdown is open)
+                        if (autoComplete?.open && ['ArrowDown', 'ArrowUp', 'Tab', 'Enter', 'Escape'].includes(e.key)) {
+                          e.preventDefault();
+                          switch (e.key) {
+                            case 'ArrowDown': onNavigateAutoComplete?.(1); return;
+                            case 'ArrowUp': onNavigateAutoComplete?.(-1); return;
+                            case 'Tab':
+                            case 'Enter': onAcceptAutoComplete?.(autoComplete.index); return;
+                            case 'Escape': onDismissAutoComplete?.(); return;
+                          }
+                        }
+                        if (e.key === 'Enter' && e.altKey) {
+                          e.preventDefault();
+                          onRawKeyDown?.(e);
+                          return;
+                        }
+                        if (e.key === 'Enter' && !e.altKey && !e.ctrlKey && !e.shiftKey) {
+                          e.preventDefault();
+                          onRawKeyDown?.(e);
+                          return;
+                        }
+                        e.preventDefault();
+                        onRawKeyDown?.(e);
+                      }}
+                    />
+                  ) : (
+                    <input
+                      ref={editInputRef as React.RefObject<HTMLInputElement>}
+                      autoFocus
+                      className="w-full h-full outline-none bg-white border border-blue-500 px-1 font-mono text-sm"
+                      value={editBuffer}
+                      onChange={(e) => {
+                        const newPos = e.target.selectionStart ?? e.target.value.length;
+                        onRawChange?.(e.target.value, newPos);
+                      }}
+                      onKeyDown={(e) => {
+                        // Auto-complete navigation (takes priority when dropdown is open)
+                        if (autoComplete?.open && ['ArrowDown', 'ArrowUp', 'Tab', 'Enter', 'Escape'].includes(e.key)) {
+                          e.preventDefault();
+                          switch (e.key) {
+                            case 'ArrowDown': onNavigateAutoComplete?.(1); return;
+                            case 'ArrowUp': onNavigateAutoComplete?.(-1); return;
+                            case 'Tab':
+                            case 'Enter': onAcceptAutoComplete?.(autoComplete.index); return;
+                            case 'Escape': onDismissAutoComplete?.(); return;
+                          }
+                        }
+                        if (e.key === 'Enter' && e.altKey) {
+                          e.preventDefault();
+                          onRawKeyDown?.(e);
+                          return;
+                        }
+                      }}
+                    />
+                  );
+
                   // Cells at intersection of frozen row AND frozen column stick horizontally.
                   // Cells in frozen rows but non-frozen columns scroll horizontally with content.
                   const isIntersectionFrozen = isColFrozen(col);
@@ -1687,16 +1772,18 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
                       onDoubleClick={() => onStartEdit?.(row, col)}
                     >
                       {cellEditing ? (
-                        <input
-                          ref={editInputRef}
-                          autoFocus
-                          className="w-full h-full outline-none bg-white border border-blue-500 px-1 font-mono text-sm"
-                          value={editBuffer}
-                          onChange={(e) => {
-                            const newPos = e.target.selectionStart ?? e.target.value.length;
-                            onRawChange?.(e.target.value, newPos);
-                          }}
-                        />
+                        <div className="relative w-full h-full">
+                          {editorElement}
+                          {autoComplete?.open && autoComplete.matches.length > 0 && (
+                            <AutoCompleteDropdown
+                              matches={autoComplete.matches}
+                              selectedIndex={autoComplete.index}
+                              onHover={(idx) => onNavigateAutoComplete?.(idx - autoComplete.index)}
+                              onSelect={onAcceptAutoComplete ?? (() => {})}
+                              onDismiss={onDismissAutoComplete}
+                            />
+                          )}
+                        </div>
                       ) : (
                         <span
                           className={`flex items-center px-1 ${cell?.style?.whiteSpace === 'normal' ? 'whitespace-normal' : cell?.style?.whiteSpace === 'pre' ? 'whitespace-pre' : 'truncate'}`}
@@ -1864,6 +1951,131 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
               }
               const cellFrozen = isCellFrozen(row, col);
               const cellEditing = isEditingCell(row, col);
+
+              // Build the cell editor element (input or textarea based on multiline)
+              const editorElement = editBuffer.includes('\n') ? (
+                <textarea
+                  ref={editInputRef as React.RefObject<HTMLTextAreaElement>}
+                  autoFocus
+                  className="w-full h-full outline-none bg-white border border-blue-500 px-1 font-mono text-sm resize-none"
+                  value={editBuffer}
+                  rows={Math.min(editBuffer.split('\n').length + 1, 5)}
+                  onChange={(e) => {
+                    const newPos = e.target.selectionStart ?? e.target.value.length;
+                    onRawChange?.(e.target.value, newPos);
+                  }}
+                  onPaste={(e) => {
+                    const text = e.clipboardData?.getData('text/plain');
+                    if (text) {
+                      e.preventDefault();
+                      const input = e.currentTarget;
+                      const selStart = input.selectionStart ?? editBuffer.length;
+                      const selEnd = input.selectionEnd ?? editBuffer.length;
+                      const newValue = editBuffer.slice(0, selStart) + text + editBuffer.slice(selEnd);
+                      const newPos = selStart + text.length;
+                      onRawChange?.(newValue, newPos);
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    // Auto-complete navigation (takes priority when dropdown is open)
+                    if (autoComplete?.open && ['ArrowDown', 'ArrowUp', 'Tab', 'Enter', 'Escape'].includes(e.key)) {
+                      e.preventDefault();
+                      switch (e.key) {
+                        case 'ArrowDown': onNavigateAutoComplete?.(1); return;
+                        case 'ArrowUp': onNavigateAutoComplete?.(-1); return;
+                        case 'Tab':
+                        case 'Enter': onAcceptAutoComplete?.(autoComplete.index); return;
+                        case 'Escape': onDismissAutoComplete?.(); return;
+                      }
+                    }
+                    if (e.key === 'Enter' && e.altKey) {
+                      e.preventDefault();
+                      onRawKeyDown?.(e);
+                      return;
+                    }
+                    if (e.key === 'Enter' && !e.altKey && !e.ctrlKey && !e.shiftKey) {
+                      e.preventDefault();
+                      onRawKeyDown?.(e);
+                      return;
+                    }
+                    if ((e.ctrlKey || e.metaKey) && (e.key === 'a' || e.key === 'A')) {
+                      e.preventDefault();
+                      e.currentTarget.select();
+                      return;
+                    }
+                    e.preventDefault();
+                    onRawKeyDown?.(e);
+                  }}
+                />
+              ) : (
+                <input
+                  ref={editInputRef as React.RefObject<HTMLInputElement>}
+                  autoFocus
+                  className="w-full h-full outline-none bg-white border border-blue-500 px-1 font-mono text-sm"
+                  value={editBuffer}
+                  onChange={(e) => {
+                    const newPos = e.target.selectionStart ?? e.target.value.length;
+                    onRawChange?.(e.target.value, newPos);
+                  }}
+                  onPaste={(e) => {
+                    const text = e.clipboardData?.getData('text/plain');
+                    if (text) {
+                      e.preventDefault();
+                      const input = e.currentTarget;
+                      const selStart = input.selectionStart ?? editBuffer.length;
+                      const selEnd = input.selectionEnd ?? editBuffer.length;
+                      const newValue = editBuffer.slice(0, selStart) + text + editBuffer.slice(selEnd);
+                      const newPos = selStart + text.length;
+                      onRawChange?.(newValue, newPos);
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    // Auto-complete navigation (takes priority when dropdown is open)
+                    if (autoComplete?.open && ['ArrowDown', 'ArrowUp', 'Tab', 'Enter', 'Escape'].includes(e.key)) {
+                      e.preventDefault();
+                      switch (e.key) {
+                        case 'ArrowDown': onNavigateAutoComplete?.(1); return;
+                        case 'ArrowUp': onNavigateAutoComplete?.(-1); return;
+                        case 'Tab':
+                        case 'Enter': onAcceptAutoComplete?.(autoComplete.index); return;
+                        case 'Escape': onDismissAutoComplete?.(); return;
+                      }
+                    }
+                    if (e.key === 'Enter' && e.altKey) {
+                      e.preventDefault();
+                      onRawKeyDown?.(e);
+                      return;
+                    }
+                    const isEditingText = session?.state === 'EDIT' || session?.state === 'ENTER';
+                    if (isEditingText && e.shiftKey && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+                      return;
+                    }
+                    if ((e.ctrlKey || e.metaKey) && (e.key === 'a' || e.key === 'A')) {
+                      e.preventDefault();
+                      e.currentTarget.select();
+                      return;
+                    }
+                    const input = editInputRef.current;
+                    const hasSelection = input ? input.selectionStart !== input.selectionEnd : false;
+                    if (!e.shiftKey && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key) && hasSelection) {
+                      const caretPos = e.key === 'ArrowLeft' ? (input?.selectionStart ?? 0) : (input?.selectionEnd ?? 0);
+                      input?.setSelectionRange(caretPos, caretPos);
+                    }
+                    if (e.key === ')') {
+                      e.preventDefault();
+                      onRawKeyDown?.(e);
+                      return;
+                    }
+                    const isSelectionKey = e.key === 'Backspace' || e.key === 'Delete' || (e.key.length === 1 && !e.ctrlKey && !e.metaKey);
+                    if (hasSelection && isSelectionKey) {
+                      return;
+                    }
+                    e.preventDefault();
+                    onRawKeyDown?.(e);
+                  }}
+                />
+              );
+
               return (
                 <div
                   key={`cell-${key}`}
@@ -1874,79 +2086,18 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
                   onDoubleClick={() => onStartEdit?.(row, col)}
                 >
                   {cellEditing ? (
-                    <input
-                      ref={editInputRef}
-                      autoFocus
-                      className="w-full h-full outline-none bg-white border border-blue-500 px-1 font-mono text-sm"
-                      value={editBuffer}
-                      onChange={(e) => {
-                        const newPos = e.target.selectionStart ?? e.target.value.length;
-                        onRawChange?.(e.target.value, newPos);
-                      }}
-                      onPaste={(e) => {
-                        // Explicitly handle paste to ensure consistent behavior
-                        // across browsers and test environments (JSDOM doesn't
-                        // trigger onChange after native paste).
-                        const text = e.clipboardData?.getData('text/plain');
-                        if (text) {
-                          e.preventDefault();
-                          const input = e.currentTarget;
-                          const selStart = input.selectionStart ?? editBuffer.length;
-                          const selEnd = input.selectionEnd ?? editBuffer.length;
-                          const newValue = editBuffer.slice(0, selStart) + text + editBuffer.slice(selEnd);
-                          const newPos = selStart + text.length;
-                          onRawChange?.(newValue, newPos);
-                        }
-                      }}
-                      onKeyDown={(e) => {
-                        // ── Let native input handle text selection ──────────
-                        // Shift+Arrow creates text selection in ENTER/EDIT mode
-                        const isEditingText = session?.state === 'EDIT' || session?.state === 'ENTER';
-                        if (isEditingText && e.shiftKey && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
-                          return;
-                        }
-                        // Ctrl+A: select all text in the cell
-                        if ((e.ctrlKey || e.metaKey) && (e.key === 'a' || e.key === 'A')) {
-                          e.preventDefault();
-                          e.currentTarget.select();
-                          return;
-                        }
-                        // ── Clear selection on Arrow keys (no Shift) ────────
-                        // When user has selection and presses Arrow without Shift,
-                        // collapse the selection to the caret position before FSM
-                        // processes the key (matches FormulaBar behavior)
-                        const input = editInputRef.current;
-                        const hasSelection = input ? input.selectionStart !== input.selectionEnd : false;
-                        if (!e.shiftKey && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key) && hasSelection) {
-                          const caretPos = e.key === 'ArrowLeft' ? (input?.selectionStart ?? 0) : (input?.selectionEnd ?? 0);
-                          input?.setSelectionRange(caretPos, caretPos);
-                        }
-                        // ── Always forward ) to FSM (commits POINT ref) ────
-                        // Must be handled before the selection check because ) is
-                        // a printable char that would otherwise be inserted natively
-                        // when text is selected
-                        if (e.key === ')') {
-                          e.preventDefault();
-                          onRawKeyDown?.(e);
-                          return;
-                        }
-                        // ── Handle selection-based keys natively ────────────
-                        // If text is selected, let the native input handle
-                        // Backspace/Delete/printable keys. The onChange handler
-                        // will sync the result to the FSM.
-                        const isSelectionKey = e.key === 'Backspace' || e.key === 'Delete' || (e.key.length === 1 && !e.ctrlKey && !e.metaKey);
-                        if (hasSelection && isSelectionKey) {
-                          // Let native input handle it - onChange will sync to FSM
-                          return;
-                        }
-                        // ── Forward all other keys to FSM ───────────────────
-                        // The FSM decides what to do based on its current state:
-                        // - ENTER/EDIT: character insertion, caret movement, commit, cancel
-                        // - POINT: arrow navigation, reference insertion, commit, cancel
-                        e.preventDefault();
-                        onRawKeyDown?.(e);
-                      }}
-                    />
+                    <div className="relative w-full h-full">
+                      {editorElement}
+                      {autoComplete?.open && autoComplete.matches.length > 0 && (
+                        <AutoCompleteDropdown
+                          matches={autoComplete.matches}
+                          selectedIndex={autoComplete.index}
+                          onHover={(idx) => onNavigateAutoComplete?.(idx - autoComplete.index)}
+                          onSelect={onAcceptAutoComplete ?? (() => {})}
+                          onDismiss={onDismissAutoComplete}
+                        />
+                      )}
+                    </div>
                   ) : (() => {
                     const isAccounting = cell?.style?.numberFormat && isAccountingFormat(cell.style.numberFormat);
                     const displayValue = getDisplayValue(cell);

@@ -227,4 +227,69 @@ describe('POINT mode — arrow key range selection', () => {
     // Still in POINT mode (clicking updates but doesn't exit)
     expectPointMode();
   });
+
+  it('typing & then " exits POINT mode and inserts both characters', () => {
+    render(<App />);
+    const input = getFormulaInput();
+
+    // Reconstruct the user's actual typing sequence for =A1 & " " & B1:
+    // Type =A1 — should be in EDIT mode after typing ref chars
+    typeInFormulaBar(input, '=A1');
+    expectNotPointMode();
+
+    // Type a space (before &) — stays in EDIT mode
+    fireEvent.keyDown(input, { key: ' ' });
+    expectNotPointMode();
+
+    // Type & — triggers POINT mode (& is a POINT_TRIGGER_CHAR)
+    fireEvent.keyDown(input, { key: '&' });
+    expectPointMode();
+
+    // Type a space — should exit POINT mode and insert the space
+    fireEvent.keyDown(input, { key: ' ' });
+    expectNotPointMode();
+
+    // Type a double-quote — should also exit/remain out of POINT and insert
+    fireEvent.keyDown(input, { key: '"' });
+    expectNotPointMode();
+
+    // Continue the formula: " " & B1
+    fireEvent.keyDown(input, { key: ' ' });
+    fireEvent.keyDown(input, { key: '"' });
+    fireEvent.keyDown(input, { key: ' ' });
+    fireEvent.keyDown(input, { key: '&' });
+    fireEvent.keyDown(input, { key: ' ' });
+    fireEvent.keyDown(input, { key: 'B' });
+    fireEvent.keyDown(input, { key: '1' });
+
+    // Buffer should contain the full concatenation formula
+    expect(input.value).toBe('=A1 & " " & B1');
+  });
+
+  it('typing & then ( enters POINT mode for reference selection', () => {
+    render(<App />);
+    const input = getFormulaInput();
+
+    typeInFormulaBar(input, '=A1');
+    expectNotPointMode();
+
+    // Space before & (EDIT mode)
+    fireEvent.keyDown(input, { key: ' ' });
+    expectNotPointMode();
+
+    fireEvent.keyDown(input, { key: '&' });
+    expectPointMode();
+
+    // Space after & — should exit POINT mode and insert
+    fireEvent.keyDown(input, { key: ' ' });
+    expectNotPointMode();
+
+    // Typing ( enters POINT mode (it's a POINT_TRIGGER_CHAR) — this is
+    // correct behavior: the user can now navigate to select a cell ref
+    fireEvent.keyDown(input, { key: '(' });
+    expectPointMode();
+
+    // But the ( character IS inserted into the buffer
+    expect(input.value).toBe('=A1 & (');
+  });
 });

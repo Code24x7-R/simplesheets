@@ -4,6 +4,13 @@
 
 ---
 
+### 2026-07-31 [BUGFIX] B-007 — String Concatenation with `&` Traps Editor in POINT Mode
+- **Symptom**: Typing `=A1 & " " & B1` in the formula bar failed — the `&` triggered POINT mode, and subsequent characters (`"`, ` `) were silently swallowed. The formula `=(A1) & "" "" & (B1)` worked because `)` committed the reference and exited POINT mode before the next `&`.
+- **Root cause**: `&` is in `POINT_TRIGGER_CHARS`, so typing it enters POINT mode. But the POINT state handler only exits to EDIT for `[A-Za-z0-9$]` chars (cell reference chars), `)`, `:`, operators, and Enter/Tab. Characters like `"` and ` ` (space) fell through all handlers and were silently ignored — they never made it into the buffer.
+- **Fix**: Added a catch-all at the end of the POINT state handler: any unhandled printable character exits POINT mode and inserts into the buffer. This matches Excel behavior where typing any non-navigation character after an operator resumes normal editing.
+- **Files**: `src/hooks/useCellEditing.ts` (POINT state catch-all), `src/App.pointmode.test.tsx` (2 new tests)
+- **Tests**: 2269 pass (was 2267), lint clean, type-check clean, build clean
+
 ### 2026-07-30 [BUGFIX] Save/Open/Export Menu Stub Wiring
 - Fixed `handleSaveMenu` (was stub — now downloads JSON via `downloadJson(workbook)`)
 - Fixed `handleLoadMenu` (was stub — now dispatches `simplesheets:open` event)

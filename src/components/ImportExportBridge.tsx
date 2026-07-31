@@ -12,7 +12,7 @@ import type { Workbook, Sheet } from '../types';
 interface ImportExportBridgeProps {
   workbook: Workbook;
   sheet: Sheet;
-  onImport: (wb: Workbook) => void;
+  onImport: (wb: Workbook, filename?: string) => void;
   onError: (msg: string) => void;
 }
 
@@ -45,7 +45,7 @@ export function ImportExportBridge({ workbook, sheet, onImport, onError }: Impor
         const text = evt.target?.result as string;
         const result = importJson(text);
         if (result.success && result.workbook) {
-          onImport(result.workbook);
+          onImport(result.workbook, file.name);
         } else {
           onError(result.error ?? 'Open failed');
         }

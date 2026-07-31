@@ -1,4 +1,4 @@
-import { render, fireEvent } from '@testing-library/react';
+import { render, fireEvent, screen } from '@testing-library/react';
 import { useState, useCallback } from 'react';
 import { Grid } from './Grid';
 import type { Sheet } from '../types';
@@ -48,6 +48,12 @@ function useTestEditingSession() {
       setSession({ ...s, state: 'SELECT', buffer: '', caretPos: 0, isFormula: false });
       return;
     }
+    // Alt+Enter — insert newline (must check before generic Enter handling)
+    if (e.key === 'Enter' && e.altKey) {
+      const newBuffer = s.buffer.slice(0, s.caretPos) + '\n' + s.buffer.slice(s.caretPos);
+      setSession({ ...s, buffer: newBuffer, caretPos: s.caretPos + 1 });
+      return;
+    }
     if (e.key === 'Enter' || e.key === 'Tab' || e.key === 'F2') {
       setSession({ ...s, state: 'SELECT', buffer: '', caretPos: 0, isFormula: false });
       return;
@@ -90,9 +96,13 @@ function useTestEditingSession() {
 function GridWithEditing(
   props: Omit<React.ComponentProps<typeof Grid>, 'session' | 'onStartEdit' | 'onStartEnter' | 'onRawKeyDown' | 'onRawChange'> & {
     onCellChange?: (row: number, col: number, value: string) => void;
+    autoComplete?: React.ComponentProps<typeof Grid>['autoComplete'];
+    onAcceptAutoComplete?: React.ComponentProps<typeof Grid>['onAcceptAutoComplete'];
+    onNavigateAutoComplete?: React.ComponentProps<typeof Grid>['onNavigateAutoComplete'];
+    onDismissAutoComplete?: React.ComponentProps<typeof Grid>['onDismissAutoComplete'];
   },
 ) {
-  const { onCellChange, ...gridProps } = props;
+  const { onCellChange, autoComplete, onAcceptAutoComplete, onNavigateAutoComplete, onDismissAutoComplete, ...gridProps } = props;
   const editing = useTestEditingSession();
 
   const handleRawKeyDown = useCallback(
@@ -102,7 +112,9 @@ function GridWithEditing(
       const prevRow = editing.session.row;
       const prevCol = editing.session.col;
       editing.onRawKeyDown(e);
-      if ((e.key === 'Enter' || e.key === 'Tab' || e.key === 'F2') && prevState !== 'SELECT') {
+      // Don't commit on Alt+Enter (inserts newline instead)
+      const isAltEnter = e.key === 'Enter' && e.altKey;
+      if ((e.key === 'Enter' || e.key === 'Tab' || e.key === 'F2') && prevState !== 'SELECT' && !isAltEnter) {
         onCellChange?.(prevRow, prevCol, prevBuffer);
       }
     },
@@ -117,6 +129,10 @@ function GridWithEditing(
       onStartEnter={editing.onStartEnter}
       onRawKeyDown={handleRawKeyDown}
       onRawChange={editing.onRawChange}
+      autoComplete={autoComplete}
+      onAcceptAutoComplete={onAcceptAutoComplete}
+      onNavigateAutoComplete={onNavigateAutoComplete}
+      onDismissAutoComplete={onDismissAutoComplete}
     />
   );
 }
@@ -680,5 +696,223 @@ describe('Grid - Selection Replacement in Cell Editor', () => {
     input.dispatchEvent(keyDownEvent);
 
     expect(preventDefaultSpy).toHaveBeenCalled();
+  });
+});
+
+describe('Grid - Multiline Cell Editor (Alt+Enter)', () => {
+  it('renders textarea when buffer contains newline', () => {
+    render(
+      <GridWithEditing
+        sheet={createTestSheet({ cells: { '0:0': { rawValue: 'Line1' } } })}
+        onCellChange={jest.fn()}
+        onSelect={jest.fn()}
+      />,
+    );
+
+    // Double-click to start editing cell A1
+    const cell = document.querySelector('.grid-cell') as HTMLElement;
+    fireEvent.doubleClick(cell);
+
+    // Initially renders input (no newline)
+    let editor = document.querySelector('.grid-cell input');
+    expect(editor).toBeInTheDocument();
+
+    // Simulate Alt+Enter to insert newline
+    fireEvent.keyDown(editor!, { key: 'Enter', altKey: true });
+
+    // Now should render textarea because buffer contains \n
+    editor = document.querySelector('.grid-cell textarea');
+    expect(editor).toBeInTheDocument();
+    // React sets value as property, not attribute
+    expect((editor as HTMLTextAreaElement).value).toContain('\n');
+  });
+
+  it('Alt+Enter inserts newline into buffer', () => {
+    const onCellChange = jest.fn();
+    render(
+      <GridWithEditing
+        sheet={createTestSheet({ cells: { '0:0': { rawValue: 'AB' } } })}
+        onCellChange={onCellChange}
+        onSelect={jest.fn()}
+      />,
+    );
+
+    const cell = document.querySelector('.grid-cell') as HTMLElement;
+    fireEvent.doubleClick(cell);
+
+    const input = document.querySelector('.grid-cell input') as HTMLInputElement;
+
+    // Set buffer to "AB" with cursor between A and B
+    fireEvent.change(input, { target: { value: 'AB' } });
+    input.setSelectionRange(1, 1);
+
+    // Press Alt+Enter — should be forwarded to FSM (preventDefault called)
+    fireEvent.keyDown(input, { key: 'Enter', altKey: true });
+
+    // After Alt+Enter, the buffer should contain a newline and we should have a textarea
+    const textarea = document.querySelector('.grid-cell textarea');
+    expect(textarea).toBeInTheDocument();
+  });
+
+  it('Enter in textarea commits and exits edit mode', () => {
+    render(
+      <GridWithEditing
+        sheet={createTestSheet({ cells: { '0:0': { rawValue: 'AB' } } })}
+        onCellChange={jest.fn()}
+        onSelect={jest.fn()}
+      />,
+    );
+
+    const cell = document.querySelector('.grid-cell') as HTMLElement;
+    fireEvent.doubleClick(cell);
+
+    // First, trigger Alt+Enter to create a newline and switch to textarea
+    const input = document.querySelector('.grid-cell input') as HTMLInputElement;
+    fireEvent.change(input, { target: { value: 'AB' } });
+    input.setSelectionRange(1, 1);
+    fireEvent.keyDown(input, { key: 'Enter', altKey: true });
+
+    // Now we should have a textarea
+    const textarea = document.querySelector('.grid-cell textarea') as HTMLTextAreaElement;
+    expect(textarea).toBeInTheDocument();
+
+    // Press Enter (no modifiers) — should commit and exit edit mode
+    // We verify by checking the textarea disappears (commit happened)
+    fireEvent.keyDown(textarea, { key: 'Enter' });
+
+    // Textarea should be gone (Enter committed and exited edit mode)
+    expect(document.querySelector('.grid-cell textarea')).not.toBeInTheDocument();
+  });
+});
+
+describe('Grid - AutoComplete Dropdown in Cell Editor', () => {
+  it('renders AutoCompleteDropdown when autoComplete is open', () => {
+    const autoComplete = {
+      open: true,
+      matches: [
+        { name: 'SUM', signature: 'SUM(number1, [number2], ...)', description: 'Adds values', category: 'Math' },
+        { name: 'AVERAGE', signature: 'AVERAGE(number1, [number2], ...)', description: 'Average of values', category: 'Math' },
+      ],
+      index: 0,
+      tokenStart: 0,
+    };
+
+    render(
+      <GridWithEditing
+        sheet={createTestSheet({ cells: { '0:0': { rawValue: '=S' } } })}
+        onCellChange={jest.fn()}
+        onSelect={jest.fn()}
+        autoComplete={autoComplete}
+        onAcceptAutoComplete={jest.fn()}
+        onNavigateAutoComplete={jest.fn()}
+        onDismissAutoComplete={jest.fn()}
+      />,
+    );
+
+    // Double-click to start editing cell A1
+    const cell = document.querySelector('.grid-cell') as HTMLElement;
+    fireEvent.doubleClick(cell);
+
+    // The autocomplete dropdown should be visible
+    expect(screen.getByText('SUM')).toBeInTheDocument();
+    expect(screen.getByText('AVERAGE')).toBeInTheDocument();
+  });
+
+  it('does not render AutoCompleteDropdown when autoComplete is closed', () => {
+    const autoComplete = {
+      open: false,
+      matches: [],
+      index: 0,
+      tokenStart: 0,
+    };
+
+    render(
+      <GridWithEditing
+        sheet={createTestSheet({ cells: { '0:0': { rawValue: '=S' } } })}
+        onCellChange={jest.fn()}
+        onSelect={jest.fn()}
+        autoComplete={autoComplete}
+        onAcceptAutoComplete={jest.fn()}
+        onNavigateAutoComplete={jest.fn()}
+        onDismissAutoComplete={jest.fn()}
+      />,
+    );
+
+    // Double-click to start editing cell A1
+    const cell = document.querySelector('.grid-cell') as HTMLElement;
+    fireEvent.doubleClick(cell);
+
+    // The autocomplete dropdown should NOT be visible
+    expect(screen.queryByText('SUM')).not.toBeInTheDocument();
+  });
+
+  it('Tab key accepts highlighted autocomplete', () => {
+    const onAcceptAutoComplete = jest.fn();
+    const autoComplete = {
+      open: true,
+      matches: [
+        { name: 'SUM', signature: 'SUM(number1, [number2], ...)', description: 'Adds values', category: 'Math' },
+        { name: 'AVERAGE', signature: 'AVERAGE(number1, [number2], ...)', description: 'Average of values', category: 'Math' },
+      ],
+      index: 0,
+      tokenStart: 0,
+    };
+
+    render(
+      <GridWithEditing
+        sheet={createTestSheet({ cells: { '0:0': { rawValue: '=S' } } })}
+        onCellChange={jest.fn()}
+        onSelect={jest.fn()}
+        autoComplete={autoComplete}
+        onAcceptAutoComplete={onAcceptAutoComplete}
+        onNavigateAutoComplete={jest.fn()}
+        onDismissAutoComplete={jest.fn()}
+      />,
+    );
+
+    const cell = document.querySelector('.grid-cell') as HTMLElement;
+    fireEvent.doubleClick(cell);
+
+    const input = document.querySelector('.grid-cell input') as HTMLInputElement;
+
+    // Press Tab to accept the highlighted autocomplete (SUM at index 0)
+    fireEvent.keyDown(input, { key: 'Tab' });
+
+    expect(onAcceptAutoComplete).toHaveBeenCalledWith(0);
+  });
+
+  it('Enter key accepts highlighted autocomplete', () => {
+    const onAcceptAutoComplete = jest.fn();
+    const autoComplete = {
+      open: true,
+      matches: [
+        { name: 'SUM', signature: 'SUM(number1, [number2], ...)', description: 'Adds values', category: 'Math' },
+        { name: 'AVERAGE', signature: 'AVERAGE(number1, [number2], ...)', description: 'Average of values', category: 'Math' },
+      ],
+      index: 1,
+      tokenStart: 0,
+    };
+
+    render(
+      <GridWithEditing
+        sheet={createTestSheet({ cells: { '0:0': { rawValue: '=S' } } })}
+        onCellChange={jest.fn()}
+        onSelect={jest.fn()}
+        autoComplete={autoComplete}
+        onAcceptAutoComplete={onAcceptAutoComplete}
+        onNavigateAutoComplete={jest.fn()}
+        onDismissAutoComplete={jest.fn()}
+      />,
+    );
+
+    const cell = document.querySelector('.grid-cell') as HTMLElement;
+    fireEvent.doubleClick(cell);
+
+    const input = document.querySelector('.grid-cell input') as HTMLInputElement;
+
+    // Press Enter to accept the highlighted autocomplete (AVERAGE at index 1)
+    fireEvent.keyDown(input, { key: 'Enter' });
+
+    expect(onAcceptAutoComplete).toHaveBeenCalledWith(1);
   });
 });

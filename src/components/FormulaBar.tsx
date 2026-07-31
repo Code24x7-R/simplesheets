@@ -115,7 +115,7 @@ function extractHighlights(formula: string): HighlightedRange[] {
 /**
  * Auto-complete dropdown component.
  */
-function AutoCompleteDropdown({
+export function AutoCompleteDropdown({
   matches,
   selectedIndex,
   onHover,
