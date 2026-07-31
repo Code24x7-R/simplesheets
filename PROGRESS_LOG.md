@@ -4,6 +4,13 @@
 
 ---
 
+### 2026-07-31 [BUGFIX] B-008 — FormulaWizard Modal Blocking POINT Mode Range Selection
+- **Symptom**: The FormulaWizard modal form was blocking POINT mode range selection. The modal (centered, pointer-events-auto) captured clicks on grid cells behind it.
+- **Root cause**: The overlay had pointer-events-none but the modal content had pointer-events-auto, so the modal still captured clicks in the center of the screen.
+- **Fix**: Changed modal to pointer-events-none in POINT mode. Moved POINT mode indicator out of modal to a fixed element at top of screen (pointer-events-auto) so Cancel remains clickable.
+- **Files**: `src/components/FormulaWizard.tsx`, `src/components/FormulaWizard.transparency.test.tsx`, `src/components/FormulaWizard.pointmode.test.tsx`
+- **Tests**: 2274 pass (was 2272), lint clean, type-check clean, build clean
+
 ### 2026-07-31 [BUGFIX] B-004 — In-Cell Editor Lacks Syntax Highlighting
 - **Symptom**: Formula bar showed colored cell reference overlays while editing. The in-cell editor was a plain `<input>` with no visual formula aid — inconsistent UX.
 - **Root cause**: The highlighting overlay was computed inside FormulaBar's render function and never shared with the Grid's cell editor.

@@ -65,12 +65,20 @@ describe('FormulaWizard — Modal Transparency for POINT Mode', () => {
     expect(overlay?.classList.contains('pointer-events-none')).toBe(true);
   });
 
-  it('modal content remains clickable in POINT mode', () => {
+  it('modal content is click-through in POINT mode (so grid is accessible)', () => {
     render(<FormulaWizard {...defaultProps} wizard={createWizardState({ state: 'POINT_SELECTION', pointSelectionParamIndex: 0 })} />);
     const content = document.querySelector('.bg-white.rounded-lg');
     expect(content).toBeInTheDocument();
-    // Content should NOT have pointer-events-none
-    expect(content?.classList.contains('pointer-events-none')).toBe(false);
+    // Content SHOULD have pointer-events-none so clicks reach the grid
+    expect(content?.classList.contains('pointer-events-none')).toBe(true);
+  });
+
+  it('POINT mode indicator is clickable (positioned at top, outside modal)', () => {
+    render(<FormulaWizard {...defaultProps} wizard={createWizardState({ state: 'POINT_SELECTION', pointSelectionParamIndex: 0 })} />);
+    // The POINT mode indicator is rendered outside the modal with pointer-events-auto
+    const indicator = document.querySelector('.fixed.top-4.left-1\\/2.-translate-x-1\\/2.z-\\[60\\]');
+    expect(indicator).toBeInTheDocument();
+    expect(indicator?.classList.contains('pointer-events-auto')).toBe(true);
   });
 
   it('modal is semi-transparent in POINT mode', () => {

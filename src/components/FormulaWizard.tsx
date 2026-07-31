@@ -196,17 +196,34 @@ export function FormulaWizard({
 
   if (!schema) return null;
 
-  // When in POINT mode, make modal transparent and click-through
+  // When in POINT mode, make modal fully click-through so the user can
+  // select a range on the grid without the form blocking cells.
   const isPointMode = wizard.state === 'POINT_SELECTION';
   const overlayClass = isPointMode
     ? 'fixed inset-0 z-50 flex items-center justify-center bg-black/10 pointer-events-none'
     : 'fixed inset-0 z-50 flex items-center justify-center bg-black/30';
   const modalClass = isPointMode
-    ? 'bg-white rounded-lg shadow-2xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto opacity-75 pointer-events-auto'
+    ? 'bg-white rounded-lg shadow-2xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto opacity-75 pointer-events-none'
     : 'bg-white rounded-lg shadow-2xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto';
+
+  // POINT mode indicator — rendered OUTSIDE the modal so it stays
+  // clickable even when the modal is pointer-events-none.
+  const pointModeIndicator = isPointSelection && (
+    <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[60] px-4 py-2 bg-yellow-50 border border-yellow-200 rounded-lg shadow-lg text-xs text-yellow-700 pointer-events-auto">
+      <span className="font-semibold">POINT mode:</span> Select a range on the grid, then click
+      "Apply Range" or press Enter.
+      <button
+        className="ml-2 text-yellow-600 underline hover:text-yellow-800"
+        onClick={cancelPointSelection}
+      >
+        Cancel
+      </button>
+    </div>
+  );
 
   return (
     <div className={overlayClass} onKeyDown={handleKeyDown}>
+      {pointModeIndicator}
       <div className={modalClass}>
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-gray-50 rounded-t-lg">
@@ -288,20 +305,6 @@ export function FormulaWizard({
             <div className="text-xs text-gray-400 italic">This function takes no parameters.</div>
           )}
         </div>
-
-        {/* Point selection mode indicator */}
-        {isPointSelection && (
-          <div className="mx-4 mb-3 px-3 py-2 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-700">
-            <span className="font-semibold">POINT mode:</span> Select a range on the grid, then click
-            "Apply Range" or press Enter.
-            <button
-              className="ml-2 text-yellow-600 underline hover:text-yellow-800"
-              onClick={cancelPointSelection}
-            >
-              Cancel
-            </button>
-          </div>
-        )}
 
         {/* Validation warnings */}
         {hasCircularRef && (

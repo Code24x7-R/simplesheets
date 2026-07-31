@@ -115,6 +115,35 @@ describe('FormulaWizard — POINT Mode Interaction', () => {
     render(<FormulaWizard {...defaultProps} />);
     expect(screen.getByText('Nested Formula Wizard')).toBeInTheDocument();
   });
+
+  it('modal does not block POINT mode range selection (B-006 fix)', () => {
+    const props = {
+      ...defaultProps,
+      wizard: {
+        ...defaultProps.wizard,
+        state: 'POINT_SELECTION' as const,
+        pointSelectionParamIndex: 0,
+      },
+    };
+    render(<FormulaWizard {...props} />);
+
+    // The modal content should be pointer-events-none so clicks pass through to grid
+    const modal = document.querySelector('.bg-white.rounded-lg');
+    expect(modal).toBeInTheDocument();
+    expect(modal?.classList.contains('pointer-events-none')).toBe(true);
+
+    // The POINT mode indicator should be clickable (outside the modal)
+    const indicator = document.querySelector('.fixed.top-4.left-1\\/2');
+    expect(indicator).toBeInTheDocument();
+    expect(indicator?.classList.contains('pointer-events-auto')).toBe(true);
+
+    // The Cancel button in the indicator should still work
+    const cancelBtns = screen.getAllByText('Cancel');
+    const pointCancelBtn = cancelBtns.find((btn) => btn.classList.contains('text-yellow-600'));
+    expect(pointCancelBtn).toBeDefined();
+    fireEvent.click(pointCancelBtn!);
+    expect(props.cancelPointSelection).toHaveBeenCalled();
+  });
 });
 
 describe('useFormulaWizard — POINT State Preservation', () => {
