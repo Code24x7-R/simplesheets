@@ -22,7 +22,7 @@ function getBuildInfo(): { date: string; time: string; raw: string; commit: stri
 
 const ABOUT_CONTENT = `# SimpleSheet
 
-A lightweight, browser-based spreadsheet for small businesses. No bloat — just a fast, offline-capable grid that reads and writes Excel files.
+A lightweight, browser-based spreadsheet for small businesses. No server, no account, no bloat — just a fast, offline-capable grid that reads and writes Excel files.
 
 ---
 
