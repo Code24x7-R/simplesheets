@@ -281,4 +281,32 @@ describe('FormulaBar - Error Display', () => {
     const input = screen.getByDisplayValue('=SUM(');
     expect(input).toBeInTheDocument();
   });
+
+  it('input does NOT have text-transparent when value is just "=" (B-009 fix)', () => {
+    render(
+      <FormulaBar
+        {...defaultProps}
+        value='='
+        session={{ ...defaultProps.session, state: 'ENTER', buffer: '=', isFormula: true }}
+      />,
+    );
+    const input = screen.getByDisplayValue('=') as HTMLInputElement;
+    expect(input).toBeInTheDocument();
+    // The "=" should be visible — no text-transparent because overlay has no segments
+    expect(input.className).not.toContain('text-transparent');
+  });
+
+  it('input HAS text-transparent when value has cell references (overlay renders)', () => {
+    render(
+      <FormulaBar
+        {...defaultProps}
+        value='=A1+B2'
+        session={{ ...defaultProps.session, state: 'EDIT', buffer: '=A1+B2', isFormula: true }}
+      />,
+    );
+    const input = screen.getByDisplayValue('=A1+B2') as HTMLInputElement;
+    expect(input).toBeInTheDocument();
+    // Has cell references — overlay renders, so text-transparent is needed
+    expect(input.className).toContain('text-transparent');
+  });
 });

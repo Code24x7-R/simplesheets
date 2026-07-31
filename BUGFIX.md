@@ -35,15 +35,17 @@ This file tracks bugs in **existing** code, functions, and UI elements. New feat
 
 <!-- Bugs being actively diagnosed — root cause not yet confirmed -->
 
-## Toggle formula view — ✅ FIXED (see Recently Fixed below)
-- ~~Symptom~~: ~~Ctrl+` is overwriting the content of the Active cell with the '`' character.~~
-- **Status**: Fixed 2026-07-31 — see Toggle formula view entry in Recently Fixed
-
----
-
 ## ✅ Recently Fixed
 
 <!-- Bugs resolved in this session or recent past. Newest first. -->
+
+### 2026-07-31: B-009 — Typing '=' makes character invisible in cell/FormulaBar ✅ VERIFIED
+- **Symptom**: When choosing a cell and typing '=' (which enables edit mode and fires autocomplete), the '=' character was not visible in the cell or FormulaBar until the formula and range was completed and committed.
+- **Root cause**: The cell editor and FormulaBar applied `text-transparent` to the input whenever the buffer started with '=' (to let the `FormulaHighlightOverlay` show through). But the overlay only renders segments when there are tokens to highlight. When the buffer was just '=' (empty formula body), the overlay returned null — no segments rendered — but the input still had `text-transparent`, making the '=' invisible.
+- **Fix**: (1) Extracted segment computation into a reusable `computeHighlightSegments` function in `FormulaHighlightOverlay.tsx`. (2) Grid and FormulaBar now compute `showOverlay = isEditingFormula && computeHighlightSegments(value, true) !== null` and only apply `text-transparent` when the overlay will actually render segments.
+- **Files**: `src/components/FormulaHighlightOverlay.tsx` (extracted `computeHighlightSegments`), `src/components/Grid.tsx` (use `showOverlay` guard), `src/components/FormulaBar.tsx` (use `showOverlay` guard), `src/components/Grid.interactions.test.tsx` (new test), `src/components/FormulaBar.test.tsx` (2 new tests)
+- **Tests**: 2281 pass (was 2278)
+- **Verification**: New tests verify '=' is visible (no text-transparent) and '=A1+B2' has text-transparent (overlay renders).
 
 ### 2026-07-31: Toggle formula view — Ctrl+` overwrites cell content ✅ VERIFIED
 - **Symptom**: Pressing Ctrl+` (to toggle formula view) was overwriting the content of the active cell with the `` ` `` character.

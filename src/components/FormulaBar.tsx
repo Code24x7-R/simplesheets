@@ -5,7 +5,7 @@ import { type FunctionInfo } from '../utils/formulaAutocomplete';
 import type { EditingSession } from '../hooks/useCellEditing';
 import type { ReferenceFormat } from '../hooks/useReferenceFormat';
 import { colToLetter } from '../types';
-import { FormulaHighlightOverlay } from './FormulaHighlightOverlay';
+import { FormulaHighlightOverlay, computeHighlightSegments } from './FormulaHighlightOverlay';
 import { HIGHLIGHT_COLORS } from '../utils/highlightColors';
 
 /** Represents a highlighted range with a color index. */
@@ -472,6 +472,11 @@ export const FormulaBar = forwardRef<FormulaBarHandle, FormulaBarProps>(function
     return null;
   }, [isEditing, validation]);
 
+  // Only apply text-transparent when the overlay will actually render
+  // segments. Without this guard, typing "=" alone would make the
+  // character invisible (text-transparent applied, but no overlay).
+  const showOverlay = value.startsWith('=') && isEditing && computeHighlightSegments(value, true) !== null;
+
   return (
     <div className="relative">
       <div className="flex items-center gap-2 px-3 py-1.5 border-b border-gray-200 bg-white">
@@ -522,7 +527,7 @@ export const FormulaBar = forwardRef<FormulaBarHandle, FormulaBarProps>(function
             <textarea
               ref={inputRef as unknown as React.RefObject<HTMLTextAreaElement>}
               className={`outline-none font-mono text-sm relative bg-transparent min-w-full formula-input-scroll resize-y ${
-                value.startsWith('=') ? 'text-transparent selection:bg-blue-200' : ''
+                showOverlay ? 'text-transparent selection:bg-blue-200' : ''
               }`}
               style={{ caretColor: '#000', minWidth: '100%', minHeight: '80px' }}
               placeholder="Enter a value or formula (e.g., =SUM(A1:A10))"
@@ -539,7 +544,7 @@ export const FormulaBar = forwardRef<FormulaBarHandle, FormulaBarProps>(function
               ref={inputRef}
               type="text"
               className={`outline-none font-mono text-sm relative bg-transparent min-w-full formula-input-scroll ${
-                value.startsWith('=') ? 'text-transparent selection:bg-blue-200' : ''
+                showOverlay ? 'text-transparent selection:bg-blue-200' : ''
               }`}
               style={{ caretColor: '#000', minWidth: '100%' }}
               placeholder="Enter a value or formula (e.g., =SUM(A1:A10))"

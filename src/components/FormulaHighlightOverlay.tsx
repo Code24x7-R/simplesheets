@@ -9,6 +9,50 @@ interface FormulaHighlightOverlayProps {
 }
 
 /**
+ * Computes the highlight segments for a formula string.
+ * Returns null if there are no segments to render.
+ *
+ * This is exported so that callers can determine whether the overlay
+ * will render anything — and thus whether to apply `text-transparent`
+ * to the underlying input.
+ */
+export function computeHighlightSegments(value: string, isEditing: boolean): Array<{ text: string; colorIndex: number | null }> | null {
+  if (!isEditing || !value || !value.startsWith('=')) return null;
+
+  try {
+    const formula = value.slice(1);
+    const segs: Array<{ text: string; colorIndex: number | null }> = [];
+    let colorIdx = 0;
+
+    const tokenRegex = /(\$?[A-Za-z]+\$?\d+:?|\$?[A-Za-z]+|[0-9.]+|[+\-*/(),&^=<>]|"[^"]*"|[A-Za-z]+)/gi;
+    let match;
+
+    while ((match = tokenRegex.exec(formula)) !== null) {
+      const token = match[0];
+      if (/^\$?[A-Za-z]+\$?\d+$/i.test(token)) {
+        segs.push({
+          text: token,
+          colorIndex: colorIdx % HIGHLIGHT_COLORS.length,
+        });
+        colorIdx++;
+      } else if (/^\$?[A-Za-z]+\$?\d+:\$?[A-Za-z]+\$?\d+$/i.test(token)) {
+        segs.push({
+          text: token,
+          colorIndex: colorIdx % HIGHLIGHT_COLORS.length,
+        });
+        colorIdx++;
+      } else {
+        segs.push({ text: token, colorIndex: null });
+      }
+    }
+
+    return segs.length > 0 ? segs : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Renders colored cell reference overlays for a formula string.
  * This is a shared component used by both FormulaBar and the Grid in-cell editor.
  *
@@ -16,41 +60,7 @@ interface FormulaHighlightOverlayProps {
  * Cell references (A1, $B$2, A1:B5) get colored backgrounds; other tokens render plain.
  */
 export function FormulaHighlightOverlay({ value, isEditing }: FormulaHighlightOverlayProps) {
-  const segments = useMemo(() => {
-    if (!isEditing || !value || !value.startsWith('=')) return null;
-
-    try {
-      const formula = value.slice(1);
-      const segs: Array<{ text: string; colorIndex: number | null }> = [];
-      let colorIdx = 0;
-
-      const tokenRegex = /(\$?[A-Za-z]+\$?\d+:?|\$?[A-Za-z]+|[0-9.]+|[+\-*/(),&^=<>]|"[^"]*"|[A-Za-z]+)/gi;
-      let match;
-
-      while ((match = tokenRegex.exec(formula)) !== null) {
-        const token = match[0];
-        if (/^\$?[A-Za-z]+\$?\d+$/i.test(token)) {
-          segs.push({
-            text: token,
-            colorIndex: colorIdx % HIGHLIGHT_COLORS.length,
-          });
-          colorIdx++;
-        } else if (/^\$?[A-Za-z]+\$?\d+:\$?[A-Za-z]+\$?\d+$/i.test(token)) {
-          segs.push({
-            text: token,
-            colorIndex: colorIdx % HIGHLIGHT_COLORS.length,
-          });
-          colorIdx++;
-        } else {
-          segs.push({ text: token, colorIndex: null });
-        }
-      }
-
-      return segs.length > 0 ? segs : null;
-    } catch {
-      return null;
-    }
-  }, [value, isEditing]);
+  const segments = useMemo(() => computeHighlightSegments(value, isEditing), [value, isEditing]);
 
   if (!segments) return null;
 

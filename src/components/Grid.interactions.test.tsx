@@ -987,6 +987,27 @@ describe('Grid - Syntax Highlighting in Cell Editor', () => {
     expect(input).toBeInTheDocument();
     expect(input!.className).toContain('text-transparent');
   });
+
+  it('input does NOT have text-transparent when buffer is just "=" (B-009 fix)', () => {
+    render(
+      <GridWithEditing
+        sheet={createTestSheet({ cells: { '0:0': { rawValue: '' } } })}
+        onCellChange={jest.fn()}
+        onSelect={jest.fn()}
+      />,
+    );
+
+    const cell = document.querySelector('.grid-cell') as HTMLElement;
+    fireEvent.doubleClick(cell);
+
+    // Set the buffer to just "=" via change event
+    const input = cell.querySelector('input') as HTMLInputElement;
+    fireEvent.change(input, { target: { value: '=' } });
+
+    expect(input).toBeInTheDocument();
+    // The "=" should be visible — no text-transparent because overlay has no segments
+    expect(input!.className).not.toContain('text-transparent');
+  });
 });
 
 describe('Grid — Wizard POINT Mode Range Selection', () => {

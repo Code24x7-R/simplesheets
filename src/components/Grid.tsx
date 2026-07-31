@@ -5,7 +5,7 @@ import type { Sheet, Selection } from '../types';
 import { cellKey, colToLetter } from '../types';
 import type { HighlightedRange } from './FormulaBar';
 import { AutoCompleteDropdown } from './FormulaBar';
-import { FormulaHighlightOverlay } from './FormulaHighlightOverlay';
+import { FormulaHighlightOverlay, computeHighlightSegments } from './FormulaHighlightOverlay';
 import type { ReferenceFormat } from '../hooks/useReferenceFormat';
 import type { EditingSession } from '../hooks/useCellEditing';
 import type { FunctionInfo } from '../utils/formulaAutocomplete';
@@ -1692,8 +1692,12 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
                   const highlightIdx = getCellHighlight(row, col);
                   const cellFrozen = true;
                   const cellEditing = isEditingCell(row, col);
-
                   const isEditingFormula = cellEditing && editBuffer.startsWith('=');
+
+                  // Only apply text-transparent when the overlay will actually render
+                  // segments. Without this guard, typing "=" alone would make the
+                  // character invisible (text-transparent applied, but no overlay).
+                  const showOverlay = isEditingFormula && computeHighlightSegments(editBuffer, true) !== null;
 
                   // Build the cell editor element (input or textarea based on multiline)
                   const editorElement = editBuffer.includes('\n') ? (
@@ -1701,7 +1705,7 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
                       ref={editInputRef as React.RefObject<HTMLTextAreaElement>}
                       autoFocus
                       className={`w-full h-full outline-none bg-white border border-blue-500 px-1 font-mono text-sm resize-none ${
-                        isEditingFormula ? 'text-transparent selection:bg-blue-200' : ''
+                        showOverlay ? 'text-transparent selection:bg-blue-200' : ''
                       }`}
                       style={{ caretColor: '#000' }}
                       value={editBuffer}
@@ -1741,7 +1745,7 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
                       ref={editInputRef as React.RefObject<HTMLInputElement>}
                       autoFocus
                       className={`w-full h-full outline-none bg-white border border-blue-500 px-1 font-mono text-sm ${
-                        isEditingFormula ? 'text-transparent selection:bg-blue-200' : ''
+                        showOverlay ? 'text-transparent selection:bg-blue-200' : ''
                       }`}
                       style={{ caretColor: '#000' }}
                       value={editBuffer}
@@ -1985,13 +1989,18 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
               const cellEditing = isEditingCell(row, col);
               const isEditingFormula = cellEditing && editBuffer.startsWith('=');
 
+              // Only apply text-transparent when the overlay will actually render
+              // segments. Without this guard, typing "=" alone would make the
+              // character invisible (text-transparent applied, but no overlay).
+              const showOverlay = isEditingFormula && computeHighlightSegments(editBuffer, true) !== null;
+
               // Build the cell editor element (input or textarea based on multiline)
               const editorElement = editBuffer.includes('\n') ? (
                 <textarea
                   ref={editInputRef as React.RefObject<HTMLTextAreaElement>}
                   autoFocus
                   className={`w-full h-full outline-none bg-white border border-blue-500 px-1 font-mono text-sm resize-none ${
-                    isEditingFormula ? 'text-transparent selection:bg-blue-200' : ''
+                    showOverlay ? 'text-transparent selection:bg-blue-200' : ''
                   }`}
                   style={{ caretColor: '#000' }}
                   value={editBuffer}
@@ -2048,7 +2057,7 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
                   ref={editInputRef as React.RefObject<HTMLInputElement>}
                   autoFocus
                   className={`w-full h-full outline-none bg-white border border-blue-500 px-1 font-mono text-sm ${
-                    isEditingFormula ? 'text-transparent selection:bg-blue-200' : ''
+                    showOverlay ? 'text-transparent selection:bg-blue-200' : ''
                   }`}
                   style={{ caretColor: '#000' }}
                   value={editBuffer}

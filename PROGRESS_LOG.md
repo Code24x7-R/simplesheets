@@ -4,6 +4,13 @@
 
 ---
 
+### 2026-07-31 [BUGFIX] B-009 — Typing '=' makes character invisible in cell/FormulaBar
+- **Symptom**: Typing '=' enabled edit mode and fired autocomplete, but the '=' character was not visible until the formula was committed.
+- **Root cause**: Input got `text-transparent` whenever buffer started with '=' (for overlay), but the overlay returned null for '=' (no tokens to highlight). Result: text-transparent applied with no overlay showing through.
+- **Fix**: Extracted `computeHighlightSegments` helper. Grid and FormulaBar now only apply `text-transparent` when the overlay will actually render segments.
+- **Files**: `src/components/FormulaHighlightOverlay.tsx`, `src/components/Grid.tsx`, `src/components/FormulaBar.tsx`, `src/components/Grid.interactions.test.tsx`, `src/components/FormulaBar.test.tsx`
+- **Tests**: 2281 pass (was 2278), lint clean, type-check clean, build clean
+
 ### 2026-07-31 [BUGFIX] Toggle formula view — Ctrl+` overwrites cell content
 - **Symptom**: Ctrl+` was overwriting the active cell content with the backtick character.
 - **Root cause**: Grid's Ctrl+ exclusion switch didn't include the backtick character. The ` key fell through to `isPrintableKey` check, starting editing with `` ` `` as buffer.
