@@ -362,3 +362,61 @@ describe('FormulaWizard - Autocomplete Integration', () => {
     expect(closeWizard).toHaveBeenCalled();
   });
 });
+
+describe('FormulaWizard - Variadic Parameters (B-010)', () => {
+  it('renders extra variadic parameters when present', () => {
+    const wizard = createWizardState({
+      activeNode: {
+        id: 'node_1',
+        functionName: 'SUM',
+        parameterValues: {
+          number1: { parameterId: 'number1', rawValue: 'A1:A3', isNestedFunction: false },
+          number2: { parameterId: 'number2', rawValue: 'D3:D7', isNestedFunction: false },
+          number2_1: { parameterId: 'number2_1', rawValue: 'F1:F5', isNestedFunction: false },
+        },
+      },
+      compiledFormula: 'SUM(A1:A3, D3:D7, F1:F5)',
+    });
+    render(<FormulaWizard {...defaultProps} wizard={wizard} />);
+    // Should render the extra variadic parameter as "Number3"
+    expect(screen.getByText('Number3')).toBeInTheDocument();
+    // Should have 3 textboxes (Number1, Number2, Number3)
+    const inputs = screen.getAllByRole('textbox') as HTMLInputElement[];
+    expect(inputs.length).toBe(3);
+    expect(inputs[0].value).toBe('A1:A3');
+    expect(inputs[1].value).toBe('D3:D7');
+    expect(inputs[2].value).toBe('F1:F5');
+  });
+
+  it('shows Add parameter button for variadic functions', () => {
+    render(<FormulaWizard {...defaultProps} />);
+    expect(screen.getByText('+ Add parameter')).toBeInTheDocument();
+  });
+
+  it('Add parameter button adds a new variadic parameter', () => {
+    const setParameter = jest.fn();
+    render(<FormulaWizard {...defaultProps} setParameter={setParameter} />);
+    fireEvent.click(screen.getByText('+ Add parameter'));
+    // Should call setParameter with the next variadic ID
+    expect(setParameter).toHaveBeenCalledWith('number2_1', '');
+  });
+
+  it('does not show Add parameter button for non-variadic functions', () => {
+    const wizard = createWizardState({
+      activeSchema: {
+        name: 'IF',
+        category: 'LOGICAL',
+        description: 'Conditional: if true then A else B',
+        returnType: 'ANY',
+        syntaxTemplate: 'IF(condition, true_val, [false_val])',
+        parameters: [
+          { id: 'condition', name: 'Condition', description: 'Expression that evaluates to TRUE or FALSE', type: 'BOOLEAN', isRequired: true, allowNestedFunction: true },
+          { id: 'true_val', name: 'True_val', description: 'Value returned when condition is TRUE', type: 'ANY', isRequired: true, allowNestedFunction: true },
+          { id: 'false_val', name: 'False_val', description: 'Value returned when condition is FALSE', type: 'ANY', isRequired: false, allowNestedFunction: true },
+        ],
+      },
+    });
+    render(<FormulaWizard {...defaultProps} wizard={wizard} />);
+    expect(screen.queryByText('+ Add parameter')).not.toBeInTheDocument();
+  });
+});

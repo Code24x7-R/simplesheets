@@ -92,6 +92,66 @@ export function FormulaWizard({
     }));
   }, [wizard.nodeStack]);
 
+  // Compute all parameters including extra variadic ones (B-010 fix)
+  // For variadic functions like SUM(number1, [number2], ...), the wizard
+  // needs to render additional parameters beyond what the schema defines.
+  const allParameters = useMemo(() => {
+    if (!schema) return [];
+    const params: Array<FunctionParameter & { isVariadicExtra?: boolean; variadicIndex?: number }> = [
+      ...schema.parameters,
+    ];
+
+    // Check for extra variadic parameters in the active node
+    const lastParam = schema.parameters[schema.parameters.length - 1];
+    if (lastParam?.isVariadic && wizard.activeNode) {
+      const variadicPrefix = `${lastParam.id}_`;
+      const variadicExtras: Array<{ index: number; param: FunctionParameter }> = [];
+
+      for (const paramId of Object.keys(wizard.activeNode.parameterValues)) {
+        if (paramId.startsWith(variadicPrefix)) {
+          const index = parseInt(paramId.slice(variadicPrefix.length), 10);
+          if (!isNaN(index)) {
+            // Generate a name like "Number3", "Number4", etc.
+            // Extract the numeric suffix from the last param name (e.g., "Number2" → 2)
+            const nameMatch = lastParam.name.match(/(\d+)$/);
+            const baseNum = nameMatch ? parseInt(nameMatch[1], 10) : schema.parameters.length;
+            const newNum = baseNum + index;
+            const newName = nameMatch
+              ? lastParam.name.replace(/\d+$/, String(newNum))
+              : `${lastParam.name} ${index + 1}`;
+            // Create a synthetic parameter for the extra variadic
+            variadicExtras.push({
+              index,
+              param: {
+                id: paramId,
+                name: newName,
+                description: lastParam.description,
+                type: lastParam.type,
+                isRequired: false,
+                allowNestedFunction: lastParam.allowNestedFunction,
+              },
+            });
+          }
+        }
+      }
+
+      // Sort by index and add to params list
+      variadicExtras.sort((a, b) => a.index - b.index);
+      for (const extra of variadicExtras) {
+        params.push({ ...extra.param, isVariadicExtra: true, variadicIndex: extra.index });
+      }
+    }
+
+    return params;
+  }, [schema, wizard.activeNode]);
+
+  // Whether to show the "Add parameter" button for variadic functions
+  const canAddVariadic = useMemo(() => {
+    if (!schema) return false;
+    const lastParam = schema.parameters[schema.parameters.length - 1];
+    return lastParam?.isVariadic === true;
+  }, [schema]);
+
   // Check for circular reference
   const hasCircularRef = useMemo(() => {
     if (targetRow === undefined || targetCol === undefined) return false;
@@ -285,7 +345,7 @@ export function FormulaWizard({
 
         {/* Parameter inputs */}
         <div className="px-4 py-3 space-y-3">
-          {schema.parameters.map((param, index) => (
+          {allParameters.map((param, index) => (
             <ParameterInput
               key={param.id}
               param={param}
@@ -307,7 +367,33 @@ export function FormulaWizard({
             />
           ))}
 
-          {schema.parameters.length === 0 && (
+          {/* Add parameter button for variadic functions */}
+          {canAddVariadic && (
+            <button
+              className="w-full px-3 py-1.5 text-xs text-blue-600 bg-blue-50 border border-blue-200 rounded hover:bg-blue-100 transition-colors"
+              onClick={() => {
+                if (!schema || !wizard.activeNode) return;
+                const lastParam = schema.parameters[schema.parameters.length - 1];
+                if (!lastParam?.isVariadic) return;
+                // Find the next available variadic index
+                const variadicPrefix = `${lastParam.id}_`;
+                let nextIndex = 1;
+                for (const paramId of Object.keys(wizard.activeNode.parameterValues)) {
+                  if (paramId.startsWith(variadicPrefix)) {
+                    const idx = parseInt(paramId.slice(variadicPrefix.length), 10);
+                    if (!isNaN(idx) && idx >= nextIndex) nextIndex = idx + 1;
+                  }
+                }
+                // Add the new parameter with an empty value
+                const newParamId = `${variadicPrefix}${nextIndex}`;
+                handleParamChange(newParamId, '');
+              }}
+            >
+              + Add parameter
+            </button>
+          )}
+
+          {allParameters.length === 0 && (
             <div className="text-xs text-gray-400 italic">This function takes no parameters.</div>
           )}
         </div>

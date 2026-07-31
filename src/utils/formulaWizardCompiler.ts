@@ -67,6 +67,38 @@ export function compileASTNodeToString(
     }
   }
 
+  // Handle extra variadic parameters (B-010 fix)
+  // When a function accepts variadic args (e.g., SUM(number1, [number2], ...)),
+  // the import function stores extra args with IDs like "number2_1", "number2_2", etc.
+  // We need to collect and compile these in order.
+  const lastParam = schema.parameters[schema.parameters.length - 1];
+  if (lastParam?.isVariadic) {
+    const variadicPrefix = `${lastParam.id}_`;
+    const variadicParams: Array<{ index: string; value: string }> = [];
+
+    for (const [paramId, paramVal] of Object.entries(node.parameterValues)) {
+      if (paramId.startsWith(variadicPrefix)) {
+        const index = paramId.slice(variadicPrefix.length);
+        let compiled = '';
+        if (paramVal.isNestedFunction && paramVal.nestedNodeId) {
+          const childNode = nodeMap.get(paramVal.nestedNodeId);
+          if (childNode) {
+            compiled = compileASTNodeToString(childNode, nodeMap);
+          }
+        } else {
+          compiled = paramVal.rawValue;
+        }
+        variadicParams.push({ index, value: compiled });
+      }
+    }
+
+    // Sort by numeric index to ensure correct order
+    variadicParams.sort((a, b) => parseInt(a.index, 10) - parseInt(b.index, 10));
+    for (const vp of variadicParams) {
+      args.push(vp.value);
+    }
+  }
+
   // Trim trailing optional empty parameters
   while (args.length > 0 && args[args.length - 1] === '') {
     args.pop();

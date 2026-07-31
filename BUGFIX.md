@@ -39,15 +39,15 @@ This file tracks bugs in **existing** code, functions, and UI elements. New feat
 
 <!-- Bugs resolved in this session or recent past. Newest first. -->
 
-### 2026-07-31: B-009 — Typing '=' makes character invisible in cell/FormulaBar ✅ VERIFIED
-- **Symptom**: When choosing a cell and typing '=' (which enables edit mode and fires autocomplete), the '=' character was not visible in the cell or FormulaBar until the formula and range was completed and committed.
-- **Root cause**: The cell editor and FormulaBar applied `text-transparent` to the input whenever the buffer started with '=' (to let the `FormulaHighlightOverlay` show through). But the overlay only renders segments when there are tokens to highlight. When the buffer was just '=' (empty formula body), the overlay returned null — no segments rendered — but the input still had `text-transparent`, making the '=' invisible.
-- **Fix**: (1) Extracted segment computation into a reusable `computeHighlightSegments` function in `FormulaHighlightOverlay.tsx`. (2) Grid and FormulaBar now compute `showOverlay = isEditingFormula && computeHighlightSegments(value, true) !== null` and only apply `text-transparent` when the overlay will actually render segments.
-- **Files**: `src/components/FormulaHighlightOverlay.tsx` (extracted `computeHighlightSegments`), `src/components/Grid.tsx` (use `showOverlay` guard), `src/components/FormulaBar.tsx` (use `showOverlay` guard), `src/components/Grid.interactions.test.tsx` (new test), `src/components/FormulaBar.test.tsx` (2 new tests)
-- **Tests**: 2281 pass (was 2278)
-- **Verification**: New tests verify '=' is visible (no text-transparent) and '=A1+B2' has text-transparent (overlay renders).
+### 2026-07-31: B-010 - FormulaWizard variadic parameters (Number3, Number4...) ✅ VERIFIED
+- **Symptom**: When a formula with more than 2 arguments was imported (e.g., `=SUM(A1:A3, D3:D7, F1:F5)`), the FormulaWizard only rendered inputs for the first 2 parameters (Number1, Number2). The third parameter (F1:F5) was stored internally but invisible to the user. The compiled formula also dropped the extra parameters, producing `=SUM(A1:A3, D3:D7)` instead of `=SUM(A1:A3, D3:D7, F1:F5)`.
+- **Root cause**: Two issues: (1) The compiler (`compileASTNodeToString`) only iterated over `schema.parameters` and ignored extra variadic parameters stored with IDs like `number2_1`, `number2_2`, etc. (2) The wizard component only rendered inputs for `schema.parameters`, not for the extra variadic parameters stored in the active node's `parameterValues`.
+- **Fix**: (1) Compiler now detects extra variadic parameters (IDs matching `{lastParamId}_{n}`) and compiles them in order after the schema parameters. (2) Wizard component now computes `allParameters` (schema + extra variadic) and renders them all. (3) Added "+ Add parameter" button for variadic functions to allow adding more parameters interactively. (4) Parameter naming convention: `number2_1` → "Number3", `number2_2` → "Number4", etc.
+- **Files**: `src/utils/formulaWizardCompiler.ts` (compile extra variadic params), `src/components/FormulaWizard.tsx` (render extra params, add button), `src/utils/formulaWizardCompiler.test.ts` (new test), `src/components/FormulaWizard.test.tsx` (3 new tests)
+- **Tests**: 2286 pass (was 2281)
+- **Verification**: New tests verify compiler includes extra params, wizard renders them, Add parameter button works, non-variadic functions don't show the button.
 
-### 2026-07-31: Toggle formula view — Ctrl+` overwrites cell content ✅ VERIFIED
+### 2026-07-31: B-009 - Toggle formula view — Ctrl+` overwrites cell content ✅ VERIFIED
 - **Symptom**: Pressing Ctrl+` (to toggle formula view) was overwriting the content of the active cell with the `` ` `` character.
 - **Root cause**: The Grid's Ctrl+ shortcut exclusion switch did not include the backtick character `` ` ``. When Ctrl+` was pressed, the global handler in App.tsx toggled formula view (correct), BUT the Grid's keydown handler also fired and did not recognize `` ` `` as a Ctrl+ shortcut to exclude. The `` ` `` character fell through to the `isPrintableKey` check (ASCII 96 is in printable range 32-126), which started editing with `` ` `` as the buffer content — overwriting the existing cell value.
 - **Fix**: Added `case '\`':` to the Ctrl+ exclusion switch in Grid's `handleKeyDown` handler. The grid now correctly skips Ctrl+` and lets the global listener handle it.

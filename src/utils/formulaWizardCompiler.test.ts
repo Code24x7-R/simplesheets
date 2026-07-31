@@ -129,6 +129,21 @@ describe('formulaWizardCompiler', () => {
       const result = compileASTNodeToString(node, nodeMap);
       expect(result).toBe('SUMIF(A1:A10, >10, B1:B10)');
     });
+
+    it('compiles SUM with variadic extra parameters (B-010)', () => {
+      const node: FormulaASTNode = {
+        id: 'node_1',
+        functionName: 'SUM',
+        parameterValues: {
+          number1: { parameterId: 'number1', rawValue: 'A1:A3', isNestedFunction: false },
+          number2: { parameterId: 'number2', rawValue: 'D3:D7', isNestedFunction: false },
+          number2_1: { parameterId: 'number2_1', rawValue: 'F1:F5', isNestedFunction: false },
+        },
+      };
+      const nodeMap = new Map([['node_1', node]]);
+      const result = compileASTNodeToString(node, nodeMap);
+      expect(result).toBe('SUM(A1:A3, D3:D7, F1:F5)');
+    });
   });
 
   describe('compileASTToFormula', () => {

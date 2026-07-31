@@ -4,6 +4,13 @@
 
 ---
 
+### 2026-07-31 [BUGFIX] B-010 — FormulaWizard variadic parameters (Number3, Number4...)
+- **Symptom**: Importing `=SUM(A1:A3, D3:D7, F1:F5)` only showed 2 params; 3rd was dropped in both UI and compiled output.
+- **Root cause**: Compiler only iterated over `schema.parameters` (ignoring `number2_1`, `number2_2`, etc.). Wizard only rendered schema params.
+- **Fix**: Compiler now compiles extra variadic params in order. Wizard renders all params + "+ Add parameter" button for variadic functions.
+- **Files**: `src/utils/formulaWizardCompiler.ts`, `src/components/FormulaWizard.tsx`, `src/utils/formulaWizardCompiler.test.ts`, `src/components/FormulaWizard.test.tsx`
+- **Tests**: 2286 pass (was 2281), lint clean, type-check clean, build clean
+
 ### 2026-07-31 [BUGFIX] B-009 — Typing '=' makes character invisible in cell/FormulaBar
 - **Symptom**: Typing '=' enabled edit mode and fired autocomplete, but the '=' character was not visible until the formula was committed.
 - **Root cause**: Input got `text-transparent` whenever buffer started with '=' (for overlay), but the overlay returned null for '=' (no tokens to highlight). Result: text-transparent applied with no overlay showing through.
