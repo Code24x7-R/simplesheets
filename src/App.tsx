@@ -206,6 +206,10 @@ function WorkbookView() {
   // Ref to track latest activeCell (avoids stale closures in wizard apply)
   const activeCellRef = useRef(activeCell);
   activeCellRef.current = activeCell;
+  // Ref to capture the target cell when the wizard opens (B-011 fix)
+  // This prevents the formula from being placed in the wrong cell when
+  // the user selects a range during POINT mode (which changes activeCell)
+  const wizardTargetCellRef = useRef<{ row: number; col: number } | null>(null);
 
   // Paste Special options
   const [pasteSkipBlanks, setPasteSkipBlanks] = useState(false);
@@ -415,7 +419,10 @@ function WorkbookView() {
 
   const handleWizardApply = useCallback(
     (formula: string) => {
-      const cell = activeCellRef.current;
+      // Use the target cell captured when the wizard opened (B-011 fix)
+      // This prevents the formula from being placed in the wrong cell
+      // when the user selects a range during POINT mode
+      const cell = wizardTargetCellRef.current ?? activeCellRef.current;
       if (cell) {
         handleCellChange(cell.row, cell.col, formula);
       }
@@ -455,6 +462,10 @@ function WorkbookView() {
       const targetCellRef = activeCell
         ? `${colToLetter(activeCell.col)}${activeCell.row + 1}`
         : undefined;
+
+      // Capture target cell so formula is placed in the correct cell
+      // even if activeCell changes during POINT mode range selection
+      wizardTargetCellRef.current = activeCell ?? null;
 
       // Try to import the existing formula
       if (currentValue && currentValue.startsWith('=')) {
@@ -2107,6 +2118,8 @@ function WorkbookView() {
           const targetCellRef = activeCell
             ? `${colToLetter(activeCell.col)}${activeCell.row + 1}`
             : undefined;
+          // Capture target cell so formula is placed in the correct cell
+          wizardTargetCellRef.current = activeCell ?? null;
           openFormulaWizard(functionName, targetCellRef);
         }}
         targetRow={activeCell?.row}

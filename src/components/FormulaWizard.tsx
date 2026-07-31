@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import type { FunctionDefinition, FunctionParameter } from '../utils/formulaWizardSchema';
 import { getAllFunctionSchemas } from '../utils/formulaWizardSchema';
 import { validateParameter, checkCircularReference } from '../utils/formulaWizardCompiler';
@@ -212,6 +212,21 @@ export function FormulaWizard({
     [enterExistingNested]
   );
 
+  // Ref to the modal container for focus management
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  // Focus the modal when it opens (after picker selection)
+  // This ensures keyboard focus moves from grid to wizard
+  useEffect(() => {
+    if (wizard.isOpen && wizard.state !== 'POINT_SELECTION' && modalRef.current) {
+      // Small delay to let the DOM update after state transition
+      const timer = setTimeout(() => {
+        modalRef.current?.focus();
+      }, 10);
+      return () => clearTimeout(timer);
+    }
+  }, [wizard.isOpen, wizard.state]);
+
   // Handle apply
   const handleApply = useCallback(() => {
     const formula = `=${wizard.compiledFormula}`;
@@ -290,7 +305,7 @@ export function FormulaWizard({
 
   return (
     <div className={overlayClass} onKeyDown={handleKeyDown}>
-      <div className={modalClass}>
+      <div className={modalClass} ref={modalRef} tabIndex={-1} style={{ outline: 'none' }}>
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-gray-50 rounded-t-lg">
           <h2 className="text-sm font-semibold text-gray-700">Nested Formula Wizard</h2>

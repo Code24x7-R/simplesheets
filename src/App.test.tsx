@@ -633,4 +633,59 @@ describe('App - Global Keyboard Shortcuts', () => {
     const status = screen.getByTestId('status-message');
     expect(status.textContent).not.toContain('Updated');
   });
+
+  it('B-011: FormulaWizard Apply commits to target cell, not range end cell', () => {
+    render(<App />);
+
+    // Enter a formula in the formula bar (default cell is A1)
+    const formulaBarInput = screen.getByPlaceholderText(/Enter a value or formula/) as HTMLInputElement;
+
+    act(() => {
+      formulaBarInput.focus();
+    });
+    act(() => {
+      fireEvent.change(formulaBarInput, { target: { value: '=SUM(B1:B3)' } });
+    });
+
+    // Press Enter to commit (selection moves down to A2)
+    act(() => {
+      fireEvent.keyDown(formulaBarInput, { key: 'Enter' });
+    });
+
+    // Navigate back to A1
+    const cells = document.querySelectorAll('.grid-cell');
+    act(() => {
+      fireEvent.mouseDown(cells[0]);
+    });
+
+    // Open wizard for A1 (imports the existing formula)
+    act(() => {
+      fireGlobalKeyDown('F', { ctrlKey: true, shiftKey: true });
+    });
+
+    expect(screen.getByText('Nested Formula Wizard')).toBeInTheDocument();
+
+    // Click Add parameter to add a second range
+    act(() => {
+      fireEvent.click(screen.getByText('+ Add parameter'));
+    });
+
+    // Set second parameter to C1:C3
+    const paramInputs = screen.getAllByRole('textbox') as HTMLInputElement[];
+    act(() => {
+      fireEvent.change(paramInputs[1], { target: { value: 'C1:C3' } });
+    });
+
+    // Click Apply to Cell
+    act(() => {
+      fireEvent.click(screen.getByText('Apply to Cell'));
+    });
+
+    // Wizard should be closed
+    expect(screen.queryByText('Nested Formula Wizard')).not.toBeInTheDocument();
+
+    // Status message should say Updated A1 (not any other cell)
+    const status = screen.getByTestId('status-message');
+    expect(status.textContent).toContain('Updated A1');
+  });
 });

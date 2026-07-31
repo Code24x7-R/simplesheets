@@ -39,6 +39,14 @@ This file tracks bugs in **existing** code, functions, and UI elements. New feat
 
 <!-- Bugs resolved in this session or recent past. Newest first. -->
 
+### 2026-07-31: B-011 - Formula placed in wrong cell after wizard range selection ✅ VERIFIED
+- **Symptom**: Building `=SUM(D5:D11, F5:F10)` in E5 resulted in the formula being placed in F10 (the last cell of the selected range) instead of E5. This overwrote the contents of F10 and created a circular reference.
+- **Root cause**: `handleWizardApply` used `activeCellRef.current` to determine where to place the formula. During wizard POINT mode, clicking cells to select a range changes the `activeCell`. So when the formula was applied, it was placed in the last cell of the selected range instead of the original target cell.
+- **Fix**: (1) Added `wizardTargetCellRef` that captures the target cell when the wizard opens (in `handleFxClick` and `onFunctionSelect`). (2) `handleWizardApply` now uses `wizardTargetCellRef.current` instead of `activeCellRef.current`. (3) Added auto-focus to wizard modal when it opens (so grid keyboard focus moves to wizard).
+- **Files**: `src/App.tsx` (capture target cell, use it in apply), `src/components/FormulaWizard.tsx` (auto-focus modal), `src/App.test.tsx` (new test)
+- **Tests**: 2287 pass (was 2286)
+- **Verification**: New test verifies formula is placed in target cell (A1), not in any range end cell.
+
 ### 2026-07-31: B-010 - FormulaWizard variadic parameters (Number3, Number4...) ✅ VERIFIED
 - **Symptom**: When a formula with more than 2 arguments was imported (e.g., `=SUM(A1:A3, D3:D7, F1:F5)`), the FormulaWizard only rendered inputs for the first 2 parameters (Number1, Number2). The third parameter (F1:F5) was stored internally but invisible to the user. The compiled formula also dropped the extra parameters, producing `=SUM(A1:A3, D3:D7)` instead of `=SUM(A1:A3, D3:D7, F1:F5)`.
 - **Root cause**: Two issues: (1) The compiler (`compileASTNodeToString`) only iterated over `schema.parameters` and ignored extra variadic parameters stored with IDs like `number2_1`, `number2_2`, etc. (2) The wizard component only rendered inputs for `schema.parameters`, not for the extra variadic parameters stored in the active node's `parameterValues`.

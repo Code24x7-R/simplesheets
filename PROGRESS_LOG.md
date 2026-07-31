@@ -4,6 +4,13 @@
 
 ---
 
+### 2026-07-31 [BUGFIX] B-011 — Formula placed in wrong cell after wizard range selection
+- **Symptom**: Building `=SUM(D5:D11, F5:F10)` in E5 placed formula in F10 (range end) instead of E5.
+- **Root cause**: `handleWizardApply` used `activeCellRef.current` which changes during POINT mode range selection.
+- **Fix**: Added `wizardTargetCellRef` to capture target cell when wizard opens. Wizard modal now auto-focuses on open.
+- **Files**: `src/App.tsx`, `src/components/FormulaWizard.tsx`, `src/App.test.tsx`
+- **Tests**: 2287 pass (was 2286), lint clean, type-check clean, build clean
+
 ### 2026-07-31 [BUGFIX] B-010 — FormulaWizard variadic parameters (Number3, Number4...)
 - **Symptom**: Importing `=SUM(A1:A3, D3:D7, F1:F5)` only showed 2 params; 3rd was dropped in both UI and compiled output.
 - **Root cause**: Compiler only iterated over `schema.parameters` (ignoring `number2_1`, `number2_2`, etc.). Wizard only rendered schema params.
