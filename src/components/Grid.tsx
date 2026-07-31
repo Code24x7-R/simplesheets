@@ -137,6 +137,7 @@ const ROW_WIDTH = 50; // Width of row number column
 /** Imperative handle for parent to call focus() after paste operations. */
 export interface GridHandle {
   focus: () => void;
+  focusCell: (row: number, col: number) => void;
 }
 
 /**
@@ -155,9 +156,18 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
   // Track whether we were editing (for focus management when editing ends)
   const wasEditingRef = useRef(false);
 
-  // Expose focus() to parent for restoring keyboard navigation after paste
+  // Ref to store handleCellSelect for use in useImperativeHandle
+  // (handleCellSelect is defined later in the component)
+  const handleCellSelectRef = useRef<(row: number, col: number) => void>(() => {});
+
+  // Expose focus() and focusCell() to parent for restoring keyboard navigation
   useImperativeHandle(ref, () => ({
     focus: () => {
+      parentRef.current?.focus();
+    },
+    focusCell: (row: number, col: number) => {
+      // Select the cell and focus the grid for keyboard navigation
+      handleCellSelectRef.current(row, col);
       parentRef.current?.focus();
     },
   }), [parentRef]);
@@ -577,6 +587,8 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
     },
     [onSelect]
   );
+  // Store handleCellSelect in ref for use in useImperativeHandle
+  handleCellSelectRef.current = handleCellSelect;
 
   /**
    * Handles clicking a row header — selects the entire row.

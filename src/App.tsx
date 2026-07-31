@@ -182,14 +182,27 @@ function WorkbookView() {
     applyPointSelection: applyWizardPointSelection,
   } = useFormulaWizard();
 
+  // State to capture the target cell when the wizard opens (B-011 fix)
+  // This prevents the formula from being placed in the wrong cell when
+  // the user selects a range during POINT mode (which changes activeCell)
+  const [wizardTargetCell, setWizardTargetCell] = useState<{ row: number; col: number } | null>(null);
+
   // Wrapper that restores focus to grid after wizard closes
   const handleCloseWizard = useCallback(() => {
+    // Capture target cell before resetting it
+    const targetCell = wizardTargetCell;
     closeFormulaWizard();
     // Reset target cell so next wizard open captures fresh target
     setWizardTargetCell(null);
-    // Restore focus to grid after modal closes
-    setTimeout(() => gridRef.current?.focus(), 0);
-  }, [closeFormulaWizard]);
+    // Restore focus to the target cell after modal closes
+    setTimeout(() => {
+      if (targetCell) {
+        gridRef.current?.focusCell(targetCell.row, targetCell.col);
+      } else {
+        gridRef.current?.focus();
+      }
+    }, 0);
+  }, [closeFormulaWizard, wizardTargetCell]);
   const [statusMessage, setStatusMessage] = useState<string>('Ready');
   const [highlightedRanges, setHighlightedRanges] = useState<HighlightedRange[]>([]);
   const [pendingCutRange, setPendingCutRange] = useState<Selection | null>(null);
@@ -208,10 +221,6 @@ function WorkbookView() {
   // Ref to track latest activeCell (avoids stale closures in wizard apply)
   const activeCellRef = useRef(activeCell);
   activeCellRef.current = activeCell;
-  // State to capture the target cell when the wizard opens (B-011 fix)
-  // This prevents the formula from being placed in the wrong cell when
-  // the user selects a range during POINT mode (which changes activeCell)
-  const [wizardTargetCell, setWizardTargetCell] = useState<{ row: number; col: number } | null>(null);
 
   // Paste Special options
   const [pasteSkipBlanks, setPasteSkipBlanks] = useState(false);

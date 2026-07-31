@@ -4,6 +4,11 @@
 
 ---
 
+### 2026-07-31 [FEATURE] Focus returns to active cell after FormulaWizard completes
+- **Change**: After the FormulaWizard closes (formula applied or cancelled), focus now returns to the active cell instead of just the grid container.
+- **Files**: `src/components/Grid.tsx` (added `focusCell` method to GridHandle), `src/App.tsx` (use `focusCell` in `handleCloseWizard`)
+- **Tests**: 2292 pass, lint clean, type-check clean, build clean
+
 ### 2026-07-31 [BUGFIX] B-012 — False circular reference warning in FormulaWizard
 - **Symptom**: Building `=SUM(D4:D9, F4:F6)` in E4 showed false circular ref warning for D4:D8 and F4:F6.
 - **Root cause**: `targetRow`/`targetCol` used `activeCell` (changes during POINT mode). `checkCircularReference` used substring matching.
