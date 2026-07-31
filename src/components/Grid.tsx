@@ -1334,15 +1334,18 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
       let colAlign: 'auto' | 'start' | 'end' = 'auto';
 
       // Standard cell-range navigation
+      // When freeze panes is active, arrow nav is bounded by the frozen area
+      const minRow = frozenRows > 0 ? frozenRows : 0;
+      const minCol = frozenColumns > 0 ? frozenColumns : 0;
       switch (e.key) {
         case 'ArrowUp':
           if (e.ctrlKey) {
-            // Ctrl+Up: jump to first row with data in current column (or row 0)
-            row = findEdgeRow(sheet, row, col, 'up');
+            // Ctrl+Up: jump to first row with data in current column (or bounded min)
+            row = Math.max(minRow, findEdgeRow(sheet, row, col, 'up'));
             rowAlign = 'end'; // Cell at bottom edge, show context above
           } else {
-            // Regular arrow: move one cell, no scroll if cell is visible
-            row = Math.max(0, row - 1);
+            // Regular arrow: move one cell, bounded by frozen area
+            row = Math.max(minRow, row - 1);
             rowAlign = 'auto';
           }
           break;
@@ -1359,12 +1362,12 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
           break;
         case 'ArrowLeft':
           if (e.ctrlKey) {
-            // Ctrl+Left: jump to first column with data in current row (or col 0)
-            col = findEdgeCol(sheet, row, col, 'left');
+            // Ctrl+Left: jump to first column with data in current row (or bounded min)
+            col = Math.max(minCol, findEdgeCol(sheet, row, col, 'left'));
             colAlign = 'end'; // Cell at right edge, show context to the left
           } else {
-            // Regular arrow: move one cell, no scroll if cell is visible
-            col = Math.max(0, col - 1);
+            // Regular arrow: move one cell, bounded by frozen area
+            col = Math.max(minCol, col - 1);
             colAlign = 'auto';
           }
           break;

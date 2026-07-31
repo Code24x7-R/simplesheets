@@ -230,4 +230,43 @@ describe('App — Freeze Panes per Excel specification', () => {
     expect(getFooterFreezeText()).not.toContain('frozen row');
     expect(getFooterFreezeText()).not.toContain('frozen col');
   });
+
+  it('arrow navigation is bounded by frozen rows and columns', () => {
+    render(<App />);
+
+    // Select C3 (row=2, col=2) — freeze 2 rows, 2 cols
+    selectCell(2, 2);
+
+    fireEvent.click(screen.getByText('View'));
+    fireEvent.click(screen.getByText('Freeze Panes'));
+
+    // frozenRows=2, frozenColumns=2
+    expect(getFooterFreezeText()).toContain('2 frozen row(s)');
+    expect(getFooterFreezeText()).toContain('2 frozen col(s)');
+
+    // Select a cell in the scrollable area (row=4, col=4)
+    selectCell(4, 4);
+
+    // Press ArrowUp — should stop at row 2 (first scrollable row)
+    const grid = document.querySelector('.overflow-auto') as HTMLElement;
+    expect(grid).toBeTruthy();
+    fireEvent.keyDown(grid, { key: 'ArrowUp' });
+    fireEvent.keyDown(grid, { key: 'ArrowUp' });
+    fireEvent.keyDown(grid, { key: 'ArrowUp' }); // Try to go past frozen area
+
+    // After ArrowUp x3 from row=4, should be at row=2 (E3, not row=1 or row=0)
+    // Row is bounded by frozenRows=2
+    const cellRefBtn = document.querySelector('button[title*="Active cell"]') as HTMLElement;
+    expect(cellRefBtn).toBeTruthy();
+    expect(cellRefBtn.textContent).toBe('E3');
+
+    // Press ArrowLeft x3 — should stop at col 2 (C3, not col=1 or col=0)
+    // Col is bounded by frozenColumns=2
+    fireEvent.keyDown(grid, { key: 'ArrowLeft' });
+    fireEvent.keyDown(grid, { key: 'ArrowLeft' });
+    fireEvent.keyDown(grid, { key: 'ArrowLeft' });
+
+    // Should be at C3 (col=2, not col=1 or col=0)
+    expect(cellRefBtn.textContent).toBe('C3');
+  });
 });
