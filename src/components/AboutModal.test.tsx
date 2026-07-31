@@ -7,6 +7,11 @@ describe('AboutModal', () => {
     expect(screen.getByText('SimpleSheet')).toBeInTheDocument();
   });
 
+  it('displays the application version', () => {
+    render(<AboutModal isOpen={true} onClose={jest.fn()} />);
+    expect(screen.getByText('v0.1.0')).toBeInTheDocument();
+  });
+
   it('does not render when isOpen is false', () => {
     const { container } = render(<AboutModal isOpen={false} onClose={jest.fn()} />);
     expect(container.firstChild).toBeNull();
@@ -76,5 +81,11 @@ describe('AboutModal', () => {
   it('renders license section', () => {
     render(<AboutModal isOpen={true} onClose={jest.fn()} />);
     expect(screen.getByText('MIT')).toBeInTheDocument();
+  });
+
+  it('displays build info', () => {
+    render(<AboutModal isOpen={true} onClose={jest.fn()} />);
+    // Should show 'dev' when __BUILD_TIMESTAMP__ is undefined (test env)
+    expect(screen.getByText(/build dev/)).toBeInTheDocument();
   });
 });

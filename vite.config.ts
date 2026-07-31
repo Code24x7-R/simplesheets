@@ -4,9 +4,15 @@ import react from '@vitejs/plugin-react';
 // When building for GitHub Pages, serve from /<repo-name>/ subpath
 const isGithubPages = process.env.GITHUB_PAGES === 'true';
 
+// Build timestamp — injected at compile time
+const BUILD_TIMESTAMP = new Date().toISOString();
+
 export default defineConfig({
   plugins: [react()],
   base: isGithubPages ? '/simplesheets/' : '/',
+  define: {
+    __BUILD_TIMESTAMP__: JSON.stringify(BUILD_TIMESTAMP),
+  },
   server: {
     port: 3000,
     open: false,

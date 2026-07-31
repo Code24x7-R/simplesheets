@@ -359,6 +359,42 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
   const virtualRows = rowVirtualizer.getVirtualItems();
   const virtualColumns = columnVirtualizer.getVirtualItems();
 
+  // ─── Ensure frozen rows/columns are always rendered ─────────────────
+  // The virtualizer only returns items visible in the viewport (plus overscan).
+  // Frozen rows/columns must ALWAYS be rendered so they remain visible when
+  // scrolling. Without this, frozen cells disappear when scrolled out of view.
+  const renderColumns = (() => {
+    if (frozenColumns <= 0) return virtualColumns;
+    const colMap = new Map(virtualColumns.map((vc) => [vc.index, vc]));
+    for (let c = 0; c < frozenColumns; c++) {
+      if (!colMap.has(c)) {
+        // Calculate the start position for this frozen column
+        let start = 0;
+        for (let i = 0; i < c; i++) {
+          start += columnWidths[i] ?? defaultColWidth;
+        }
+        colMap.set(c, { index: c, start, size: columnWidths[c] ?? defaultColWidth, end: start + (columnWidths[c] ?? defaultColWidth), key: `frozen-col-${c}`, lane: 0 });
+      }
+    }
+    return Array.from(colMap.values()).sort((a, b) => a.index - b.index);
+  })();
+
+  const renderRows = (() => {
+    if (frozenRows <= 0) return virtualRows;
+    const rowMap = new Map(virtualRows.map((vr) => [vr.index, vr]));
+    for (let r = 0; r < frozenRows; r++) {
+      if (!rowMap.has(r)) {
+        // Calculate the start position for this frozen row
+        let start = 0;
+        for (let i = 0; i < r; i++) {
+          start += rowHeights[i] ?? defaultRowHeight;
+        }
+        rowMap.set(r, { index: r, start, size: rowHeights[r] ?? defaultRowHeight, end: start + (rowHeights[r] ?? defaultRowHeight), key: `frozen-row-${r}`, lane: 0 });
+      }
+    }
+    return Array.from(rowMap.values()).sort((a, b) => a.index - b.index);
+  })();
+
   // ─── Re-measure virtualizers when dimensions change ──────────────────
   // The virtualizer caches measurements keyed on count/gap/etc., but NOT
   // on estimateSize. When columnWidths or rowHeights change (resize, paste),
@@ -1458,6 +1494,16 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
   const totalWidth = columnVirtualizer.getTotalSize();
   const totalHeight = rowVirtualizer.getTotalSize();
 
+  // Calculate total height of frozen rows (for spacer offset)
+  let frozenRowHeight = 0;
+  for (let r = 0; r < frozenRows; r++) {
+    frozenRowHeight += rowHeights[r] ?? defaultRowHeight;
+  }
+
+  // Separate frozen rows from scrollable rows
+  const frozenRowItems = renderRows.filter((vr) => vr.index < frozenRows);
+  const scrollableRowItems = renderRows.filter((vr) => vr.index >= frozenRows);
+
   return (
     <div
       ref={parentRef}
@@ -1477,7 +1523,7 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
           style={{ width: ROW_WIDTH, minWidth: ROW_WIDTH, height: defaultRowHeight }}
         />
         {/* Column headers */}
-        {virtualColumns.map((virtualCol) => {
+        {renderColumns.map((virtualCol) => {
           const col = virtualCol.index;
           const colSelected = isColHeaderSelected(col);
           const isHovered = hoveredHeader?.type === 'col' && hoveredHeader.index === col;
@@ -1539,9 +1585,144 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
         })}
       </div>
 
-      {/* Virtualized rows */}
+      {/* Frozen rows — sticky at top, below header */}
+      {frozenRowItems.length > 0 && (
+        <div
+          data-frozen-rows
+          style={{
+            position: 'sticky',
+            top: defaultRowHeight,
+            zIndex: 15,
+            width: totalWidth + ROW_WIDTH,
+            height: frozenRowHeight,
+            backgroundColor: '#f0f4f8',
+          }}
+        >
+          {frozenRowItems.map((virtualRow) => {
+            const actualRowIndex = visibleRowIndices && virtualRow.index > filterState!.headerRow
+              ? getActualRowIndex(virtualRow.index - filterState!.headerRow - 1)
+              : virtualRow.index;
+            let topOffset = 0;
+            for (let r = 0; r < virtualRow.index; r++) {
+              topOffset += rowHeights[r] ?? defaultRowHeight;
+            }
+            return (
+              <div
+                key={`frozen-row-${virtualRow.index}`}
+                data-row-container={actualRowIndex}
+                className="flex"
+                style={{
+                  position: 'absolute',
+                  top: topOffset,
+                  height: getRowHeight(actualRowIndex),
+                  width: totalWidth + ROW_WIDTH,
+                }}
+              >
+                {/* Row number (sticky) */}
+                <div
+                  data-row-header={actualRowIndex}
+                  className={`sticky left-0 z-10 grid-cell-header border-r border-b border-gray-300 cursor-pointer select-none ${
+                    isRowHeaderSelected(actualRowIndex)
+                      ? 'bg-blue-600 text-white'
+                      : 'hover:bg-gray-200'
+                  }`}
+                  style={{
+                    width: ROW_WIDTH,
+                    minWidth: ROW_WIDTH,
+                    height: getRowHeight(actualRowIndex),
+                    top: defaultRowHeight + topOffset,
+                    zIndex: 20,
+                  }}
+                  onMouseDown={(e) => {
+                    if ((e.target as HTMLElement).closest('.resize-handle')) return;
+                    handleRowHeaderClick(actualRowIndex, e.shiftKey);
+                  }}
+                  onContextMenu={(e) => handleHeaderContextMenu('row', actualRowIndex, e)}
+                >
+                  {actualRowIndex + 1}
+                </div>
+                {/* Frozen row cells */}
+                {renderColumns.map((virtualCol) => {
+                  const row = actualRowIndex;
+                  const col = virtualCol.index;
+                  const key = cellKey(row, col);
+                  const cell = cells[key];
+                  const isSelected = isCellSelected(row, col);
+                  const highlightIdx = getCellHighlight(row, col);
+                  const cellFrozen = true;
+                  const cellEditing = isEditingCell(row, col);
+                  // Cells at intersection of frozen row AND frozen column stick horizontally.
+                  // Cells in frozen rows but non-frozen columns scroll horizontally with content.
+                  const isIntersectionFrozen = isColFrozen(col);
+                  const cellStyle: React.CSSProperties = {
+                    width: getColWidth(col),
+                    minWidth: getColWidth(col),
+                    height: getRowHeight(row),
+                    left: ROW_WIDTH + virtualCol.start,
+                    position: isIntersectionFrozen ? 'sticky' : 'absolute',
+                    zIndex: isIntersectionFrozen ? 25 : 15,
+                    backgroundColor: '#f0f4f8',
+                  };
+                  if (cell?.style) {
+                    if (cell.style.fontWeight) cellStyle.fontWeight = cell.style.fontWeight;
+                    if (cell.style.fontStyle) cellStyle.fontStyle = cell.style.fontStyle;
+                    if (cell.style.textDecoration) cellStyle.textDecoration = cell.style.textDecoration;
+                    if (cell.style.color) cellStyle.color = cell.style.color;
+                    if (cell.style.backgroundColor) cellStyle.backgroundColor = cell.style.backgroundColor;
+                    if (cell.style.textAlign) cellStyle.textAlign = cell.style.textAlign;
+                  }
+                  if (highlightIdx !== null) {
+                    cellStyle.backgroundColor = HIGHLIGHT_COLORS[highlightIdx % HIGHLIGHT_COLORS.length];
+                  }
+                  return (
+                    <div
+                      key={`cell-${key}`}
+                      data-col={col}
+                      className={`grid-cell ${cellFrozen ? 'grid-cell-frozen' : 'absolute'} ${isSelected ? 'grid-cell-selected' : ''}`}
+                      style={cellStyle}
+                      onMouseDown={(e) => handleCellMouseDown(row, col, e.shiftKey)}
+                      onDoubleClick={() => onStartEdit?.(row, col)}
+                    >
+                      {cellEditing ? (
+                        <input
+                          ref={editInputRef}
+                          autoFocus
+                          className="w-full h-full outline-none bg-white border border-blue-500 px-1 font-mono text-sm"
+                          value={editBuffer}
+                          onChange={(e) => {
+                            const newPos = e.target.selectionStart ?? e.target.value.length;
+                            onRawChange?.(e.target.value, newPos);
+                          }}
+                        />
+                      ) : (
+                        <span
+                          className={`flex items-center px-1 ${cell?.style?.whiteSpace === 'normal' ? 'whitespace-normal' : cell?.style?.whiteSpace === 'pre' ? 'whitespace-pre' : 'truncate'}`}
+                          style={{
+                            fontStyle: cell?.style?.fontStyle,
+                            textDecoration: cell?.style?.textDecoration,
+                            color: cell?.style?.color,
+                            fontWeight: cell?.style?.fontWeight,
+                            backgroundColor: cell?.style?.backgroundColor,
+                            textAlign: cell?.style?.textAlign
+                              ? cell.style.textAlign
+                              : 'left',
+                          }}
+                        >
+                          {getDisplayValue(cell)}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Scrollable rows — frozen rows container above already occupies space in normal flow */}
       <div data-spacer style={{ height: totalHeight, width: totalWidth + ROW_WIDTH, position: 'relative' }}>
-        {virtualRows.map((virtualRow) => {
+        {scrollableRowItems.map((virtualRow) => {
           // Map display row index to actual row index (when filter is active)
           const actualRowIndex = visibleRowIndices && virtualRow.index > filterState!.headerRow
             ? getActualRowIndex(virtualRow.index - filterState!.headerRow - 1)
@@ -1552,7 +1733,7 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
             data-row-container={actualRowIndex}
             className="flex absolute"
             style={{
-              top: virtualRow.start,
+              top: virtualRow.start - frozenRowHeight,
               height: getRowHeight(actualRowIndex),
               width: totalWidth + ROW_WIDTH,
             }}
@@ -1596,7 +1777,7 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
             </div>
 
             {/* Virtualized columns */}
-            {virtualColumns.map((virtualCol) => {
+            {renderColumns.map((virtualCol) => {
               const row = actualRowIndex;
               const col = virtualCol.index;
               const key = cellKey(row, col);

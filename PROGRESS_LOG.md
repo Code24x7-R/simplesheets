@@ -1,8 +1,40 @@
 ## Progress Log
 
-### 2026-07-27 (Stage 3: Coverage Recovery — Complex Files)
+> **Convention:** All entries are tagged by track: `[FEATURE]` for new features/refactoring (planned in `PLAN.md`), `[BUGFIX]` for bug fixes (tracked in `BUGFIX.md`). Entries without a tag predate this convention.
 
-**Stage 3a-3b: App.tsx integration tests (+27 tests)**
+---
+
+### 2026-07-30 [BUGFIX] Save/Open/Export Menu Stub Wiring
+- Fixed `handleSaveMenu` (was stub — now downloads JSON via `downloadJson(workbook)`)
+- Fixed `handleLoadMenu` (was stub — now dispatches `simplesheets:open` event)
+- Wired `ImportExportBridge` to handle all 4 export events (Excel/CSV/JSON/PDF)
+- All 4 ExportButton components converted to `forwardRef` to accept refs from bridge
+- Updated 5 test files to reflect new behavior
+- **2076 tests pass**, lint clean, type-check clean, build clean
+
+### 2026-07-30 [BUGFIX] Ctrl+Shift+F FSM Freeze
+- Grid's Ctrl+ shortcut exclusion switch missing `'f'`/`'F'` and `'l'`/`'L'`
+- Fixed by adding to switch in Grid.tsx ~line 1027
+- **1999 tests pass**
+
+### 2026-07-30 [BUGFIX] Autocomplete State Duplication
+- FSM now owns `autoComplete` state; FormulaBar is pure view
+- Removed `formulaBarValue` duplication from App.tsx
+- Fixed pre-existing POINT-mode bug
+- **1543 tests pass**
+
+### 2026-07-30 [BUGFIX] POINT Mode Multi-Parameter
+- Continuation operators (comma, +, -, *, /) re-enter POINT mode
+- Regular arrow = single-cell, shift+arrow = range
+- **1500 tests pass**
+
+### 2026-07-30 [BUGFIX] FormulaBar Blur Double-Commit
+- Added guard in FormulaBar's `handleBlur` to skip commit when `session.state === 'SELECT'`
+- **1894 tests pass**
+
+---
+
+### 2026-07-27 (Stage 3: Coverage Recovery — Complex Files)
 - Sheet operations (add, switch, rename, copy, delete sheets)
 - Insert/delete row and column handlers
 - Freeze/unfreeze panes

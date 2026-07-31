@@ -265,6 +265,10 @@ describe('App', () => {
 
   it('shows View menu freeze status after freeze', () => {
     render(<App />);
+    // Select a non-A1 cell so freeze has a reference point
+    const allCells = Array.from(document.querySelectorAll('.grid-cell')) as HTMLElement[];
+    const c3 = allCells[2 * 5 + 2]; // row=2, col=2 (C3)
+    if (c3) fireEvent.mouseDown(c3);
     // Open View menu and click Freeze Panes
     fireEvent.click(screen.getByText('View'));
     fireEvent.click(screen.getByText('Freeze Panes'));

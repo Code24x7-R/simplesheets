@@ -1,3 +1,7 @@
+# Scratchpad
+
+> **Bug tracking has moved to `BUGFIX.md`.** This file is now for daily task checklists only (completed features, session logs, running context). Bug symptoms, root causes, and fix details go in `BUGFIX.md`.
+
 <!-- 2026-07-28 (Phase 18: Sort & Filter — COMPLETE ✅) -->
 - [x] Sort utility: src/utils/sheetSort.ts — sortRange, sortEntireSheet, findUsedRange, formula ref adjustment
 - [x] Sort tests: 21 tests covering single/multi-column, header handling, row integrity, formula adjustment, edge cases

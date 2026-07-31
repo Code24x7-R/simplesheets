@@ -137,8 +137,17 @@ describe('App - Insert/Delete Row/Column', () => {
 });
 
 describe('App - Freeze Panes', () => {
+  // Helper: select a cell at (row, col) so freeze has a reference point
+  function selectCell(row: number, col: number) {
+    const allCells = Array.from(document.querySelectorAll('.grid-cell')) as HTMLElement[];
+    const cell = allCells[row * 5 + col];
+    if (cell) fireEvent.mouseDown(cell);
+  }
+
   it('freezes panes via View menu', () => {
     render(<App />);
+    // Select C3 (row=2, col=2) so freeze has a non-trivial reference
+    selectCell(2, 2);
     fireEvent.click(screen.getByText('View'));
     const freezeItem = screen.getByText('Freeze Panes').closest('.menu-item') as HTMLElement;
     fireEvent.click(freezeItem);
@@ -149,6 +158,8 @@ describe('App - Freeze Panes', () => {
 
   it('unfreezes panes via View menu', () => {
     render(<App />);
+    // Select C3 so freeze actually does something
+    selectCell(2, 2);
     // First freeze
     fireEvent.click(screen.getByText('View'));
     fireEvent.click(screen.getByText('Freeze Panes').closest('.menu-item') as HTMLElement);
@@ -162,6 +173,8 @@ describe('App - Freeze Panes', () => {
 
   it('freezing panes applies frozen class to grid cells', () => {
     render(<App />);
+    // Select C3 so freeze freezes 2 rows + 2 cols
+    selectCell(2, 2);
     // Freeze panes via View menu
     fireEvent.click(screen.getByText('View'));
     fireEvent.click(screen.getByText('Freeze Panes').closest('.menu-item') as HTMLElement);
@@ -174,6 +187,8 @@ describe('App - Freeze Panes', () => {
 
   it('unfreezing panes removes frozen class from grid cells', () => {
     render(<App />);
+    // Select C3 so freeze actually does something
+    selectCell(2, 2);
     // Freeze then unfreeze
     fireEvent.click(screen.getByText('View'));
     fireEvent.click(screen.getByText('Freeze Panes').closest('.menu-item') as HTMLElement);

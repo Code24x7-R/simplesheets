@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, fireEvent, act, within } from '@testing-library/react';
 import App from './App';
 
 // Mock the virtualizer
@@ -215,5 +215,84 @@ describe('App — Paste with Styles (Integration)', () => {
 
     // Verify paste completed — style preservation is verified by unit tests
     expect(screen.getByText(/Pasted/i)).toBeInTheDocument();
+  });
+
+  it('paste special → formatting preserves destination cell content', () => {
+    render(<App />);
+
+    // Set value on A1
+    editCell(0, 0, 'Source');
+    // Re-select A1 (editCell pressed Enter, selection moved to A2)
+    fireEvent.mouseDown(getCell(0, 0)!);
+    // Make A1 bold via Format menu
+    fireEvent.click(screen.getByText('Format'));
+    fireEvent.click(screen.getByText('Bold'));
+
+    // Copy A1
+    act(() => {
+      window.dispatchEvent(new CustomEvent('simplesheets:copy', {
+        detail: { startRow: 0, startCol: 0, endRow: 0, endCol: 0, selectionType: 'cell' },
+      }));
+    });
+
+    // Set a different value on B1 (the destination)
+    editCell(0, 1, 'Target');
+
+    // Select B1 as the paste destination
+    fireEvent.mouseDown(getCell(0, 1)!);
+
+    // Open Edit menu → Paste Special
+    fireEvent.click(screen.getByText('Edit'));
+    fireEvent.click(screen.getByText('Paste Special…'));
+
+    // Choose "Formatting" radio option
+    const formattingRadio = screen.getByLabelText('Formatting') as HTMLInputElement;
+    fireEvent.click(formattingRadio);
+
+    // Click the modal's Paste button (scope to dialog)
+    const modal = screen.getByRole('dialog');
+    fireEvent.click(within(modal).getByRole('button', { name: 'Paste' }));
+
+    // BUG: destination cell content should be preserved
+    expect(getCell(0, 1)?.textContent).toBe('Target');
+  });
+
+  it('paste special → formatting applies source style to destination', () => {
+    render(<App />);
+
+    // Set value on A1
+    editCell(0, 0, 'Source');
+    // Re-select A1 (editCell pressed Enter, selection moved to A2)
+    fireEvent.mouseDown(getCell(0, 0)!);
+    // Make A1 bold via Format menu
+    fireEvent.click(screen.getByText('Format'));
+    fireEvent.click(screen.getByText('Bold'));
+
+    // Copy A1
+    act(() => {
+      window.dispatchEvent(new CustomEvent('simplesheets:copy', {
+        detail: { startRow: 0, startCol: 0, endRow: 0, endCol: 0, selectionType: 'cell' },
+      }));
+    });
+
+    // Set a different value on B1 (the destination)
+    editCell(0, 1, 'Target');
+
+    // Select B1
+    fireEvent.mouseDown(getCell(0, 1)!);
+
+    // Open Edit menu → Paste Special → Formatting
+    fireEvent.click(screen.getByText('Edit'));
+    fireEvent.click(screen.getByText('Paste Special…'));
+    fireEvent.click(screen.getByLabelText('Formatting'));
+
+    // Click the modal's Paste button (scope to dialog)
+    const modal = screen.getByRole('dialog');
+    fireEvent.click(within(modal).getByRole('button', { name: 'Paste' }));
+
+    // Content preserved AND style applied
+    const destCell = getCell(0, 1)!;
+    expect(destCell.textContent).toBe('Target');
+    expect(destCell.style.fontWeight).toBe('bold');
   });
 });

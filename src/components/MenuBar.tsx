@@ -33,6 +33,8 @@ interface MenuBarProps {
   onFreeze: () => void;
   onUnfreeze: () => void;
   hasFrozenPanes: boolean;
+  // Called after any menu action to restore focus to the grid
+  onAfterMenuAction?: () => void;
   // Insert menu
   onInsertRowAbove: () => void;
   onInsertRowBelow: () => void;
@@ -152,6 +154,8 @@ export function MenuBar(props: MenuBarProps) {
         'help-shortcuts': props.onShortcuts,
       };
       actions[id]?.();
+      // Restore focus to grid after menu action so keyboard navigation works
+      props.onAfterMenuAction?.();
     },
     [props]
   );

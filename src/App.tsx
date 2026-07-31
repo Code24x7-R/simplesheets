@@ -669,9 +669,20 @@ function WorkbookView() {
 
 
   const handleFreeze = useCallback(() => {
-    freeze(1, 1);
-    setStatusMessage('Panes frozen (1 row, 1 column)');
-  }, [freeze]);
+    // Excel behavior: freeze all rows above and all columns to the left
+    // of the active cell (the selection anchor). E.g. active cell C3
+    // (row=2, col=2) freezes rows 0-1 and columns 0-1.
+    // Use gridSelection.anchorRow/anchorCol which correctly tracks the
+    // active cell even when a range is selected.
+    const anchorRow = gridSelection?.anchorRow ?? activeCell?.row ?? 0;
+    const anchorCol = gridSelection?.anchorCol ?? activeCell?.col ?? 0;
+    freeze(anchorCol, anchorRow);
+    if (anchorRow === 0 && anchorCol === 0) {
+      setStatusMessage('No panes frozen — select a cell below row 1 or right of column A');
+    } else {
+      setStatusMessage(`Panes frozen (${anchorRow} row${anchorRow === 1 ? '' : 's'}, ${anchorCol} col${anchorCol === 1 ? '' : 's'})`);
+    }
+  }, [freeze, gridSelection, activeCell]);
 
   const handleUnfreeze = useCallback(() => {
     unfreeze();
@@ -1055,12 +1066,31 @@ function WorkbookView() {
             }
           }
 
-          const destCell: Cell = {
-            rawValue: newValue,
-            style: cell?.style,
-          };
-          newCells[destKey] = destCell;
-          cellsUpdated++;
+          // Formatting-only paste: preserve destination cell content,
+          // apply only the style from the source
+          if (pasteMode === 'formatting') {
+            const existingDest = newCells[destKey];
+            const mergedStyle = {
+              ...existingDest?.style,
+              ...cell?.style,
+            };
+            const destCell: Cell = {
+              rawValue: existingDest?.rawValue ?? '',
+              style: Object.keys(mergedStyle).length > 0 ? mergedStyle : undefined,
+            };
+            if (existingDest?.computedValue !== undefined) {
+              destCell.computedValue = existingDest.computedValue;
+            }
+            newCells[destKey] = destCell;
+            cellsUpdated++;
+          } else {
+            const destCell: Cell = {
+              rawValue: newValue,
+              style: cell?.style,
+            };
+            newCells[destKey] = destCell;
+            cellsUpdated++;
+          }
         }
       }
 
@@ -1766,6 +1796,7 @@ function WorkbookView() {
           onAbout={handleAbout}
           onShortcuts={handleShortcuts}
           onSearchReplace={handleSearchReplace}
+          onAfterMenuAction={() => gridRef.current?.focus()}
         />
         <span className="text-sm text-gray-500">{workbook.title}</span>
       </header>

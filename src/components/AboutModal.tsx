@@ -1,6 +1,21 @@
+import packageJson from '../../package.json';
+
 interface AboutModalProps {
   isOpen: boolean;
   onClose: () => void;
+}
+
+const APP_VERSION = packageJson.version;
+
+function getBuildInfo(): { date: string; time: string; raw: string } {
+  const ts = typeof __BUILD_TIMESTAMP__ !== 'undefined' ? __BUILD_TIMESTAMP__ : '';
+  if (!ts) return { date: 'dev', time: '', raw: '' };
+  const d = new Date(ts);
+  return {
+    date: d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }),
+    time: d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+    raw: ts,
+  };
 }
 
 const ABOUT_CONTENT = `# SimpleSheet
@@ -215,6 +230,7 @@ function renderInline(text: string): React.ReactNode {
  */
 export function AboutModal({ isOpen, onClose }: AboutModalProps) {
   if (!isOpen) return null;
+  const build = getBuildInfo();
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
@@ -224,7 +240,11 @@ export function AboutModal({ isOpen, onClose }: AboutModalProps) {
       >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-bold">About SimpleSheet</h2>
+          <div className="flex items-center gap-3">
+            <h2 className="text-lg font-bold">About SimpleSheet</h2>
+            <span className="text-xs font-mono text-gray-400 bg-gray-100 px-2 py-0.5 rounded">v{APP_VERSION}</span>
+            <span className="text-xs text-gray-400" title={build.raw}>build {build.date}{build.time ? ` ${build.time}` : ''}</span>
+          </div>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600 text-xl"

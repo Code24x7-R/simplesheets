@@ -88,6 +88,14 @@ describe('App - Menu Handlers', () => {
 
   it('handles View > Freeze Panes', () => {
     render(<App />);
+    // Select a cell below/right of A1 so something actually freezes
+    const cell = document.querySelector('.grid-cell') as HTMLElement | null;
+    if (cell) {
+      // Click cell at row=2, col=2 (C3) to freeze 2 rows + 2 cols
+      const allCells = Array.from(document.querySelectorAll('.grid-cell')) as HTMLElement[];
+      const c3 = allCells[2 * 5 + 2]; // row 2, col 2 in a 5-col grid
+      if (c3) fireEvent.mouseDown(c3);
+    }
     fireEvent.click(screen.getByText('View'));
     fireEvent.click(screen.getByText('Freeze Panes'));
     const statusBar = screen.getByTestId('status-message');
@@ -96,6 +104,10 @@ describe('App - Menu Handlers', () => {
 
   it('handles View > Unfreeze Panes after freezing', () => {
     render(<App />);
+    // First select a non-A1 cell so freeze actually does something
+    const allCells = Array.from(document.querySelectorAll('.grid-cell')) as HTMLElement[];
+    const c3 = allCells[2 * 5 + 2];
+    if (c3) fireEvent.mouseDown(c3);
     // First freeze
     fireEvent.click(screen.getByText('View'));
     fireEvent.click(screen.getByText('Freeze Panes'));
