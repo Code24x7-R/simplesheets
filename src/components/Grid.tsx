@@ -1911,6 +1911,34 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
                           e.currentTarget.select();
                           return;
                         }
+                        // ── Clear selection on Arrow keys (no Shift) ────────
+                        // When user has selection and presses Arrow without Shift,
+                        // collapse the selection to the caret position before FSM
+                        // processes the key (matches FormulaBar behavior)
+                        const input = editInputRef.current;
+                        const hasSelection = input ? input.selectionStart !== input.selectionEnd : false;
+                        if (!e.shiftKey && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key) && hasSelection) {
+                          const caretPos = e.key === 'ArrowLeft' ? (input?.selectionStart ?? 0) : (input?.selectionEnd ?? 0);
+                          input?.setSelectionRange(caretPos, caretPos);
+                        }
+                        // ── Always forward ) to FSM (commits POINT ref) ────
+                        // Must be handled before the selection check because ) is
+                        // a printable char that would otherwise be inserted natively
+                        // when text is selected
+                        if (e.key === ')') {
+                          e.preventDefault();
+                          onRawKeyDown?.(e);
+                          return;
+                        }
+                        // ── Handle selection-based keys natively ────────────
+                        // If text is selected, let the native input handle
+                        // Backspace/Delete/printable keys. The onChange handler
+                        // will sync the result to the FSM.
+                        const isSelectionKey = e.key === 'Backspace' || e.key === 'Delete' || (e.key.length === 1 && !e.ctrlKey && !e.metaKey);
+                        if (hasSelection && isSelectionKey) {
+                          // Let native input handle it - onChange will sync to FSM
+                          return;
+                        }
                         // ── Forward all other keys to FSM ───────────────────
                         // The FSM decides what to do based on its current state:
                         // - ENTER/EDIT: character insertion, caret movement, commit, cancel

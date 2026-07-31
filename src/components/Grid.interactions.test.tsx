@@ -582,3 +582,103 @@ describe('Grid - Marching Ants Clipboard', () => {
     expect(dashedCount).toBeGreaterThan(0);
   });
 });
+
+describe('Grid - Selection Replacement in Cell Editor', () => {
+  it('replaces selected text when typing a printable character', () => {
+    const onCellChange = jest.fn();
+    render(
+      <GridWithEditing
+        sheet={createTestSheet({ cells: { '0:0': { rawValue: '=AVERAGE(B6:D6)' } } })}
+        onCellChange={onCellChange}
+        onSelect={jest.fn()}
+      />,
+    );
+
+    // Double-click to start editing cell A1
+    const cell = document.querySelector('.grid-cell') as HTMLElement;
+    fireEvent.doubleClick(cell);
+
+    const input = document.querySelector('.grid-cell input') as HTMLInputElement;
+    expect(input).toBeInTheDocument();
+
+    // Set the buffer to the formula via change
+    fireEvent.change(input, { target: { value: '=AVERAGE(B6:D6)' } });
+
+    // Select "AVERAGE" (positions 1-8)
+    input.setSelectionRange(1, 8);
+
+    // Type "M" — should replace selection, not append
+    // The keyDown should NOT preventDefault (lets native input handle it)
+    const keyDownEvent = new KeyboardEvent('keydown', {
+      key: 'M',
+      bubbles: true,
+      cancelable: true,
+    });
+    const preventDefaultSpy = jest.spyOn(keyDownEvent, 'preventDefault');
+    input.dispatchEvent(keyDownEvent);
+
+    // The handler should NOT have called preventDefault for a selection key
+    // (it returns early to let native input handle replacement)
+    expect(preventDefaultSpy).not.toHaveBeenCalled();
+  });
+
+  it('does not preventDefault for Backspace when text is selected', () => {
+    render(
+      <GridWithEditing
+        sheet={createTestSheet({ cells: { '0:0': { rawValue: '=AVERAGE(B6:D6)' } } })}
+        onCellChange={jest.fn()}
+        onSelect={jest.fn()}
+      />,
+    );
+
+    const cell = document.querySelector('.grid-cell') as HTMLElement;
+    fireEvent.doubleClick(cell);
+
+    const input = document.querySelector('.grid-cell input') as HTMLInputElement;
+    fireEvent.change(input, { target: { value: '=AVERAGE(B6:D6)' } });
+
+    // Select "AVERAGE"
+    input.setSelectionRange(1, 8);
+
+    // Press Backspace — should let native input handle it
+    const keyDownEvent = new KeyboardEvent('keydown', {
+      key: 'Backspace',
+      bubbles: true,
+      cancelable: true,
+    });
+    const preventDefaultSpy = jest.spyOn(keyDownEvent, 'preventDefault');
+    input.dispatchEvent(keyDownEvent);
+
+    expect(preventDefaultSpy).not.toHaveBeenCalled();
+  });
+
+  it('still forwards non-selection keys to FSM (e.g. Arrow without selection)', () => {
+    render(
+      <GridWithEditing
+        sheet={createTestSheet({ cells: { '0:0': { rawValue: '=AVERAGE(B6:D6)' } } })}
+        onCellChange={jest.fn()}
+        onSelect={jest.fn()}
+      />,
+    );
+
+    const cell = document.querySelector('.grid-cell') as HTMLElement;
+    fireEvent.doubleClick(cell);
+
+    const input = document.querySelector('.grid-cell input') as HTMLInputElement;
+    fireEvent.change(input, { target: { value: '=AVERAGE(B6:D6)' } });
+
+    // No selection — cursor at end
+    input.setSelectionRange(16, 16);
+
+    // Press ArrowLeft — should be forwarded to FSM (preventDefault called)
+    const keyDownEvent = new KeyboardEvent('keydown', {
+      key: 'ArrowLeft',
+      bubbles: true,
+      cancelable: true,
+    });
+    const preventDefaultSpy = jest.spyOn(keyDownEvent, 'preventDefault');
+    input.dispatchEvent(keyDownEvent);
+
+    expect(preventDefaultSpy).toHaveBeenCalled();
+  });
+});

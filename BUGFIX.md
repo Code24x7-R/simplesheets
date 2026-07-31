@@ -60,6 +60,14 @@ This file tracks bugs in **existing** code, functions, and UI elements. New feat
 
 <!-- Bugs resolved in this session or recent past. Newest first. -->
 
+### 2026-07-31: B-006 — Grid Cell Editor Selection Replacement ✅ VERIFIED
+- **Symptom**: Double-clicking a formula token (e.g., `AVERAGE` in `=AVERAGE(B6:D6)`) to select it in the Grid cell editor, then typing a replacement character (e.g., `M`), appended the character at the end (`=AVERAGE(B6:D6)M`) instead of replacing the selection (`=M(B6:D6)`). The FormulaBar worked correctly but the in-cell editor did not.
+- **Root cause**: Grid's `onKeyDown` handler called `e.preventDefault()` and forwarded ALL keys to the FSM via `onRawKeyDown`. The FSM's `handleKeyDown` in EDIT state appends printable characters to the END of the buffer (`s.buffer + key`), ignoring the native selection. The FormulaBar already had selection-detection logic to let native input handle replacement, but the Grid did not.
+- **Fix**: Added selection-detection logic to Grid's `onKeyDown` (matching FormulaBar behavior): (1) detect `hasSelection` via `selectionStart !== selectionEnd`, (2) collapse selection on Arrow keys without Shift before FSM processes, (3) always forward `)` to FSM (commits POINT reference), (4) for selection keys (printable/Backspace/Delete) with active selection, return early without `preventDefault` — letting native input handle replacement. The `onChange` handler syncs the result to the FSM.
+- **Files**: `src/components/Grid.tsx` (onKeyDown handler in cell editor input), `src/components/Grid.interactions.test.tsx` (3 new tests)
+- **Tests**: 2260 pass (was 2257)
+- **Verification**: Verified in real browser (Chrome + puppeteer CDP) — double-click selection and Shift+Arrow selection both correctly replace selected text when typing.
+
 ### 2026-07-30: B-00N — Freeze Panes Not Following Excel Specification ✅ VERIFIED
 - **Symptom**: Clicking View → Freeze Panes always froze exactly 1 row and 1 column regardless of which cell was selected. When scrolling right past content, frozen cells disappeared and/or stuck horizontally (not scrolling with content). Grid lost focus after enabling freeze panes. Navigation down did not keep frozen rows visible.
 - **Root causes**:
