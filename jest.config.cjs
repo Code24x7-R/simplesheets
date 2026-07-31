@@ -5,6 +5,12 @@ module.exports = {
   roots: ['<rootDir>/src'],
   testMatch: ['**/*.test.ts', '**/*.test.tsx'],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
+  transform: {
+    '^.+\\.(ts|tsx|js|jsx)$': 'ts-jest',
+  },
+  transformIgnorePatterns: [
+    'node_modules/(?!(jspdf|fflate|fast-png|@babel/runtime)/)',
+  ],
   collectCoverageFrom: [
     'src/**/*.{ts,tsx}',
     '!src/**/*.test.{ts,tsx}',
