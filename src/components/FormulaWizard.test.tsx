@@ -117,13 +117,18 @@ describe('FormulaWizard', () => {
   it('calls cancelPointSelection when cancel is clicked in POINT mode', () => {
     const cancelPointSelection = jest.fn();
     render(<FormulaWizard {...defaultProps} wizard={createWizardState({ state: 'POINT_SELECTION' })} cancelPointSelection={cancelPointSelection} />);
-    // In POINT mode, the indicator has a "Cancel" link (not the button)
-    const pointModeText = screen.getByText(/POINT mode:/);
-    const cancelLink = pointModeText.querySelector('button') || pointModeText.nextElementSibling;
-    if (cancelLink) {
-      fireEvent.click(cancelLink);
-    }
+    // In POINT mode, the indicator has Accept and Cancel buttons
+    const cancelButton = screen.getByRole('button', { name: 'Cancel' });
+    fireEvent.click(cancelButton);
     expect(cancelPointSelection).toHaveBeenCalled();
+  });
+
+  it('calls onAcceptPointSelection when Accept is clicked in POINT mode', () => {
+    const onAcceptPointSelection = jest.fn();
+    render(<FormulaWizard {...defaultProps} wizard={createWizardState({ state: 'POINT_SELECTION' })} onAcceptPointSelection={onAcceptPointSelection} />);
+    const acceptButton = screen.getByRole('button', { name: 'Accept' });
+    fireEvent.click(acceptButton);
+    expect(onAcceptPointSelection).toHaveBeenCalled();
   });
 
   it('calls onApply when Apply to Cell is clicked', () => {

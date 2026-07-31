@@ -2133,6 +2133,10 @@ function WorkbookView() {
           setWizardTargetCell(activeCell ?? null);
           openFormulaWizard(functionName, targetCellRef);
         }}
+        onAcceptPointSelection={() => {
+          // Accept the current point selection (for touch devices)
+          gridRef.current?.acceptPointSelection();
+        }}
         targetRow={wizardTargetCell?.row}
         targetCol={wizardTargetCell?.col}
       />

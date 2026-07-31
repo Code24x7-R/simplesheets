@@ -4,6 +4,12 @@
 
 ---
 
+### 2026-07-31 [FEATURE] iOS touch support for FormulaWizard range picker
+- **Change**: Added Accept button to POINT mode indicator for touch devices (iOS/Android) that can't press Enter. Added `acceptPointSelection` method to GridHandle.
+- **Files**: `src/components/FormulaWizard.tsx` (Accept button, `onAcceptPointSelection` prop), `src/components/Grid.tsx` (added `acceptPointSelection` and `getSelection` to GridHandle), `src/App.tsx` (pass `onAcceptPointSelection` callback), `src/components/FormulaWizard.test.tsx` (new test for Accept button)
+- **Tests**: 2293 pass, lint clean, type-check clean, build clean
+- **iOS issues identified**: (1) No Accept button for touch users - FIXED. (2) Grid uses `onMouseDown` which works on iOS but may have 300ms delay. (3) Range picker button touch target is small (10px font). (4) No touch-and-drag range selection on grid.
+
 ### 2026-07-31 [FEATURE] Focus returns to active cell after FormulaWizard completes
 - **Change**: After the FormulaWizard closes (formula applied or cancelled), focus now returns to the active cell instead of just the grid container.
 - **Files**: `src/components/Grid.tsx` (added `focusCell` method to GridHandle), `src/App.tsx` (use `focusCell` in `handleCloseWizard`)

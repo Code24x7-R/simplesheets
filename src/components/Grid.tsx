@@ -138,6 +138,8 @@ const ROW_WIDTH = 50; // Width of row number column
 export interface GridHandle {
   focus: () => void;
   focusCell: (row: number, col: number) => void;
+  getSelection: () => Selection | null;
+  acceptPointSelection: () => void;
 }
 
 /**
@@ -160,7 +162,10 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
   // (handleCellSelect is defined later in the component)
   const handleCellSelectRef = useRef<(row: number, col: number) => void>(() => {});
 
-  // Expose focus() and focusCell() to parent for restoring keyboard navigation
+  // Callback ref for accepting point selection (simulates Enter key)
+  const acceptPointSelectionRef = useRef<() => void>(() => {});
+
+  // Expose focus(), focusCell(), getSelection(), and acceptPointSelection() to parent
   useImperativeHandle(ref, () => ({
     focus: () => {
       parentRef.current?.focus();
@@ -170,7 +175,24 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
       handleCellSelectRef.current(row, col);
       parentRef.current?.focus();
     },
+    getSelection: () => selectionRef.current,
+    acceptPointSelection: () => acceptPointSelectionRef.current(),
   }), [parentRef]);
+
+  // Define the accept point selection logic (shared between Enter key and touch button)
+  acceptPointSelectionRef.current = () => {
+    const activeSelection = selectionRef.current;
+    if (activeSelection && onWizardPointSelection) {
+      const startRow = Math.min(activeSelection.startRow, activeSelection.endRow);
+      const endRow = Math.max(activeSelection.startRow, activeSelection.endRow);
+      const startCol = Math.min(activeSelection.startCol, activeSelection.endCol);
+      const endCol = Math.max(activeSelection.startCol, activeSelection.endCol);
+      const rangeStr = startRow === endRow && startCol === endCol
+        ? `${colToLetter(startCol)}${startRow + 1}`
+        : `${colToLetter(startCol)}${startRow + 1}:${colToLetter(endCol)}${endRow + 1}`;
+      onWizardPointSelection(rangeStr);
+    }
+  };
 
   // ─── Resize drag state ───────────────────────────────────────────────
   // Drag tracking via ref (NOT state) so mousemove never triggers re-render.
@@ -1222,17 +1244,7 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
       // Wizard POINT mode: Enter accepts the current selection as the range
       if (wizardPointMode && e.key === 'Enter') {
         e.preventDefault();
-        const activeSelection = selectionRef.current;
-        if (activeSelection && onWizardPointSelection) {
-          const startRow = Math.min(activeSelection.startRow, activeSelection.endRow);
-          const endRow = Math.max(activeSelection.startRow, activeSelection.endRow);
-          const startCol = Math.min(activeSelection.startCol, activeSelection.endCol);
-          const endCol = Math.max(activeSelection.startCol, activeSelection.endCol);
-          const rangeStr = startRow === endRow && startCol === endCol
-            ? `${colToLetter(startCol)}${startRow + 1}`
-            : `${colToLetter(startCol)}${startRow + 1}:${colToLetter(endCol)}${endRow + 1}`;
-          onWizardPointSelection(rangeStr);
-        }
+        acceptPointSelectionRef.current();
         return;
       }
 

@@ -51,6 +51,8 @@ interface FormulaWizardProps {
   computedResult?: string | number | boolean | null;
   /** Callback when user picks a function from the autocomplete picker */
   onFunctionSelect?: (functionName: string) => void;
+  /** Callback to accept the current point selection (for touch devices) */
+  onAcceptPointSelection?: () => void;
 }
 
 /**
@@ -76,6 +78,7 @@ export function FormulaWizard({
   targetCol,
   computedResult,
   onFunctionSelect,
+  onAcceptPointSelection,
 }: FormulaWizardProps) {
   const [nestedFunctionPicker, setNestedFunctionPicker] = useState<string | null>(null);
 
@@ -254,6 +257,12 @@ export function FormulaWizard({
     [wizard.state, cancelPointSelection, closeWizard]
   );
 
+  // Accept the current selection as the range (for touch devices without Enter key)
+  // (Must be before conditional returns - React hooks rule)
+  const handleAcceptPointSelection = useCallback(() => {
+    onAcceptPointSelection?.();
+  }, [onAcceptPointSelection]);
+
   if (!wizard.isOpen) return null;
 
   // Show autocomplete picker when no formula was imported
@@ -285,7 +294,13 @@ export function FormulaWizard({
       onKeyDown={handleKeyDown}
     >
       <span className="font-semibold">POINT mode:</span> Select a range on the grid, then press
-      Enter or click to accept.
+      Enter or tap Accept.
+      <button
+        className="ml-2 px-2 py-0.5 text-yellow-700 bg-yellow-200 rounded hover:bg-yellow-300 transition-colors font-semibold"
+        onClick={handleAcceptPointSelection}
+      >
+        Accept
+      </button>
       <button
         className="ml-2 text-yellow-600 underline hover:text-yellow-800"
         onClick={cancelPointSelection}
