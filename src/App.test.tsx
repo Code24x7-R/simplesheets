@@ -1,5 +1,13 @@
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import App from './App';
+// Mock pdfExport/excelExport to avoid ESM issues in tests
+jest.mock('./services/pdfExport', () => ({
+  downloadPdf: jest.fn(() => Promise.resolve()),
+}));
+jest.mock('./services/excelExport', () => ({
+  downloadExcel: jest.fn(),
+  exportExcel: jest.fn(() => new Blob()),
+}));
 
 // Mock the virtualizer
 jest.mock('@tanstack/react-virtual', () => ({
@@ -302,8 +310,12 @@ describe('App - Global Keyboard Shortcuts', () => {
     URL.createObjectURL = jest.fn(() => 'blob:mock');
     URL.revokeObjectURL = jest.fn();
     render(<App />);
-    // Press Ctrl+S (triggers download)
+    // Press Ctrl+S (shows filename modal)
     fireGlobalKeyDown('s');
+    // Filename modal should appear
+    expect(screen.getByText('Save Workbook')).toBeInTheDocument();
+    // Confirm the save
+    fireEvent.click(screen.getByText('Save'));
     // Verify download was triggered
     expect(URL.createObjectURL).toHaveBeenCalled();
     // Verify app still renders

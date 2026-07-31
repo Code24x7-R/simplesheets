@@ -21,6 +21,8 @@ export interface PdfExportOptions {
   showGrid?: boolean;
   /** Whether to include row/column headers. */
   showHeaders?: boolean;
+  /** Custom filename (without extension). */
+  filename?: string;
 }
 
 /**
@@ -75,7 +77,8 @@ export async function downloadPdf(sheet: Sheet, options: PdfExportOptions): Prom
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `${(options.title ?? sheet.name).replace(/[^a-zA-Z0-9-_]/g, '_')}.pdf`;
+  const name = options.filename ?? options.title ?? sheet.name;
+  a.download = `${name.replace(/[^a-zA-Z0-9-_]/g, '_')}.pdf`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);

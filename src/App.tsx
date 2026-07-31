@@ -14,6 +14,7 @@ import type { HighlightedRange } from './components/FormulaBar';
 import { PrintSetupModal } from './components/PrintSetupModal';
 import { ShortcutsModal } from './components/ShortcutsModal';
 import { AboutModal } from './components/AboutModal';
+import { FilenameModal } from './components/FilenameModal';
 import { SearchReplaceModal } from './components/SearchReplaceModal';
 import { SheetTabs } from './components/SheetTabs';
 import { MenuBar } from './components/MenuBar';
@@ -30,6 +31,9 @@ import { useFormulaWizard } from './hooks/useFormulaWizard';
 import { FormulaWizard } from './components/FormulaWizard';
 import { loadAutosave } from './services/storageService';
 import { downloadJson } from './services/jsonService';
+import { downloadExcel } from './services/excelExport';
+import { downloadCsv } from './services/csvService';
+import { downloadPdf } from './services/pdfExport';
 import type { Cell, Selection, Sheet } from './types';
 import { insertRow, deleteRow, insertCol, deleteCol } from './utils/sheetOperations';
 import { computeFillSeries } from './utils/fillSeries';
@@ -211,6 +215,14 @@ function WorkbookView() {
   } | null>(null);
   // Toggle formula view (Ctrl + `) - show formulas instead of values
   const [showFormulas, setShowFormulas] = useState(false);
+  // Filename modal state for save/export operations
+  const [filenameModal, setFilenameModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    defaultName: string;
+    extension: string;
+    onConfirm: (filename: string) => void;
+  }>({ isOpen: false, title: '', defaultName: '', extension: '', onConfirm: () => {} });
   // Filter state for auto-filter feature
   const [filterState, setFilterState] = useState<FilterState | null>(null);
 
@@ -554,10 +566,26 @@ function WorkbookView() {
 
   // ─── Save / Load Triggers (for menu) ──────────────────────────────────
 
+  const openFilenameModal = useCallback(
+    (title: string, defaultName: string, extension: string, onConfirm: (filename: string) => void) => {
+      setFilenameModal({ isOpen: true, title, defaultName, extension, onConfirm });
+    },
+    [],
+  );
+
+  const closeFilenameModal = useCallback(() => {
+    setFilenameModal((prev) => ({ ...prev, isOpen: false }));
+    gridRef.current?.focus();
+  }, []);
+
   const handleSaveMenu = useCallback(() => {
-    downloadJson(workbook);
-    setStatusMessage(`Saved "${workbook.title}" — download started`);
-  }, [workbook]);
+    const defaultName = workbook.title.replace(/[^a-zA-Z0-9-_]/g, '_') || 'Untitled';
+    openFilenameModal('Save Workbook', defaultName, 'json', (filename) => {
+      downloadJson(workbook, filename);
+      setStatusMessage(`Saved "${filename}.json" — download started`);
+      closeFilenameModal();
+    });
+  }, [workbook, openFilenameModal, closeFilenameModal]);
 
   const handleLoadMenu = useCallback(() => {
     window.dispatchEvent(new CustomEvent('simplesheets:open'));
@@ -577,20 +605,48 @@ function WorkbookView() {
   }, []);
 
   const handleExportExcelMenu = useCallback(() => {
-    window.dispatchEvent(new CustomEvent('simplesheets:export-excel'));
-  }, []);
+    const defaultName = workbook.title.replace(/[^a-zA-Z0-9-_]/g, '_') || 'Untitled';
+    openFilenameModal('Export Excel', defaultName, 'xlsx', (filename) => {
+      downloadExcel(workbook, filename);
+      setStatusMessage(`Exported "${filename}.xlsx" — download started`);
+      closeFilenameModal();
+    });
+  }, [workbook, openFilenameModal, closeFilenameModal]);
 
   const handleExportCsvMenu = useCallback(() => {
-    window.dispatchEvent(new CustomEvent('simplesheets:export-csv'));
-  }, []);
+    const defaultName = (sheet.name || workbook.title).replace(/[^a-zA-Z0-9-_]/g, '_') || 'Untitled';
+    openFilenameModal('Export CSV', defaultName, 'csv', (filename) => {
+      downloadCsv(sheet, filename);
+      setStatusMessage(`Exported "${filename}.csv" — download started`);
+      closeFilenameModal();
+    });
+  }, [workbook, sheet, openFilenameModal, closeFilenameModal]);
 
   const handleExportJsonMenu = useCallback(() => {
-    window.dispatchEvent(new CustomEvent('simplesheets:export-json'));
-  }, []);
+    const defaultName = workbook.title.replace(/[^a-zA-Z0-9-_]/g, '_') || 'Untitled';
+    openFilenameModal('Export JSON', defaultName, 'json', (filename) => {
+      downloadJson(workbook, filename);
+      setStatusMessage(`Exported "${filename}.json" — download started`);
+      closeFilenameModal();
+    });
+  }, [workbook, openFilenameModal, closeFilenameModal]);
 
   const handleExportPdfMenu = useCallback(() => {
-    window.dispatchEvent(new CustomEvent('simplesheets:export-pdf'));
-  }, []);
+    const defaultName = (sheet.name || workbook.title).replace(/[^a-zA-Z0-9-_]/g, '_') || 'Untitled';
+    openFilenameModal('Export PDF', defaultName, 'pdf', (filename) => {
+      downloadPdf(sheet, {
+        filename,
+        setup: {
+          orientation: 'portrait',
+          pageSize: 'A4',
+          scaling: 'fit-to-page',
+          margins: { top: 10, right: 10, bottom: 10, left: 10 },
+        },
+      });
+      setStatusMessage(`Exported "${filename}.pdf" — download started`);
+      closeFilenameModal();
+    });
+  }, [workbook, sheet, openFilenameModal, closeFilenameModal]);
 
   // When the active cell changes externally (e.g., clicking a different cell
   // in the grid), reset the editing FSM so it starts fresh for the new cell.
@@ -1942,6 +1998,14 @@ function WorkbookView() {
       <PrintSetupModal isOpen={showPrintSetup} onClose={() => { setShowPrintSetup(false); gridRef.current?.focus(); }} />
       <ShortcutsModal isOpen={showShortcuts} onClose={() => { setShowShortcuts(false); gridRef.current?.focus(); }} />
       <AboutModal isOpen={showAbout} onClose={() => { setShowAbout(false); gridRef.current?.focus(); }} />
+      <FilenameModal
+        isOpen={filenameModal.isOpen}
+        title={filenameModal.title}
+        defaultName={filenameModal.defaultName}
+        extension={filenameModal.extension}
+        onConfirm={filenameModal.onConfirm}
+        onCancel={closeFilenameModal}
+      />
       <SearchReplaceModal
         isOpen={showSearchReplace}
         onClose={() => { setShowSearchReplace(false); gridRef.current?.focus(); }}

@@ -1,5 +1,13 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import App from './App';
+// Mock pdfExport/excelExport to avoid ESM issues in tests
+jest.mock('./services/pdfExport', () => ({
+  downloadPdf: jest.fn(() => Promise.resolve()),
+}));
+jest.mock('./services/excelExport', () => ({
+  downloadExcel: jest.fn(),
+  exportExcel: jest.fn(() => new Blob()),
+}));
 
 // Mock the virtualizer
 jest.mock('@tanstack/react-virtual', () => ({
@@ -125,11 +133,15 @@ describe('App - Menu Handlers', () => {
     expect(unfreezeItem?.classList.contains('menu-item-disabled')).toBe(true);
   });
 
-  it('handles File > Save (triggers download)', () => {
+  it('handles File > Save (shows filename modal)', () => {
     URL.createObjectURL = jest.fn(() => 'blob:mock');
     URL.revokeObjectURL = jest.fn();
     render(<App />);
     fireEvent.click(screen.getByText('File'));
+    fireEvent.click(screen.getByText('Save'));
+    // Filename modal should appear
+    expect(screen.getByText('Save Workbook')).toBeInTheDocument();
+    // Confirm the save
     fireEvent.click(screen.getByText('Save'));
     const statusBar = screen.getByTestId('status-message');
     expect(statusBar?.textContent).toContain('Saved');
@@ -357,14 +369,18 @@ describe('App - Menu Handlers (Import/Export via bridge)', () => {
     spy.mockRestore();
   });
 
-  it('dispatches export event when File > Export > CSV is clicked', () => {
+  it('shows filename modal when File > Export > CSV is clicked', () => {
+    URL.createObjectURL = jest.fn(() => 'blob:mock');
+    URL.revokeObjectURL = jest.fn();
     render(<App />);
-    const spy = jest.spyOn(window, 'dispatchEvent');
     fireEvent.click(screen.getByText('File'));
     fireEvent.mouseEnter(screen.getByText('Export'));
     fireEvent.click(screen.getByText('CSV (.csv)'));
-    expect(spy).toHaveBeenCalled();
-    spy.mockRestore();
+    // Filename modal should appear
+    expect(screen.getByText('Export CSV')).toBeInTheDocument();
+    // Confirm the export
+    fireEvent.click(screen.getByText('Save'));
+    expect(screen.getByTestId('status-message')).toBeInTheDocument();
   });
 
   it('shows File > Export > PDF option', () => {

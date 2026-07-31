@@ -1,6 +1,15 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import App from './App';
 
+// Mock pdfExport/excelExport to avoid ESM issues in tests
+jest.mock('./services/pdfExport', () => ({
+  downloadPdf: jest.fn(() => Promise.resolve()),
+}));
+jest.mock('./services/excelExport', () => ({
+  downloadExcel: jest.fn(),
+  exportExcel: jest.fn(() => new Blob()),
+}));
+
 // Mock the virtualizer
 jest.mock('@tanstack/react-virtual', () => ({
   useVirtualizer: (options: { horizontal?: boolean }) => {
@@ -75,48 +84,58 @@ describe('App - Clipboard Menu Actions', () => {
 
 
 describe('App - Export Menu Actions', () => {
-  it('File → Export → Excel dispatches export excel event', () => {
+  // Mock URL.createObjectURL for export tests
+  beforeAll(() => {
+    URL.createObjectURL = jest.fn(() => 'blob:mock');
+    URL.revokeObjectURL = jest.fn();
+  });
+
+  it('File → Export → Excel shows filename modal', () => {
     render(<App />);
-    const handler = jest.fn();
-    window.addEventListener('simplesheets:export-excel', handler);
     fireEvent.click(screen.getByText('File'));
     fireEvent.click(screen.getByText('Export'));
     fireEvent.click(screen.getByText('Excel (.xlsx)'));
-    expect(handler).toHaveBeenCalled();
-    window.removeEventListener('simplesheets:export-excel', handler);
+    // Filename modal should appear
+    expect(screen.getByText('Export Excel')).toBeInTheDocument();
+    // Confirm the export
+    fireEvent.click(screen.getByText('Save'));
+    expect(screen.getByTestId('status-message')).toBeInTheDocument();
   });
 
-  it('File → Export → CSV dispatches export csv event', () => {
+  it('File → Export → CSV shows filename modal', () => {
     render(<App />);
-    const handler = jest.fn();
-    window.addEventListener('simplesheets:export-csv', handler);
     fireEvent.click(screen.getByText('File'));
     fireEvent.click(screen.getByText('Export'));
     fireEvent.click(screen.getByText('CSV (.csv)'));
-    expect(handler).toHaveBeenCalled();
-    window.removeEventListener('simplesheets:export-csv', handler);
+    // Filename modal should appear
+    expect(screen.getByText('Export CSV')).toBeInTheDocument();
+    // Confirm the export
+    fireEvent.click(screen.getByText('Save'));
+    expect(screen.getByTestId('status-message')).toBeInTheDocument();
   });
 
-  it('File → Export → JSON dispatches export json event', () => {
+  it('File → Export → JSON shows filename modal', () => {
     render(<App />);
-    const handler = jest.fn();
-    window.addEventListener('simplesheets:export-json', handler);
     fireEvent.click(screen.getByText('File'));
     fireEvent.click(screen.getByText('Export'));
     fireEvent.click(screen.getByText('JSON (.json)'));
-    expect(handler).toHaveBeenCalled();
-    window.removeEventListener('simplesheets:export-json', handler);
+    // Filename modal should appear
+    expect(screen.getByText('Export JSON')).toBeInTheDocument();
+    // Confirm the export
+    fireEvent.click(screen.getByText('Save'));
+    expect(screen.getByTestId('status-message')).toBeInTheDocument();
   });
 
-  it('File → Export → PDF dispatches export pdf event', () => {
+  it('File → Export → PDF shows filename modal', () => {
     render(<App />);
-    const handler = jest.fn();
-    window.addEventListener('simplesheets:export-pdf', handler);
     fireEvent.click(screen.getByText('File'));
     fireEvent.click(screen.getByText('Export'));
     fireEvent.click(screen.getByText('PDF (.pdf)'));
-    expect(handler).toHaveBeenCalled();
-    window.removeEventListener('simplesheets:export-pdf', handler);
+    // Filename modal should appear
+    expect(screen.getByText('Export PDF')).toBeInTheDocument();
+    // Confirm the export
+    fireEvent.click(screen.getByText('Save'));
+    expect(screen.getByTestId('status-message')).toBeInTheDocument();
   });
 });
 

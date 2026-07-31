@@ -1,5 +1,13 @@
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import App from './App';
+// Mock pdfExport/excelExport to avoid ESM issues in tests
+jest.mock('./services/pdfExport', () => ({
+  downloadPdf: jest.fn(() => Promise.resolve()),
+}));
+jest.mock('./services/excelExport', () => ({
+  downloadExcel: jest.fn(),
+  exportExcel: jest.fn(() => new Blob()),
+}));
 
 // Mock the virtualizer
 jest.mock('@tanstack/react-virtual', () => ({
@@ -321,6 +329,11 @@ describe('App - Save Button', () => {
     render(<App />);
     // Use File menu
     fireEvent.click(screen.getByText('File'));
+    fireEvent.click(screen.getByText('Save'));
+
+    // Filename modal should appear
+    expect(screen.getByText('Save Workbook')).toBeInTheDocument();
+    // Confirm the save
     fireEvent.click(screen.getByText('Save'));
 
     // Should show saved status and trigger download
