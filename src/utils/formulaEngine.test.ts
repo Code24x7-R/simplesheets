@@ -2272,6 +2272,42 @@ describe('evaluateWorkbook - cross-sheet references', () => {
       expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue).toBe('#VALUE!');
     });
 
+    // ─── ROUNDDOWN/MOD error paths ────────────────────────────────
+
+    it('ROUNDDOWN with non-numeric input returns #VALUE!', () => {
+      const sheet = createSheet({ '0:0': '=ROUNDDOWN("abc", 2)' });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue).toBe('#VALUE!');
+    });
+
+    it('MOD with non-numeric input returns #DIV/0!', () => {
+      const sheet = createSheet({ '0:0': '=MOD("abc", 2)' });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue).toBe('#DIV/0!');
+    });
+
+    // ─── INT/FLOOR/CEILING error paths ───────────────────────────
+
+    it('INT with non-numeric input returns #VALUE!', () => {
+      const sheet = createSheet({ '0:0': '=INT("abc")' });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue).toBe('#VALUE!');
+    });
+
+    it('FLOOR with non-numeric input returns #VALUE!', () => {
+      const sheet = createSheet({ '0:0': '=FLOOR("abc")' });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue).toBe('#VALUE!');
+    });
+
+    // ─── LOG/LOG10 error paths ────────────────────────────────────
+
+    it('LOG returns error for negative number', () => {
+      const sheet = createSheet({ '0:0': '=LOG(-5)' });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue).toBe('#VALUE!');
+    });
+
+    it('LOG10 returns error for zero', () => {
+      const sheet = createSheet({ '0:0': '=LOG10(0)' });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue).toBe('#VALUE!');
+    });
+
     // ─── matchesCriterion: blank/non-blank branches ───────────────
 
     it('COUNTIF with empty string criterion counts blank cells', () => {
