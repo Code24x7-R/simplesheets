@@ -2393,4 +2393,87 @@ describe('evaluateWorkbook - cross-sheet references', () => {
       expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['1:0'].computedValue).toBe(false);
     });
   });
+
+  // ─── TEXT with date format (exercises formatDate + dateFromSerial) ──
+  // Test env is UTC+10 (AEST). Serial 45731 = 2025-03-15 (Saturday)
+  // day=15, month=3 (March), year=2025, weekday=6 (Sat)
+
+  describe('TEXT with date format (formatDate coverage)', () => {
+    it('TEXT with "dd/mm/yyyy" formats date', () => {
+      const sheet = createSheet({ '0:0': '=TEXT(45731, "dd/mm/yyyy")' });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue).toBe('15/03/2025');
+    });
+
+    it('TEXT with "d/m/yy" formats date', () => {
+      const sheet = createSheet({ '0:0': '=TEXT(45731, "d/m/yy")' });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue).toBe('15/3/25');
+    });
+
+    it('TEXT with "dddd" shows full weekday name', () => {
+      const sheet = createSheet({ '0:0': '=TEXT(45731, "dddd")' });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue).toBe('Saturday');
+    });
+
+    it('TEXT with "ddd" shows abbreviated weekday', () => {
+      const sheet = createSheet({ '0:0': '=TEXT(45731, "ddd")' });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue).toBe('Sat');
+    });
+
+    it('TEXT with "ddddd" shows abbreviated weekday', () => {
+      const sheet = createSheet({ '0:0': '=TEXT(45731, "ddddd")' });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue).toBe('Sat');
+    });
+
+    it('TEXT with "mmmm" shows full month name', () => {
+      const sheet = createSheet({ '0:0': '=TEXT(45731, "mmmm")' });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue).toBe('March');
+    });
+
+    it('TEXT with "mmm" shows abbreviated month name', () => {
+      const sheet = createSheet({ '0:0': '=TEXT(45731, "mmm")' });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue).toBe('Mar');
+    });
+
+    it('TEXT with "hh:MM:ss" formats time from serial with fractional part', () => {
+      // 45731.5 = March 15, 2025 at 12:00:00 (noon)
+      // Note: formatDate uses M (uppercase) for minutes, m (lowercase) for month
+      const sheet = createSheet({ '0:0': '=TEXT(45731.5, "hh:MM:ss")' });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue).toBe('12:00:00');
+    });
+
+    it('TEXT with "HH:MM" 24-hour format', () => {
+      // 45731.5 = noon = 12:00 in 24h format
+      const sheet = createSheet({ '0:0': '=TEXT(45731.5, "HH:MM")' });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue).toBe('12:00');
+    });
+
+    it('TEXT with "HH:MM" afternoon', () => {
+      // 45731.75 = March 15, 2025 at 18:00:00 (6 PM)
+      const sheet = createSheet({ '0:0': '=TEXT(45731.75, "HH:MM")' });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue).toBe('18:00');
+    });
+
+    it('TEXT with format containing non-date literal chars', () => {
+      // Use only non-format letters to avoid being parsed as format codes
+      const sheet = createSheet({ '0:0': '=TEXT(45731, "XddXmmX")' });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue).toBe('X15X03X');
+    });
+
+    it('TEXT with "h" single-digit hour (no leading zero)', () => {
+      // 45731 + 2.5/24 ≈ 2:30 AM (2 in 12-hour format)
+      const sheet = createSheet({ '0:0': '=TEXT(45731.10417, "h")' });
+      const result = evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue;
+      expect(result).toBe('2');
+    });
+  });
+
+  // ─── Formula parse error catch block (line 1294) ────────────────
+
+  describe('Formula evaluation error handling', () => {
+    it('returns #VALUE! for formula with unterminated string', () => {
+      // This triggers the catch block in evaluateWorkbook when parseFormula throws
+      const sheet = createSheet({ '0:0': '=TEXT("unclosed, "0")' });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue).toBe('#VALUE!');
+    });
+  });
 });
