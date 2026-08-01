@@ -8,6 +8,8 @@ import {
   shouldRightAlign,
   formatDate,
   formatTime,
+  isAccountingFormat,
+  parseDateTimeFormat,
 } from './numberFormat';
 
 /**
@@ -396,6 +398,230 @@ describe('Phase 29b: Text Format (@)', () => {
         computedValue: '42',
         style: { numberFormat: '@' },
       })).toBe(false);
+    });
+  });
+});
+
+describe('Phase 29d: Branch Coverage & Edge Cases', () => {
+  describe('formatNumberValue - boolean coercion (line 204)', () => {
+    it('coerces boolean true to 1 with number format', () => {
+      expect(formatNumberValue(true, '0.00')).toBe('1.00');
+    });
+
+    it('coerces boolean false to 0 with number format', () => {
+      expect(formatNumberValue(false, '0.00')).toBe('0.00');
+    });
+
+    it('coerces boolean true to 1 with currency format', () => {
+      expect(formatNumberValue(true, '$#,##0.00')).toBe('$1.00');
+    });
+  });
+
+  describe('formatTime - single-char m/s tokens (lines 478-485)', () => {
+    it('formats single m (minutes) without leading zero', () => {
+      // 0.25 = 6:00:00 → h:m:s should show "6:0:0" (no padding)
+      expect(formatTime(0.25, 'h:m:s')).toBe('6:0:0');
+    });
+
+    it('formats single m (minutes) with non-zero value', () => {
+      // 0.250694 ≈ 6:01:00 → h:m:s should show "6:1:0" (no padding)
+      expect(formatTime(0.250694, 'h:m:s')).toBe('6:1:0');
+    });
+
+    it('formats single s (seconds) without leading zero', () => {
+      // A time with 5 seconds → should show "5" not "05"
+      const fiveSeconds = 5 / 86400;
+      const result = formatTime(fiveSeconds, 'h:m:s');
+      expect(result).toMatch(/:5$/);
+    });
+
+    it('formats h:m (single minute digit) correctly', () => {
+      // 0.1 = 2:24:00 → h:m should be "2:24"
+      expect(formatTime(0.1, 'h:m')).toBe('2:24');
+    });
+  });
+
+  describe('tokenizeFormat - 2-char am/pm edge (lines 377-378)', () => {
+    it('handles format string with lowercase am (no slash)', () => {
+      // "h:mm am" — only 2 chars "am" after the time
+      const result = formatTime(0.3, 'h:mm am');
+      expect(result).toContain('AM');
+    });
+
+    it('handles format string with lowercase pm detection', () => {
+      const result = formatTime(0.7, 'h:mm am');
+      expect(result).toContain('PM');
+    });
+  });
+
+  describe('isDateFormat - combined date+time heuristic (line 533)', () => {
+    it('detects combined date+time as date format', () => {
+      expect(isDateFormat('mm/dd/yyyy hh:mm')).toBe(true);
+    });
+
+    it('detects DD-MMM-YY HH:MM as date format', () => {
+      expect(isDateFormat('dd-mmm-yy hh:mm')).toBe(true);
+    });
+
+    it('detects date+time with seconds as date format', () => {
+      expect(isDateFormat('yyyy-mm-dd hh:mm:ss')).toBe(true);
+    });
+  });
+
+  describe('isTimeFormat - heuristic not in fast lookup (line 549)', () => {
+    it('detects uppercase HH:MM:SS via heuristic', () => {
+      expect(isTimeFormat('HH:MM:SS')).toBe(true);
+    });
+
+    it('detects time format with only h and s markers', () => {
+      // "h:s" is not in TIME_FORMATS_LOWER, triggers heuristic
+      expect(isTimeFormat('h:s')).toBe(true);
+    });
+
+    it('detects time format with a/p notation', () => {
+      expect(isTimeFormat('h:mm a/p')).toBe(true);
+    });
+  });
+
+  describe('isAccountingFormat - unusual format triggers fallback', () => {
+    it('detects format starting with _($ as accounting', () => {
+      expect(isAccountingFormat('_($* #,##0.00_);_($* (#,##0.00);_($* "-"_);_(@_)')).toBe(true);
+    });
+
+    it('detects lowercase "accounting" as accounting format', () => {
+      expect(isAccountingFormat('accounting')).toBe(true);
+    });
+
+    it('returns false for non-accounting format', () => {
+      expect(isAccountingFormat('$#,##0.00')).toBe(false);
+    });
+
+    it('handles accounting format with no numeric pattern (fallback)', () => {
+      // A malformed accounting format where first section has no numeric chars
+      // e.g., "_($* )" → cleaned = empty → fallback returns "#,##0.00"
+      const malformed = '_($* )';
+      expect(isAccountingFormat(malformed)).toBe(true);
+      // The formatNumberValue should still produce valid output
+      const result = formatNumberValue(1234.56, malformed);
+      expect(result).toContain('$');
+      expect(result).toContain('1,234.56');
+    });
+  });
+
+  describe('parseDateTimeFormat - edge cases', () => {
+    it('correctly splits date and time portions of combined format', () => {
+      const result = parseDateTimeFormat('mm/dd/yyyy hh:mm:ss');
+      expect(result.isDate).toBe(true);
+      expect(result.isTime).toBe(true);
+      expect(result.dateTokens.length).toBeGreaterThan(0);
+      expect(result.timeTokens.length).toBeGreaterThan(0);
+    });
+
+    it('handles pure date format', () => {
+      const result = parseDateTimeFormat('dd-mmm-yy');
+      expect(result.isDate).toBe(true);
+      expect(result.isTime).toBe(false);
+    });
+
+    it('handles pure time format', () => {
+      const result = parseDateTimeFormat('h:mm AM/PM');
+      expect(result.isDate).toBe(false);
+      expect(result.isTime).toBe(true);
+    });
+  });
+
+  describe('formatDate - single M (month) token (lines 427-428)', () => {
+    it('formats single M as unpadded month number', () => {
+      // Jan 2021 → "1" not "01"
+      expect(formatDate(44197, 'M/D/YYYY')).toBe('1/1/2021');
+    });
+
+    it('formats single D as unpadded day number', () => {
+      // Feb 2021 → "2/1/2021"
+      expect(formatDate(44228, 'M/D/YYYY')).toBe('2/1/2021');
+    });
+
+    it('formats single M and D for values >= 10', () => {
+      // Dec 25, 2020 → "12/25/2020"
+      expect(formatDate(44190, 'M/D/YYYY')).toBe('12/25/2020');
+    });
+  });
+
+  describe('Edge cases: invalid date input (line 400)', () => {
+    it('returns serial number string when serialNumber is NaN', () => {
+      expect(formatDate(NaN, 'mm/dd/yyyy')).toBe('NaN');
+    });
+
+    it('returns serial number string when serialNumber is Infinity', () => {
+      expect(formatDate(Infinity, 'mm/dd/yyyy')).toBe('Infinity');
+    });
+  });
+
+  describe('Edge cases: epoch boundaries', () => {
+    it('serial 60 = Feb 28, 1900 (JS Date correctly handles non-leap year)', () => {
+      // The implementation uses JS Date which correctly computes 1900 as non-leap
+      expect(formatDate(60, 'mm/dd/yyyy')).toBe('02/28/1900');
+    });
+
+    it('serial 61 = Mar 1, 1900 (day after Feb 28)', () => {
+      expect(formatDate(61, 'mm/dd/yyyy')).toBe('03/01/1900');
+    });
+
+    it('serial 0 produces valid date string', () => {
+      // Serial 0 = Jan 0, 1900 (invalid but handled)
+      const result = formatDate(0, 'mm/dd/yyyy');
+      expect(typeof result).toBe('string');
+      expect(result.length).toBeGreaterThan(0);
+    });
+
+    it('handles Y2K boundary (serial 36525 = Dec 31, 1999)', () => {
+      expect(formatDate(36525, 'mm/dd/yyyy')).toBe('12/31/1999');
+    });
+
+    it('handles far future serial 73000 = Jan 1, 2099', () => {
+      expect(formatDate(73000, 'yyyy')).toBe('2099');
+    });
+  });
+
+  describe('Edge cases: hh padStart branch (line 469)', () => {
+    it('formats hh with hours >= 10 (no padding needed)', () => {
+      // 0.416667 = 10:00:00 → hours24 = 10, padStart returns "10" unchanged
+      expect(formatTime(0.416667, 'hh:mm')).toBe('10:00');
+    });
+
+    it('formats hh with hours < 10 (padding adds leading zero)', () => {
+      // 0.25 = 06:00:00 → hours24 = 6, padStart returns "06"
+      expect(formatTime(0.25, 'hh:mm')).toBe('06:00');
+    });
+
+    it('formats hh in 12-hour mode (is12Hour=true)', () => {
+      // 0.5 = 12:00:00 → hours12 = 12, padStart returns "12"
+      expect(formatTime(0.5, 'hh:mm AM/PM')).toBe('12:00 PM');
+    });
+
+    it('formats hh in 12-hour mode with morning hour', () => {
+      // 0.25 = 06:00:00 → hours12 = 6, padStart returns "06"
+      expect(formatTime(0.25, 'hh:mm AM/PM')).toBe('06:00 AM');
+    });
+  });
+
+  describe('Edge cases: midnight/noon time boundaries', () => {
+    it('0.9999884 (11:59:59 PM) formats correctly', () => {
+      const result = formatTime(0.9999884, 'h:mm:ss AM/PM');
+      expect(result).toBe('11:59:59 PM');
+    });
+
+    it('0.0000116 (12:00:01 AM) formats correctly', () => {
+      const result = formatTime(0.0000116, 'h:mm:ss AM/PM');
+      expect(result).toBe('12:00:01 AM');
+    });
+
+    it('0.0416667 (1:00:00 AM) formats correctly', () => {
+      expect(formatTime(0.0416667, 'h:mm AM/PM')).toBe('1:00 AM');
+    });
+
+    it('0.9583333 (11:00:00 PM) formats correctly', () => {
+      expect(formatTime(0.9583333, 'h:mm AM/PM')).toBe('11:00 PM');
     });
   });
 });

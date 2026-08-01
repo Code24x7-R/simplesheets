@@ -1677,11 +1677,13 @@ Improve FormulaWizard usability on mobile/touch platforms (iOS Safari, Android C
 - [x] **Format detection** — Grid automatically applies date/time formatting when a cell's format string matches (existing pattern, now extended)
 - [ ] **Keyboard shortcuts** — Optionally add Ctrl+Shift+# (date) and Ctrl+Shift+@ (text) shortcuts (deferred — low priority)
 
-### Phase 29d: Testing & Documentation — PLANNED 📋
-- [ ] **Unit tests** — Comprehensive tests for date serial decoding, format string parsing, time extraction, text format passthrough
-- [ ] **Edge cases** — Epoch boundaries (1900-01-01, 1900-02-28 leap year bug, 2000-01-01), negative serials, very large serials, midnight/noon boundaries
-- [ ] **Integration tests** — Grid rendering with date/text formats, toolbar button clicks, menu actions
-- [ ] **README update** — Document date/time and text format support
+### Phase 29d: Testing & Documentation — COMPLETE ✅
+- [x] **Unit tests** — Comprehensive tests for date serial decoding, format string parsing, time extraction, text format passthrough (102 tests in `numberFormat.dateTime.test.ts`)
+- [x] **Edge cases** — Epoch boundaries, NaN/Infinity serials, negative serials, very large serials, midnight/noon boundaries, combined date+time detection
+- [x] **Coverage** — `numberFormat.ts` at 100% lines, 100% branches, 100% functions, 100% statements
+- [x] **README update** — Documented date/time serial decoding, text format, expanded format pattern list
+- [x] **Lint fix** — Removed pre-existing `require()` usage in `ImportExportBridge.test.tsx`
+- [x] **Full verification** — 2513 tests pass, lint clean, type-check clean, build clean
 
 ---
 

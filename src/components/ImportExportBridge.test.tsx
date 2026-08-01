@@ -3,6 +3,7 @@
 import { render, screen, act } from '@testing-library/react';
 import { ImportExportBridge } from './ImportExportBridge';
 import { PrintSetupProvider } from '../context/PrintSetupContext';
+import { importJson } from '../services/jsonService';
 import type { Workbook, Sheet } from '../types';
 
 // Mock export services to prevent actual file downloads in tests
@@ -222,8 +223,7 @@ describe('ImportExportBridge', () => {
   it('handleOpenFileChange calls onError with fallback when importJson returns no error', () => {
     const onError = jest.fn();
     // Mock importJson to return success: false without error field
-    const { importJson } = require('../services/jsonService');
-    importJson.mockReturnValueOnce({ success: false });
+    jest.mocked(importJson).mockReturnValueOnce({ success: false });
 
     render(<PrintSetupProvider><ImportExportBridge {...defaultProps} onError={onError} /></PrintSetupProvider>);
 

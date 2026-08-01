@@ -94,9 +94,15 @@ Supported format patterns include:
 - **Currency**: `$#,##0.00`
 - **Accounting**: `_($* #,##0.00_);...` (Excel-compatible)
 - **Percentage**: `0%`, `0.00%`
-- **Date**: `mm/dd/yyyy`, `mm/dd/yy`, `yyyy-mm-dd`
-- **Time**: `hh:mm`, `hh:mm:ss`
+- **Date**: `mm/dd/yyyy`, `mm/dd/yy`, `yyyy-mm-dd`, `dd-mmm-yy`, `mmmm d, yyyy`
+- **Time**: `hh:mm`, `hh:mm:ss`, `h:mm AM/PM`
+- **Date+Time**: `mm/dd/yyyy hh:mm` (combined)
+- **Text**: `@` (preserves literal string, e.g., leading zeros in ZIP codes)
 - **Scientific**: `0.00E+00`
+
+**Date & Time serial numbers**: Excel stores dates as serial numbers (day 1 = Jan 1, 1900) and times as fractional days (0.5 = noon). SimpleSheet decodes these automatically when a date/time format is applied.
+
+**Text format (`@`)**: Forces numeric entries to be treated as literal text, preserving leading zeros (ZIP codes, ID numbers, credit card numbers) that would otherwise be stripped.
 
 ### Reference Format Toggle
 
