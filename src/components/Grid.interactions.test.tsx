@@ -314,6 +314,92 @@ describe('Grid - Cell Editing Input', () => {
     window.getComputedStyle = originalGetComputedStyle;
   });
 
+  it('overlay scrolls in sync with input when editing a long formula', () => {
+    const longFormula = '=SUM(Sheet1!B2:Sheet1!B21)+A3+SUM(F14:F22)';
+    render(
+      <GridWithEditing
+        sheet={createTestSheet({ cells: { '0:0': { rawValue: longFormula } } })}
+        onCellChange={jest.fn()}
+        onSelect={jest.fn()}
+      />,
+    );
+
+    // Double-click to start editing
+    const cell = document.querySelector('.grid-cell') as HTMLElement;
+    fireEvent.doubleClick(cell);
+
+    const input = document.querySelector('.grid-cell input') as HTMLInputElement;
+    expect(input).toBeInTheDocument();
+
+    // Mock input dimensions
+    Object.defineProperty(input, 'clientWidth', { value: 100, configurable: true });
+    Object.defineProperty(input, 'scrollWidth', { value: 500, configurable: true });
+
+    // Mock canvas context for text measurement
+    const mockMeasureText = jest.fn().mockReturnValue({ width: 400 });
+    const mockGetContext = jest.fn().mockReturnValue({
+      measureText: mockMeasureText,
+      font: '',
+    });
+    const originalCreateElement = document.createElement;
+    document.createElement = jest.fn((tagName: string) => {
+      if (tagName === 'canvas') {
+        const canvasEl = originalCreateElement.call(document, 'canvas') as HTMLCanvasElement;
+        canvasEl.getContext = mockGetContext as unknown as typeof canvasEl.getContext;
+        return canvasEl;
+      }
+      return originalCreateElement.call(document, tagName);
+    }) as typeof document.createElement;
+
+    const originalGetComputedStyle = window.getComputedStyle;
+    window.getComputedStyle = jest.fn(() => ({
+      fontSize: '14px',
+      fontFamily: 'monospace',
+      paddingLeft: '4px',
+    }) as unknown as CSSStyleDeclaration) as unknown as typeof window.getComputedStyle;
+
+    // Focus the input to trigger syncCursorPosition + overlay sync
+    fireEvent.focus(input);
+
+    // Input should be scrolled to show caret
+    expect(input.scrollLeft).toBeGreaterThan(0);
+
+    // Overlay should scroll in sync with the input
+    const overlay = cell.querySelector('.pointer-events-none') as HTMLDivElement;
+    expect(overlay).toBeInTheDocument();
+    expect(overlay.scrollLeft).toBe(input.scrollLeft);
+
+    // Restore mocks
+    document.createElement = originalCreateElement;
+    window.getComputedStyle = originalGetComputedStyle;
+  });
+
+  it('overlay scrolls when input scrolls via onScroll (manual scroll)', () => {
+    const longFormula = '=SUM(Sheet1!B2:Sheet1!B21)+A3+SUM(F14:F22)';
+    render(
+      <GridWithEditing
+        sheet={createTestSheet({ cells: { '0:0': { rawValue: longFormula } } })}
+        onCellChange={jest.fn()}
+        onSelect={jest.fn()}
+      />,
+    );
+
+    const cell = document.querySelector('.grid-cell') as HTMLElement;
+    fireEvent.doubleClick(cell);
+
+    const input = document.querySelector('.grid-cell input') as HTMLInputElement;
+    const overlay = cell.querySelector('.pointer-events-none') as HTMLDivElement;
+    expect(input).toBeInTheDocument();
+    expect(overlay).toBeInTheDocument();
+
+    // Simulate the input being scrolled (e.g., user drags scrollbar)
+    Object.defineProperty(input, 'scrollLeft', { value: 150, writable: true, configurable: true });
+    fireEvent.scroll(input);
+
+    // Overlay should match the input scroll position
+    expect(overlay.scrollLeft).toBe(150);
+  });
+
   it('cancels edit on Escape key', () => {
     const onCellChange = jest.fn();
     render(
@@ -1097,6 +1183,63 @@ describe('Grid - Syntax Highlighting in Cell Editor', () => {
     // The "=" should still be visible via the overlay
     const overlay = cell.querySelector('.pointer-events-none');
     expect(overlay?.textContent).toContain('=');
+  });
+});
+
+describe('Grid — Overlay Alignment', () => {
+  it('overlay colored spans use box-shadow (not border) to avoid width offset', () => {
+    render(
+      <GridWithEditing
+        sheet={createTestSheet({ cells: { '0:0': { rawValue: '=A1+B2' } } })}
+        onCellChange={jest.fn()}
+        onSelect={jest.fn()}
+      />,
+    );
+
+    const cell = document.querySelector('.grid-cell') as HTMLElement;
+    fireEvent.doubleClick(cell);
+
+    const input = cell.querySelector('input') as HTMLInputElement;
+    fireEvent.change(input, { target: { value: '=A1+B2' } });
+
+    const overlay = cell.querySelector('.pointer-events-none') as HTMLDivElement;
+    expect(overlay).toBeInTheDocument();
+
+    // Colored spans should use box-shadow for the border effect, not
+    // border, so they add zero width and don't shift subsequent text.
+    const coloredSpans = overlay.querySelectorAll('span[style*="background-color"]');
+    expect(coloredSpans.length).toBeGreaterThanOrEqual(2);
+    for (const span of Array.from(coloredSpans)) {
+      const style = (span as HTMLElement).style;
+      expect(style.boxShadow).toContain('inset');
+      expect(style.border).toBe('');
+      expect(style.padding).toBe('');
+      // Bold text is wider than normal — must NOT be used or the caret
+      // drifts progressively out of alignment with the overlay.
+      expect(style.fontWeight).toBe('');
+    }
+  });
+
+  it('overlay has transparent border to match input border offset', () => {
+    render(
+      <GridWithEditing
+        sheet={createTestSheet({ cells: { '0:0': { rawValue: '=A1' } } })}
+        onCellChange={jest.fn()}
+        onSelect={jest.fn()}
+      />,
+    );
+
+    const cell = document.querySelector('.grid-cell') as HTMLElement;
+    fireEvent.doubleClick(cell);
+
+    const input = cell.querySelector('input') as HTMLInputElement;
+    fireEvent.change(input, { target: { value: '=A1' } });
+
+    const overlay = cell.querySelector('.pointer-events-none') as HTMLDivElement;
+    expect(overlay).toBeInTheDocument();
+    // The overlay must have a 1px transparent border to match the input's
+    // 1px blue border, so both text contents start at the same offset.
+    expect(overlay.style.border).toBe('1px solid transparent');
   });
 });
 

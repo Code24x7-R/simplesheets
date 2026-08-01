@@ -266,6 +266,8 @@ export const FormulaBar = forwardRef<FormulaBarHandle, FormulaBarProps>(function
 }, ref) {
   const [expanded, setExpanded] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  // Ref to the highlight overlay so we can sync its scroll with the input
+  const overlayRef = useRef<HTMLDivElement>(null);
   // Track whether focus event should be ignored (used during Alt+Enter expansion)
   const suppressFocus = useRef(false);
 
@@ -325,6 +327,19 @@ export const FormulaBar = forwardRef<FormulaBarHandle, FormulaBarProps>(function
   // Compute validation
   const validation: ValidationResult = useMemo(() => validateFormula(value), [value]);
 
+  // Sync overlay scroll position with the input scroll position.
+  // The overlay is absolutely positioned over the input and renders the
+  // colored formula segments (the input text is transparent). When the input
+  // scrolls horizontally (long formula > bar width), the overlay must scroll
+  // in sync or the highlights will be misaligned with the caret position.
+  const syncOverlayScroll = useCallback(() => {
+    const input = inputRef.current;
+    const overlay = overlayRef.current;
+    if (input && overlay) {
+      overlay.scrollLeft = input.scrollLeft;
+    }
+  }, []);
+
   // Sync cursor position to input element and scroll to keep cursor visible
   // IMPORTANT: Only sync when there's no active selection to avoid clearing
   // the user's text selection
@@ -354,8 +369,10 @@ export const FormulaBar = forwardRef<FormulaBarHandle, FormulaBarProps>(function
           input.scrollLeft = Math.max(0, cursorX - 20);
         }
       }
+      // Sync overlay scroll to match input scroll
+      syncOverlayScroll();
     }
-  }, [cursorPos, value]);
+  }, [cursorPos, value, syncOverlayScroll]);
 
 
 
@@ -610,7 +627,7 @@ export const FormulaBar = forwardRef<FormulaBarHandle, FormulaBarProps>(function
         {/* Formula input area */}
         <div className={`flex-1 relative ${expanded ? 'min-h-[80px]' : ''} overflow-x-auto`}>
           {/* Colored display layer (underlay) */}
-          <FormulaHighlightOverlay value={value} isEditing={isEditing} />
+          <FormulaHighlightOverlay ref={overlayRef} value={value} isEditing={isEditing} />
           {/* Actual input — horizontal scroll for long content */}
           {expanded ? (
             <textarea
@@ -623,6 +640,7 @@ export const FormulaBar = forwardRef<FormulaBarHandle, FormulaBarProps>(function
               value={value}
               onChange={handleChange}
               onFocus={handleFocus}
+              onScroll={syncOverlayScroll}
               onBlur={handleBlur}
               onKeyDown={handleKeyDown}
               onClick={handleClick}
@@ -640,6 +658,7 @@ export const FormulaBar = forwardRef<FormulaBarHandle, FormulaBarProps>(function
               value={value}
               onChange={handleChange}
               onFocus={handleFocus}
+              onScroll={syncOverlayScroll}
               onBlur={handleBlur}
               onKeyDown={handleKeyDown}
               onClick={handleClick}

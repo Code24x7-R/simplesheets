@@ -4,13 +4,11 @@
 Achieve a clean, clutter-free UI with standardized dropdown menus, formula wizard, formula bar, and R1C1 reference format.
 
 ## Current State
-- **2304 tests** across **97 suites**, All passing
+- **2378 tests** across **96 suites**, All passing
 - Lint clean (0 warnings), Type-check clean, Build clean
 - Coverage: **93.94% stmts, 85.03% branches, 95.76% funcs, 95.31% lines**
-- Phases 1-28 complete: All planned features implemented and verified
-- Phase 28 complete (2026-07-31): Mobile platform enhancements (touch-friendly POINT mode, formula placement fix, false circular reference fix, focus restoration)
-- Recent fixes (2026-08-01): B-005 storageService 100% coverage; B-015 custom filter persistence; B-016 sort/undo filter state; B-017 sort/undo selection destruction fix
-- Planned: Phase 29 (Number Formatting — Date/Time & Text)
+- Phases 1–29 defined; Phases 1–28 and 29a/29b/29c complete ✅
+- Phase 29d (docs/tests) and Phases 21–23 (Charts, Conditional Formatting, Data Validation) planned 📋
 
 ---
 
@@ -189,145 +187,6 @@ Achieve a clean, clutter-free UI with standardized dropdown menus, formula wizar
 
 ---
 
-## 🔴 CURRENT PRIORITY: Phase 21 — Charts
-
-**Status**: Phases 1–27 defined; Phases 1–25 **complete** ✅. Branch coverage at **86.62%** (target 85%+ met).
-
-### New Phases Added (2026-07-30)
-
-| Phase | Description |
-|-------|-------------|
-| **Phase 26** | Range Operations Improvements (copy styles, paste special, drag-move, fill handle) |
-| **Phase 27** | POINT Mode & Modal Interaction (FormulaWizard modal blocking range selection) |
-
-### New Phase Added (2026-08-01)
-
-| Phase | Description |
-|-------|-------------|
-| **Phase 29** | Number Formatting Enhancements — Date/Time serial decoding & Text format (leading zero preservation) |
-
-### Next Phase: Phase 21 — Charts
-
-| Stage | Description |
-|-------|-------------|
-| 21a | Chart Types (bar, column, line, pie, area, scatter) |
-| 21b | Chart Configuration (title, axes, legend, colors, data range) |
-| 21c | Chart Rendering Engine (pure SVG, responsive, grid lines) |
-| 21d | Chart UI & Interaction (insert dialog, edit, delete, export) |
-| 21e | Integration (live updates, PDF export, workbook save/load) |
-
-**Problem**: The Formula Bar Editor and In-Line Grid Cell Editor have overlapping,
-poorly-designed implementations that diverge from Excel's functional model. The FSM
-(Finite State Machine) in `useCellEditing.ts` is supposed to be the single source of
-truth, but `Grid.tsx` maintains its own parallel editing state (`editingCell`,
-`editValue`, `editInputRef`) and re-implements editing behaviors that the FSM already
-handles. The in-cell editor also lacks formula-specific features (syntax highlighting,
-autocomplete, F9 evaluation) that the formula bar has.
-
-**Goal**: Unify both editors under a single FSM-driven architecture where:
-- The FSM is the **sole source of truth** for editing state (no parallel state in Grid)
-- Both editors share **formula-specific features** (syntax highlighting, autocomplete,
-  parenthesis matching, F9 evaluation)
-- POINT mode behavior is **consistent** regardless of which editor is active
-- Cell-click reference insertion works from **both** editors
-
-**Full analysis and subtasks below.**
-- Phase 17 complete: Cell Editing Workflows (F2 toggle, Ctrl+Shift+U expand, batch entry, formula view toggle)
-- Phase 18 complete: Sort & Filter (sort A-Z/Z-A, filter dropdown with custom conditions, Ctrl+Shift+L toggle)
-- 
-
-### UI Architecture (2026-07-28)
-| Component | Description |
-|-----------|-------------|
-| MenuBar | File/Edit/View/Insert/Format/Data/Help dropdown menus |
-| DropdownMenu | Reusable menu with submenus, shortcuts, separators |
-| Toolbar | Formatting toolbar (borders, colors, alignment, font) |
-| ImportExportBridge | Connects menu events to import/export file buttons |
-| R1C1 Toggle | Click cell ref button to switch A1/R1C1 |
-| Formula Bar | formula (function) editor |
-| Grid | Shows numeric column headers in R1C1 mode, fill handle, freeze panes |
-| formulaAutocomplete | Formula autocomplete engine |
-| FormulaWizard | Interactive step-by-step formula builder |
-| useFormulaWizard | Wizard state machine hook |
-| formulaWizardSchema | Structured function parameter definitions |
-| formulaWizardCompiler | AST-to-formula compiler |
-| SearchReplaceModal | Find & Replace dialog with configurable options |
-| FilterDropdown | Per-column filter dropdown with custom conditions |
-| PasteModal / PasteSpecialModal | Paste preview and paste special dialogs |
-| PrintSetupModal | Print configuration dialog |
-| AboutModal | About dialog with app info |
-| ShortcutsModal | Keyboard shortcuts reference |
-| SheetTabs | Multi-sheet tab bar |
-| FillHandle | Drag-to-fill series in Grid |
-| sheetSearch | Core search and replace engine |
-| sheetSort | Sort engine with multi-column support |
-| sheetFilter | Filter engine with custom conditions |
-| sheetOperations | Sheet add/delete/rename/switch operations |
-| fillSeries | Auto-fill series detection and generation |
-| numberFormat | Number formatting (currency, percent, date, etc.) |
-| FreezeContext | Freeze panes state management |
-| PrintSetupContext | Print configuration state |
-| HistoryContext | Undo/redo history management |
-
-### Coverage by file (2026-07-28)
-| File | Lines | Branches | Status |
-|------|-------|----------|--------|
-| App.tsx | 91.05% | 76.04% | ⚠️ paste/edge cases |
-| Grid.tsx | 87.63% | 87.16% | ⚠️ POINT mode/fill handle |
-| FormulaBar.tsx | 94.73% | 84.55% | ⚠️ autocomplete/error display |
-| MenuBar.tsx | 100% | 100% | ✅ |
-| Toolbar.tsx | 100% | 96.36% | ⚠️ branches |
-| FormulaWizard.tsx | 100% | 86.27% | ⚠️ branches |
-| FilterDropdown.tsx | 93.9% | 80.76% | ⚠️ custom filter |
-| clipboardParse.ts | 100% | 91.66% | ⚠️ branches |
-| formulaEngine.ts | 97.53% | 76.04% | ⚠️ branches |
-| SearchReplaceModal.tsx | 100% | 83.33% | ⚠️ branches |
-| useCellEditing.ts | 92.89% | 87.02% | ⚠️ FSM branches |
-| pdfExport.ts | 100% | 100% | ✅ |
-| HistoryContext.tsx | 100% | 75% | ⚠️ branches |
-| excelImport.ts | 100% | 100% | ✅ |
-| excelExport.ts | 100% | 94.73% | ⚠️ |
-| formulaParser.ts | 97.52% | 90.9% | ⚠️ |
-| formulaAutocomplete.ts | 100% | 100% | ✅ |
-| sheetSearch.ts | 100% | 100% | ✅ |
-| sheetSort.ts | 98.88% | 95.16% | ⚠️ |
-| sheetFilter.ts | 97.02% | 96.29% | ⚠️ |
-| sheetOperations.ts | 97% | 81.01% | ⚠️ |
-| fillSeries.ts | 100% | 86.11% | ⚠️ branches |
-| numberFormat.ts | 98.87% | 92.72% | ✅ accounting + auto-align |
-| useFormulaWizard.ts | 100% | 90.47% | ⚠️ branches |
-| highlightColors.ts | 100% | 100% | ✅ |
-| ImportCsvButton.tsx | 100% | 100% | ✅ |
-| ImportExcelButton.tsx | 100% | 100% | ✅ |
-| ImportJsonButton.tsx | 100% | 100% | ✅ |
-| ExportCsvButton.tsx | 100% | 100% | ✅ |
-| ExportExcelButton.tsx | 100% | 100% | ✅ |
-| ExportJsonButton.tsx | 100% | 100% | ✅ |
-| ExportPdfButton.tsx | 100% | 100% | ✅ |
-| ImportExportBridge.tsx | 100% | 100% | ✅ |
-| PrintSetupModal.tsx | 100% | 100% | ✅ |
-| PrintSetupContext.tsx | 100% | 100% | ✅ |
-| FreezeContext.tsx | 100% | 100% | ✅ |
-| PasteModal.tsx | 100% | 90% | ⚠️ branches |
-| PasteSpecialModal.tsx | 100% | 100% | ✅ |
-| ResizeHandle.tsx | 100% | 100% | ✅ |
-| ShortcutsModal.tsx | 100% | 100% | ✅ |
-| AboutModal.tsx | 98.18% | 85% | ⚠️ markdown edge |
-| SheetTabs.tsx | 98.46% | 96.15% | ⚠️ |
-| useAutosave.ts | 100% | 100% | ✅ |
-| useCellStyle.ts | 100% | 100% | ✅ |
-| useCellStyles.ts | 100% | 77.46% | ⚠️ branches |
-| useReferenceFormat.ts | 100% | 100% | ✅ |
-| csvService.ts | 98.59% | 82.35% | ⚠️ |
-| jsonService.ts | 100% | 96% | ⚠️ |
-| storageService.ts | 100% | 66.66% | ⚠️ branches |
-| clipboard.ts | 100% | 100% | ✅ |
-| benchmark.ts | 100% | 75% | ⚠️ branches |
-| formulaValidation.ts | 100% | 90.9% | ⚠️ |
-| formulaWizardCompiler.ts | 96.34% | 96.29% | ⚠️ |
-| formulaWizardSchema.ts | 100% | 100% | ✅ |
-| types.ts | 100% | 100% | ✅ |
-
 ## Phase 20: Number Formatting Enhancements (2026-07-29)
 *Auto-alignment for numbers/dates/times and Accounting format with left-aligned $ and right-aligned numbers.*
 
@@ -361,8 +220,6 @@ autocomplete, F9 evaluation) that the formula bar has.
 **Result:** 1922 tests across 78 suites, lint clean. Coverage: 94.31% stmts, 85.58% branches, 96.11% funcs, 95.68% lines.
 
 ---
-
-## Strategy: Quick Wins First, Then Phased Complex Files
 
 ## Phase 1: Quick Wins — COMPLETE ✅
 *All targeted files now at 100% lines. Achieved through tests + istanbul ignore for genuinely unreachable code.*
@@ -518,36 +375,6 @@ autocomplete, F9 evaluation) that the formula bar has.
 
 ---
 
-## Phase 8: Final Verification — IN PROGRESS
-- [ ] All files at 100% coverage
-- [x] All existing tests still pass (2076)
-- [x] Lint clean (0 warnings)
-- [x] Type-check clean (0 errors)
-- [x] Build succeeds
-- [x] Save/Open/Export fully wired (2026-07-30)
-
-**Current gaps** (metrics from 2026-07-30):
-- formulaEngine.ts: ~97.7% lines, **~78% branches** ← weakest
-- App.tsx: ~93% lines, **~78% branches** ← weakest
-- HistoryContext.tsx: 100% lines, **~75% branches** ← low-hanging
-- Grid.tsx: ~87.88% lines, ~88.51% branches
-- useCellEditing.ts: ~92.98% lines, ~87.65% branches
-- FormulaBar.tsx: ~94.79% lines, ~84.67% branches
-- FilterDropdown.tsx: ~93.9% lines, ~80.76% branches
-- useCellStyles.ts: 100% lines, ~77.46% branches
-- storageService.ts: 100% lines, **~66% branches** ← lowest
-- sheetOperations.ts: ~97% lines, ~81.01% branches
-- csvService.ts: ~98.59% lines, ~82.35% branches
-- benchmark.ts: 100% lines, 75% branches
-- formulaParser.ts: ~97.52% lines, ~90.9% branches
-- All other files at ≥95% lines, ≥85% branches ✅
-
-**Overall**: 94.55% stmts, **86.62% branches**, 95.7% funcs, 95.88% lines
-- sheetFilter.ts: 97.02% lines, 96.29% branches
-- useFormulaWizard.ts: 100% lines, 90.47% branches
-
----
-
 ## Phase 9: UI Overhaul (2026-07-25)
 *Consolidate all UI into clean dropdown menus with formula wizard and function bar.*
 
@@ -617,11 +444,13 @@ autocomplete, F9 evaluation) that the formula bar has.
 - [x] Add FormulaWizard component to render tree
 - [x] Handle wizard apply (commit formula to cell)
 
-### Phase 10f: Documentation — PARTIALLY COMPLETE
-- [ ] Update README.md with wizard documentation (covered by Phase 25f.1)
+### Phase 10f: Documentation — COMPLETE ✅
+- [x] Update README.md with wizard documentation (completed in Phase 25f.1)
 - [x] Update PLAN.md with Phase 10
 
 ---
+
+> **Note:** Phase 11 is not present in this plan (gap in numbering between Phases 10 and 12).
 
 ## Phase 12: Search & Replace (2026-07-26)
 *Find & Replace modal with configurable search options and multi-sheet scope.*
@@ -1154,7 +983,7 @@ multi-line editor.
 **Tests**: Test Alt+Enter in-cell creates textarea; test multiline display; test commit
 preserves newlines
 
-#### Phase 19f: Cleanup & Consistency — PARTIALLY COMPLETE
+#### Phase 19f: Cleanup & Consistency — COMPLETE ✅
 
 **Goal**: Remove dead code, fix known issues, ensure both editors are fully consistent.
 
@@ -1444,7 +1273,7 @@ Wizard AST:
 
 ---
 
-#### Stage 25f: Documentation & Polish — PARTIALLY COMPLETE
+#### Stage 25f: Documentation & Polish — COMPLETE ✅
 
 **Goal**: Update docs and ensure quality.
 
@@ -1846,7 +1675,7 @@ Improve FormulaWizard usability on mobile/touch platforms (iOS Safari, Android C
 - [x] **Toolbar buttons** — Added Date (📅) and Text (Abc) format buttons to the Toolbar
 - [x] **Format menu items** — Added Date/Text options to the Format menu dropdown (under Number Format)
 - [x] **Format detection** — Grid automatically applies date/time formatting when a cell's format string matches (existing pattern, now extended)
-- [ ] **Keyboard shortcuts** — Optionally add Ctrl+Shift+# (date) and Ctrl+Shift+@ (text) shortcuts
+- [ ] **Keyboard shortcuts** — Optionally add Ctrl+Shift+# (date) and Ctrl+Shift+@ (text) shortcuts (deferred — low priority)
 
 ### Phase 29d: Testing & Documentation — PLANNED 📋
 - [ ] **Unit tests** — Comprehensive tests for date serial decoding, format string parsing, time extraction, text format passthrough

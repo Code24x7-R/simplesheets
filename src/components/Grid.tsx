@@ -157,6 +157,8 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
   const parentRef = useRef<HTMLDivElement>(null);
   const [selection, setSelection] = useState<Selection | null>(null);
   const editInputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
+  // Ref to the highlight overlay so we can sync its scroll with the input
+  const overlayRef = useRef<HTMLDivElement>(null);
   // Track whether we were editing (for focus management when editing ends)
   const wasEditingRef = useRef(false);
 
@@ -473,6 +475,21 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
     return () => clearTimeout(timer);
   }, [isPointMode, pointSelection, rowVirtualizer, columnVirtualizer]);
 
+  // ─── Overlay Scroll Sync ────────────────────────────────────────
+  // The highlight overlay is absolutely positioned over the input and
+  // renders colored segments for cell references. Because the input
+  // uses text-transparent, the overlay carries the visible text. When
+  // the input scrolls horizontally (long formula > cell width), the
+  // overlay must scroll in sync or the highlights will be misaligned
+  // with the caret position.
+  const syncOverlayScroll = useCallback(() => {
+    const input = editInputRef.current;
+    const overlay = overlayRef.current;
+    if (input && overlay) {
+      overlay.scrollLeft = input.scrollLeft;
+    }
+  }, []);
+
   // ─── Cursor Sync Effect ───────────────────────────────────────────
   // Keeps the input caret position in sync with the FSM's caretPos.
   // Only syncs when there's no active selection to avoid clearing the
@@ -503,8 +520,10 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
           input.scrollLeft = Math.max(0, cursorX - 20);
         }
       }
+      // Sync overlay scroll to match input scroll
+      syncOverlayScroll();
     }
-  }, [session, editBuffer]);
+  }, [session, editBuffer, syncOverlayScroll]);
 
   useEffect(() => {
     if (document.activeElement === editInputRef.current) {
@@ -1766,6 +1785,7 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
                       value={editBuffer}
                       rows={Math.min(editBuffer.split('\n').length + 1, 5)}
                       onFocus={syncCursorPosition}
+                      onScroll={syncOverlayScroll}
                       onChange={(e) => {
                         const newPos = e.target.selectionStart ?? e.target.value.length;
                         onRawChange?.(e.target.value, newPos);
@@ -1806,6 +1826,7 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
                       style={{ caretColor: '#000' }}
                       value={editBuffer}
                       onFocus={syncCursorPosition}
+                      onScroll={syncOverlayScroll}
                       onChange={(e) => {
                         const newPos = e.target.selectionStart ?? e.target.value.length;
                         onRawChange?.(e.target.value, newPos);
@@ -1865,7 +1886,7 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
                     >
                       {cellEditing ? (
                         <div className="relative w-full h-full">
-                          <FormulaHighlightOverlay value={editBuffer} isEditing={true} />
+                          <FormulaHighlightOverlay ref={overlayRef} value={editBuffer} isEditing={true} />
                           {editorElement}
                           {autoComplete?.open && autoComplete.matches.length > 0 && (
                             <AutoCompleteDropdown
@@ -2063,6 +2084,7 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
                   value={editBuffer}
                   rows={Math.min(editBuffer.split('\n').length + 1, 5)}
                   onFocus={syncCursorPosition}
+                  onScroll={syncOverlayScroll}
                   onChange={(e) => {
                     const newPos = e.target.selectionStart ?? e.target.value.length;
                     onRawChange?.(e.target.value, newPos);
@@ -2120,6 +2142,7 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
                   style={{ caretColor: '#000' }}
                   value={editBuffer}
                   onFocus={syncCursorPosition}
+                  onScroll={syncOverlayScroll}
                   onChange={(e) => {
                     const newPos = e.target.selectionStart ?? e.target.value.length;
                     onRawChange?.(e.target.value, newPos);
@@ -2194,7 +2217,7 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
                 >
                   {cellEditing ? (
                     <div className="relative w-full h-full">
-                      <FormulaHighlightOverlay value={editBuffer} isEditing={true} />
+                      <FormulaHighlightOverlay ref={overlayRef} value={editBuffer} isEditing={true} />
                       {editorElement}
                       {autoComplete?.open && autoComplete.matches.length > 0 && (
                         <AutoCompleteDropdown

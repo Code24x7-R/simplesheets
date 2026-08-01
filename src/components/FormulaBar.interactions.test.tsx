@@ -202,6 +202,31 @@ describe('FormulaBar - Cursor Sync Effect', () => {
     const input = screen.getByPlaceholderText(/Enter a value or formula/) as HTMLInputElement;
     expect(input).toBeInTheDocument();
   });
+
+  it('overlay scrolls in sync with input on scroll event', () => {
+    const longFormula = '=SUM(Sheet1!B2:Sheet1!B21)+A3+SUM(F14:F22)';
+    render(
+      <FormulaBar
+        {...makeProps({
+          session: { ...defaultSession, state: 'EDIT', buffer: longFormula, isFormula: true },
+          value: longFormula,
+          cursorPos: longFormula.length,
+        })}
+      />,
+    );
+
+    const input = screen.getByPlaceholderText(/Enter a value or formula/) as HTMLInputElement;
+    const overlay = input.parentElement!.querySelector('.pointer-events-none') as HTMLDivElement;
+    expect(input).toBeInTheDocument();
+    expect(overlay).toBeInTheDocument();
+
+    // Simulate the input being scrolled (e.g., user drags the scrollbar)
+    Object.defineProperty(input, 'scrollLeft', { value: 150, writable: true, configurable: true });
+    fireEvent.scroll(input);
+
+    // Overlay should match the input scroll position
+    expect(overlay.scrollLeft).toBe(150);
+  });
 });
 
 describe('FormulaBar - Reference Format Toggle', () => {

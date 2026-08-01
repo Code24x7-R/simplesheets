@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
-import { useMemo } from 'react';
+import { useMemo, forwardRef } from 'react';
 import { HIGHLIGHT_COLORS, HIGHLIGHT_BORDER_COLORS } from '../utils/highlightColors';
 
 interface FormulaHighlightOverlayProps {
@@ -93,32 +93,50 @@ export function computeHighlightSegments(value: string, isEditing: boolean): Arr
  * The overlay is positioned absolutely underneath a transparent input/textarea.
  * Cell references (A1, $B$2, A1:B5) get colored backgrounds; other tokens render plain.
  */
-export function FormulaHighlightOverlay({ value, isEditing }: FormulaHighlightOverlayProps) {
-  const segments = useMemo(() => computeHighlightSegments(value, isEditing), [value, isEditing]);
+export const FormulaHighlightOverlay = forwardRef<HTMLDivElement, FormulaHighlightOverlayProps>(
+  function FormulaHighlightOverlay({ value, isEditing }, ref) {
+    const segments = useMemo(() => computeHighlightSegments(value, isEditing), [value, isEditing]);
 
-  if (!segments) return null;
+    if (!segments) return null;
 
-  return (
-    <div className="absolute inset-0 pointer-events-none font-mono text-sm flex items-center px-1 whitespace-nowrap min-w-full">
-      {segments.map((seg, i) => (
-        <span
-          key={i}
-          style={
-            seg.colorIndex !== null
-              ? {
-                  backgroundColor: HIGHLIGHT_COLORS[seg.colorIndex],
-                  border: `1px solid ${HIGHLIGHT_BORDER_COLORS[seg.colorIndex]}`,
-                  borderRadius: '2px',
-                  padding: '0 2px',
-                  fontWeight: 600,
-                  color: HIGHLIGHT_BORDER_COLORS[seg.colorIndex],
-                }
-              : undefined
-          }
-        >
-          {seg.text}
-        </span>
-      ))}
-    </div>
-  );
-}
+    return (
+      <div
+        ref={ref}
+        className="absolute inset-0 pointer-events-none font-mono text-sm px-1 whitespace-nowrap min-w-full overflow-hidden select-none"
+        style={{
+          /* Match the input's box model exactly: the input has a 1px
+             border that offsets its text content by 1px. Without this
+             the overlay text is misaligned with the input caret. */
+          border: '1px solid transparent',
+          lineHeight: 'inherit',
+          letterSpacing: 'inherit',
+        }}
+      >
+        {segments.map((seg, i) => (
+          <span
+            key={i}
+            style={
+              seg.colorIndex !== null
+                ? {
+                    backgroundColor: HIGHLIGHT_COLORS[seg.colorIndex],
+                    /* Use box-shadow instead of border so the highlight
+                       adds zero width — colored spans must occupy the
+                       same horizontal space as the plain input text so
+                       the caret aligns 1:1 with characters. */
+                    boxShadow: `inset 0 0 0 1px ${HIGHLIGHT_BORDER_COLORS[seg.colorIndex]}`,
+                    borderRadius: '2px',
+                    /* No fontWeight: bold characters are wider than normal
+                       ones, causing progressive misalignment (each colored
+                       cell ref shifts the caret further off). */
+                    color: HIGHLIGHT_BORDER_COLORS[seg.colorIndex],
+                  }
+                : undefined
+            }
+          >
+            {seg.text}
+          </span>
+        ))}
+      </div>
+    );
+  },
+);

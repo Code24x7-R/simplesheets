@@ -4,6 +4,29 @@
 
 ---
 
+### 2026-08-01 [COVERAGE] ImportExportBridge event handlers + file open
+- **Target**: ImportExportBridge.tsx was at 0% branches (never tested)
+- **Gap**: Component was tested for import events but not export events or file open handler
+- **Fix**: Added 8 new tests:
+  - 4 tests for export event listeners (Excel, CSV, JSON, PDF)
+  - 1 test for open file picker event
+  - 2 tests for file open handler (valid/invalid JSON)
+  - 1 test for no-file-selected early return
+  - Added istanbul ignore for genuinely unreachable defensive catch
+- **Results**: ImportExportBridge.tsx: 0% → 71.42% branches, 100% lines. Overall: 84.41% branches, 2438 tests pass
+- **Files**: `src/components/ImportExportBridge.test.tsx` (8 new tests), `src/components/ImportExportBridge.tsx` (istanbul ignore)
+- Commit: `6b6ca05`
+
+### 2026-08-01 [COVERAGE] formulaEngine.ts formatDate + error catch block
+- **Target**: formulaEngine.ts was at 74% branches, 94% functions, 90% lines
+- **Gap**: `formatDate` and `dateFromSerial` functions were only reachable via `TEXT` with date format strings — never tested
+- **Fix**: Added 13 new tests:
+  - 12 tests exercising `formatDate` via `TEXT(<serial>, "<fmt>")`: day (d/dd/dddd), month (m/mm/mmm/mmmm), year (y/yy), hour (h/HH), minutes (MM), seconds (ss), literal chars
+  - 1 test for the formula evaluation error catch block (unterminated string → #VALUE!)
+- **Results**: formulaEngine.ts now at 79% branches, 100% functions, 100% lines. Overall project: 84.28% branches (target 85%), 2430 tests pass
+- **Files**: `src/utils/formulaEngine.test.ts` (13 new tests)
+- Commit: `93f9c4a`
+
 ### 2026-08-01 [BUGFIX] B-023 — In-cell editor initial cursor position not right-most
 - **Symptom**: (1) Cursor at start of text when double-clicking to edit. (2) Long formulas not scrolled to show caret at end.
 - **Root cause**: (1) Cursor sync effect had `document.activeElement !== input` guard; could run before autoFocus established focus. (2) Grid cell editor lacked scroll-to-caret logic.
