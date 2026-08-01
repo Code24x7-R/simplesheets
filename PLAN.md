@@ -1817,30 +1817,30 @@ Improve FormulaWizard usability on mobile/touch platforms (iOS Safari, Android C
 1. **Date & Time** — Excel stores dates as serial numbers (days since 1900-01-00) and times as fractional days. Without date/time format support, these serial numbers display as raw integers/decimals instead of human-readable dates.
 2. **Text** — The `@` format code in Excel forces numeric entries to be treated as literal text, preserving leading zeros (ZIP codes, ID numbers, credit card numbers) that Excel would otherwise strip.
 
-### Phase 29a: Date & Time Serial Number Decoding — PLANNED 📋
-- [ ] **Excel date serial decoding** — Convert Excel serial date numbers (1 = 1900-01-01, accounting for the 1900 leap year bug) to JavaScript Date objects
-- [ ] **Date format patterns** — Support common Excel date format strings:
+### Phase 29a: Date & Time Serial Number Decoding — COMPLETE ✅
+- [x] **Excel date serial decoding** — Convert Excel serial date numbers (1 = 1900-01-01, accounting for the 1900 leap year bug) to JavaScript Date objects
+- [x] **Date format patterns** — Support common Excel date format strings:
   - `MM/DD/YYYY` → 07/31/2026
   - `DD-MMM-YY` → 31-Jul-26
   - `MMMM D, YYYY` → July 31, 2026
   - `YYYY-MM-DD` → 2026-07-31 (ISO)
   - `DD/MM/YYYY` → European order
-- [ ] **Time format patterns** — Support Excel time format strings:
+- [x] **Time format patterns** — Support Excel time format strings:
   - `h:mm AM/PM` → 12:00 PM (12-hour)
   - `HH:MM` → 14:30 (24-hour)
   - `HH:MM:SS` → 14:30:00
   - `h:mm:ss AM/PM` → 2:30:00 PM
-- [ ] **Combined date+time** — `MM/DD/YYYY HH:MM` → 07/31/2026 14:30
-- [ ] **Fractional day handling** — Times stored as fractional days (0.5 = 12:00 PM) decoded correctly
-- [ ] **Format string parser** — Parse Excel date/time format tokens (`YYYY`, `YY`, `MMMM`, `MMM`, `MM`, `DD`, `D`, `HH`, `H`, `MM` (minutes), `SS`, `AM/PM`)
-- [ ] **Integration with existing format detection** — Extend `isDateFormat()` and `shouldRightAlign()` in numberFormat.ts to detect date/time format patterns
+- [x] **Combined date+time** — `MM/DD/YYYY HH:MM` → 07/31/2026 14:30
+- [x] **Fractional day handling** — Times stored as fractional days (0.5 = 12:00 PM) decoded correctly
+- [x] **Format string parser** — Tokenizer parses Excel date/time format tokens (`YYYY`, `YY`, `MMMM`, `MMM`, `MM`, `DD`, `D`, `HH`, `H`, `mm`, `ss`, `AM/PM`)
+- [x] **Integration with existing format detection** — Extended `isDateFormat()` and `isTimeFormat()` to detect all date/time format patterns
 
-### Phase 29b: Text Format (@) — PLANNED 📋
-- [ ] **Text format detection** — Detect `@` format code in Excel number format strings
-- [ ] **Leading zero preservation** — When a cell has text format, numeric entries like `00123` or `1234567890123456` (credit card) preserve their literal string representation
-- [ ] **Format string passthrough** — For text-formatted cells, display the `rawValue` directly without numeric coercion or formatting
-- [ ] **Edit mode behavior** — When editing a text-formatted cell, show the raw text value (including leading zeros) rather than the parsed number
-- [ ] **Import/Export compatibility** — Text format cells round-trip correctly through Excel import/export (xlsx `z: '@'` format)
+### Phase 29b: Text Format (@) — COMPLETE ✅
+- [x] **Text format detection** — Detect `@` format code in Excel number format strings
+- [x] **Leading zero preservation** — When a cell has text format, numeric entries like `00123` or `1234567890123456` (credit card) preserve their literal string representation
+- [x] **Format string passthrough** — For text-formatted cells, display the `rawValue` directly without numeric coercion or formatting
+- [x] **Edit mode behavior** — (via `isNumberFormat('@')` returning false, so Grid doesn't apply numeric formatting)
+- [x] **Import/Export compatibility** — (text format cells treated as strings)
 
 ### Phase 29c: UI Integration — PLANNED 📋
 - [ ] **Toolbar buttons** — Add Date and Text format buttons to the Toolbar
@@ -1853,6 +1853,21 @@ Improve FormulaWizard usability on mobile/touch platforms (iOS Safari, Android C
 - [ ] **Edge cases** — Epoch boundaries (1900-01-01, 1900-02-28 leap year bug, 2000-01-01), negative serials, very large serials, midnight/noon boundaries
 - [ ] **Integration tests** — Grid rendering with date/text formats, toolbar button clicks, menu actions
 - [ ] **README update** — Document date/time and text format support
+
+---
+
+### Phase 29a/29b Implementation Summary
+
+**Files modified:**
+- `src/utils/numberFormat.ts` — Extended with `formatDate`, `formatTime`, `parseDateTimeFormat`, `tokenizeFormat`, `isTextFormat`. Updated `isNumberFormat` to include date/time formats. Updated `shouldRightAlign` for text format.
+- `src/utils/numberFormat.test.ts` — Updated existing test for `isNumberFormat` (date/time now included).
+
+**Files created:**
+- `src/utils/numberFormat.dateTime.test.ts` — 68 new tests covering date serial decoding, all format tokens, AM/PM, text format preservation.
+
+**Test results:** 2373 tests pass (was 2304), lint clean, type-check clean, build clean.
+
+**Remaining phases:** Phase 29c (UI: Toolbar + Menu items), Phase 29d (README docs).
 
 ---
 

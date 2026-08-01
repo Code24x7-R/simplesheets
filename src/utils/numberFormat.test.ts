@@ -19,7 +19,14 @@ describe('isNumberFormat', () => {
     expect(isNumberFormat('$#,##0.00')).toBe(true);
     expect(isNumberFormat('0.00%')).toBe(true);
     expect(isNumberFormat('0.00E+00')).toBe(true);
-    expect(isNumberFormat('mm/dd/yyyy')).toBe(false); // date, not numeric pattern
+    // Date/time formats are also "number formats" in the sense that they
+    // require numeric values to format (so Grid applies them)
+    expect(isNumberFormat('mm/dd/yyyy')).toBe(true);
+    expect(isNumberFormat('hh:mm:ss')).toBe(true);
+  });
+
+  it('returns false for text format (@)', () => {
+    expect(isNumberFormat('@')).toBe(false);
   });
 });
 
