@@ -250,6 +250,15 @@ describe('Toolbar', () => {
     expect(defaultProps.onSetNumberFormat).toHaveBeenCalledWith('0.00%');
   });
 
+  it('calls date and text format callbacks', () => {
+    render(<Toolbar {...defaultProps} />);
+    fireEvent.click(screen.getByTitle('Date format (MM/DD/YYYY)'));
+    expect(defaultProps.onSetNumberFormat).toHaveBeenCalledWith('mm/dd/yyyy');
+
+    fireEvent.click(screen.getByTitle('Text format — preserves literal values (leading zeros, IDs)'));
+    expect(defaultProps.onSetNumberFormat).toHaveBeenCalledWith('@');
+  });
+
   describe('color pickers', () => {
     it('opens text color picker when text color button is clicked', () => {
       render(<Toolbar {...defaultProps} />);

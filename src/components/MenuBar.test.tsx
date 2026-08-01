@@ -325,6 +325,38 @@ describe('MenuBar', () => {
     expect(defaultProps.onSetNumberFormat).toHaveBeenCalledWith('0.00%');
   });
 
+  it('Format menu triggers date format (MM/DD/YYYY) callback', () => {
+    render(<MenuBar {...defaultProps} />);
+    fireEvent.click(screen.getByText('Format'));
+    fireEvent.mouseEnter(screen.getByText('Number Format'));
+    fireEvent.click(screen.getByText('Date (MM/DD/YYYY)'));
+    expect(defaultProps.onSetNumberFormat).toHaveBeenCalledWith('mm/dd/yyyy');
+  });
+
+  it('Format menu triggers date format (DD-MMM-YY) callback', () => {
+    render(<MenuBar {...defaultProps} />);
+    fireEvent.click(screen.getByText('Format'));
+    fireEvent.mouseEnter(screen.getByText('Number Format'));
+    fireEvent.click(screen.getByText('Date (DD-MMM-YY)'));
+    expect(defaultProps.onSetNumberFormat).toHaveBeenCalledWith('dd-mmm-yy');
+  });
+
+  it('Format menu triggers date format (MMMM D, YYYY) callback', () => {
+    render(<MenuBar {...defaultProps} />);
+    fireEvent.click(screen.getByText('Format'));
+    fireEvent.mouseEnter(screen.getByText('Number Format'));
+    fireEvent.click(screen.getByText('Date (MMMM D, YYYY)'));
+    expect(defaultProps.onSetNumberFormat).toHaveBeenCalledWith('mmmm d, yyyy');
+  });
+
+  it('Format menu triggers text format (@) callback', () => {
+    render(<MenuBar {...defaultProps} />);
+    fireEvent.click(screen.getByText('Format'));
+    fireEvent.mouseEnter(screen.getByText('Number Format'));
+    fireEvent.click(screen.getByText('Text (@)'));
+    expect(defaultProps.onSetNumberFormat).toHaveBeenCalledWith('@');
+  });
+
   it('Format menu triggers alignment left callback', () => {
     render(<MenuBar {...defaultProps} />);
     fireEvent.click(screen.getByText('Format'));

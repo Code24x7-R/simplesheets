@@ -414,6 +414,20 @@ export function Toolbar(props: ToolbarProps) {
         >
           %
         </button>
+        <button
+          className="toolbar-btn text-xs"
+          onClick={() => props.onSetNumberFormat('mm/dd/yyyy')}
+          title="Date format (MM/DD/YYYY)"
+        >
+          📅
+        </button>
+        <button
+          className="toolbar-btn text-xs"
+          onClick={() => props.onSetNumberFormat('@')}
+          title="Text format — preserves literal values (leading zeros, IDs)"
+        >
+          Abc
+        </button>
       </div>
     </div>
   );
