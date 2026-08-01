@@ -2245,6 +2245,78 @@ describe('evaluateWorkbook - cross-sheet references', () => {
       });
       expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['3:0'].computedValue).toBe(1);
     });
+
+    // ─── IF with < 2 args returns #VALUE! ─────────────────────────
+
+    it('IF with only 1 argument returns #VALUE!', () => {
+      const sheet = createSheet({ '0:0': '=IF(TRUE)' });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue).toBe('#VALUE!');
+    });
+
+    // ─── ROUND with non-numeric input returns #VALUE! ─────────────
+
+    it('ROUND with non-numeric input returns #VALUE!', () => {
+      const sheet = createSheet({ '0:0': '=ROUND("abc", 2)' });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue).toBe('#VALUE!');
+    });
+
+    // ─── ABS/ROUNDUP with non-numeric input returns #VALUE! ──────
+
+    it('ABS with non-numeric input returns #VALUE!', () => {
+      const sheet = createSheet({ '0:0': '=ABS("abc")' });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue).toBe('#VALUE!');
+    });
+
+    it('ROUNDUP with non-numeric input returns #VALUE!', () => {
+      const sheet = createSheet({ '0:0': '=ROUNDUP("abc", 2)' });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue).toBe('#VALUE!');
+    });
+
+    // ─── matchesCriterion: blank/non-blank branches ───────────────
+
+    it('COUNTIF with empty string criterion counts blank cells', () => {
+      const sheet = createSheet({
+        '0:0': '42',
+        '1:0': '',
+        '2:0': '10',
+        '3:0': '=COUNTIF(A1:A3, "")',
+      });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['3:0'].computedValue).toBe(1);
+    });
+
+    it('COUNTIF with "<>" criterion counts non-blank cells', () => {
+      const sheet = createSheet({
+        '0:0': '42',
+        '1:0': '',
+        '2:0': '10',
+        '3:0': '=COUNTIF(A1:A3, "<>")',
+      });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['3:0'].computedValue).toBe(2);
+    });
+
+    // ─── matchesCriterion: = operator in numeric comparison ────────
+
+    it('COUNTIF with "=5" criterion matches exact value', () => {
+      const sheet = createSheet({
+        '0:0': '5',
+        '1:0': '3',
+        '2:0': '5',
+        '3:0': '=COUNTIF(A1:A3, "=5")',
+      });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['3:0'].computedValue).toBe(2);
+    });
+
+    // ─── matchesCriterion: wildcard with ? ─────────────────────────
+
+    it('COUNTIF with "a?c" wildcard matches', () => {
+      const sheet = createSheet({
+        '0:0': 'abc',
+        '1:0': 'axc',
+        '2:0': 'abcd',
+        '3:0': '=COUNTIF(A1:A3, "a?c")',
+      });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['3:0'].computedValue).toBe(2);
+    });
   });
 
   // ─── Additional function coverage (math, trig, string, date, stats) ──

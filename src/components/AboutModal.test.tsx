@@ -90,4 +90,16 @@ describe('AboutModal', () => {
     // Should show 'dev' when __BUILD_TIMESTAMP__ is undefined (test env)
     expect(screen.getByText(/build dev/)).toBeInTheDocument();
   });
+
+  it('displays build info with timestamp when __BUILD_TIMESTAMP__ is set', () => {
+    // Mock the global constants (ISO string format, as injected by Vite)
+    (global as Record<string, unknown>)['__BUILD_TIMESTAMP__'] = '2024-03-01T00:00:00.000Z';
+    (global as Record<string, unknown>)['__GIT_COMMIT_HASH__'] = 'abc1234';
+    render(<AboutModal isOpen={true} onClose={jest.fn()} />);
+    // When timestamp is set, should show commit hash (not 'dev')
+    expect(screen.getByText(/abc1234/)).toBeInTheDocument();
+    // Clean up
+    delete (global as Record<string, unknown>)['__BUILD_TIMESTAMP__'];
+    delete (global as Record<string, unknown>)['__GIT_COMMIT_HASH__'];
+  });
 });
