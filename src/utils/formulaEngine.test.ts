@@ -2308,6 +2308,30 @@ describe('evaluateWorkbook - cross-sheet references', () => {
       expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue).toBe('#VALUE!');
     });
 
+    // ─── CEILING/EXP error paths ──────────────────────────────────
+
+    it('CEILING with non-numeric input returns #VALUE!', () => {
+      const sheet = createSheet({ '0:0': '=CEILING("abc")' });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue).toBe('#VALUE!');
+    });
+
+    it('EXP with non-numeric input returns #VALUE!', () => {
+      const sheet = createSheet({ '0:0': '=EXP("abc")' });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue).toBe('#VALUE!');
+    });
+
+    // ─── Trig error paths ─────────────────────────────────────────
+
+    it('ATAN2 with non-numeric input returns #VALUE!', () => {
+      const sheet = createSheet({ '0:0': '=ATAN2("abc", 1)' });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue).toBe('#VALUE!');
+    });
+
+    it('DEGREES with non-numeric input returns #VALUE!', () => {
+      const sheet = createSheet({ '0:0': '=DEGREES("abc")' });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue).toBe('#VALUE!');
+    });
+
     // ─── matchesCriterion: blank/non-blank branches ───────────────
 
     it('COUNTIF with empty string criterion counts blank cells', () => {
