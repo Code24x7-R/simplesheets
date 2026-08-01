@@ -5,7 +5,7 @@
  * Parses cell ranges from sheets and produces structured data for chart rendering.
  */
 
-import type { Sheet } from '../types';
+import type { Sheet, Workbook } from '../types';
 import { cellKey } from '../types';
 
 /**
@@ -47,6 +47,46 @@ export function parseCellRef(ref: string): { row: number; col: number } {
 }
 
 /**
+ * Parses a range string that may include a sheet name.
+ * @param range - Range string (e.g., "A1:B10" or "Sheet1!A1:B10").
+ * @returns Object with sheetName (optional), startRow, endRow, startCol, endCol.
+ */
+export function parseRangeWithSheet(range: string): {
+  sheetName?: string;
+  startRow: number;
+  endRow: number;
+  startCol: number;
+  endCol: number;
+} {
+  // Check for sheet name prefix (e.g., "Sheet1!A1:B10" or 'Sheet 1'!A1:B10)
+  const sheetMatch = range.match(/^'([^']+)'!|^([A-Za-z0-9_]+)!/);
+  let cellRange = range;
+  let sheetName: string | undefined;
+
+  if (sheetMatch) {
+    sheetName = sheetMatch[1] ?? sheetMatch[2];
+    cellRange = range.slice(sheetMatch[0].length);
+  }
+
+  const parts = cellRange.split(':').map((s) => s.trim());
+  if (parts.length !== 2) {
+    const single = parseCellRef(parts[0]);
+    return { sheetName, startRow: single.row, endRow: single.row, startCol: single.col, endCol: single.col };
+  }
+
+  const start = parseCellRef(parts[0]);
+  const end = parseCellRef(parts[1]);
+
+  return {
+    sheetName,
+    startRow: Math.min(start.row, end.row),
+    endRow: Math.max(start.row, end.row),
+    startCol: Math.min(start.col, end.col),
+    endCol: Math.max(start.col, end.col),
+  };
+}
+
+/**
  * Parses a range string into start and end row/col.
  * @param range - Range string (e.g., "A1:B10").
  * @returns Object with startRow, endRow, startCol, endCol (all inclusive, zero-based).
@@ -72,6 +112,18 @@ export function parseRange(range: string): {
     startCol: Math.min(start.col, end.col),
     endCol: Math.max(start.col, end.col),
   };
+}
+
+/**
+ * Finds a sheet by name in a workbook.
+ * @param workbook - The workbook to search.
+ * @param sheetName - The sheet name to find.
+ * @returns The sheet, or undefined if not found.
+ */
+export function findSheetByName(workbook: Workbook, sheetName: string): Sheet | undefined {
+  return workbook.sheets.find(
+    (s) => s.name.toLowerCase() === sheetName.toLowerCase()
+  );
 }
 
 /**
@@ -112,7 +164,7 @@ export function tryParseNumber(str: string): number | null {
  * @returns Structured chart data with categories and series.
  */
 export function extractChartData(sheet: Sheet, range: string): ChartData {
-  const { startRow, endRow, startCol, endCol } = parseRange(range);
+  const { startRow, endRow, startCol, endCol } = parseRangeWithSheet(range);
 
   if (startRow < 0 || startCol < 0) {
     return { categories: [], series: [] };
@@ -187,6 +239,32 @@ export function extractChartData(sheet: Sheet, range: string): ChartData {
   }
 
   return { categories, series: seriesList };
+}
+
+/**
+ * Extracts chart data from a workbook, supporting cross-sheet references.
+ * @param workbook - The workbook containing sheets.
+ * @param range - Range string, optionally with sheet name (e.g., "Sheet1!A1:B10").
+ * @returns Structured chart data, or empty if sheet not found.
+ */
+export function extractChartDataFromWorkbook(workbook: Workbook, range: string): ChartData {
+  const parsed = parseRangeWithSheet(range);
+  let targetSheet: Sheet | undefined;
+
+  if (parsed.sheetName) {
+    targetSheet = findSheetByName(workbook, parsed.sheetName);
+    if (!targetSheet) {
+      // Sheet not found — return empty data
+      return { categories: [], series: [] };
+    }
+  } else {
+    // No sheet name — use the active sheet
+    targetSheet = workbook.sheets[workbook.activeSheetIndex];
+  }
+
+  // Reconstruct range without sheet name for the existing function
+  const cellRange = range.includes('!') ? range.slice(range.indexOf('!') + 1) : range;
+  return extractChartData(targetSheet, cellRange);
 }
 
 /**

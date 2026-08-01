@@ -3,14 +3,18 @@
 import {
   parseCellRef,
   parseRange,
+  parseRangeWithSheet,
   getCellValue,
   tryParseNumber,
   extractChartData,
+  extractChartDataFromWorkbook,
   getMinMax,
   getPieData,
   generateColors,
   findDataRange,
+  findSheetByName,
 } from './chartData';
+import type { Workbook } from '../types';
 import type { Sheet } from '../types';
 
 /**
@@ -331,5 +335,151 @@ describe('findDataRange', () => {
       '2:3': { rawValue: 'D3' },
     });
     expect(findDataRange(sheet)).toBe('D3:D3');
+  });
+});
+
+describe('parseRangeWithSheet', () => {
+  it('parses range without sheet name', () => {
+    const result = parseRangeWithSheet('A1:B10');
+    expect(result.sheetName).toBeUndefined();
+    expect(result.startRow).toBe(0);
+    expect(result.endRow).toBe(9);
+    expect(result.startCol).toBe(0);
+    expect(result.endCol).toBe(1);
+  });
+
+  it('parses range with simple sheet name', () => {
+    const result = parseRangeWithSheet('Sales!A1:B10');
+    expect(result.sheetName).toBe('Sales');
+    expect(result.startRow).toBe(0);
+    expect(result.endRow).toBe(9);
+  });
+
+  it('parses range with quoted sheet name', () => {
+    const result = parseRangeWithSheet("'My Sheet'!A1:B10");
+    expect(result.sheetName).toBe('My Sheet');
+    expect(result.startRow).toBe(0);
+    expect(result.endRow).toBe(9);
+  });
+
+  it('parses range with underscore sheet name', () => {
+    const result = parseRangeWithSheet('Sheet_1!C5:D10');
+    expect(result.sheetName).toBe('Sheet_1');
+    expect(result.startCol).toBe(2);
+    expect(result.endCol).toBe(3);
+  });
+
+  it('handles single cell with sheet name', () => {
+    const result = parseRangeWithSheet('Data!B3');
+    expect(result.sheetName).toBe('Data');
+    expect(result.startRow).toBe(2);
+    expect(result.endRow).toBe(2);
+    expect(result.startCol).toBe(1);
+    expect(result.endCol).toBe(1);
+  });
+});
+
+describe('findSheetByName', () => {
+  const workbook: Workbook = {
+    id: 'wb1',
+    title: 'Test',
+    sheets: [
+      { id: 's1', name: 'Sheet1', cells: {}, defaultColWidth: 100, defaultRowHeight: 28, columnWidths: {}, rowHeights: {}, columnCount: 26, rowCount: 100, frozenColumns: 0, frozenRows: 0 },
+      { id: 's2', name: 'Sales Data', cells: {}, defaultColWidth: 100, defaultRowHeight: 28, columnWidths: {}, rowHeights: {}, columnCount: 26, rowCount: 100, frozenColumns: 0, frozenRows: 0 },
+      { id: 's3', name: 'Q3 Report', cells: {}, defaultColWidth: 100, defaultRowHeight: 28, columnWidths: {}, rowHeights: {}, columnCount: 26, rowCount: 100, frozenColumns: 0, frozenRows: 0 },
+    ],
+    activeSheetIndex: 0,
+    lastModified: 0,
+  };
+
+  it('finds sheet by exact name', () => {
+    expect(findSheetByName(workbook, 'Sheet1')).toBe(workbook.sheets[0]);
+    expect(findSheetByName(workbook, 'Q3 Report')).toBe(workbook.sheets[2]);
+  });
+
+  it('finds sheet by case-insensitive name', () => {
+    expect(findSheetByName(workbook, 'sheet1')).toBe(workbook.sheets[0]);
+    expect(findSheetByName(workbook, 'SALES DATA')).toBe(workbook.sheets[1]);
+  });
+
+  it('returns undefined for non-existent sheet', () => {
+    expect(findSheetByName(workbook, 'NonExistent')).toBeUndefined();
+  });
+});
+
+describe('extractChartDataFromWorkbook', () => {
+  const workbook: Workbook = {
+    id: 'wb1',
+    title: 'Test',
+    sheets: [
+      {
+        id: 's1', name: 'Sheet1', cells: {
+          '0:0': { rawValue: 'Month', computedValue: 'Month' },
+          '0:1': { rawValue: 'Sales', computedValue: 'Sales' },
+          '1:0': { rawValue: 'Jan', computedValue: 'Jan' },
+          '1:1': { rawValue: '100', computedValue: 100 },
+          '2:0': { rawValue: 'Feb', computedValue: 'Feb' },
+          '2:1': { rawValue: '200', computedValue: 200 },
+        },
+        defaultColWidth: 100, defaultRowHeight: 28, columnWidths: {}, rowHeights: {},
+        columnCount: 26, rowCount: 100, frozenColumns: 0, frozenRows: 0,
+      },
+      {
+        id: 's2', name: 'Data', cells: {
+          '0:0': { rawValue: 'Q1', computedValue: 'Q1' },
+          '0:1': { rawValue: '50', computedValue: 50 },
+          '1:0': { rawValue: 'Q2', computedValue: 'Q2' },
+          '1:1': { rawValue: '75', computedValue: 75 },
+        },
+        defaultColWidth: 100, defaultRowHeight: 28, columnWidths: {}, rowHeights: {},
+        columnCount: 26, rowCount: 100, frozenColumns: 0, frozenRows: 0,
+      },
+    ],
+    activeSheetIndex: 0,
+    lastModified: 0,
+  };
+
+  it('extracts data from active sheet when no sheet name', () => {
+    const data = extractChartDataFromWorkbook(workbook, 'A1:B3');
+    expect(data.categories).toEqual(['Jan', 'Feb']);
+    expect(data.series[0].values).toEqual([100, 200]);
+  });
+
+  it('extracts data from named sheet', () => {
+    // Data sheet has Q1/50 in row 0, Q2/75 in row 1
+    // Row 0 (Q1, 50) detected as header; col 0 (Q1, Q2) as categories
+    const data = extractChartDataFromWorkbook(workbook, 'Data!A1:B2');
+    expect(data.categories).toEqual(['Q2']);
+    expect(data.series[0].values).toEqual([75]);
+  });
+
+  it('extracts from named sheet with explicit header', () => {
+    const workbookWithHeader: Workbook = {
+      ...workbook,
+      sheets: [
+        workbook.sheets[0],
+        {
+          ...workbook.sheets[1],
+          cells: {
+            '0:0': { rawValue: 'Quarter', computedValue: 'Quarter' },
+            '0:1': { rawValue: 'Revenue', computedValue: 'Revenue' },
+            '1:0': { rawValue: 'Q1', computedValue: 'Q1' },
+            '1:1': { rawValue: '50', computedValue: 50 },
+            '2:0': { rawValue: 'Q2', computedValue: 'Q2' },
+            '2:1': { rawValue: '75', computedValue: 75 },
+          },
+        },
+      ],
+    };
+    const data = extractChartDataFromWorkbook(workbookWithHeader, 'Data!A1:C3');
+    expect(data.categories).toEqual(['Q1', 'Q2']);
+    expect(data.series[0].label).toBe('Revenue');
+    expect(data.series[0].values).toEqual([50, 75]);
+  });
+
+  it('returns empty data for non-existent sheet', () => {
+    const data = extractChartDataFromWorkbook(workbook, 'NonExistent!A1:B3');
+    expect(data.categories).toEqual([]);
+    expect(data.series).toEqual([]);
   });
 });

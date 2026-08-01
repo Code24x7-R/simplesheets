@@ -195,21 +195,24 @@ describe('ChartDialog Range Picker', () => {
     expect(screen.getByText('📎 Pick Range')).toBeInTheDocument();
   });
 
-  it('shows active state when range picker is active', () => {
+  it('minimizes dialog when range picker is active', () => {
     render(<ChartDialog {...defaultProps} isRangePickerActive={true} />);
-    expect(screen.getByText('✓ Selecting...')).toBeInTheDocument();
+    // Dialog should be minimized to a small bar, not show full form
+    expect(screen.getByText(/Select a data range on the grid/)).toBeInTheDocument();
+    // Full dialog elements should not be visible
+    expect(screen.queryByTestId('chart-type-bar')).not.toBeInTheDocument();
+  });
+
+  it('shows pick range button in normal (non-picker) mode', () => {
+    render(<ChartDialog {...defaultProps} isRangePickerActive={false} />);
+    expect(screen.getByTestId('chart-range-picker')).toBeInTheDocument();
   });
 
   it('calls onToggleRangePicker when button is clicked', () => {
     const onToggleRangePicker = jest.fn();
-    render(<ChartDialog {...defaultProps} onToggleRangePicker={onToggleRangePicker} />);
+    render(<ChartDialog {...defaultProps} onToggleRangePicker={onToggleRangePicker} isRangePickerActive={false} />);
     fireEvent.click(screen.getByTestId('chart-range-picker'));
     expect(onToggleRangePicker).toHaveBeenCalledTimes(1);
-  });
-
-  it('shows instruction text when picker is active', () => {
-    render(<ChartDialog {...defaultProps} isRangePickerActive={true} />);
-    expect(screen.getByText(/Click and drag on the grid/)).toBeInTheDocument();
   });
 
   it('updates dataRange when chartRangeSelected event fires', () => {

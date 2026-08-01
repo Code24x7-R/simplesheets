@@ -2332,6 +2332,7 @@ function WorkbookView() {
         />
         <ChartOverlay
           sheet={updatedSheet}
+          workbook={workbook}
           onSelectChart={setSelectedChartId}
           onMoveChart={handleMoveChart}
           onResizeChart={handleResizeChart}
@@ -2483,6 +2484,7 @@ function WorkbookView() {
         onToggleRangePicker={handleToggleChartRangePicker}
         initialSettings={chartSettings}
         onSettingsChange={updateChartSettings}
+        workbook={workbook}
       />
     </div>
   );

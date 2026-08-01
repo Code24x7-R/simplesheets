@@ -7,13 +7,15 @@
  */
 
 import { useCallback, useState, useRef, useMemo } from 'react';
-import type { ChartConfig, Sheet } from '../../types';
+import type { ChartConfig, Sheet, Workbook } from '../../types';
 import { ChartRenderer } from './ChartRenderer';
-import { extractChartData } from '../../utils/chartData';
+import { extractChartDataFromWorkbook } from '../../utils/chartData';
 
 interface ChartOverlayProps {
   /** The sheet containing charts. */
   sheet: Sheet;
+  /** The workbook (for cross-sheet data references). */
+  workbook: Workbook;
   /** Callback when a chart is selected. */
   onSelectChart?: (id: string | null) => void;
   /** Callback when a chart is moved. */
@@ -31,6 +33,7 @@ interface ChartOverlayProps {
  */
 export function ChartOverlay({
   sheet,
+  workbook,
   onSelectChart,
   onMoveChart,
   onResizeChart,
@@ -154,7 +157,7 @@ export function ChartOverlay({
       data-testid="chart-overlay"
     >
       {sortedCharts.map((chart, index) => {
-        const data = extractChartData(sheet, chart.dataRange);
+        const data = extractChartDataFromWorkbook(workbook, chart.dataRange);
         const isSelected = chart.id === selectedChartId;
         const isMinimized = minimizedCharts.has(chart.id);
 

@@ -6,8 +6,8 @@
  */
 
 import { useState, useMemo, useCallback, useEffect } from 'react';
-import type { ChartConfig, ChartType, LegendPosition } from '../types';
-import { extractChartData, generateColors, findDataRange } from '../utils/chartData';
+import type { ChartConfig, ChartType, LegendPosition, Workbook } from '../types';
+import { extractChartDataFromWorkbook, generateColors, findDataRange } from '../utils/chartData';
 import { ChartRenderer } from './charts/ChartRenderer';
 import type { Sheet } from '../types';
 import type { ChartSettings } from '../hooks/useChartSettings';
@@ -30,6 +30,8 @@ interface ChartDialogProps {
   initialSettings?: ChartSettings;
   /** Callback when settings change (for persistence). */
   onSettingsChange?: (settings: ChartSettings) => void;
+  /** The workbook (for cross-sheet data references). */
+  workbook?: Workbook;
 }
 
 /** Chart type metadata for the type selector. */
@@ -53,7 +55,7 @@ const LEGEND_POSITIONS: Array<{ value: LegendPosition; label: string }> = [
 /**
  * Dialog for creating or editing a chart.
  */
-export function ChartDialog({ isOpen, onClose, onApply, sheet, initialRange, existingChart, isRangePickerActive, onToggleRangePicker, initialSettings, onSettingsChange }: ChartDialogProps) {
+export function ChartDialog({ isOpen, onClose, onApply, sheet, initialRange, existingChart, isRangePickerActive, onToggleRangePicker, initialSettings, onSettingsChange, workbook }: ChartDialogProps) {
   const defaultRange = initialRange || findDataRange(sheet) || 'A1:B5';
   const settings = initialSettings;
 
@@ -74,14 +76,21 @@ export function ChartDialog({ isOpen, onClose, onApply, sheet, initialRange, exi
     return () => window.removeEventListener('simplesheets:chartRangeSelected', handleRangeSelected);
   }, []);
 
-  // Extract data for preview
+  // Extract data for preview (supports cross-sheet references via workbook)
   const previewData = useMemo(() => {
     try {
-      return extractChartData(sheet, dataRange);
+      if (workbook) {
+        return extractChartDataFromWorkbook(workbook, dataRange);
+      }
+      // Fallback: extract from active sheet only
+      return extractChartDataFromWorkbook(
+        { id: 'temp', title: 'Temp', sheets: [sheet], activeSheetIndex: 0, lastModified: 0 },
+        dataRange
+      );
     } catch {
       return { categories: [], series: [] };
     }
-  }, [sheet, dataRange]);
+  }, [sheet, workbook, dataRange]);
 
   // Generate preview config
   const previewConfig = useMemo<ChartConfig>(() => {
@@ -146,6 +155,27 @@ export function ChartDialog({ isOpen, onClose, onApply, sheet, initialRange, exi
   }, [chartType, title, dataRange, xAxisLabel, yAxisLabel, legendPosition, previewData, existingChart, onApply, onClose, settings, onSettingsChange]);
 
   if (!isOpen) return null;
+
+  // When range picker is active, minimize dialog to top of screen
+  if (isRangePickerActive) {
+    return (
+      <div className="fixed top-2 left-1/2 -translate-x-1/2 z-50 bg-white rounded-lg shadow-xl border border-blue-300 w-[500px]">
+        <div className="flex items-center justify-between px-4 py-2">
+          <span className="text-sm font-medium text-blue-700">📊 Select a data range on the grid</span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-500">Press Enter to accept, Esc to cancel</span>
+            <button
+              onClick={onToggleRangePicker}
+              className="text-gray-400 hover:text-gray-600 text-sm"
+              aria-label="Cancel range selection"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
