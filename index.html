@@ -5,25 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SimpleSheet</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <!-- Tailwind CSS via CDN for zero-build-step prototyping -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            colors: {
-              grid: {
-                border: '#e0e0e0',
-                header: '#f8f9fa',
-                selected: '#e3f2fd',
-                'selected-border': '#1976d2',
-                frozen: '#f0f4f8',
-              },
-            },
-          },
-        },
-      };
-    </script>
+    <!-- Tailwind CSS is compiled via PostCSS during build (see src/index.css) -->
   </head>
   <body class="bg-white">
     <div id="root"></div>
