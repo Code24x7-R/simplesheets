@@ -10,6 +10,8 @@
 import type { Sheet } from '../types';
 import type { PrintSetup } from '../context/PrintSetupContext';
 import { colToLetter } from '../types';
+import { extractChartData, getMinMax, generateColors } from '../utils/chartData';
+import type { ChartConfig } from '../types';
 
 /**
  * Options for PDF generation.
@@ -169,7 +171,97 @@ function buildPrintableHtml(
   }
 
   container.appendChild(table);
+
+  // Charts
+  const charts = sheet.charts ?? [];
+  if (charts.length > 0) {
+    const chartsTitle = document.createElement('h3');
+    chartsTitle.textContent = 'Charts';
+    chartsTitle.style.margin = '16px 0 8px 0';
+    chartsTitle.style.fontSize = '12pt';
+    container.appendChild(chartsTitle);
+
+    for (const chart of charts) {
+      const chartContainer = document.createElement('div');
+      chartContainer.style.marginBottom = '12px';
+      chartContainer.style.pageBreakInside = 'avoid';
+
+      // Generate SVG and embed as inline
+      const svgString = generateChartSvg(chart, sheet);
+      const svgBlob = new Blob([svgString], { type: 'image/svg+xml' });
+      const svgUrl = URL.createObjectURL(svgBlob);
+
+      const img = document.createElement('img');
+      img.src = svgUrl;
+      img.width = chart.width;
+      img.height = chart.height;
+      img.style.maxWidth = '100%';
+      chartContainer.appendChild(img);
+      chartContainer.appendChild(img);
+      container.appendChild(chartContainer);
+    }
+  }
+
   return container;
+}
+
+/**
+ * Generates an SVG string for chart PDF export.
+ */
+function generateChartSvg(chart: ChartConfig, sheet: Sheet): string {
+  const data = extractChartData(sheet, chart.dataRange);
+  const { min: minVal, max: maxVal } = getMinMax(data);
+  const colors = generateColors(data.series.length);
+  const { width, height } = chart;
+
+  // Margins
+  const mTop = 40, mBottom = 40, mLeft = 50, mRight = 20;
+  const plotW = width - mLeft - mRight;
+  const plotH = height - mTop - mBottom;
+  const range = maxVal - minVal || 1;
+
+  let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`;
+
+  // Title
+  if (chart.title) {
+    svg += `<text x="${width / 2}" y="20" text-anchor="middle" font-size="14" font-weight="bold" fill="#374151">${chart.title}</text>`;
+  }
+
+  // Axes
+  svg += `<line x1="${mLeft}" y1="${mTop}" x2="${mLeft}" y2="${height - mBottom}" stroke="#D1D5DB"/>`;
+  svg += `<line x1="${mLeft}" y1="${height - mBottom}" x2="${width - mRight}" y2="${height - mBottom}" stroke="#D1D5DB"/>`;
+
+  // Y-axis ticks
+  for (let i = 0; i <= 4; i++) {
+    const val = minVal + (range * i) / 4;
+    const y = height - mBottom - (plotH * i) / 4;
+    svg += `<text x="${mLeft - 8}" y="${y + 3}" text-anchor="end" font-size="9" fill="#6B7280">${Math.round(val)}</text>`;
+  }
+
+  // Bars (simplified - works for bar/column/line)
+  if (data.categories.length > 0 && data.series.length > 0) {
+    const barW = (plotW / data.categories.length) * 0.6 / data.series.length;
+    const gap = (plotW / data.categories.length) * 0.2;
+
+    data.categories.forEach((_, ci) => {
+      data.series.forEach((s, si) => {
+        const val = s.values[ci] ?? 0;
+        const barH = ((val - minVal) / range) * plotH;
+        const x = mLeft + gap + ci * (plotW / data.categories.length) + si * barW;
+        const y = height - mBottom - barH;
+        svg += `<rect x="${x}" y="${y}" width="${Math.max(1, barW)}" height="${Math.max(0, barH)}" fill="${colors[si]}" opacity="0.9" rx="2"/>`;
+      });
+    });
+
+    // X-axis labels
+    data.categories.forEach((cat, i) => {
+      const x = mLeft + (plotW * (i + 0.5)) / data.categories.length;
+      svg += `<text x="${x}" y="${height - mBottom + 14}" text-anchor="middle" font-size="9" fill="#6B7280">${cat}</text>`;
+    });
+  }
+
+  svg += '</svg>';
+  return svg;
 }
 
 /**

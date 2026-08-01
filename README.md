@@ -104,6 +104,26 @@ Supported format patterns include:
 
 **Text format (`@`)**: Forces numeric entries to be treated as literal text, preserving leading zeros (ZIP codes, ID numbers, credit card numbers) that would otherwise be stripped.
 
+### Charts
+
+Create data visualizations from your spreadsheet data:
+
+- **Insert** — Insert → Chart… (or use the chart button in the toolbar)
+- **Supported types** — Bar, Column, Line, Pie, Area, Scatter
+- **Data source** — Uses your current cell selection as the default data range
+- **Configuration** — Set title, axis labels, legend position, and data range
+- **Live preview** — See changes in real-time as you configure
+- **Floating placement** — Charts float on the sheet and can be repositioned by dragging
+- **Auto-update** — Charts refresh automatically when source data changes
+- **PDF export** — Charts are included when exporting to PDF
+- **Persistence** — Charts are saved and loaded with the workbook
+
+To create a chart:
+1. Select the data range you want to visualize (including headers)
+2. Open Insert → Chart… or click the chart button in the toolbar
+3. Choose a chart type and configure options
+4. Click "Insert Chart" to place it on the sheet
+
 ### Reference Format Toggle
 
 Click the cell reference button (e.g., `A1`) in the formula bar to toggle between **A1** and **R1C1** notation. The preference is saved to localStorage.
