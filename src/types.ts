@@ -109,6 +109,9 @@ export interface Sheet {
 
   /** Frozen row count (0 = none frozen). */
   frozenRows: number;
+
+  /** Charts embedded in this sheet. */
+  charts?: ChartConfig[];
 }
 
 /**
@@ -175,6 +178,58 @@ export interface Selection {
 
   /** The column where the user started the selection. */
   anchorCol: number;
+}
+
+/**
+ * Chart type enumeration.
+ */
+export type ChartType = 'bar' | 'column' | 'line' | 'pie' | 'area' | 'scatter';
+
+/**
+ * Legend positioning options.
+ */
+export type LegendPosition = 'top' | 'bottom' | 'left' | 'right' | 'none';
+
+/**
+ * A single data series in a chart.
+ */
+export interface ChartSeries {
+  /** Display name for this series (shown in legend). */
+  label: string;
+  /** Cell range containing the data values (e.g., "A1:A10"). */
+  dataRange: string;
+  /** Optional custom color (hex string). Auto-assigned if omitted. */
+  color?: string;
+}
+
+/**
+ * Configuration for a chart embedded in a sheet.
+ */
+export interface ChartConfig {
+  /** Unique identifier for this chart. */
+  id: string;
+  /** The type of chart to render. */
+  type: ChartType;
+  /** Chart title displayed above the visualization. */
+  title: string;
+  /** Source data range (e.g., "A1:B10"). */
+  dataRange: string;
+  /** Data series configurations. */
+  series: ChartSeries[];
+  /** Label for the x-axis (category axis). */
+  xAxisLabel?: string;
+  /** Label for the y-axis (value axis). */
+  yAxisLabel?: string;
+  /** Position of the legend. */
+  legendPosition: LegendPosition;
+  /** Width of the chart in pixels. */
+  width: number;
+  /** Height of the chart in pixels. */
+  height: number;
+  /** Row position on the sheet (for floating placement). */
+  row: number;
+  /** Column position on the sheet (for floating placement). */
+  col: number;
 }
 
 /**
