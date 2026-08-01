@@ -5,11 +5,12 @@
  * Allows users to select chart type, data range, labels, and preview.
  */
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import type { ChartConfig, ChartType, LegendPosition } from '../types';
 import { extractChartData, generateColors, findDataRange } from '../utils/chartData';
 import { ChartRenderer } from './charts/ChartRenderer';
 import type { Sheet } from '../types';
+import type { ChartSettings } from '../hooks/useChartSettings';
 
 interface ChartDialogProps {
   isOpen: boolean;
@@ -21,6 +22,14 @@ interface ChartDialogProps {
   initialRange?: string;
   /** Existing chart to edit (optional). */
   existingChart?: ChartConfig;
+  /** Whether range picker mode is active. */
+  isRangePickerActive?: boolean;
+  /** Callback to toggle range picker mode. */
+  onToggleRangePicker?: () => void;
+  /** Initial settings from persistence. */
+  initialSettings?: ChartSettings;
+  /** Callback when settings change (for persistence). */
+  onSettingsChange?: (settings: ChartSettings) => void;
 }
 
 /** Chart type metadata for the type selector. */
@@ -44,15 +53,26 @@ const LEGEND_POSITIONS: Array<{ value: LegendPosition; label: string }> = [
 /**
  * Dialog for creating or editing a chart.
  */
-export function ChartDialog({ isOpen, onClose, onApply, sheet, initialRange, existingChart }: ChartDialogProps) {
+export function ChartDialog({ isOpen, onClose, onApply, sheet, initialRange, existingChart, isRangePickerActive, onToggleRangePicker, initialSettings, onSettingsChange }: ChartDialogProps) {
   const defaultRange = initialRange || findDataRange(sheet) || 'A1:B5';
+  const settings = initialSettings;
 
-  const [chartType, setChartType] = useState<ChartType>(existingChart?.type || 'bar');
+  const [chartType, setChartType] = useState<ChartType>(existingChart?.type || settings?.type || 'bar');
   const [dataRange, setDataRange] = useState(existingChart?.dataRange || defaultRange);
-  const [title, setTitle] = useState(existingChart?.title || 'Chart Title');
-  const [xAxisLabel, setXAxisLabel] = useState(existingChart?.xAxisLabel || '');
-  const [yAxisLabel, setYAxisLabel] = useState(existingChart?.yAxisLabel || '');
-  const [legendPosition, setLegendPosition] = useState<LegendPosition>(existingChart?.legendPosition || 'bottom');
+  const [title, setTitle] = useState(existingChart?.title || settings?.title || 'Chart Title');
+  const [xAxisLabel, setXAxisLabel] = useState(existingChart?.xAxisLabel || settings?.xAxisLabel || '');
+  const [yAxisLabel, setYAxisLabel] = useState(existingChart?.yAxisLabel || settings?.yAxisLabel || '');
+  const [legendPosition, setLegendPosition] = useState<LegendPosition>(existingChart?.legendPosition || settings?.legendPosition || 'bottom');
+
+  // Listen for chart range selection events from the grid
+  useEffect(() => {
+    const handleRangeSelected = (e: Event) => {
+      const customEvent = e as CustomEvent<{ range: string }>;
+      setDataRange(customEvent.detail.range);
+    };
+    window.addEventListener('simplesheets:chartRangeSelected', handleRangeSelected);
+    return () => window.removeEventListener('simplesheets:chartRangeSelected', handleRangeSelected);
+  }, []);
 
   // Extract data for preview
   const previewData = useMemo(() => {
@@ -88,6 +108,9 @@ export function ChartDialog({ isOpen, onClose, onApply, sheet, initialRange, exi
   }, [chartType, title, dataRange, xAxisLabel, yAxisLabel, legendPosition, previewData, existingChart]);
 
   const handleApply = useCallback(() => {
+    const width = existingChart?.width || settings?.width || 400;
+    const height = existingChart?.height || settings?.height || 300;
+
     const config: ChartConfig = {
       id: existingChart?.id || `chart-${Date.now()}`,
       type: chartType,
@@ -101,14 +124,26 @@ export function ChartDialog({ isOpen, onClose, onApply, sheet, initialRange, exi
       xAxisLabel: xAxisLabel || undefined,
       yAxisLabel: yAxisLabel || undefined,
       legendPosition,
-      width: existingChart?.width || 400,
-      height: existingChart?.height || 300,
+      width,
+      height,
       row: existingChart?.row || 0,
       col: existingChart?.col || 0,
     };
+
+    // Persist settings for next time
+    onSettingsChange?.({
+      type: chartType,
+      legendPosition,
+      title,
+      xAxisLabel,
+      yAxisLabel,
+      width,
+      height,
+    });
+
     onApply(config);
     onClose();
-  }, [chartType, title, dataRange, xAxisLabel, yAxisLabel, legendPosition, previewData, existingChart, onApply, onClose]);
+  }, [chartType, title, dataRange, xAxisLabel, yAxisLabel, legendPosition, previewData, existingChart, onApply, onClose, settings, onSettingsChange]);
 
   if (!isOpen) return null;
 
@@ -153,16 +188,32 @@ export function ChartDialog({ isOpen, onClose, onApply, sheet, initialRange, exi
           {/* Data Range */}
           <div>
             <label className="block text-sm font-medium mb-1">Data Range</label>
-            <input
-              type="text"
-              className="w-full border border-gray-200 rounded px-3 py-2 text-sm"
-              value={dataRange}
-              onChange={(e) => setDataRange(e.target.value)}
-              placeholder="e.g., A1:C10"
-              data-testid="chart-data-range"
-            />
+            <div className="flex gap-2">
+              <input
+                type="text"
+                className="flex-1 border border-gray-200 rounded px-3 py-2 text-sm"
+                value={dataRange}
+                onChange={(e) => setDataRange(e.target.value)}
+                placeholder="e.g., A1:C10"
+                data-testid="chart-data-range"
+              />
+              <button
+                className={`px-3 py-2 rounded border text-sm whitespace-nowrap ${
+                  isRangePickerActive
+                    ? 'bg-blue-100 border-blue-500 text-blue-700'
+                    : 'border-gray-200 hover:bg-gray-50'
+                }`}
+                onClick={onToggleRangePicker}
+                title="Select range on grid"
+                data-testid="chart-range-picker"
+              >
+                {isRangePickerActive ? '✓ Selecting...' : '📎 Pick Range'}
+              </button>
+            </div>
             <p className="text-xs text-gray-500 mt-1">
-              {previewData.categories.length} categories, {previewData.series.length} series detected
+              {isRangePickerActive
+                ? 'Click and drag on the grid to select a range, then press Enter.'
+                : `${previewData.categories.length} categories, ${previewData.series.length} series detected`}
             </p>
           </div>
 

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { ChartDialog } from './ChartDialog';
 import type { Sheet } from '../types';
 
@@ -169,5 +169,57 @@ describe('ChartDialog', () => {
     expect(screen.getByText('Edit Chart')).toBeInTheDocument();
     expect(screen.getByText('Update Chart')).toBeInTheDocument();
     expect(screen.getByTestId('chart-title')).toHaveValue('Existing Chart');
+  });
+});
+
+describe('ChartDialog Range Picker', () => {
+  const defaultProps = {
+    isOpen: true,
+    onClose: jest.fn(),
+    onApply: jest.fn(),
+    sheet: createTestSheet(),
+    initialRange: 'A1:B4',
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('shows pick range button', () => {
+    render(<ChartDialog {...defaultProps} />);
+    expect(screen.getByTestId('chart-range-picker')).toBeInTheDocument();
+  });
+
+  it('shows inactive state initially', () => {
+    render(<ChartDialog {...defaultProps} isRangePickerActive={false} />);
+    expect(screen.getByText('📎 Pick Range')).toBeInTheDocument();
+  });
+
+  it('shows active state when range picker is active', () => {
+    render(<ChartDialog {...defaultProps} isRangePickerActive={true} />);
+    expect(screen.getByText('✓ Selecting...')).toBeInTheDocument();
+  });
+
+  it('calls onToggleRangePicker when button is clicked', () => {
+    const onToggleRangePicker = jest.fn();
+    render(<ChartDialog {...defaultProps} onToggleRangePicker={onToggleRangePicker} />);
+    fireEvent.click(screen.getByTestId('chart-range-picker'));
+    expect(onToggleRangePicker).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows instruction text when picker is active', () => {
+    render(<ChartDialog {...defaultProps} isRangePickerActive={true} />);
+    expect(screen.getByText(/Click and drag on the grid/)).toBeInTheDocument();
+  });
+
+  it('updates dataRange when chartRangeSelected event fires', () => {
+    render(<ChartDialog {...defaultProps} />);
+    // Dispatch a custom event simulating grid range selection
+    act(() => {
+      window.dispatchEvent(new CustomEvent('simplesheets:chartRangeSelected', {
+        detail: { range: 'A1:D10' },
+      }));
+    });
+    expect(screen.getByTestId('chart-data-range')).toHaveValue('A1:D10');
   });
 });

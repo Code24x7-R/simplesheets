@@ -51,6 +51,7 @@ import type { ColumnFilter } from './utils/sheetFilter';
 import { ChartDialog } from './components/ChartDialog';
 import { ChartOverlay } from './components/charts/ChartOverlay';
 import type { ChartConfig } from './types';
+import { useChartSettings } from './hooks/useChartSettings';
 
 // ─── Empty Workbook ──────────────────────────────────────────────────────────
 
@@ -274,6 +275,8 @@ function WorkbookView() {
   const [showChartDialog, setShowChartDialog] = useState(false);
   const [editingChart, setEditingChart] = useState<ChartConfig | null>(null);
   const [selectedChartId, setSelectedChartId] = useState<string | null>(null);
+  const [chartPointMode, setChartPointMode] = useState(false);
+  const { settings: chartSettings, updateSettings: updateChartSettings } = useChartSettings();
 
   // Sheet reference (needed by the editing hook and everywhere else)
   const sheet = workbook.sheets[workbook.activeSheetIndex];
@@ -1684,6 +1687,52 @@ function WorkbookView() {
     [workbook, pushHistory],
   );
 
+  // ─── Chart Range Picker ────────────────────────────────────────────
+
+  const handleToggleChartRangePicker = useCallback(() => {
+    setChartPointMode((prev) => !prev);
+  }, []);
+
+  const handleChartPointSelection = useCallback(
+    (range: string) => {
+      // Update the chart range in the dialog via a custom event
+      // The ChartDialog listens for this and updates its dataRange
+      window.dispatchEvent(new CustomEvent('simplesheets:chartRangeSelected', {
+        detail: { range },
+      }));
+      setChartPointMode(false);
+    },
+    [],
+  );
+
+  const handleResizeChart = useCallback(
+    (chartId: string, width: number, height: number) => {
+      const currentSheet = workbook.sheets[workbook.activeSheetIndex];
+      const existingCharts = currentSheet.charts ?? [];
+      const chart = existingCharts.find((c) => c.id === chartId);
+      if (!chart) return;
+
+      const updatedCharts = existingCharts.map((c) =>
+        c.id === chartId ? { ...c, width, height } : c,
+      );
+
+      const updatedSheets = [...workbook.sheets];
+      updatedSheets[workbook.activeSheetIndex] = {
+        ...currentSheet,
+        charts: updatedCharts,
+      };
+
+      const newWorkbook = {
+        ...workbook,
+        sheets: updatedSheets,
+        lastModified: Date.now(),
+      };
+
+      pushHistory(newWorkbook, 'Resized chart', filterStateRef.current, gridSelectionRef.current);
+    },
+    [workbook, pushHistory],
+  );
+
   const handleApplyFilter = useCallback((column: number, filter: ColumnFilter | undefined) => {
     const currentSheet = workbook.sheets[workbook.activeSheetIndex];
     const currentFilters = filterState?.filters || {};
@@ -2278,13 +2327,14 @@ function WorkbookView() {
           onAcceptAutoComplete={acceptAutoComplete}
           onNavigateAutoComplete={navigateAutoComplete}
           onDismissAutoComplete={dismissAutoComplete}
-          wizardPointMode={isWizardPointMode}
-          onWizardPointSelection={handleWizardPointSelection}
+          wizardPointMode={isWizardPointMode || chartPointMode}
+          onWizardPointSelection={isWizardPointMode ? handleWizardPointSelection : handleChartPointSelection}
         />
         <ChartOverlay
           sheet={updatedSheet}
           onSelectChart={setSelectedChartId}
           onMoveChart={handleMoveChart}
+          onResizeChart={handleResizeChart}
           onDeleteChart={handleDeleteChart}
           selectedChartId={selectedChartId}
         />
@@ -2429,6 +2479,10 @@ function WorkbookView() {
             : undefined
         }
         existingChart={editingChart ?? undefined}
+        isRangePickerActive={chartPointMode}
+        onToggleRangePicker={handleToggleChartRangePicker}
+        initialSettings={chartSettings}
+        onSettingsChange={updateChartSettings}
       />
     </div>
   );
