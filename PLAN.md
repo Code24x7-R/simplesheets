@@ -1842,11 +1842,11 @@ Improve FormulaWizard usability on mobile/touch platforms (iOS Safari, Android C
 - [x] **Edit mode behavior** — (via `isNumberFormat('@')` returning false, so Grid doesn't apply numeric formatting)
 - [x] **Import/Export compatibility** — (text format cells treated as strings)
 
-### Phase 29c: UI Integration — PLANNED 📋
-- [ ] **Toolbar buttons** — Add Date and Text format buttons to the Toolbar
-- [ ] **Format menu items** — Add Date/Text options to the Format menu dropdown
-- [ ] **Format detection** — Grid automatically applies date/time formatting when a cell's format string matches a date/time pattern (existing auto-alignment pattern)
-- [ ] **Keyboard shortcuts** — Optionally add Ctrl+Shift+# (date) and Ctrl+Shift+@ (text) shortcuts (Excel-compatible)
+### Phase 29c: UI Integration — COMPLETE ✅
+- [x] **Toolbar buttons** — Added Date (📅) and Text (Abc) format buttons to the Toolbar
+- [x] **Format menu items** — Added Date/Text options to the Format menu dropdown (under Number Format)
+- [x] **Format detection** — Grid automatically applies date/time formatting when a cell's format string matches (existing pattern, now extended)
+- [ ] **Keyboard shortcuts** — Optionally add Ctrl+Shift+# (date) and Ctrl+Shift+@ (text) shortcuts
 
 ### Phase 29d: Testing & Documentation — PLANNED 📋
 - [ ] **Unit tests** — Comprehensive tests for date serial decoding, format string parsing, time extraction, text format passthrough
