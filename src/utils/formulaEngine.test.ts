@@ -2332,6 +2332,69 @@ describe('evaluateWorkbook - cross-sheet references', () => {
       expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue).toBe('#VALUE!');
     });
 
+    // ─── EXP with no arguments (covers ?? 0 branch) ──────────────
+
+    it('EXP with no arguments uses default 0', () => {
+      const sheet = createSheet({ '0:0': '=EXP()' });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue).toBe(1);
+    });
+
+    // ─── LN with no arguments (covers ?? 1 branch) ───────────────
+
+    it('LN with no arguments uses default 1', () => {
+      const sheet = createSheet({ '0:0': '=LN()' });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue).toBe(0);
+    });
+
+    // ─── LOG10 with no arguments (covers ?? 1 branch) ────────────
+
+    it('LOG10 with no arguments uses default 1', () => {
+      const sheet = createSheet({ '0:0': '=LOG10()' });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue).toBe(0);
+    });
+
+    // ─── ATAN/ASIN/ACOS with no arguments (covers ?? 0 branch) ──
+
+    it('ATAN with no arguments uses default 0', () => {
+      const sheet = createSheet({ '0:0': '=ATAN()' });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue).toBe(0);
+    });
+
+    it('ASIN with no arguments uses default 0', () => {
+      const sheet = createSheet({ '0:0': '=ASIN()' });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue).toBe(0);
+    });
+
+    // ─── IFERROR/IFNA with no fallback (covers ?? '' branch) ─────
+
+    it('IFERROR with no fallback returns empty string on error', () => {
+      const sheet = createSheet({
+        '0:0': '=1/0',
+        '1:0': '=IFERROR(A1)',
+      });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['1:0'].computedValue).toBe('');
+    });
+
+    it('IFNA with no fallback returns empty string on error', () => {
+      const sheet = createSheet({
+        '0:0': '=1/0',
+        '1:0': '=IFNA(A1)',
+      });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['1:0'].computedValue).toBe('');
+    });
+
+    // ─── SIGN/SIN with no arguments (covers ?? 0 branch) ─────────
+
+    it('SIGN with no arguments uses default 0', () => {
+      const sheet = createSheet({ '0:0': '=SIGN()' });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue).toBe(0);
+    });
+
+    it('SIN with no arguments uses default 0', () => {
+      const sheet = createSheet({ '0:0': '=SIN()' });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue).toBe(0);
+    });
+
     // ─── matchesCriterion: blank/non-blank branches ───────────────
 
     it('COUNTIF with empty string criterion counts blank cells', () => {
