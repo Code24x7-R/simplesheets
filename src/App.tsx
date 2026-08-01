@@ -241,6 +241,12 @@ function WorkbookView() {
   }>({ isOpen: false, title: '', defaultName: '', extension: '', onConfirm: () => {} });
   // Filter state for auto-filter feature
   const [filterState, setFilterState] = useState<FilterState | null>(null);
+  // Ref to always capture current filterState for pushHistory calls
+  const filterStateRef = useRef<FilterState | null>(null);
+  filterStateRef.current = filterState;
+  // Ref to always capture current gridSelection for pushHistory calls
+  const gridSelectionRef = useRef<Selection | null>(null);
+  gridSelectionRef.current = gridSelection;
 
   // Sheet reference (needed by the editing hook and everywhere else)
   const sheet = workbook.sheets[workbook.activeSheetIndex];
@@ -365,7 +371,7 @@ function WorkbookView() {
         lastModified: Date.now(),
       };
       const cellRef = `${colToLetter(col)}${row + 1}`;
-      pushHistory(newWorkbook, `Edit ${cellRef}`);
+      pushHistory(newWorkbook, `Edit ${cellRef}`, filterStateRef.current, gridSelectionRef.current);
       setStatusMessage(`Updated ${cellRef}`);
     },
     [workbook, pushHistory]
@@ -402,7 +408,7 @@ function WorkbookView() {
         lastModified: Date.now(),
       };
       const cellCount = changes.length;
-      pushHistory(newWorkbook, `Updated ${cellCount} cell(s)`);
+      pushHistory(newWorkbook, `Updated ${cellCount} cell(s)`, filterStateRef.current, gridSelectionRef.current);
       setStatusMessage(`Updated ${cellCount} cell(s)`);
     },
     [workbook, pushHistory]
@@ -594,7 +600,7 @@ function WorkbookView() {
   // Modal updater for search/replace (receives new workbook + description)
   const handleSearchReplaceApply = useCallback(
     (updatedWb: Workbook, description: string) => {
-      pushHistory(updatedWb, description);
+      pushHistory(updatedWb, description, filterStateRef.current, gridSelectionRef.current);
       setStatusMessage(description);
       setShowSearchReplace(false);
       // Restore focus to grid so keyboard navigation works
@@ -624,7 +630,7 @@ function WorkbookView() {
       setStatusMessage(`Saved "${filename}.json" — download started`);
       // Update the workbook title to the saved filename (without extension)
       const updatedWb: Workbook = { ...workbook, title: filename, lastModified: Date.now() };
-      pushHistory(updatedWb, `Saved as "${filename}"`);
+      pushHistory(updatedWb, `Saved as "${filename}"`, filterStateRef.current, gridSelectionRef.current);
       closeFilenameModal();
     });
   }, [workbook, pushHistory, openFilenameModal, closeFilenameModal]);
@@ -713,7 +719,19 @@ function WorkbookView() {
     const prev = undo();
     if (prev) {
       setStatusMessage('Undo performed');
-      setActiveCell(null);
+      if (prev.gridSelection) {
+        const sel = prev.gridSelection as Selection;
+        setGridSelection(sel);
+        setActiveCell({ row: sel.anchorRow, col: sel.anchorCol });
+      } else {
+        setGridSelection(null);
+        setActiveCell(null);
+      }
+      if (prev.filterState) {
+        setFilterState(prev.filterState as FilterState);
+      } else {
+        setFilterState(null);
+      }
       gridRef.current?.focus();
     }
   }, [undo]);
@@ -722,6 +740,19 @@ function WorkbookView() {
     const next = redo();
     if (next) {
       setStatusMessage('Redo performed');
+      if (next.filterState) {
+        setFilterState(next.filterState as FilterState);
+      } else {
+        setFilterState(null);
+      }
+      if (next.gridSelection) {
+        const sel = next.gridSelection as Selection;
+        setGridSelection(sel);
+        setActiveCell({ row: sel.anchorRow, col: sel.anchorCol });
+      } else {
+        setGridSelection(null);
+        setActiveCell(null);
+      }
       gridRef.current?.focus();
     }
   }, [redo]);
@@ -740,7 +771,7 @@ function WorkbookView() {
         sheets: newSheets,
         lastModified: Date.now(),
       };
-      pushHistory(newWorkbook, `Resize column ${colToLetter(col)} to ${newWidth}px`);
+      pushHistory(newWorkbook, `Resize column ${colToLetter(col)} to ${newWidth}px`, filterStateRef.current, gridSelectionRef.current);
     },
     [workbook, pushHistory]
   );
@@ -759,7 +790,7 @@ function WorkbookView() {
         sheets: newSheets,
         lastModified: Date.now(),
       };
-      pushHistory(newWorkbook, `Resize row ${row + 1} to ${newHeight}px`);
+      pushHistory(newWorkbook, `Resize row ${row + 1} to ${newHeight}px`, filterStateRef.current, gridSelectionRef.current);
     },
     [workbook, pushHistory]
   );
@@ -805,7 +836,7 @@ function WorkbookView() {
       const wbWithTitle: Workbook = title !== importedWb.title
         ? { ...importedWb, title, lastModified: Date.now() }
         : importedWb;
-      pushHistory(wbWithTitle, 'Import file');
+      pushHistory(wbWithTitle, 'Import file', filterStateRef.current, gridSelectionRef.current);
       setStatusMessage(`Imported "${title}" — ${wbWithTitle.sheets.length} sheet(s)`);
     },
     [pushHistory]
@@ -830,7 +861,7 @@ function WorkbookView() {
         activeSheetIndex: index,
         lastModified: Date.now(),
       };
-      pushHistory(newWb, `Switch to ${workbook.sheets[index].name}`);
+      pushHistory(newWb, `Switch to ${workbook.sheets[index].name}`, filterStateRef.current, gridSelectionRef.current);
       setActiveCell(null);
       gridRef.current?.focus();
     },
@@ -858,7 +889,7 @@ function WorkbookView() {
       activeSheetIndex: workbook.sheets.length,
       lastModified: Date.now(),
     };
-    pushHistory(newWb, `Add Sheet${sheetNum}`);
+    pushHistory(newWb, `Add Sheet${sheetNum}`, filterStateRef.current, gridSelectionRef.current);
     setActiveCell(null);
     gridRef.current?.focus();
   }, [workbook, pushHistory]);
@@ -875,7 +906,7 @@ function WorkbookView() {
         sheets: newSheets,
         lastModified: Date.now(),
       };
-      pushHistory(newWb, `Rename sheet to "${trimmed}"`);
+      pushHistory(newWb, `Rename sheet to "${trimmed}"`, filterStateRef.current, gridSelectionRef.current);
       setStatusMessage(`Renamed sheet to "${trimmed}"`);
       gridRef.current?.focus();
     },
@@ -902,7 +933,7 @@ function WorkbookView() {
         activeSheetIndex: index + 1,
         lastModified: Date.now(),
       };
-      pushHistory(newWb, `Copy sheet "${source.name}"`);
+      pushHistory(newWb, `Copy sheet "${source.name}"`, filterStateRef.current, gridSelectionRef.current);
       setActiveCell(null);
       gridRef.current?.focus();
     },
@@ -922,7 +953,7 @@ function WorkbookView() {
         activeSheetIndex: newActive < 0 ? 0 : newActive,
         lastModified: Date.now(),
       };
-      pushHistory(newWb, `Delete sheet "${sheetName}"`);
+      pushHistory(newWb, `Delete sheet "${sheetName}"`, filterStateRef.current, gridSelectionRef.current);
       setActiveCell(null);
       gridRef.current?.focus();
     },
@@ -1259,7 +1290,7 @@ function WorkbookView() {
           : selType === 'col'
           ? isCut ? 'Moved column(s)' : 'Pasted column(s)'
           : isCut ? `Cut ${cellsUpdated} cell(s)` : `Paste ${cellsUpdated} cell(s)`;
-      pushHistory(newWorkbook, actionLabel);
+      pushHistory(newWorkbook, actionLabel, filterStateRef.current, gridSelectionRef.current);
 
       // Build status message with skip blanks info
       let statusMsg = `${isCut ? 'Moved' : 'Pasted'} ${cellsUpdated} cell(s)`;
@@ -1406,7 +1437,7 @@ function WorkbookView() {
       idx === workbook.activeSheetIndex ? sorted : s
     );
     const newWb: Workbook = { ...workbook, sheets: newSheets, lastModified: Date.now() };
-    pushHistory(newWb, `Sorted column ${colToLetter(selection.startCol)} ascending`);
+    pushHistory(newWb, `Sorted column ${colToLetter(selection.startCol)} ascending`, filterStateRef.current, gridSelectionRef.current);
     setStatusMessage(`Sorted column ${colToLetter(selection.startCol)} — ascending`);
   }, [workbook, pushHistory, selection]);
 
@@ -1426,7 +1457,7 @@ function WorkbookView() {
       idx === workbook.activeSheetIndex ? sorted : s
     );
     const newWb: Workbook = { ...workbook, sheets: newSheets, lastModified: Date.now() };
-    pushHistory(newWb, `Sorted column ${colToLetter(selection.startCol)} descending`);
+    pushHistory(newWb, `Sorted column ${colToLetter(selection.startCol)} descending`, filterStateRef.current, gridSelectionRef.current);
     setStatusMessage(`Sorted column ${colToLetter(selection.startCol)} — descending`);
   }, [workbook, pushHistory, selection]);
 
@@ -1620,12 +1651,12 @@ function WorkbookView() {
       const newSheets = workbook.sheets.map((s, idx) =>
         idx === workbook.activeSheetIndex ? { ...s, cells: newCells } : s
       );
-      const newWorkbook: Workbook = {
+      const newWb: Workbook = {
         ...workbook,
         sheets: newSheets,
         lastModified: Date.now(),
       };
-      pushHistory(newWorkbook, `Paste ${cellsUpdated} cell(s)`);
+      pushHistory(newWb, `Paste ${cellsUpdated} cell(s)`, filterStateRef.current, gridSelectionRef.current);
 
       // Build status message with clipping info if applicable
       let statusMsg = `Pasted ${cellsUpdated} cell(s)`;
@@ -1685,7 +1716,7 @@ function WorkbookView() {
       idx === workbook.activeSheetIndex ? insertRow(s, rowIndex) : s
     );
     const newWb: Workbook = { ...workbook, sheets: newSheets, lastModified: Date.now() };
-    pushHistory(newWb, `Insert row ${rowIndex + 1}`);
+    pushHistory(newWb, `Insert row ${rowIndex + 1}`, filterStateRef.current, gridSelectionRef.current);
     setActiveCell({ row: rowIndex, col: activeCell.col });
     setStatusMessage(`Inserted row ${rowIndex + 1}`);
   }, [workbook, pushHistory, activeCell]);
@@ -1697,7 +1728,7 @@ function WorkbookView() {
       idx === workbook.activeSheetIndex ? insertRow(s, rowIndex) : s
     );
     const newWb: Workbook = { ...workbook, sheets: newSheets, lastModified: Date.now() };
-    pushHistory(newWb, `Insert row ${rowIndex + 1}`);
+    pushHistory(newWb, `Insert row ${rowIndex + 1}`, filterStateRef.current, gridSelectionRef.current);
     setStatusMessage(`Inserted row ${rowIndex + 1}`);
   }, [workbook, pushHistory, activeCell]);
 
@@ -1708,7 +1739,7 @@ function WorkbookView() {
       idx === workbook.activeSheetIndex ? insertCol(s, colIndex) : s
     );
     const newWb: Workbook = { ...workbook, sheets: newSheets, lastModified: Date.now() };
-    pushHistory(newWb, `Insert col ${colToLetter(colIndex)}`);
+    pushHistory(newWb, `Insert col ${colToLetter(colIndex)}`, filterStateRef.current, gridSelectionRef.current);
     setActiveCell({ row: activeCell.row, col: colIndex });
     setStatusMessage(`Inserted column ${colToLetter(colIndex)}`);
   }, [workbook, pushHistory, activeCell]);
@@ -1720,7 +1751,7 @@ function WorkbookView() {
       idx === workbook.activeSheetIndex ? insertCol(s, colIndex) : s
     );
     const newWb: Workbook = { ...workbook, sheets: newSheets, lastModified: Date.now() };
-    pushHistory(newWb, `Insert col ${colToLetter(colIndex)}`);
+    pushHistory(newWb, `Insert col ${colToLetter(colIndex)}`, filterStateRef.current, gridSelectionRef.current);
     setStatusMessage(`Inserted column ${colToLetter(colIndex)}`);
   }, [workbook, pushHistory, activeCell]);
 
@@ -1731,7 +1762,7 @@ function WorkbookView() {
       idx === workbook.activeSheetIndex ? deleteRow(s, rowIndex) : s
     );
     const newWb: Workbook = { ...workbook, sheets: newSheets, lastModified: Date.now() };
-    pushHistory(newWb, `Delete row ${rowIndex + 1}`);
+    pushHistory(newWb, `Delete row ${rowIndex + 1}`, filterStateRef.current, gridSelectionRef.current);
     setActiveCell({ row: Math.max(0, rowIndex - 1), col: activeCell.col });
     setStatusMessage(`Deleted row ${rowIndex + 1}`);
   }, [workbook, pushHistory, activeCell]);
@@ -1743,7 +1774,7 @@ function WorkbookView() {
       idx === workbook.activeSheetIndex ? deleteCol(s, colIndex) : s
     );
     const newWb: Workbook = { ...workbook, sheets: newSheets, lastModified: Date.now() };
-    pushHistory(newWb, `Delete col ${colToLetter(colIndex)}`);
+    pushHistory(newWb, `Delete col ${colToLetter(colIndex)}`, filterStateRef.current, gridSelectionRef.current);
     setActiveCell({ row: activeCell.row, col: Math.max(0, colIndex - 1) });
     setStatusMessage(`Deleted column ${colToLetter(colIndex)}`);
   }, [workbook, pushHistory, activeCell]);

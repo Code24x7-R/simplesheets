@@ -263,6 +263,51 @@ describe('FilterDropdown', () => {
     });
   });
 
+  describe('custom filter persistence (B-015)', () => {
+    it('initializes custom filter tab and values from existing custom filter', () => {
+      const existingFilter: ColumnFilter = {
+        conditions: [{ type: 'contains', value: 'Ali' }],
+        logic: 'AND',
+      };
+      render(<FilterDropdown {...defaultProps} currentFilter={existingFilter} />);
+      // Should auto-switch to custom filter tab
+      const customType = screen.getByTestId('filter-custom-type');
+      expect(customType).toBeInTheDocument();
+      // Should show the saved custom filter type and value
+      expect(customType).toHaveValue('contains');
+      expect(screen.getByTestId('filter-custom-value')).toHaveValue('Ali');
+    });
+
+    it('initializes equals custom filter from existing filter', () => {
+      const existingFilter: ColumnFilter = {
+        conditions: [{ type: 'equals', value: 'Bob' }],
+        logic: 'AND',
+      };
+      render(<FilterDropdown {...defaultProps} currentFilter={existingFilter} />);
+      expect(screen.getByTestId('filter-custom-type')).toHaveValue('equals');
+      expect(screen.getByTestId('filter-custom-value')).toHaveValue('Bob');
+    });
+
+    it('initializes greaterThan custom filter from existing filter', () => {
+      const existingFilter: ColumnFilter = {
+        conditions: [{ type: 'greaterThan', value: 100 }],
+        logic: 'AND',
+      };
+      render(<FilterDropdown {...defaultProps} currentFilter={existingFilter} />);
+      expect(screen.getByTestId('filter-custom-type')).toHaveValue('greaterThan');
+      expect(screen.getByTestId('filter-custom-value')).toHaveValue('100');
+    });
+
+    it('initializes isEmpty custom filter from existing filter', () => {
+      const existingFilter: ColumnFilter = {
+        conditions: [{ type: 'isEmpty' }],
+        logic: 'AND',
+      };
+      render(<FilterDropdown {...defaultProps} currentFilter={existingFilter} />);
+      expect(screen.getByTestId('filter-custom-type')).toHaveValue('isEmpty');
+    });
+  });
+
   describe('keyboard handling', () => {
     it('closes on Escape key', () => {
       render(<FilterDropdown {...defaultProps} />);

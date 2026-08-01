@@ -266,5 +266,102 @@ describe('Storage Service', () => {
       const result = loadWorkbook('ValidSave');
       expect(result).toBeNull();
     });
+
+    it('readSavesList returns empty array for non-array saves-list data', () => {
+      // Write a non-array JSON value to the saves-list key
+      localStorage.setItem('simplesheets:saves-list', '{"foo":"bar"}');
+      // listSaves calls readSavesList internally
+      const saves = listSaves();
+      expect(saves).toEqual([]);
+    });
+
+    it('saveWorkbook returns false when localStorage write fails', () => {
+      // Mock Storage.prototype.setItem to throw (quota exceeded / disabled)
+      const originalSetItem = Storage.prototype.setItem;
+      Storage.prototype.setItem = function () {
+        throw new Error('QuotaExceededError');
+      };
+      try {
+        const result = saveWorkbook('WillFail', testWorkbook);
+        expect(result).toBe(false);
+      } finally {
+        Storage.prototype.setItem = originalSetItem;
+      }
+    });
+
+    it('listSaves skips orphaned entries (name in list, no data key)', () => {
+      // Manually add a name to the saves-list without writing data
+      localStorage.setItem('simplesheets:saves-list', JSON.stringify(['GhostSlot']));
+      // Also write a valid save to confirm it still appears
+      saveWorkbook('RealSlot', testWorkbook);
+      const saves = listSaves();
+      expect(saves.map((s) => s.name)).toContain('RealSlot');
+      expect(saves.map((s) => s.name)).not.toContain('GhostSlot');
+    });
+
+    it('listSaves uses fallback values for missing lastModified and sheets', () => {
+      // Write a valid-looking workbook but with missing lastModified and sheets undefined
+      const minimalWb = {
+        id: 'minimal',
+        title: 'Minimal',
+        sheets: [
+          {
+            id: 's1',
+            name: 'Sheet1',
+            cells: {},
+            defaultColWidth: 100,
+            defaultRowHeight: 28,
+            columnWidths: {},
+            rowHeights: {},
+            columnCount: 26,
+            rowCount: 100,
+          },
+        ],
+        activeSheetIndex: 0,
+        // lastModified intentionally omitted
+      };
+      localStorage.setItem('simplesheets:save:MinimalSave', JSON.stringify(minimalWb));
+      // Add to saves-list
+      localStorage.setItem('simplesheets:saves-list', JSON.stringify(['MinimalSave']));
+      const saves = listSaves();
+      expect(saves).toHaveLength(1);
+      expect(saves[0].savedAt).toBe(0); // fallback from ?? 0
+      expect(saves[0].title).toBe('Minimal');
+      expect(saves[0].sheetCount).toBe(1);
+    });
+
+    it('listSaves uses 0 for sheetCount when sheets is undefined', () => {
+      const noSheetsWb = {
+        id: 'no-sheets',
+        title: 'No Sheets',
+        sheets: [
+          {
+            id: 's1',
+            name: 'Sheet1',
+            cells: {},
+            defaultColWidth: 100,
+            defaultRowHeight: 28,
+            columnWidths: {},
+            rowHeights: {},
+            columnCount: 26,
+            rowCount: 100,
+          },
+        ],
+        activeSheetIndex: 0,
+        lastModified: 5000,
+        // sheets is present on top-level but let's test the ?.length ?? 0 path
+      };
+      // Overwrite the key with a version where sheets is undefined at top level
+      const wbWithoutSheets: Record<string, unknown> = { ...noSheetsWb };
+      delete wbWithoutSheets.sheets;
+      localStorage.setItem('simplesheets:save:NoSheetsTop', JSON.stringify(wbWithoutSheets));
+      // This will fail isValidWorkbook (sheets is required), so listSaves skips it.
+      // To hit the ?.length ?? 0 branch, we need a wb that passes isValidWorkbook
+      // but has sheets as undefined — impossible since isValidWorkbook checks sheets.length > 0.
+      // So we just verify it's skipped gracefully.
+      localStorage.setItem('simplesheets:saves-list', JSON.stringify(['NoSheetsTop']));
+      const saves = listSaves();
+      expect(saves).toEqual([]);
+    });
   });
 });

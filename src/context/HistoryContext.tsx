@@ -31,12 +31,18 @@ type HistoryAction =
 function historyReducer(state: HistoryState, action: HistoryAction): HistoryState {
   switch (action.type) {
     case 'PUSH': {
-      // When we push a new state, clear the redo stack
-      const newPast = [...state.past, ...(state.present ? [{
-        workbook: state.present,
-        description: action.entry.description,
-        timestamp: action.entry.timestamp,
-      }] : /* istanbul ignore next */ [])].slice(-MAX_HISTORY);
+      // When we push a new state, clear the redo stack.
+      // The past entry stores the CURRENT (pre-push) filter state and selection so undo can restore them.
+      const newPast = [
+        ...state.past,
+        ...(state.present ? [{
+          workbook: state.present,
+          description: action.entry.description,
+          timestamp: action.entry.timestamp,
+          filterState: action.entry.filterState ?? null,
+          gridSelection: action.entry.gridSelection ?? null,
+        }] : /* istanbul ignore next */ []),
+      ].slice(-MAX_HISTORY);
 
       return {
         past: newPast,
@@ -100,11 +106,11 @@ interface HistoryContextValue {
   /** Whether redo is available. */
   canRedo: boolean;
   /** Push a new state onto the history stack. */
-  pushHistory: (workbook: Workbook, description: string) => void;
-  /** Undo the last action. Returns the previous workbook state or null. */
-  undo: () => Workbook | null;
-  /** Redo the next action. Returns the redone workbook state or null. */
-  redo: () => Workbook | null;
+  pushHistory: (workbook: Workbook, description: string, filterState?: unknown, gridSelection?: unknown) => void;
+  /** Undo the last action. Returns the previous workbook state, filter state, and grid selection, or null. */
+  undo: () => { workbook: Workbook; filterState: unknown; gridSelection: unknown } | null;
+  /** Redo the next action. Returns the redone workbook state, filter state, and grid selection, or null. */
+  redo: () => { workbook: Workbook; filterState: unknown; gridSelection: unknown } | null;
   /** Reset history with a new workbook. */
   resetHistory: (workbook: Workbook) => void;
   /** List of past action descriptions (for debugging/inspection). */
@@ -127,28 +133,38 @@ export function HistoryProvider({ children, initialWorkbook }: HistoryProviderPr
     future: [],
   });
 
-  const pushHistory = useCallback((workbook: Workbook, description: string) => {
+  const pushHistory = useCallback((workbook: Workbook, description: string, filterState?: unknown, gridSelection?: unknown) => {
     const entry: HistoryEntry = {
       workbook,
       description,
       timestamp: Date.now(),
+      filterState: filterState ?? null,
+      gridSelection: gridSelection ?? null,
     };
     dispatch({ type: 'PUSH', entry });
   }, []);
 
-  const undo = useCallback((): Workbook | null => {
+  const undo = useCallback((): { workbook: Workbook; filterState: unknown; gridSelection: unknown } | null => {
     if (state.past.length === 0) return null;
     dispatch({ type: 'UNDO' });
-    // Return the state that will be active after undo
+    const prev = state.past[state.past.length - 1];
     /* istanbul ignore next - defensive fallback; past entries always have workbook */
-    return state.past[state.past.length - 1]?.workbook ?? state.present;
+    return {
+      workbook: prev?.workbook ?? state.present,
+      filterState: prev?.filterState ?? null,
+      gridSelection: prev?.gridSelection ?? null,
+    };
   }, [state.past, state.present]);
 
-  const redo = useCallback((): Workbook | null => {
+  const redo = useCallback((): { workbook: Workbook; filterState: unknown; gridSelection: unknown } | null => {
     if (state.future.length === 0) return null;
     dispatch({ type: 'REDO' });
     /* istanbul ignore next - defensive fallback; future entries always have workbook */
-    return state.future[0]?.workbook ?? state.present;
+    return {
+      workbook: state.future[0]?.workbook ?? state.present,
+      filterState: state.future[0]?.filterState ?? null,
+      gridSelection: state.future[0]?.gridSelection ?? null,
+    };
   }, [state.future, state.present]);
 
   const resetHistory = useCallback((workbook: Workbook) => {

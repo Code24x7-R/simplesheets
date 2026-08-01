@@ -30,6 +30,36 @@ export function FilterDropdown({
   onApply,
   onClose,
 }: FilterDropdownProps) {
+  // Determine if the existing filter is a custom condition
+  const getInitialCustomCondition = (): { type: string; value: string } | null => {
+    if (!currentFilter) return null;
+    const customCond = currentFilter.conditions.find(
+      (c): c is FilterCondition =>
+        c.type !== 'includes'
+    );
+    if (!customCond) return null;
+    switch (customCond.type) {
+      case 'contains':
+      case 'notContains':
+      case 'equals':
+      case 'notEquals':
+      case 'startsWith':
+      case 'endsWith':
+        return { type: customCond.type, value: customCond.value };
+      case 'greaterThan':
+      case 'lessThan':
+      case 'greaterOrEqual':
+      case 'lessOrEqual':
+        return { type: customCond.type, value: String(customCond.value) };
+      case 'isEmpty':
+      case 'isNotEmpty':
+        return { type: customCond.type, value: '' };
+      default:
+        return null;
+    }
+  };
+
+  const initialCustom = getInitialCustomCondition();
   const [selectedValues, setSelectedValues] = useState<Set<string>>(() => {
     // Initialize from existing filter if present
     if (currentFilter) {
@@ -43,9 +73,9 @@ export function FilterDropdown({
     return new Set();
   });
   const [searchText, setSearchText] = useState('');
-  const [showCustomFilter, setShowCustomFilter] = useState(false);
-  const [customFilterType, setCustomFilterType] = useState<string>('contains');
-  const [customFilterValue, setCustomFilterValue] = useState('');
+  const [showCustomFilter, setShowCustomFilter] = useState(() => initialCustom !== null);
+  const [customFilterType, setCustomFilterType] = useState<string>(() => initialCustom?.type ?? 'contains');
+  const [customFilterValue, setCustomFilterValue] = useState<string>(() => initialCustom?.value ?? '');
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Get unique values for this column

@@ -4,6 +4,35 @@
 
 ---
 
+### 2026-08-01 [BUGFIX] B-017 — Sort/Undo destroys selection, blocking re-sort
+- **Symptom**: After sorting a selected range and pressing Ctrl+Z, user couldn't sort again without deselecting/reselecting.
+- **Root cause**: `handleUndo` set `activeCell` to null, which triggered `useEffect` that cleared `gridSelection`. Sort handlers check `if (!selection) return;` and silently bail.
+- **Fix**: Added optional `gridSelection` to `HistoryEntry`. Updated `HistoryContext` to store/restore it. Added `gridSelectionRef` in App.tsx. Updated all `pushHistory` calls. Updated undo/redo to restore both `gridSelection` and `activeCell` (from selection anchor).
+- **Files**: `src/types.ts`, `src/context/HistoryContext.tsx`, `src/App.tsx`
+- **Tests**: 2304 pass (was 2302), lint clean, type-check clean, build clean
+
+### 2026-08-01 [BUGFIX] B-016 — Sort/Undo breaks filter state
+- **Symptom**: After sorting data and then undoing, the filter state was not restored.
+- **Root cause**: `pushHistory` did not include `filterState`; `undo`/`redo` only restored the workbook.
+- **Fix**: Added optional `filterState` to `HistoryEntry`. Updated `HistoryContext` to store/restore filter state in undo/redo. Added `filterStateRef` in App.tsx to capture current state. Updated all 21 `pushHistory` calls to pass `filterStateRef.current`. Updated `handleUndo`/`handleRedo` to restore filter state.
+- **Files**: `src/types.ts`, `src/context/HistoryContext.tsx`, `src/App.tsx`
+- **Tests**: 2302 pass, lint clean, type-check clean, build clean
+
+### 2026-08-01 [BUGFIX] B-015 — Custom filter display not restored on reopen
+- **Symptom**: After applying a custom filter and reopening the dropdown, UI reset to "Filter by values" tab with empty fields.
+- **Root cause**: `FilterDropdown` initialized `selectedValues` from `currentFilter` for `includes` but not custom conditions.
+- **Fix**: Added `getInitialCustomCondition()` helper. `showCustomFilter`, `customFilterType`, `customFilterValue` now initialize from existing filter. UI auto-switches to custom tab when custom condition present.
+- **Files**: `src/components/FilterDropdown.tsx`, `src/components/FilterDropdown.test.tsx` (4 new tests)
+- **Tests**: 2302 pass (was 2298), lint clean, type-check clean, build clean
+
+### 2026-08-01 [BUGFIX] B-005 — storageService.ts Branch Coverage 66% → 100%
+- **Symptom**: `storageService.ts` had ~66% branch coverage (lowest in project). Four branches untested.
+- **Root cause**: No tests exercised defensive error paths (corrupt data, quota exceeded, orphaned entries).
+- **Fix**: Added 5 tests: non-array saves-list, `Storage.prototype.setItem` throwing, orphaned entry skipped, missing `lastModified` fallback, missing `sheets` skipped. Added `/* istanbul ignore next */` on unreachable `wb.sheets?.length ?? 0` fallback.
+- **Files**: `src/services/storageService.ts` (istanbul ignore), `src/services/storageService.test.ts` (5 new tests)
+- **Tests**: 2298 pass (was 2293), lint clean, type-check clean, build clean
+- **Coverage**: storageService.ts: 100% stmts / 100% branches / 100% funcs / 100% lines
+
 ### 2026-07-31 [FEATURE] iOS touch support for FormulaWizard range picker
 - **Change**: Added Accept button to POINT mode indicator for touch devices (iOS/Android) that can't press Enter. Added `acceptPointSelection` method to GridHandle.
 - **Files**: `src/components/FormulaWizard.tsx` (Accept button, `onAcceptPointSelection` prop), `src/components/Grid.tsx` (added `acceptPointSelection` and `getSelection` to GridHandle), `src/App.tsx` (pass `onAcceptPointSelection` callback), `src/components/FormulaWizard.test.tsx` (new test for Accept button)

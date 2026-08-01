@@ -4,12 +4,13 @@
 Achieve a clean, clutter-free UI with standardized dropdown menus, formula wizard, formula bar, and R1C1 reference format.
 
 ## Current State
-- **2293 tests** across **97 suites**, All passing
+- **2304 tests** across **97 suites**, All passing
 - Lint clean (0 warnings), Type-check clean, Build clean
-- Coverage: **94.7% stmts, 86.8% branches, 95.88% funcs, 96.03% lines**
+- Coverage: **93.94% stmts, 85.03% branches, 95.76% funcs, 95.31% lines**
 - Phases 1-28 complete: All planned features implemented and verified
 - Phase 28 complete (2026-07-31): Mobile platform enhancements (touch-friendly POINT mode, formula placement fix, false circular reference fix, focus restoration)
-- Recent fixes (2026-07-31): FormulaWizard Accept button for touch devices; B-011 formula placement fix; B-012 false circular reference fix; focus returns to active cell after wizard closes
+- Recent fixes (2026-08-01): B-005 storageService 100% coverage; B-015 custom filter persistence; B-016 sort/undo filter state; B-017 sort/undo selection destruction fix
+- Planned: Phase 29 (Number Formatting — Date/Time & Text)
 
 ---
 
@@ -198,6 +199,12 @@ Achieve a clean, clutter-free UI with standardized dropdown menus, formula wizar
 |-------|-------------|
 | **Phase 26** | Range Operations Improvements (copy styles, paste special, drag-move, fill handle) |
 | **Phase 27** | POINT Mode & Modal Interaction (FormulaWizard modal blocking range selection) |
+
+### New Phase Added (2026-08-01)
+
+| Phase | Description |
+|-------|-------------|
+| **Phase 29** | Number Formatting Enhancements — Date/Time serial decoding & Text format (leading zero preservation) |
 
 ### Next Phase: Phase 21 — Charts
 
@@ -1799,3 +1806,73 @@ Improve FormulaWizard usability on mobile/touch platforms (iOS Safari, Android C
 - Phase 27 (POINT Mode & Modal Interaction)
 - useCellEditing FSM (POINT mode)
 - formulaWizardCompiler (parameter commit)
+
+---
+
+## Phase 29: Number Formatting — Date/Time & Text — PLANNED 📋
+*Extend the number format engine to support Excel-compatible date/time serialization and text-format preservation of numeric values.*
+
+**Current state**: `numberFormat.ts` already handles currency, percent, number (with decimal/thousand separators), and accounting formats. Phase 20 added auto-alignment and accounting layout. However, two important Excel number format categories are missing:
+
+1. **Date & Time** — Excel stores dates as serial numbers (days since 1900-01-00) and times as fractional days. Without date/time format support, these serial numbers display as raw integers/decimals instead of human-readable dates.
+2. **Text** — The `@` format code in Excel forces numeric entries to be treated as literal text, preserving leading zeros (ZIP codes, ID numbers, credit card numbers) that Excel would otherwise strip.
+
+### Phase 29a: Date & Time Serial Number Decoding — PLANNED 📋
+- [ ] **Excel date serial decoding** — Convert Excel serial date numbers (1 = 1900-01-01, accounting for the 1900 leap year bug) to JavaScript Date objects
+- [ ] **Date format patterns** — Support common Excel date format strings:
+  - `MM/DD/YYYY` → 07/31/2026
+  - `DD-MMM-YY` → 31-Jul-26
+  - `MMMM D, YYYY` → July 31, 2026
+  - `YYYY-MM-DD` → 2026-07-31 (ISO)
+  - `DD/MM/YYYY` → European order
+- [ ] **Time format patterns** — Support Excel time format strings:
+  - `h:mm AM/PM` → 12:00 PM (12-hour)
+  - `HH:MM` → 14:30 (24-hour)
+  - `HH:MM:SS` → 14:30:00
+  - `h:mm:ss AM/PM` → 2:30:00 PM
+- [ ] **Combined date+time** — `MM/DD/YYYY HH:MM` → 07/31/2026 14:30
+- [ ] **Fractional day handling** — Times stored as fractional days (0.5 = 12:00 PM) decoded correctly
+- [ ] **Format string parser** — Parse Excel date/time format tokens (`YYYY`, `YY`, `MMMM`, `MMM`, `MM`, `DD`, `D`, `HH`, `H`, `MM` (minutes), `SS`, `AM/PM`)
+- [ ] **Integration with existing format detection** — Extend `isDateFormat()` and `shouldRightAlign()` in numberFormat.ts to detect date/time format patterns
+
+### Phase 29b: Text Format (@) — PLANNED 📋
+- [ ] **Text format detection** — Detect `@` format code in Excel number format strings
+- [ ] **Leading zero preservation** — When a cell has text format, numeric entries like `00123` or `1234567890123456` (credit card) preserve their literal string representation
+- [ ] **Format string passthrough** — For text-formatted cells, display the `rawValue` directly without numeric coercion or formatting
+- [ ] **Edit mode behavior** — When editing a text-formatted cell, show the raw text value (including leading zeros) rather than the parsed number
+- [ ] **Import/Export compatibility** — Text format cells round-trip correctly through Excel import/export (xlsx `z: '@'` format)
+
+### Phase 29c: UI Integration — PLANNED 📋
+- [ ] **Toolbar buttons** — Add Date and Text format buttons to the Toolbar
+- [ ] **Format menu items** — Add Date/Text options to the Format menu dropdown
+- [ ] **Format detection** — Grid automatically applies date/time formatting when a cell's format string matches a date/time pattern (existing auto-alignment pattern)
+- [ ] **Keyboard shortcuts** — Optionally add Ctrl+Shift+# (date) and Ctrl+Shift+@ (text) shortcuts (Excel-compatible)
+
+### Phase 29d: Testing & Documentation — PLANNED 📋
+- [ ] **Unit tests** — Comprehensive tests for date serial decoding, format string parsing, time extraction, text format passthrough
+- [ ] **Edge cases** — Epoch boundaries (1900-01-01, 1900-02-28 leap year bug, 2000-01-01), negative serials, very large serials, midnight/noon boundaries
+- [ ] **Integration tests** — Grid rendering with date/text formats, toolbar button clicks, menu actions
+- [ ] **README update** — Document date/time and text format support
+
+---
+
+### Phase 29 Dependencies
+
+| Dependency | Phase |
+|------------|-------|
+| numberFormat.ts (existing) | Phase 15e |
+| Grid rendering (cell display) | Phase 4 |
+| Toolbar | Phase 15j |
+| MenuBar (Format menu) | Phase 9 |
+| excelImport/excelExport (xlsx format round-trip) | Phase 15b |
+
+### Phase 29 Files Expected
+
+| File | Action |
+|------|--------|
+| `src/utils/numberFormat.ts` | Extend with date/time decoding + text format |
+| `src/components/Grid.tsx` | Apply date/time/text format in cell rendering |
+| `src/components/Toolbar.tsx` | Add Date + Text format buttons |
+| `src/components/MenuBar.tsx` | Add Format → Date / Format → Text menu items |
+| `src/utils/numberFormat.test.ts` | New date/time/text tests |
+| `README.md` | Document new format options |

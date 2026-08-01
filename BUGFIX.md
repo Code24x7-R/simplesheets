@@ -7,37 +7,56 @@ This file tracks bugs in **existing** code, functions, and UI elements. New feat
 ## 🔴 Open Bugs
 
 <!-- Add new bugs here as they're discovered. Each entry should have:
-     - Symptom (what the user sees)
-     - Suspected file/component
-     - Date discovered -->
+     - Symptom (what the userFilters)
+     - - custom filter display not available Suspected file/compofilterate discovered -->
 
-### B-002: F9 Formula Evaluation Not Implemented
-- **Symptom**: Pressing F9 while editing a formula does nothing. Excel/Sheets highlights the selected sub-expression and shows the evaluated result in-place.
-- **Suspected file**: `src/components/FormulaBar.tsx`, `src/components/Grid.tsx`, `src/utils/formulaEngine.ts`
-- **Discovered**: 2026-07-28 (documented in PLAN.md Phase 19 analysis)
-- **Impact**: Low — power-user feature, not commonly expected
-- **Fix direction**: Add `evaluateSelection(buffer, selStart, selEnd)` to formulaEngine, wire F9 key in both editors (deferred to Phase 19d)
+### 2026-08-01: B-015 — Data Filter settings - custom filter display not available
+- **Symptom**: When performing a filter and Applying it (filter form closes as expected), then reopening the filter form, the custom filter should display.
+- **Root cause**: filter WF not fully implemented.
 
-### B-004: In-Cell Editor Lacks Syntax Highlighting — ✅ FIXED (see Recently Fixed below)
-- ~~Symptom~~: ~~Formula bar shows colored cell reference overlays and function highlighting while editing. The in-cell editor is a plain `<input>` with no visual formula aid.~~
-- **Status**: Fixed 2026-07-31 — see B-004 entry in Recently Fixed
+### 2026-08-01: B-016 — Data Sort settings
+- **Symptom**: When performing a sort (A-Z/Z-A) and applying it (filter form closes as expected), then reopening the filter form, the custom filter should display.
+- **Root cause**: Undo handling.
+     
 
-### B-005: storageService.ts Branch Coverage ~66% (Lowest in Project)
-- **Symptom**: Defensive branches in storageService are untested, leaving potential edge cases uncovered (corrupt localStorage, quota exceeded, etc.).
-- **Suspected file**: `src/utils/storageService.ts`
-- **Discovered**: 2026-07-30 (from PLAN.md Phase 8 gap analysis)
-- **Impact**: Low — code works but has untested error paths
-- **Fix direction**: Write tests for error/edge paths, or add istanbul ignore for genuinely unreachable defensive code
-
----
+<!-- No open bugs. Add new ones as they're discovered. -->
 
 ## 🟡 Under Investigation
 
-<!-- Bugs being actively diagnosed — root cause not yet confirmed -->
+<!-- Bugs being actively diagnosed — root cause not yet confirmed. None currently. -->
 
 ## ✅ Recently Fixed
 
 <!-- Bugs resolved in this session or recent past. Newest first. -->
+
+### 2026-08-01: B-017 — Sort/Undo destroys selection, blocking re-sort ✅ VERIFIED
+- **Symptom**: After sorting a selected range and pressing Ctrl+Z, the user could not sort again without first deselecting and reselecting the range. The sort silently no-op'd because `selection` was null after undo.
+- **Root cause**: `handleUndo` called `setActiveCell(null)`, which triggered a `useEffect` that cleared `gridSelection` to null. The sort handlers check `if (!selection) return;` and silently bailed. Additionally, `gridSelection` was not stored in undo history.
+- **Fix**: (1) Added optional `gridSelection` to `HistoryEntry` in types.ts. (2) Updated `HistoryContext` PUSH reducer to store gridSelection, and undo/redo to return it. (3) Added `gridSelectionRef` in App.tsx to track current selection. (4) Updated all 21 `pushHistory` calls to pass `gridSelectionRef.current`. (5) Updated `handleUndo`/`handleRedo` to restore `gridSelection` AND `activeCell` (from selection anchor) from history.
+- **Files**: `src/types.ts` (HistoryEntry.gridSelection), `src/context/HistoryContext.tsx` (store/restore gridSelection), `src/App.tsx` (gridSelectionRef + undo/redo restore selection + activeCell)
+- **Tests**: 2304 pass (was 2302), lint clean, type-check clean, build clean
+
+### 2026-08-01: B-016 — Sort/Undo breaks filter state ✅ VERIFIED
+- **Symptom**: After sorting data and then undoing, the filter state was not restored. The `filterState` in App.tsx was independent of the undo/redo history, so sort + undo left stale or missing filter state.
+- **Root cause**: `pushHistory` did not include `filterState`; `undo`/`redo` only restored the workbook.
+- **Fix**: (1) Added optional `filterState` to `HistoryEntry` in types.ts. (2) Updated `HistoryContext` to accept and store `filterState` in history entries, and return it from `undo()`/`redo()`. (3) Added `filterStateRef` in App.tsx to always capture the current filter state. (4) Updated all 21 `pushHistory` calls to pass `filterStateRef.current`. (5) Updated `handleUndo`/`handleRedo` to restore `filterState` from the history entry.
+- **Files**: `src/types.ts` (HistoryEntry.filterState), `src/context/HistoryContext.tsx` (undo/redo return filterState), `src/App.tsx` (filterStateRef + all pushHistory calls + undo/redo restore)
+- **Tests**: 2302 pass, lint clean, type-check clean, build clean
+
+### 2026-08-01: B-015 — Custom filter display not restored on reopen ✅ VERIFIED
+- **Symptom**: After applying a custom filter (contains, equals, greaterThan, etc.) and reopening the filter dropdown, the UI reset to the "Filter by values" tab with empty custom filter fields. The previously applied custom filter was lost.
+- **Root cause**: `FilterDropdown` initialized `selectedValues` from `currentFilter` for `includes` conditions but did not initialize `showCustomFilter`, `customFilterType`, or `customFilterValue` for custom conditions.
+- **Fix**: Added `getInitialCustomCondition()` helper that extracts the custom condition from `currentFilter`. The `showCustomFilter`, `customFilterType`, and `customFilterValue` states now initialize from the existing filter, and the UI auto-switches to the "Custom filter" tab when a custom condition is present.
+- **Files**: `src/components/FilterDropdown.tsx` (initialize custom filter state from currentFilter), `src/components/FilterDropdown.test.tsx` (4 new tests)
+- **Tests**: 2302 pass (was 2298), lint clean, type-check clean, build clean
+
+### 2026-08-01: B-005 — storageService.ts Branch Coverage 66% → 100% ✅ VERIFIED
+- **Symptom**: `storageService.ts` had ~66% branch coverage (lowest in project). Four branches were untested: non-array saves-list data, localStorage write failure, orphaned save entries, and missing workbook fields.
+- **Root cause**: No tests exercised these defensive error paths.
+- **Fix**: Added 5 new tests: (1) non-array saves-list returns empty array, (2) `Storage.prototype.setItem` throwing → `saveWorkbook` returns false, (3) orphaned entry (name in list but no data key) is skipped, (4) missing `lastModified` uses `?? 0` fallback, (5) missing `sheets` at top level is skipped gracefully. Added `/* istanbul ignore next */` to the `wb.sheets?.length ?? 0` fallback — unreachable because `isValidWorkbook` guarantees sheets is a non-empty array.
+- **Files**: `src/services/storageService.ts` (istanbul ignore on unreachable branch), `src/services/storageService.test.ts` (5 new tests)
+- **Tests**: 2298 pass (was 2293)
+- **Coverage**: storageService.ts: 100% stmts / 100% branches / 100% funcs / 100% lines
 
 ### 2026-07-31: B-012 - False circular reference warning in FormulaWizard ✅ VERIFIED
 - **Symptom**: Building `=SUM(D4:D9, F4:F6)` in E4 showed "selected range includes target cell and may cause circular dependency" warning after picking D4:D8 and F4:F6. These ranges don't include E4, so the warning was incorrect.

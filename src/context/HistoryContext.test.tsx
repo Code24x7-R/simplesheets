@@ -166,4 +166,33 @@ describe('HistoryContext', () => {
     expect(screen.getByTestId('can-undo').textContent).toBe('false');
     expect(screen.getByTestId('wb-title').textContent).toBe('Reset Book');
   });
+
+  it('undo restores gridSelection that was saved with pushHistory', () => {
+    const testSelection = { type: 'range', startRow: 0, endRow: 5, startCol: 0, endCol: 0, anchorRow: 0, anchorCol: 0 };
+    let undoResult: { workbook: Workbook; filterState: unknown; gridSelection: unknown } | null = null;
+
+    function SelectionComponent() {
+      const { pushHistory, undo, workbook } = useHistory();
+      return (
+        <div>
+          <button data-testid="edit" onClick={() => pushHistory({ ...workbook, lastModified: Date.now() }, 'Edit', null, testSelection)}>Edit</button>
+          <button data-testid="do-undo" onClick={() => { undoResult = undo(); }}>Undo</button>
+        </div>
+      );
+    }
+
+    render(
+      <HistoryProvider initialWorkbook={createTestWorkbook()}>
+        <SelectionComponent />
+      </HistoryProvider>
+    );
+
+    // Edit with selection
+    fireEvent.click(screen.getByTestId('edit'));
+
+    // Undo should return the selection
+    fireEvent.click(screen.getByTestId('do-undo'));
+    expect(undoResult).not.toBeNull();
+    expect(undoResult!.gridSelection).toEqual(testSelection);
+  });
 });

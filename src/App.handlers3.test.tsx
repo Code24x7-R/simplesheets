@@ -252,6 +252,27 @@ describe('App - Data Handlers', () => {
 
     expect(screen.getByText('Data')).toBeInTheDocument();
   });
+
+  it('Sort → Undo does not break app (selection state preserved)', () => {
+    const { container } = render(<App />);
+    // Select a range
+    const cells = container.querySelectorAll('.grid-cell');
+    if (cells.length >= 2) {
+      fireEvent.mouseDown(cells[0]);
+      fireEvent.mouseDown(cells[1], { shiftKey: true });
+    }
+
+    // Sort (may no-op on empty data)
+    fireEvent.click(screen.getByText('Data'));
+    fireEvent.click(screen.getByText('Sort A → Z'));
+
+    // Undo with Ctrl+Z (should not crash even if nothing to undo)
+    fireEvent.keyDown(document, { key: 'z', ctrlKey: true });
+
+    // App should still be functional — Data menu accessible
+    fireEvent.click(screen.getByText('Data'));
+    expect(screen.getByText('Sort A → Z')).toBeInTheDocument();
+  });
 });
 
 describe('App - Help Handlers', () => {

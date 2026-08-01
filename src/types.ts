@@ -141,6 +141,12 @@ export interface HistoryEntry {
 
   /** Timestamp when this entry was created (epoch ms). */
   timestamp: number;
+
+  /** Filter state snapshot (for undo/redo of filter operations). */
+  filterState?: unknown;
+
+  /** Selection snapshot (for undo/redo to preserve grid selection). */
+  gridSelection?: unknown;
 }
 
 /**

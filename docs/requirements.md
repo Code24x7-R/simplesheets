@@ -14,6 +14,8 @@
 
 3. **Undo / redo stack** — At least 50 levels of undo with toolbar buttons and Ctrl+Z/Y shortcuts. *Rationale:* Confidence to experiment; prevents data loss from accidental edits.
 
+4. **Data validation Rules** -  Excel Data Validation rules control the type or value of data entered into a cell, ensuring accuracy and consistency across worksheets by blocking invalid inputs and displaying custom error alerts. When using List validation, Excel constrains input to a defined set of values—either typed directly into the rule or referenced from a cell range—creating a convenient drop-down menu that prevents typos and forces standardization. In contrast, Custom validation utilizes logical formulas evaluate cell entries against complex criteria (such as using =COUNTIF(A:A, A1)=1 to block duplicate values or =ISNUMBER(A1) to require numeric input), granting complete flexibility to enforce tailored business rules beyond standard predefined options.
+
 ## Formulas
 
 5. **Core formula engine** — Arithmetic (+, −, ×, ÷) plus SUM, AVERAGE, COUNT, MIN, MAX, IF. *Rationale:* Covers 90 % of small‑business calculations; keeps engine simple and fast.
@@ -38,4 +40,4 @@
 
 ---
 
-**Out of scope (intentionally excluded):** Pivot tables, charts, collaborative editing, macros, cloud storage integration, conditional formatting.
+**Out of scope (intentionally excluded):** Collaborative editing, macros, Cloud storage integration.

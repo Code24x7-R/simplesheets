@@ -189,11 +189,15 @@ export function listSaves(): SaveSlot[] {
     try {
       const wb = JSON.parse(raw);
       if (isValidWorkbook(wb)) {
+        // isValidWorkbook guarantees sheets is a non-empty array,
+        // so the ?? 0 fallback below is unreachable — guard it from coverage.
+        /* istanbul ignore next */
+        const sheetCount = wb.sheets?.length ?? 0;
         slots.push({
           name,
           savedAt: wb.lastModified ?? 0,
           title: wb.title,
-          sheetCount: wb.sheets?.length ?? 0,
+          sheetCount,
         });
       }
     } catch {
