@@ -1977,6 +1977,18 @@ describe('evaluateWorkbook - cross-sheet references', () => {
     expect(result.circularRefs.length).toBe(0);
   });
 
+  it('evaluates cross-sheet SUM with sheet prefix on BOTH range ends (B-019)', () => {
+    // This is what prefixRefsWithSheet produces: =SUM(Sheet1!B2:Sheet1!B21)
+    const sheet1 = createSheet({
+      '1:1': '10', '2:1': '20', '3:1': '30',  // B2, B3, B4
+    }, { name: 'Sheet1' });
+    const sheet2 = createSheet({ '0:0': '=SUM(Sheet1!B2:Sheet1!B21)' }, { name: 'Sheet2' });
+    const wb = createMultiSheetWorkbook([sheet1, sheet2]);
+    const result = evaluateWorkbook(wb, 1);
+    // B2=10 + B3=20 + B4=30 = 60
+    expect(result.cells['0:0'].computedValue).toBe(60);
+  });
+
   describe('evaluateFormulaPreview', () => {
     it('evaluates a simple arithmetic formula', () => {
       const sheet = createSheet({ '0:0': '10', '1:0': '20' });

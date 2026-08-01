@@ -26,18 +26,45 @@ export function computeHighlightSegments(value: string, isEditing: boolean): Arr
     const segs: Array<{ text: string; colorIndex: number | null }> = [];
     let colorIdx = 0;
 
-    const tokenRegex = /(\$?[A-Za-z]+\$?\d+:?|\$?[A-Za-z]+|[0-9.]+|[+\-*/(),&^=<>]|"[^"]*"|[A-Za-z]+)/gi;
+    // Prepend the leading '=' as a plain (uncolored) segment so it remains
+    // visible even though the underlying input uses text-transparent.
+    segs.push({ text: '=', colorIndex: null });
+
+    // Tokenizer: handles cell refs (A1, $A$2), ranges (A1:B5), cross-sheet refs
+    // (Sheet1!A1, 'My Sheet'!A1:B5), operators, strings, numbers, function names.
+    // The '!' separator and quoted sheet names are explicitly included.
+    // For cross-sheet ranges, the sheet prefix may appear on both ends (Sheet1!A1:Sheet1!B5).
+    // Order matters: cell refs MUST come before plain names (SUM, A, etc.) to avoid
+    // partial matches (e.g., A1 being split into A + 1).
+    const tokenRegex = /([A-Za-z_][A-Za-z0-9_]*!'[^']*'!\$?[A-Za-z]+\$?\d+:[A-Za-z_][A-Za-z0-9_]*!'[^']*'!\$?[A-Za-z]+\$?\d+|[A-Za-z_][A-Za-z0-9_]*!'[^']*'!\$?[A-Za-z]+\$?\d+:'[^']*'!\$?[A-Za-z]+\$?\d+|'[^']*'!\$?[A-Za-z]+\$?\d+:[A-Za-z_][A-Za-z0-9_]*!'[^']*'!\$?[A-Za-z]+\$?\d+|'[^']*'!\$?[A-Za-z]+\$?\d+:'[^']*'!\$?[A-Za-z]+\$?\d+|[A-Za-z_][A-Za-z0-9_]*!\$?[A-Za-z]+\$?\d+:[A-Za-z_][A-Za-z0-9_]*!\$?[A-Za-z]+\$?\d+|[A-Za-z_][A-Za-z0-9_]*!\$?[A-Za-z]+\$?\d+:\$?[A-Za-z]+\$?\d+|\$?[A-Za-z]+\$?\d+:[A-Za-z_][A-Za-z0-9_]*!\$?[A-Za-z]+\$?\d+|'[^']*'!\$?[A-Za-z]+\$?\d+:[A-Za-z_][A-Za-z0-9_]*!\$?[A-Za-z]+\$?\d+|'[^']*'!\$?[A-Za-z]+\$?\d+:\$?[A-Za-z]+\$?\d+|[A-Za-z_][A-Za-z0-9_]*!'[^']*'!\$?[A-Za-z]+\$?\d+|[A-Za-z_][A-Za-z0-9_]*!\$?[A-Za-z]+\$?\d+|'[^']*'!\$?[A-Za-z]+\$?\d+|\$?[A-Za-z]+\$?\d+:\$?[A-Za-z]+\$?\d+|\$?[A-Za-z]+\$?\d+|[0-9.]+|[+\-*/(),&^=<>!]|"[^"]*"|[A-Za-z]+)/gi;
     let match;
+    let lastIndex = 0;
 
     while ((match = tokenRegex.exec(formula)) !== null) {
+      // Capture any unmatched characters between matches as plain text
+      if (match.index > lastIndex) {
+        segs.push({ text: formula.slice(lastIndex, match.index), colorIndex: null });
+      }
+      lastIndex = match.index + match[0].length;
+
       const token = match[0];
-      if (/^\$?[A-Za-z]+\$?\d+$/i.test(token)) {
+      // Check if token contains '!' (cross-sheet ref)
+      if (/!/i.test(token)) {
+        // Cross-sheet cell ref or range (Sheet1!A1, Sheet1!A1:B5, 'My Sheet'!A1, etc.)
+        segs.push({
+          text: token,
+          colorIndex: colorIdx % HIGHLIGHT_COLORS.length,
+        });
+        colorIdx++;
+      } else if (/^\$?[A-Za-z]+\$?\d+$/i.test(token)) {
+        // Same-sheet cell ref (A1)
         segs.push({
           text: token,
           colorIndex: colorIdx % HIGHLIGHT_COLORS.length,
         });
         colorIdx++;
       } else if (/^\$?[A-Za-z]+\$?\d+:\$?[A-Za-z]+\$?\d+$/i.test(token)) {
+        // Same-sheet range (A1:B5)
         segs.push({
           text: token,
           colorIndex: colorIdx % HIGHLIGHT_COLORS.length,
@@ -46,6 +73,11 @@ export function computeHighlightSegments(value: string, isEditing: boolean): Arr
       } else {
         segs.push({ text: token, colorIndex: null });
       }
+    }
+
+    // Capture any trailing unmatched characters
+    if (lastIndex < formula.length) {
+      segs.push({ text: formula.slice(lastIndex), colorIndex: null });
     }
 
     return segs.length > 0 ? segs : null;

@@ -48,6 +48,10 @@ export interface CellRefNode {
   absoluteRow: boolean;
   /** Sheet name qualifier (e.g., "Sheet1" for Sheet1!A1). Null for same-sheet refs. */
   sheetName?: string;
+  /** Start position in formula text (for highlighting). */
+  pos?: number;
+  /** End position in formula text (for highlighting). */
+  endPos?: number;
 }
 
 export interface RangeNode {
@@ -56,6 +60,10 @@ export interface RangeNode {
   end: CellRefNode;
   /** Sheet name qualifier (e.g., "Sheet1" for Sheet1!A1:B10). Null for same-sheet refs. */
   sheetName?: string;
+  /** Start position in formula text (for highlighting). */
+  pos?: number;
+  /** End position in formula text (for highlighting). */
+  endPos?: number;
 }
 
 export interface BinaryOpNode {
@@ -437,6 +445,26 @@ class Parser {
     return this.advance();
   }
 
+  /**
+   * Parses the end of a range (after the colon).
+   * Handles both bare cell refs (B5) and cross-sheet refs (Sheet1!B5).
+   * @param defaultSheetName - Sheet name to use if the end ref has no prefix.
+   * @returns The parsed cell ref info (row, col, sheetName, endPos).
+   */
+  private parseRangeEnd(defaultSheetName?: string): { row: number; col: number; absoluteCol: boolean; absoluteRow: boolean; sheetName?: string; endPos: number } {
+    if (this.current().type === 'SHEET_NAME') {
+      const sheetName = this.current().value;
+      this.advance(); // consume sheet name
+      this.expect('BANG');
+      const token = this.expect('CELL');
+      const ref = parseCellRef(token.value);
+      return { row: ref.row, col: ref.col, absoluteCol: ref.absoluteCol, absoluteRow: ref.absoluteRow, sheetName, endPos: token.pos + token.value.length };
+    }
+    const token = this.expect('CELL');
+    const ref = parseCellRef(token.value);
+    return { row: ref.row, col: ref.col, absoluteCol: ref.absoluteCol, absoluteRow: ref.absoluteRow, sheetName: defaultSheetName, endPos: token.pos + token.value.length };
+  }
+
   /** Entry point: parses the full expression. */
   parse(): ASTNode {
     const node = this.parseExpression();
@@ -535,45 +563,49 @@ class Parser {
 
       case 'SHEET_NAME': {
         const sheetName = token.value;
+        const startPos = token.pos; // position of sheet name start
         this.advance(); // consume sheet name
         this.expect('BANG');
         // Next must be a cell or range on the specified sheet
         const nextToken = this.expect('CELL');
         const ref = parseCellRef(nextToken.value);
 
-        // Check if this is part of a range (e.g., Sheet1!A1:B5)
+        // Check if this is part of a range (e.g., Sheet1!A1:B5 or Sheet1!A1:Sheet1!B5)
         if (this.current().type === 'COLON') {
           this.advance(); // consume colon
-          const endToken = this.expect('CELL');
-          const endRef = parseCellRef(endToken.value);
+          const endRef = this.parseRangeEnd(sheetName);
           return {
             type: 'range',
             sheetName,
-            start: { type: 'cell', row: ref.row, col: ref.col, absoluteCol: ref.absoluteCol, absoluteRow: ref.absoluteRow, sheetName },
-            end: { type: 'cell', row: endRef.row, col: endRef.col, absoluteCol: endRef.absoluteCol, absoluteRow: endRef.absoluteRow, sheetName },
+            pos: startPos,
+            endPos: endRef.endPos,
+            start: { type: 'cell', row: ref.row, col: ref.col, absoluteCol: ref.absoluteCol, absoluteRow: ref.absoluteRow, sheetName, pos: nextToken.pos, endPos: nextToken.pos + nextToken.value.length },
+            end: { type: 'cell', row: endRef.row, col: endRef.col, absoluteCol: endRef.absoluteCol, absoluteRow: endRef.absoluteRow, sheetName: endRef.sheetName, endPos: endRef.endPos },
           };
         }
 
-        return { type: 'cell', row: ref.row, col: ref.col, absoluteCol: ref.absoluteCol, absoluteRow: ref.absoluteRow, sheetName };
+        return { type: 'cell', row: ref.row, col: ref.col, absoluteCol: ref.absoluteCol, absoluteRow: ref.absoluteRow, sheetName, pos: startPos, endPos: nextToken.pos + nextToken.value.length };
       }
 
       case 'CELL': {
+        const startPos = token.pos;
         this.advance();
         const ref = parseCellRef(token.value);
 
-        // Check if this is part of a range (e.g., A1:B5)
+        // Check if this is part of a range (e.g., A1:B5 or A1:Sheet1!B5)
         if (this.current().type === 'COLON') {
           this.advance(); // consume colon
-          const endToken = this.expect('CELL');
-          const endRef = parseCellRef(endToken.value);
+          const endRef = this.parseRangeEnd();
           return {
             type: 'range',
-            start: { type: 'cell', row: ref.row, col: ref.col, absoluteCol: ref.absoluteCol, absoluteRow: ref.absoluteRow },
-            end: { type: 'cell', row: endRef.row, col: endRef.col, absoluteCol: endRef.absoluteCol, absoluteRow: endRef.absoluteRow },
+            pos: startPos,
+            endPos: endRef.endPos,
+            start: { type: 'cell', row: ref.row, col: ref.col, absoluteCol: ref.absoluteCol, absoluteRow: ref.absoluteRow, pos: startPos, endPos: startPos + token.value.length },
+            end: { type: 'cell', row: endRef.row, col: endRef.col, absoluteCol: endRef.absoluteCol, absoluteRow: endRef.absoluteRow, sheetName: endRef.sheetName, endPos: endRef.endPos },
           };
         }
 
-        return { type: 'cell', row: ref.row, col: ref.col, absoluteCol: ref.absoluteCol, absoluteRow: ref.absoluteRow };
+        return { type: 'cell', row: ref.row, col: ref.col, absoluteCol: ref.absoluteCol, absoluteRow: ref.absoluteRow, pos: startPos, endPos: startPos + token.value.length };
       }
 
       case 'FUNCTION': {
@@ -657,11 +689,22 @@ export function rangeToString(node: RangeNode): string {
 export function adjustFormulaRefs(formula: string, rowOffset: number, colOffset: number): string {
   if (rowOffset === 0 && colOffset === 0) return formula;
 
+  // Protect cross-sheet prefixes (e.g., "Sheet1!" in "Sheet1!A1") from adjustment.
+  // The offset regex below would otherwise match "Sheet1" as column="Sheet" row="1".
+  // Only the sheet prefix is protected — the cell ref after it is still adjusted.
+  const crossSheetPrefixRegex = /('[^']*'!|[A-Za-z_][A-Za-z0-9_]*!)/gi;
+  const placeholders: string[] = [];
+  let protectedFormula = formula.replace(crossSheetPrefixRegex, (match) => {
+    const placeholder = `§§${placeholders.length}§§`;
+    placeholders.push(match);
+    return placeholder;
+  });
+
   // Regex to match cell references: optional $ column, column letters, optional $ row, row digits
   // Case-insensitive but NOT preceded by a digit (to avoid matching scientific notation like 1e5)
   const cellRefRegex = /(?<![0-9])(\$?)([A-Za-z]+)(\$?)(\d+)/gi;
 
-  return formula.replace(cellRefRegex, (match, dollarCol: string, col: string, dollarRow: string, row: string) => {
+  protectedFormula = protectedFormula.replace(cellRefRegex, (match, dollarCol: string, col: string, dollarRow: string, row: string) => {
     const absoluteCol = dollarCol === '$';
     const absoluteRow = dollarRow === '$';
 
@@ -696,6 +739,13 @@ export function adjustFormulaRefs(formula: string, rowOffset: number, colOffset:
 
     return `${absoluteCol ? '$' : ''}${newCol.toUpperCase()}${absoluteRow ? '$' : ''}${newRow}`;
   });
+
+  // Restore cross-sheet references
+  placeholders.forEach((original, idx) => {
+    protectedFormula = protectedFormula.replace(`§§${idx}§§`, original);
+  });
+
+  return protectedFormula;
 }
 
 /**

@@ -9,7 +9,7 @@ import type { EditingSession } from '../hooks/useCellEditing';
 /**
  * Test helper: a minimal FSM session manager for Grid component tests.
  */
-function useTestEditingSession() {
+function useTestEditingSession(sheet?: Sheet) {
   const [session, setSession] = useState<EditingSession>({
     state: 'SELECT',
     row: 0,
@@ -21,16 +21,19 @@ function useTestEditingSession() {
   });
 
   const onStartEdit = useCallback((row: number, col: number) => {
+    // Match real startEdit: load cell value and set caret to right-most
+    const cellKey = `${row}:${col}`;
+    const cellValue = sheet?.cells[cellKey]?.rawValue ?? '';
     setSession({
       state: 'EDIT',
       row,
       col,
-      buffer: '',
-      originalValue: '',
-      caretPos: 0,
-      isFormula: false,
+      buffer: cellValue,
+      originalValue: cellValue,
+      caretPos: cellValue.length,
+      isFormula: cellValue.startsWith('='),
     });
-  }, []);
+  }, [sheet]);
 
   const onStartEnter = useCallback((row: number, col: number, char: string) => {
     setSession({
@@ -105,7 +108,7 @@ function GridWithEditing(
   },
 ) {
   const { onCellChange, autoComplete, onAcceptAutoComplete, onNavigateAutoComplete, onDismissAutoComplete, ...gridProps } = props;
-  const editing = useTestEditingSession();
+  const editing = useTestEditingSession(gridProps.sheet);
 
   const handleRawKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -227,6 +230,88 @@ describe('Grid - Cell Editing Input', () => {
     fireEvent.keyDown(input, { key: 'Enter' });
 
     expect(onCellChange).toHaveBeenCalled();
+  });
+
+  it('cursor is at right-most position when editing starts (double-click)', () => {
+    render(
+      <GridWithEditing
+        sheet={createTestSheet({ cells: { '0:0': { rawValue: 'HelloWorld' } } })}
+        onCellChange={jest.fn()}
+        onSelect={jest.fn()}
+      />,
+    );
+
+    // Double-click to start editing
+    const cell = document.querySelector('.grid-cell') as HTMLElement;
+    fireEvent.doubleClick(cell);
+
+    const input = document.querySelector('.grid-cell input') as HTMLInputElement;
+    expect(input).toBeInTheDocument();
+    expect(input.value).toBe('HelloWorld');
+    // Cursor should be at the end (right-most position)
+    expect(input.selectionStart).toBe(10);
+    expect(input.selectionEnd).toBe(10);
+  });
+
+  it('scrolls input to show caret at end of long formula', () => {
+    // Set up a long formula that exceeds typical cell width
+    const longFormula = '=SUM(Sheet1!B2:Sheet1!B21)+A3+SUM(F14:F22)';
+    render(
+      <GridWithEditing
+        sheet={createTestSheet({ cells: { '0:0': { rawValue: longFormula } } })}
+        onCellChange={jest.fn()}
+        onSelect={jest.fn()}
+      />,
+    );
+
+    // Double-click to start editing (this renders the input)
+    const cell = document.querySelector('.grid-cell') as HTMLElement;
+    fireEvent.doubleClick(cell);
+
+    const input = document.querySelector('.grid-cell input') as HTMLInputElement;
+    expect(input).toBeInTheDocument();
+    expect(input.value).toBe(longFormula);
+
+    // Mock input dimensions: clientWidth=100, scrollWidth=500
+    Object.defineProperty(input, 'clientWidth', { value: 100, configurable: true });
+    Object.defineProperty(input, 'scrollWidth', { value: 500, configurable: true });
+
+    // Mock canvas context for text measurement
+    const mockMeasureText = jest.fn().mockReturnValue({ width: 400 });
+    const mockGetContext = jest.fn().mockReturnValue({
+      measureText: mockMeasureText,
+      font: '',
+    });
+    const originalCreateElement = document.createElement;
+    document.createElement = jest.fn((tagName: string) => {
+      if (tagName === 'canvas') {
+        const canvasEl = originalCreateElement.call(document, 'canvas') as HTMLCanvasElement;
+        canvasEl.getContext = mockGetContext as unknown as typeof canvasEl.getContext;
+        return canvasEl;
+      }
+      return originalCreateElement.call(document, tagName);
+    }) as typeof document.createElement;
+
+    // Mock getComputedStyle
+    const originalGetComputedStyle = window.getComputedStyle;
+    window.getComputedStyle = jest.fn(() => ({
+      fontSize: '14px',
+      fontFamily: 'monospace',
+      paddingLeft: '4px',
+    }) as unknown as CSSStyleDeclaration) as unknown as typeof window.getComputedStyle;
+
+    // Focus the input to trigger syncCursorPosition via onFocus
+    fireEvent.focus(input);
+
+    // Cursor should be at the end
+    expect(input.selectionStart).toBe(longFormula.length);
+    expect(input.selectionEnd).toBe(longFormula.length);
+    // Input should be scrolled to show the caret (scrollLeft > 0)
+    expect(input.scrollLeft).toBeGreaterThan(0);
+
+    // Restore mocks
+    document.createElement = originalCreateElement;
+    window.getComputedStyle = originalGetComputedStyle;
   });
 
   it('cancels edit on Escape key', () => {
@@ -990,7 +1075,7 @@ describe('Grid - Syntax Highlighting in Cell Editor', () => {
     expect(input!.className).toContain('text-transparent');
   });
 
-  it('input does NOT have text-transparent when buffer is just "=" (B-009 fix)', () => {
+  it('input has text-transparent when buffer is just "=" (overlay renders "=" segment)', () => {
     render(
       <GridWithEditing
         sheet={createTestSheet({ cells: { '0:0': { rawValue: '' } } })}
@@ -1007,8 +1092,11 @@ describe('Grid - Syntax Highlighting in Cell Editor', () => {
     fireEvent.change(input, { target: { value: '=' } });
 
     expect(input).toBeInTheDocument();
-    // The "=" should be visible — no text-transparent because overlay has no segments
-    expect(input!.className).not.toContain('text-transparent');
+    // The "=" is rendered by the overlay as a segment, so text-transparent IS applied
+    expect(input!.className).toContain('text-transparent');
+    // The "=" should still be visible via the overlay
+    const overlay = cell.querySelector('.pointer-events-none');
+    expect(overlay?.textContent).toContain('=');
   });
 });
 

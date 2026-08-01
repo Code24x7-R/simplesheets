@@ -1,6 +1,27 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
 import { parseFormula, FormulaError, extractCellRefs, adjustFormulaRefs, prefixRefsWithSheet, cellRefToString, rangeToString } from './formulaParser';
+
+/**
+ * Deep-clones an AST node stripping position info (pos/endPos) for comparison.
+ * The parser now includes position tracking for cross-sheet navigation;
+ * existing structural tests verify shape without positions.
+ */
+function stripPos<T>(node: T): T {
+  if (!node || typeof node !== 'object') return node;
+  if (Array.isArray(node)) return node.map(stripPos) as T;
+  const obj = node as Record<string, unknown>;
+  const rest: Record<string, unknown> = {};
+  for (const key of Object.keys(obj)) {
+    if (key === 'pos' || key === 'endPos') continue;
+    if (obj[key] && typeof obj[key] === 'object') {
+      rest[key] = stripPos(obj[key] as T);
+    } else {
+      rest[key] = obj[key];
+    }
+  }
+  return rest as T;
+}
 import type { CellRefNode, RangeNode } from './formulaParser';
 
 describe('Formula Parser', () => {
@@ -69,32 +90,32 @@ describe('Formula Parser', () => {
   describe('Cell References', () => {
     it('parses single cell A1', () => {
       const ast = parseFormula('A1');
-      expect(ast).toEqual({ type: 'cell', row: 0, col: 0, absoluteCol: false, absoluteRow: false });
+      expect(stripPos(ast)).toEqual({ type: 'cell', row: 0, col: 0, absoluteCol: false, absoluteRow: false });
     });
 
     it('parses cell B3', () => {
       const ast = parseFormula('B3');
-      expect(ast).toEqual({ type: 'cell', row: 2, col: 1, absoluteCol: false, absoluteRow: false });
+      expect(stripPos(ast)).toEqual({ type: 'cell', row: 2, col: 1, absoluteCol: false, absoluteRow: false });
     });
 
     it('parses multi-letter columns AA1', () => {
       const ast = parseFormula('AA1');
-      expect(ast).toEqual({ type: 'cell', row: 0, col: 26, absoluteCol: false, absoluteRow: false });
+      expect(stripPos(ast)).toEqual({ type: 'cell', row: 0, col: 26, absoluteCol: false, absoluteRow: false });
     });
 
     it('parses absolute column $A1', () => {
       const ast = parseFormula('$A1');
-      expect(ast).toEqual({ type: 'cell', row: 0, col: 0, absoluteCol: true, absoluteRow: false });
+      expect(stripPos(ast)).toEqual({ type: 'cell', row: 0, col: 0, absoluteCol: true, absoluteRow: false });
     });
 
     it('parses absolute row A$1', () => {
       const ast = parseFormula('A$1');
-      expect(ast).toEqual({ type: 'cell', row: 0, col: 0, absoluteCol: false, absoluteRow: true });
+      expect(stripPos(ast)).toEqual({ type: 'cell', row: 0, col: 0, absoluteCol: false, absoluteRow: true });
     });
 
     it('parses fully absolute $A$1', () => {
       const ast = parseFormula('$A$1');
-      expect(ast).toEqual({ type: 'cell', row: 0, col: 0, absoluteCol: true, absoluteRow: true });
+      expect(stripPos(ast)).toEqual({ type: 'cell', row: 0, col: 0, absoluteCol: true, absoluteRow: true });
     });
   });
 
@@ -103,8 +124,8 @@ describe('Formula Parser', () => {
       const ast = parseFormula('A1:B5');
       expect(ast.type).toBe('range');
       if (ast.type === 'range') {
-        expect(ast.start).toEqual({ type: 'cell', row: 0, col: 0, absoluteCol: false, absoluteRow: false });
-        expect(ast.end).toEqual({ type: 'cell', row: 4, col: 1, absoluteCol: false, absoluteRow: false });
+        expect(stripPos(ast).start).toEqual({ type: 'cell', row: 0, col: 0, absoluteCol: false, absoluteRow: false });
+        expect(stripPos(ast).end).toEqual({ type: 'cell', row: 4, col: 1, absoluteCol: false, absoluteRow: false });
       }
     });
 
@@ -112,8 +133,8 @@ describe('Formula Parser', () => {
       const ast = parseFormula('$A$1:$B$5');
       expect(ast.type).toBe('range');
       if (ast.type === 'range') {
-        expect(ast.start).toEqual({ type: 'cell', row: 0, col: 0, absoluteCol: true, absoluteRow: true });
-        expect(ast.end).toEqual({ type: 'cell', row: 4, col: 1, absoluteCol: true, absoluteRow: true });
+        expect(stripPos(ast).start).toEqual({ type: 'cell', row: 0, col: 0, absoluteCol: true, absoluteRow: true });
+        expect(stripPos(ast).end).toEqual({ type: 'cell', row: 4, col: 1, absoluteCol: true, absoluteRow: true });
       }
     });
 
@@ -121,8 +142,8 @@ describe('Formula Parser', () => {
       const ast = parseFormula('$A1:B$5');
       expect(ast.type).toBe('range');
       if (ast.type === 'range') {
-        expect(ast.start).toEqual({ type: 'cell', row: 0, col: 0, absoluteCol: true, absoluteRow: false });
-        expect(ast.end).toEqual({ type: 'cell', row: 4, col: 1, absoluteCol: false, absoluteRow: true });
+        expect(stripPos(ast).start).toEqual({ type: 'cell', row: 0, col: 0, absoluteCol: true, absoluteRow: false });
+        expect(stripPos(ast).end).toEqual({ type: 'cell', row: 4, col: 1, absoluteCol: false, absoluteRow: true });
       }
     });
   });
@@ -130,7 +151,7 @@ describe('Formula Parser', () => {
   describe('Cross-Sheet References', () => {
     it('parses sheet-qualified cell Sheet1!A1', () => {
       const ast = parseFormula('Sheet1!A1');
-      expect(ast).toEqual({ type: 'cell', row: 0, col: 0, absoluteCol: false, absoluteRow: false, sheetName: 'Sheet1' });
+      expect(stripPos(ast)).toEqual({ type: 'cell', row: 0, col: 0, absoluteCol: false, absoluteRow: false, sheetName: 'Sheet1' });
     });
 
     it('parses sheet-qualified range Sheet2!A1:B5', () => {
@@ -138,14 +159,14 @@ describe('Formula Parser', () => {
       expect(ast.type).toBe('range');
       if (ast.type === 'range') {
         expect(ast.sheetName).toBe('Sheet2');
-        expect(ast.start).toEqual({ type: 'cell', row: 0, col: 0, absoluteCol: false, absoluteRow: false, sheetName: 'Sheet2' });
-        expect(ast.end).toEqual({ type: 'cell', row: 4, col: 1, absoluteCol: false, absoluteRow: false, sheetName: 'Sheet2' });
+        expect(stripPos(ast).start).toEqual({ type: 'cell', row: 0, col: 0, absoluteCol: false, absoluteRow: false, sheetName: 'Sheet2' });
+        expect(stripPos(ast).end).toEqual({ type: 'cell', row: 4, col: 1, absoluteCol: false, absoluteRow: false, sheetName: 'Sheet2' });
       }
     });
 
     it('parses quoted sheet name with spaces', () => {
       const ast = parseFormula("'My Sheet'!A1");
-      expect(ast).toEqual({ type: 'cell', row: 0, col: 0, absoluteCol: false, absoluteRow: false, sheetName: 'My Sheet' });
+      expect(stripPos(ast)).toEqual({ type: 'cell', row: 0, col: 0, absoluteCol: false, absoluteRow: false, sheetName: 'My Sheet' });
     });
 
     it('parses sheet-qualified ref in function SUM(Sheet1!A1:A10)', () => {
@@ -157,6 +178,43 @@ describe('Formula Parser', () => {
         if (ast.args[0].type === 'range') {
           expect(ast.args[0].sheetName).toBe('Sheet1');
         }
+      }
+    });
+
+    it('parses cross-sheet range with sheet prefix on BOTH ends (Sheet1!A1:Sheet1!B5)', () => {
+      // This is what prefixRefsWithSheet produces: Sheet1!B2:Sheet1!B21
+      const ast = parseFormula('Sheet1!A1:Sheet1!B5');
+      expect(ast.type).toBe('range');
+      if (ast.type === 'range') {
+        expect(ast.sheetName).toBe('Sheet1');
+        expect(stripPos(ast).start).toEqual({ type: 'cell', row: 0, col: 0, absoluteCol: false, absoluteRow: false, sheetName: 'Sheet1' });
+        expect(stripPos(ast).end).toEqual({ type: 'cell', row: 4, col: 1, absoluteCol: false, absoluteRow: false, sheetName: 'Sheet1' });
+      }
+    });
+
+    it('parses cross-sheet SUM with sheet prefix on both range ends', () => {
+      // Exact user scenario: =SUM(Sheet1!B2:Sheet1!B21)
+      const ast = parseFormula('SUM(Sheet1!B2:Sheet1!B21)');
+      expect(ast.type).toBe('function');
+      if (ast.type === 'function') {
+        expect(ast.name).toBe('SUM');
+        expect(ast.args[0].type).toBe('range');
+        if (ast.args[0].type === 'range') {
+          expect(ast.args[0].sheetName).toBe('Sheet1');
+          expect(ast.args[0].start.row).toBe(1); // B2 = row 1
+          expect(ast.args[0].start.col).toBe(1); // B = col 1
+          expect(ast.args[0].end.row).toBe(20); // B21 = row 20
+          expect(ast.args[0].end.col).toBe(1); // B = col 1
+        }
+      }
+    });
+
+    it('parses mixed range: bare ref to cross-sheet ref (A1:Sheet1!B5)', () => {
+      const ast = parseFormula('A1:Sheet1!B5');
+      expect(ast.type).toBe('range');
+      if (ast.type === 'range') {
+        expect(stripPos(ast).start).toEqual({ type: 'cell', row: 0, col: 0, absoluteCol: false, absoluteRow: false });
+        expect(stripPos(ast).end).toEqual({ type: 'cell', row: 4, col: 1, absoluteCol: false, absoluteRow: false, sheetName: 'Sheet1' });
       }
     });
   });
@@ -277,7 +335,7 @@ describe('Formula Parser', () => {
   describe('Functions', () => {
     it('parses SUM function', () => {
       const ast = parseFormula('SUM(A1:A10)');
-      expect(ast).toEqual({
+      expect(stripPos(ast)).toEqual({
         type: 'function',
         name: 'SUM',
         args: [
@@ -292,7 +350,7 @@ describe('Formula Parser', () => {
 
     it('parses SUM with absolute references', () => {
       const ast = parseFormula('SUM($A$1:$A$10)');
-      expect(ast).toEqual({
+      expect(stripPos(ast)).toEqual({
         type: 'function',
         name: 'SUM',
         args: [
@@ -382,7 +440,7 @@ describe('Formula Parser', () => {
       expect(ast.type).toBe('binary');
       if (ast.type === 'binary') {
         expect(ast.op).toBe('+');
-        expect(ast.left).toEqual({ type: 'cell', row: 0, col: 0, absoluteCol: true, absoluteRow: true });
+        expect(stripPos(ast.left)).toEqual({ type: 'cell', row: 0, col: 0, absoluteCol: true, absoluteRow: true });
       }
     });
   });
@@ -487,6 +545,58 @@ describe('Formula Parser', () => {
     it('handles lowercase cell references', () => {
       // Normalizes cell refs to uppercase, preserves function name case
       expect(adjustFormulaRefs('sum(a1:a10)', 1, 0)).toBe('sum(A2:A11)');
+    });
+  });
+
+  describe('adjustFormulaRefs — cross-sheet reference protection (B-018)', () => {
+    it('adjusts cross-sheet ref cell part while preserving sheet prefix (col offset)', () => {
+      expect(adjustFormulaRefs('Sheet1!A1', 0, 1)).toBe('Sheet1!B1');
+    });
+
+    it('adjusts cross-sheet ref cell part while preserving sheet prefix (row offset)', () => {
+      expect(adjustFormulaRefs('Sheet1!A1', 1, 0)).toBe('Sheet1!A2');
+    });
+
+    it('adjusts cross-sheet ref cell part with both offsets', () => {
+      expect(adjustFormulaRefs('Sheet1!A1', 1, 1)).toBe('Sheet1!B2');
+    });
+
+    it('adjusts both cross-sheet and relative refs in mixed formula', () => {
+      expect(adjustFormulaRefs('Sheet1!A1+B1', 0, 1)).toBe('Sheet1!B1+C1');
+    });
+
+    it('handles multiple cross-sheet refs from different sheets', () => {
+      expect(adjustFormulaRefs('Sheet1!A1+Sheet2!B2', 0, 1)).toBe('Sheet1!B1+Sheet2!C2');
+    });
+
+    it('handles cross-sheet refs with quoted sheet names', () => {
+      expect(adjustFormulaRefs("'My Sheet'!A1+B1", 0, 1)).toBe("'My Sheet'!B1+C1");
+    });
+
+    it('handles cross-sheet prefix followed by range', () => {
+      expect(adjustFormulaRefs('Sheet1!A1:B5', 0, 1)).toBe('Sheet1!B1:C5');
+    });
+
+    it('does NOT corrupt sheet name even with large offsets', () => {
+      const result = adjustFormulaRefs('Sheet1!A22', 0, 1);
+      expect(result).toBe('Sheet1!B22');
+      expect(result).not.toContain('SHEEU');
+    });
+
+    it('reproduces and fixes the exact user bug scenario', () => {
+      // Cross-sheet paste adds prefix, then same-sheet paste with offset
+      const prefixed = prefixRefsWithSheet('A22', 'Sheet1');
+      expect(prefixed).toBe('Sheet1!A22');
+      const result = adjustFormulaRefs(prefixed, 0, 1);
+      expect(result).toBe('Sheet1!B22');
+    });
+
+    it('handles cross-sheet ref with absolute cell reference', () => {
+      expect(adjustFormulaRefs('Sheet1!$A$1', 0, 1)).toBe('Sheet1!$A$1');
+    });
+
+    it('handles cross-sheet ref with absolute row', () => {
+      expect(adjustFormulaRefs('Sheet1!A$1', 0, 1)).toBe('Sheet1!B$1');
     });
   });
 

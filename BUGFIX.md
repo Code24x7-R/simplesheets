@@ -7,17 +7,12 @@ This file tracks bugs in **existing** code, functions, and UI elements. New feat
 ## 🔴 Open Bugs
 
 <!-- Add new bugs here as they're discovered. Each entry should have:
-     - Symptom (what the userFilters)
-     - - custom filter display not available Suspected file/compofilterate discovered -->
+     - Symptom (what the user sees)
+     - Suspected file/component
+     - Date discovered
+     - Impact (High/Medium/Low)
+     - Fix direction (if known) -->
 
-### 2026-08-01: B-015 — Data Filter settings - custom filter display not available
-- **Symptom**: When performing a filter and Applying it (filter form closes as expected), then reopening the filter form, the custom filter should display.
-- **Root cause**: filter WF not fully implemented.
-
-### 2026-08-01: B-016 — Data Sort settings
-- **Symptom**: When performing a sort (A-Z/Z-A) and applying it (filter form closes as expected), then reopening the filter form, the custom filter should display.
-- **Root cause**: Undo handling.
-     
 
 <!-- No open bugs. Add new ones as they're discovered. -->
 
@@ -28,6 +23,48 @@ This file tracks bugs in **existing** code, functions, and UI elements. New feat
 ## ✅ Recently Fixed
 
 <!-- Bugs resolved in this session or recent past. Newest first. -->
+
+### 2026-08-01: B-023 — In-cell editor initial cursor position not right-most ✅ VERIFIED
+- **Symptom**: (1) When double-clicking a cell to edit it, the cursor appeared at the beginning of the text instead of at the end. (2) When editing a long formula like `=SUM(Sheet1!B2:Sheet1!B21)+A3+SUM(F14:F22)`, the caret was placed at the end but the input wasn't scrolled to show it — the user only saw the beginning of the formula.
+- **Root cause**: (1) The cursor sync effect (`useEffect`) had a guard `document.activeElement !== input` that prevented syncing when the input wasn't focused yet. When the input first mounted with `autoFocus`, the effect could run before the browser had established focus. (2) The Grid cell editor lacked the scroll-to-caret logic that FormulaBar has.
+- **Fix**: (1) Extracted cursor sync into a `syncCursorPosition` callback. (2) Added `onFocus={syncCursorPosition}` to both the input and textarea editor elements (frozen and non-frozen variants). (3) Added scroll-to-caret logic using canvas text measurement (matching FormulaBar's approach) so the input scrolls horizontally to keep the caret visible. (4) Updated test helper `useTestEditingSession` to match real `startEdit` behavior (loads cell value, sets caret to end).
+- **Files**: `src/components/Grid.tsx` (syncCursorPosition + onFocus + scroll), `src/components/Grid.interactions.test.tsx` (test helper fix + 2 new tests)
+- **Tests**: 2417 pass (was 2415), lint clean, type-check clean, build clean
+
+### 2026-08-01: B-022 — Formula editing view missing `=` and `!` characters ✅ VERIFIED
+- **Symptom**: When editing formulas containing cross-sheet references (e.g., `=SUM(Sheet1!B2:Sheet1!B21)`), the `!` character and leading `=` sign were invisible in the formula bar and cell editor. Only cell references and operators like `+`, `-` were visible.
+- **Root cause**: The `FormulaHighlightOverlay` component uses `text-transparent` to hide the real input text and renders colored segments instead. The tokenizer regex (`computeHighlightSegments`) didn't match the `!` separator or cross-sheet range syntax (`Sheet1!A2:Sheet1!B21`). Additionally, the leading `=` was stripped (`value.slice(1)`) and never rendered as a segment. Unmatched characters were simply not rendered — making them invisible.
+- **Fix**: (1) Rewrote the tokenizer regex to handle cross-sheet refs (Sheet1!A1), quoted sheet names ('My Sheet'!A1), cross-sheet ranges with prefix on both ends (Sheet1!A1:Sheet1!B5), and added fallback logic to render any unmatched characters as plain text. Cell refs are now matched before plain names to prevent partial matches (A1 → A + 1). (2) Prepend the leading `=` as a plain segment so it remains visible even with `text-transparent` applied.
+- **Files**: `src/components/FormulaHighlightOverlay.tsx` (rewrote `computeHighlightSegments`), `src/components/FormulaBar.highlight.test.tsx` (7 new tests), `src/components/FormulaBar.test.tsx` (updated), `src/components/Grid.interactions.test.tsx` (updated)
+- **Tests**: 2415 pass (was 2408), lint clean, type-check clean, build clean
+
+### 2026-08-01: B-021 — Cross-sheet reference click-to-navigate ✅ VERIFIED
+- **Symptom**: When editing a formula with cross-sheet references (e.g., `=SUM(Sheet1!B2:Sheet1!B21)` in Sheet2), clicking on the reference in the formula bar did nothing — the user had to manually switch to Sheet1 to view/edit the referenced cells.
+- **Root cause**: The highlight system (`walkAstForHighlights`) ignored `sheetName` entirely and had no cursor-position tracking for cross-sheet refs.
+- **Fix**: (1) Added `pos`/`endPos` tracking to AST nodes in the parser. (2) Created `findCrossSheetRefAtCursor()` to detect when the cursor is on a cross-sheet ref. (3) FormulaBar emits `onCrossSheetRefChange` when cursor lands on a cross-sheet ref. (4) App shows a tip ("Go to sheet" / cancel) and navigates to the source sheet on click, highlighting the target range. (5) Clicking the formula bar again returns to the original sheet.
+- **Files**: `src/utils/formulaParser.ts` (pos/endPos tracking), `src/components/FormulaBar.tsx` (findCrossSheetRefAtCursor + cursor detection), `src/App.tsx` (navigation handlers + tip UI), `src/components/FormulaBar.highlight.test.tsx` (7 new tests)
+- **Tests**: 2408 pass (was 2401), lint clean, type-check clean, build clean
+
+### 2026-08-01: B-020 — Cross-sheet range highlight shows on wrong sheet ✅ VERIFIED
+- **Symptom**: When editing a formula with cross-sheet references (e.g., `=SUM(Sheet1!B2:Sheet1!B21)`), the range highlight overlay showed cells on the CURRENT sheet instead of the source sheet — misleading visual feedback.
+- **Root cause**: `walkAstForHighlights` extracted ranges from the AST but ignored the `sheetName` property. All ranges (same-sheet and cross-sheet) were highlighted on the current sheet.
+- **Fix**: Added a guard in `walkAstForHighlights`: if a cell/range node has a `sheetName`, it is skipped. Only same-sheet references produce highlights. The `Sheet1!` prefix in the formula bar already communicates which sheet is referenced.
+- **Files**: `src/components/FormulaBar.tsx` (`walkAstForHighlights` + exported `extractHighlights` for testing), `src/components/FormulaBar.highlight.test.tsx` (8 new tests)
+- **Tests**: 2401 pass (was 2393), lint clean, type-check clean, build clean
+
+### 2026-08-01: B-019 — Cross-sheet ranges produce #VALUE! after paste ✅ VERIFIED
+- **Symptom**: After pasting formulas across sheets, range formulas like `=SUM(Sheet1!B2:Sheet1!B21)` show `#VALUE!` instead of the computed sum. The cross-sheet prefix appears correctly on both sides of the range colon, but the formula fails to evaluate.
+- **Root cause**: `prefixRefsWithSheet` correctly produces `Sheet1!B2:Sheet1!B21` (prefix on both sides of the range colon). However, the parser's range handling after the COLON token only accepts a `CELL` token — it encounters `SHEET_NAME` and throws `FormulaError`. The catch block in `evaluateWorkbook` converts this to `#VALUE!`. The parser handled `Sheet1!A1:B5` (prefix on left only) but not `Sheet1!A1:Sheet1!B5` (prefix on both sides).
+- **Fix**: Added a `parseRangeEnd` helper method to the parser that handles both `CELL` and `SHEET_NAME ! CELL` tokens after the range colon. Both the `SHEET_NAME` and `CELL` range cases now use this helper, correctly propagating the sheet name from the end ref when present.
+- **Files**: `src/utils/formulaParser.ts` (`parseRangeEnd` helper + updated range parsing), `src/utils/formulaParser.test.ts` (3 new tests), `src/utils/formulaEngine.test.ts` (1 new test)
+- **Tests**: 2393 pass (was 2389), lint clean, type-check clean, build clean
+
+### 2026-08-01: B-018 — Same-sheet paste corrupts existing cross-sheet references ✅ VERIFIED
+- **Symptom**: Pasting formulas within the same sheet with an offset corrupted any existing cross-sheet references (e.g., `=Sheet1!A1`). The sheet name "Sheet1" was matched by `adjustFormulaRefs`'s regex as column="Sheet" row="1", producing garbage like `=SHEEU1!B22` instead of `=Sheet1!B22`.
+- **Root cause**: `adjustFormulaRefs` uses regex `/([A-Za-z]+)(\d+)/` to find cell references. When a formula already contains a cross-sheet prefix (from a prior cross-sheet paste), the prefix "Sheet1" matches as if it were a column+row reference. The column letters "Sheet" get converted to a huge column number, incremented, and converted back to gibberish.
+- **Fix**: Added a protection step at the top of `adjustFormulaRefs`: cross-sheet prefixes (`Sheet1!`, `'My Sheet'!`, etc.) are replaced with placeholders before the offset regex runs, then restored afterward. The cell reference AFTER the prefix is still correctly adjusted (matching Excel behavior where `=Sheet1!A1` copied +1 col becomes `=Sheet1!B1`).
+- **Files**: `src/utils/formulaParser.ts` (`adjustFormulaRefs` — added cross-sheet prefix protection), `src/utils/adjustFormulaRefs_fix.test.ts` (12 new tests)
+- **Tests**: 2390 pass (was 2378), lint clean, type-check clean, build clean
 
 ### 2026-08-01: B-017 — Sort/Undo destroys selection, blocking re-sort ✅ VERIFIED
 - **Symptom**: After sorting a selected range and pressing Ctrl+Z, the user could not sort again without first deselecting and reselecting the range. The sort silently no-op'd because `selection` was null after undo.

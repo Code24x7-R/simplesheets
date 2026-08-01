@@ -284,7 +284,7 @@ describe('FormulaBar - Error Display', () => {
     expect(input).toBeInTheDocument();
   });
 
-  it('input does NOT have text-transparent when value is just "=" (B-009 fix)', () => {
+  it('input has text-transparent when value is just "=" (overlay renders "=" segment)', () => {
     render(
       <FormulaBar
         {...defaultProps}
@@ -294,8 +294,11 @@ describe('FormulaBar - Error Display', () => {
     );
     const input = screen.getByDisplayValue('=') as HTMLInputElement;
     expect(input).toBeInTheDocument();
-    // The "=" should be visible — no text-transparent because overlay has no segments
-    expect(input.className).not.toContain('text-transparent');
+    // The "=" is rendered by the overlay as a segment, so text-transparent IS applied
+    expect(input.className).toContain('text-transparent');
+    // The "=" should still be visible via the overlay
+    const overlay = input.parentElement?.querySelector('.pointer-events-none');
+    expect(overlay?.textContent).toContain('=');
   });
 
   it('input HAS text-transparent when value has cell references (overlay renders)', () => {

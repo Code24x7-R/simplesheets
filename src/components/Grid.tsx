@@ -476,16 +476,41 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
   // ─── Cursor Sync Effect ───────────────────────────────────────────
   // Keeps the input caret position in sync with the FSM's caretPos.
   // Only syncs when there's no active selection to avoid clearing the
-  // user's text selection.
-  useEffect(() => {
+  // user's text selection. Also scrolls the input to keep the caret
+  // visible (important for long formulas that exceed the cell width).
+  const syncCursorPosition = useCallback(() => {
     const input = editInputRef.current;
-    if (!input || !session || document.activeElement !== input) return;
+    if (!input || !session) return;
     const hasSelection = input.selectionStart !== input.selectionEnd;
     if (!hasSelection && session.caretPos >= 0) {
       const pos = Math.min(session.caretPos, editBuffer.length);
       input.setSelectionRange(pos, pos);
+      // Scroll input to keep the caret visible
+      // Create a temporary span to measure the width of text before cursor
+      const textBeforeCursor = editBuffer.slice(0, pos);
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        const computedStyle = window.getComputedStyle(input);
+        ctx.font = `${computedStyle.fontSize} ${computedStyle.fontFamily}`;
+        const textWidth = ctx.measureText(textBeforeCursor).width;
+        const padding = parseInt(computedStyle.paddingLeft) || 0;
+        const cursorX = padding + textWidth;
+        // If cursor is beyond visible area, scroll right to show it
+        if (cursorX > input.scrollLeft + input.clientWidth) {
+          input.scrollLeft = cursorX - input.clientWidth + 20;
+        } else if (cursorX < input.scrollLeft) {
+          input.scrollLeft = Math.max(0, cursorX - 20);
+        }
+      }
     }
-  }, [session?.caretPos, editBuffer, session]);
+  }, [session, editBuffer]);
+
+  useEffect(() => {
+    if (document.activeElement === editInputRef.current) {
+      syncCursorPosition();
+    }
+  }, [session?.caretPos, editBuffer, session, syncCursorPosition]);
 
   // ─── Focus Management ──────────────────────────────────────────────
   // When editing ends (session transitions to SELECT), focus the grid
@@ -1043,10 +1068,14 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
 
   /**
    * Checks if a cell is within any highlighted range and returns the color index.
+   * Highlights with a sheetName only match cells on that specific sheet.
    */
   const getCellHighlight = useCallback(
     (row: number, col: number): number | null => {
+      const currentSheetName = sheet.name;
       for (const range of highlightedRanges) {
+        // If the highlight has a sheetName, it only matches that sheet
+        if (range.sheetName && range.sheetName !== currentSheetName) continue;
         if (
           row >= range.startRow &&
           row <= range.endRow &&
@@ -1058,7 +1087,7 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
       }
       return null;
     },
-    [highlightedRanges]
+    [highlightedRanges, sheet.name]
   );
 
   /**
@@ -1736,6 +1765,7 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
                       style={{ caretColor: '#000' }}
                       value={editBuffer}
                       rows={Math.min(editBuffer.split('\n').length + 1, 5)}
+                      onFocus={syncCursorPosition}
                       onChange={(e) => {
                         const newPos = e.target.selectionStart ?? e.target.value.length;
                         onRawChange?.(e.target.value, newPos);
@@ -1775,6 +1805,7 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
                       }`}
                       style={{ caretColor: '#000' }}
                       value={editBuffer}
+                      onFocus={syncCursorPosition}
                       onChange={(e) => {
                         const newPos = e.target.selectionStart ?? e.target.value.length;
                         onRawChange?.(e.target.value, newPos);
@@ -2031,6 +2062,7 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
                   style={{ caretColor: '#000' }}
                   value={editBuffer}
                   rows={Math.min(editBuffer.split('\n').length + 1, 5)}
+                  onFocus={syncCursorPosition}
                   onChange={(e) => {
                     const newPos = e.target.selectionStart ?? e.target.value.length;
                     onRawChange?.(e.target.value, newPos);
@@ -2087,6 +2119,7 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
                   }`}
                   style={{ caretColor: '#000' }}
                   value={editBuffer}
+                  onFocus={syncCursorPosition}
                   onChange={(e) => {
                     const newPos = e.target.selectionStart ?? e.target.value.length;
                     onRawChange?.(e.target.value, newPos);

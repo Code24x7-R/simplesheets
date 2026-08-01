@@ -207,6 +207,23 @@ function WorkbookView() {
   }, [closeFormulaWizard, wizardTargetCell]);
   const [statusMessage, setStatusMessage] = useState<string>('Ready');
   const [highlightedRanges, setHighlightedRanges] = useState<HighlightedRange[]>([]);
+  // Cross-sheet navigation state
+  const [crossSheetNavigation, setCrossSheetNavigation] = useState<{
+    sheetName: string;
+    startRow: number;
+    startCol: number;
+    endRow: number;
+    endCol: number;
+    sourceSheetIndex: number; // the sheet that owns the formula being edited
+  } | null>(null);
+  const [pendingCrossSheetRef, setPendingCrossSheetRef] = useState<{
+    sheetName: string;
+    startRow: number;
+    startCol: number;
+    endRow: number;
+    endCol: number;
+  } | null>(null);
+  const crossSheetSourceRef = useRef<number | null>(null); // sheet index to return to
   const [pendingCutRange, setPendingCutRange] = useState<Selection | null>(null);
   // Tracks the range currently on the clipboard for marching-ants visual feedback
   const [clipboardRange, setClipboardRange] = useState<{
@@ -500,16 +517,97 @@ function WorkbookView() {
     [activeCell, importFormulaToWizard, openWizardWithAutocomplete]
   );
 
+  // ─── Cross-Sheet Navigation ──────────────────────────────────────
+  // Handle cross-sheet ref detection from formula bar
+  const handleCrossSheetRefChange = useCallback(
+    (info: { sheetName: string; startRow: number; startCol: number; endRow: number; endCol: number; startPos: number; endPos: number } | null) => {
+      setPendingCrossSheetRef(info);
+    },
+    []
+  );
+
+  // Navigate to source sheet for cross-sheet ref editing
+  const handleNavigateToCrossSheet = useCallback(
+    () => {
+      if (!pendingCrossSheetRef) return;
+      const targetIndex = workbook.sheets.findIndex((s) => s.name === pendingCrossSheetRef.sheetName);
+      if (targetIndex === -1) return;
+      if (targetIndex === workbook.activeSheetIndex) return;
+
+      // Save the source sheet (where the formula being edited lives)
+      crossSheetSourceRef.current = workbook.activeSheetIndex;
+
+      const newWb: Workbook = {
+        ...workbook,
+        activeSheetIndex: targetIndex,
+        lastModified: Date.now(),
+      };
+      pushHistory(newWb, `Navigate to ${pendingCrossSheetRef.sheetName}`, filterStateRef.current, gridSelectionRef.current);
+
+      setCrossSheetNavigation({
+        sheetName: pendingCrossSheetRef.sheetName,
+        startRow: pendingCrossSheetRef.startRow,
+        startCol: pendingCrossSheetRef.startCol,
+        endRow: pendingCrossSheetRef.endRow,
+        endCol: pendingCrossSheetRef.endCol,
+        sourceSheetIndex: crossSheetSourceRef.current,
+      });
+      setPendingCrossSheetRef(null);
+      setStatusMessage(`Viewing ${pendingCrossSheetRef.sheetName}! range — click formula bar to return`);
+
+      // Highlight the target range on the source sheet
+      setHighlightedRanges([{
+        startRow: pendingCrossSheetRef.startRow,
+        startCol: pendingCrossSheetRef.startCol,
+        endRow: pendingCrossSheetRef.endRow,
+        endCol: pendingCrossSheetRef.endCol,
+        colorIndex: 0,
+        sheetName: pendingCrossSheetRef.sheetName,
+      }]);
+
+      // Select the target range
+      setActiveCell({ row: pendingCrossSheetRef.startRow, col: pendingCrossSheetRef.startCol });
+      gridRef.current?.focus();
+    },
+    [pendingCrossSheetRef, workbook, pushHistory]
+  );
+
+  // Return from cross-sheet navigation to source sheet
+  const handleReturnFromCrossSheet = useCallback(
+    () => {
+      const sourceIndex = crossSheetSourceRef.current;
+      if (sourceIndex === null || sourceIndex === workbook.activeSheetIndex) return;
+
+      const newWb: Workbook = {
+        ...workbook,
+        activeSheetIndex: sourceIndex,
+        lastModified: Date.now(),
+      };
+      pushHistory(newWb, `Return to ${workbook.sheets[sourceIndex].name}`, filterStateRef.current, gridSelectionRef.current);
+      crossSheetSourceRef.current = null;
+      setCrossSheetNavigation(null);
+      setPendingCrossSheetRef(null);
+      gridRef.current?.focus();
+    },
+    [workbook, pushHistory]
+  );
+
   // ─── Raw Event Handlers for FormulaBar ──────────────────────────
   // FormulaBar is now a pure view - it forwards raw events to the FSM.
 
   // Raw focus - FSM enters EDIT mode
   const handleFormulaRawFocus = useCallback(
     (caretPos: number) => {
+      // If we're in cross-sheet navigation mode, clicking the formula bar
+      // returns to the source sheet instead of starting edit
+      if (crossSheetSourceRef.current !== null && crossSheetNavigation) {
+        handleReturnFromCrossSheet();
+        return;
+      }
       startEditAt(caretPos);
       setFormulaCursorPos(caretPos);
     },
-    [startEditAt],
+    [startEditAt, handleReturnFromCrossSheet, crossSheetNavigation],
   );
 
   // Raw blur - FSM commits
@@ -1998,8 +2096,30 @@ function WorkbookView() {
         referenceFormat={referenceFormat}
         onToggleReferenceFormat={toggleReferenceFormat}
         onHighlightsChange={setHighlightedRanges}
+        onCrossSheetRefChange={handleCrossSheetRefChange}
         onFxClick={handleFxClick}
       />
+
+      {/* Cross-sheet navigation tip */}
+      {pendingCrossSheetRef && (
+        <div className="absolute left-1/2 -translate-x-1/2 top-[92px] z-50 bg-blue-50 border border-blue-200 rounded-lg shadow-md px-3 py-2 flex items-center gap-2 text-xs">
+          <span className="text-blue-700">
+            📋 <strong>{pendingCrossSheetRef.sheetName}</strong>!{colToLetter(pendingCrossSheetRef.startCol)}{pendingCrossSheetRef.startRow + 1}:{colToLetter(pendingCrossSheetRef.endCol)}{pendingCrossSheetRef.endRow + 1}
+          </span>
+          <button
+            className="px-2 py-0.5 bg-blue-600 text-white rounded text-xs hover:bg-blue-700"
+            onClick={handleNavigateToCrossSheet}
+          >
+            Go to sheet
+          </button>
+          <button
+            className="px-2 py-0.5 text-gray-500 hover:text-gray-700"
+            onClick={() => setPendingCrossSheetRef(null)}
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       {/* Sheet Tabs */}
       <SheetTabs
@@ -2080,6 +2200,12 @@ function WorkbookView() {
             {frozenColumns > 0 && ` | ${frozenColumns} frozen col(s)`}
           </span>
         </div>
+        {/* Cross-sheet navigation indicator */}
+        {crossSheetNavigation && (
+          <span className="text-blue-600 font-medium">
+            📋 Viewing {crossSheetNavigation.sheetName} — click formula bar to return
+          </span>
+        )}
       </footer>
 
       {/* Hidden import/export bridge for menu actions */}

@@ -17,6 +17,12 @@ export interface HighlightedRange {
   endRow: number;
   endCol: number;
   colorIndex: number;
+  /** Sheet name for cross-sheet references (undefined for same-sheet). */
+  sheetName?: string;
+  /** Start position in formula text (for cursor-based navigation). */
+  startPos?: number;
+  /** End position in formula text (for cursor-based navigation). */
+  endPos?: number;
 }
 
 export interface FormulaBarProps {
@@ -57,32 +63,47 @@ export interface FormulaBarProps {
   onToggleReferenceFormat?: () => void;
   /** Callback when formula highlights change. */
   onHighlightsChange?: (ranges: HighlightedRange[]) => void;
+  /**
+   * Callback when the cursor is on a cross-sheet reference.
+   * Provides the sheet name and range info for navigation.
+   * Called with null when cursor leaves all cross-sheet refs.
+   */
+  onCrossSheetRefChange?: (info: { sheetName: string; startRow: number; startCol: number; endRow: number; endCol: number; startPos: number; endPos: number } | null) => void;
   /** Callback when the fx button is clicked — opens FormulaWizard with current formula. */
   onFxClick?: (currentValue: string) => void;
 }
 
 /**
  * Walks the AST to extract ranges for highlighting.
+ * Cross-sheet references (those with a sheetName) are skipped — they
+ * reference cells on a different sheet and should not be highlighted
+ * on the current sheet.
  */
 function walkAstForHighlights(node: ASTNode, ranges: HighlightedRange[], colorIndex: { value: number }): void {
   switch (node.type) {
     case 'cell':
+      if (node.sheetName) break; // cross-sheet ref — don't highlight on current sheet
       ranges.push({
         startRow: node.row,
         startCol: node.col,
         endRow: node.row,
         endCol: node.col,
         colorIndex: colorIndex.value % HIGHLIGHT_COLORS.length,
+        startPos: node.pos,
+        endPos: node.endPos,
       });
       colorIndex.value++;
       break;
     case 'range':
+      if (node.sheetName) break; // cross-sheet ref — don't highlight on current sheet
       ranges.push({
         startRow: Math.min(node.start.row, node.end.row),
         startCol: Math.min(node.start.col, node.end.col),
         endRow: Math.max(node.start.row, node.end.row),
         endCol: Math.max(node.start.col, node.end.col),
         colorIndex: colorIndex.value % HIGHLIGHT_COLORS.length,
+        startPos: node.pos,
+        endPos: node.endPos,
       });
       colorIndex.value++;
       break;
@@ -100,9 +121,61 @@ function walkAstForHighlights(node: ASTNode, ranges: HighlightedRange[], colorIn
 }
 
 /**
- * Extracts ranges from a formula string for highlighting.
+ * Extracts cross-sheet references from the AST with their text positions.
+ * These are used for click-to-navigate behavior.
  */
-function extractHighlights(formula: string): HighlightedRange[] {
+function walkAstForCrossSheetRefs(node: ASTNode, refs: { sheetName: string; startRow: number; startCol: number; endRow: number; endCol: number; pos?: number; endPos?: number }[]): void {
+  switch (node.type) {
+    case 'cell':
+      if (node.sheetName) {
+        refs.push({ sheetName: node.sheetName, startRow: node.row, startCol: node.col, endRow: node.row, endCol: node.col, pos: node.pos, endPos: node.endPos });
+      }
+      break;
+    case 'range':
+      if (node.sheetName) {
+        refs.push({ sheetName: node.sheetName, startRow: Math.min(node.start.row, node.end.row), startCol: Math.min(node.start.col, node.end.col), endRow: Math.max(node.start.row, node.end.row), endCol: Math.max(node.start.col, node.end.col), pos: node.pos, endPos: node.endPos });
+      }
+      break;
+    case 'binary':
+      walkAstForCrossSheetRefs(node.left, refs);
+      walkAstForCrossSheetRefs(node.right, refs);
+      break;
+    case 'unary':
+      walkAstForCrossSheetRefs(node.operand, refs);
+      break;
+    case 'function':
+      node.args.forEach(arg => walkAstForCrossSheetRefs(arg, refs));
+      break;
+  }
+}
+
+/**
+ * Finds the cross-sheet reference at the given cursor position.
+ * Returns null if cursor is not on a cross-sheet ref.
+ */
+export function findCrossSheetRefAtCursor(formula: string, cursorPos: number): { sheetName: string; startRow: number; startCol: number; endRow: number; endCol: number; startPos: number; endPos: number } | null {
+  if (!formula || !formula.startsWith('=')) return null;
+  try {
+    const ast = parseFormula(formula.slice(1));
+    const refs: { sheetName: string; startRow: number; startCol: number; endRow: number; endCol: number; pos?: number; endPos?: number }[] = [];
+    walkAstForCrossSheetRefs(ast, refs);
+    for (const ref of refs) {
+      if (ref.pos !== undefined && ref.endPos !== undefined && cursorPos >= ref.pos && cursorPos <= ref.endPos) {
+        return { sheetName: ref.sheetName, startRow: ref.startRow, startCol: ref.startCol, endRow: ref.endRow, endCol: ref.endCol, startPos: ref.pos, endPos: ref.endPos };
+      }
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Extracts ranges from a formula string for highlighting.
+ * Cross-sheet references (with sheetName) are excluded — they should not
+ * be highlighted on the current sheet.
+ */
+export function extractHighlights(formula: string): HighlightedRange[] {
   if (!formula || !formula.startsWith('=')) return [];
 
   try {
@@ -188,6 +261,7 @@ export const FormulaBar = forwardRef<FormulaBarHandle, FormulaBarProps>(function
   referenceFormat = 'A1',
   onToggleReferenceFormat,
   onHighlightsChange,
+  onCrossSheetRefChange,
   onFxClick,
 }, ref) {
   const [expanded, setExpanded] = useState(false);
@@ -229,6 +303,19 @@ export const FormulaBar = forwardRef<FormulaBarHandle, FormulaBarProps>(function
     }
     return [];
   }, [value, isEditing]);
+
+  // Detect cross-sheet reference under cursor
+  const crossSheetRef = useMemo(() => {
+    if (value && isEditing && cursorPos != null) {
+      return findCrossSheetRefAtCursor(value, cursorPos);
+    }
+    return null;
+  }, [value, isEditing, cursorPos]);
+
+  // Emit cross-sheet ref info to parent
+  useEffect(() => {
+    onCrossSheetRefChange?.(crossSheetRef);
+  }, [crossSheetRef, onCrossSheetRefChange]);
 
   // Emit highlights to parent
   useEffect(() => {
