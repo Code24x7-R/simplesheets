@@ -110,4 +110,12 @@ describe('FilenameModal', () => {
     fireEvent.change(input, { target: { value: 'a' } });
     expect(screen.queryByText('Filename is required')).not.toBeInTheDocument();
   });
+
+  it('shows error for filename starting with a period', () => {
+    render(<FilenameModal {...defaultProps} />);
+    const input = screen.getByDisplayValue('MyWorkbook');
+    fireEvent.change(input, { target: { value: '.hidden' } });
+    fireEvent.click(screen.getByText('Save'));
+    expect(screen.getByText(/cannot start\/end with a period/)).toBeInTheDocument();
+  });
 });
