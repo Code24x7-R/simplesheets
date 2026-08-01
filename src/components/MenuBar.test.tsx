@@ -36,6 +36,7 @@ describe('MenuBar', () => {
     onInsertColLeft: jest.fn(),
     onInsertColRight: jest.fn(),
     onFormulaWizard: jest.fn(),
+    onChart: jest.fn(),
     onToggleBold: jest.fn(),
     onToggleItalic: jest.fn(),
     onToggleUnderline: jest.fn(),
@@ -173,6 +174,16 @@ describe('MenuBar', () => {
     expect(wizardItem).toBeTruthy();
     fireEvent.click(wizardItem);
     expect(onFormulaWizard).toHaveBeenCalledTimes(1);
+  });
+
+  it('Insert menu shows Chart option', () => {
+    const onChart = jest.fn();
+    render(<MenuBar {...defaultProps} onChart={onChart} />);
+    fireEvent.click(screen.getByText('Insert'));
+    const chartItem = screen.getByText('Chart…');
+    expect(chartItem).toBeTruthy();
+    fireEvent.click(chartItem);
+    expect(onChart).toHaveBeenCalledTimes(1);
   });
 
   it('Format menu shows Bold, Italic, Underline items', () => {

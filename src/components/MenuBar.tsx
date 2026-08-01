@@ -43,6 +43,7 @@ interface MenuBarProps {
   onInsertColLeft: () => void;
   onInsertColRight: () => void;
   onFormulaWizard: () => void;
+  onChart: () => void;
   // Format menu
   onToggleBold: () => void;
   onToggleItalic: () => void;
@@ -117,6 +118,7 @@ export function MenuBar(props: MenuBarProps) {
         'insert-col-left': props.onInsertColLeft,
         'insert-col-right': props.onInsertColRight,
         'insert-formula-wizard': props.onFormulaWizard,
+        'insert-chart': props.onChart,
         // Format
 
         'format-bold': props.onToggleBold,
@@ -233,6 +235,7 @@ export function MenuBar(props: MenuBarProps) {
     { id: 'insert-col-right', label: 'Column Right', icon: '➡️' },
     { id: 'sep-insert-2', label: '', separator: true },
     { id: 'insert-formula-wizard', label: 'Formula Wizard…', icon: '🧙', shortcut: 'Ctrl+Shift+F' },
+    { id: 'insert-chart', label: 'Chart…', icon: '📊' },
   ];
 
   const formatItems: MenuItem[] = [

@@ -48,6 +48,9 @@ import {
   type FilterState,
 } from './utils/sheetFilter';
 import type { ColumnFilter } from './utils/sheetFilter';
+import { ChartDialog } from './components/ChartDialog';
+import { ChartOverlay } from './components/charts/ChartOverlay';
+import type { ChartConfig } from './types';
 
 // ─── Empty Workbook ──────────────────────────────────────────────────────────
 
@@ -266,6 +269,11 @@ function WorkbookView() {
   // Ref to always capture current gridSelection for pushHistory calls
   const gridSelectionRef = useRef<Selection | null>(null);
   gridSelectionRef.current = gridSelection;
+
+  // Chart state
+  const [showChartDialog, setShowChartDialog] = useState(false);
+  const [editingChart, setEditingChart] = useState<ChartConfig | null>(null);
+  const [selectedChartId, setSelectedChartId] = useState<string | null>(null);
 
   // Sheet reference (needed by the editing hook and everywhere else)
   const sheet = workbook.sheets[workbook.activeSheetIndex];
@@ -1578,6 +1586,104 @@ function WorkbookView() {
     }
   }, [filterState, workbook]);
 
+  // ─── Chart Handlers ──────────────────────────────────────────────────
+
+  const handleInsertChart = useCallback(() => {
+    setEditingChart(null);
+    setShowChartDialog(true);
+  }, []);
+
+  const handleChartApply = useCallback(
+    (chartConfig: ChartConfig) => {
+      const currentSheet = workbook.sheets[workbook.activeSheetIndex];
+      const existingCharts = currentSheet.charts ?? [];
+      const chartIndex = existingCharts.findIndex((c) => c.id === chartConfig.id);
+
+      let updatedCharts: ChartConfig[];
+      let description: string;
+
+      if (chartIndex >= 0) {
+        // Update existing chart
+        updatedCharts = [...existingCharts];
+        updatedCharts[chartIndex] = chartConfig;
+        description = 'Updated chart';
+      } else {
+        // Add new chart
+        updatedCharts = [...existingCharts, chartConfig];
+        description = `Inserted ${chartConfig.type} chart`;
+      }
+
+      // Update the sheet with new charts array
+      const updatedSheets = [...workbook.sheets];
+      updatedSheets[workbook.activeSheetIndex] = {
+        ...currentSheet,
+        charts: updatedCharts,
+      };
+
+      const newWorkbook = {
+        ...workbook,
+        sheets: updatedSheets,
+        lastModified: Date.now(),
+      };
+
+      pushHistory(newWorkbook, description, filterStateRef.current, gridSelectionRef.current);
+      setStatusMessage(description);
+    },
+    [workbook, pushHistory],
+  );
+
+  const handleDeleteChart = useCallback(
+    (chartId: string) => {
+      const currentSheet = workbook.sheets[workbook.activeSheetIndex];
+      const existingCharts = currentSheet.charts ?? [];
+      const updatedCharts = existingCharts.filter((c) => c.id !== chartId);
+
+      const updatedSheets = [...workbook.sheets];
+      updatedSheets[workbook.activeSheetIndex] = {
+        ...currentSheet,
+        charts: updatedCharts,
+      };
+
+      const newWorkbook = {
+        ...workbook,
+        sheets: updatedSheets,
+        lastModified: Date.now(),
+      };
+
+      pushHistory(newWorkbook, 'Deleted chart', filterStateRef.current, gridSelectionRef.current);
+      setStatusMessage('Chart deleted');
+      setSelectedChartId(null);
+    },
+    [workbook, pushHistory],
+  );
+
+  const handleMoveChart = useCallback(
+    (chartId: string, row: number, col: number) => {
+      const currentSheet = workbook.sheets[workbook.activeSheetIndex];
+      const existingCharts = currentSheet.charts ?? [];
+      const updatedCharts = existingCharts.map((c) =>
+        c.id === chartId ? { ...c, row, col } : c,
+      );
+
+      const updatedSheets = [...workbook.sheets];
+      updatedSheets[workbook.activeSheetIndex] = {
+        ...currentSheet,
+        charts: updatedCharts,
+      };
+
+      const newWorkbook = {
+        ...workbook,
+        sheets: updatedSheets,
+        lastModified: Date.now(),
+      };
+
+      // Don't push history on every move — too noisy. Just update state.
+      // History is pushed on insert/delete only.
+      pushHistory(newWorkbook, 'Moved chart', filterStateRef.current, gridSelectionRef.current);
+    },
+    [workbook, pushHistory],
+  );
+
   const handleApplyFilter = useCallback((column: number, filter: ColumnFilter | undefined) => {
     const currentSheet = workbook.sheets[workbook.activeSheetIndex];
     const currentFilters = filterState?.filters || {};
@@ -2012,6 +2118,7 @@ function WorkbookView() {
           onInsertColLeft={handleInsertColLeft}
           onInsertColRight={handleInsertColRight}
           onFormulaWizard={() => handleFxClick(getActiveCellValue())}
+          onChart={handleInsertChart}
           onToggleBold={toggleBoldStyle}
           onToggleItalic={toggleItalicStyle}
           onToggleUnderline={toggleUnderlineStyle}
@@ -2051,6 +2158,7 @@ function WorkbookView() {
         onToggleItalic={toggleItalicStyle}
         onToggleUnderline={toggleUnderlineStyle}
         onToggleStrikethrough={toggleStrikethroughStyle}
+        onChart={handleInsertChart}
         onSetTextColor={setTextColor}
         onSetBackgroundColor={setBackgroundColor}
         onSetAlignLeft={() => setTextAlign('left')}
@@ -2172,6 +2280,13 @@ function WorkbookView() {
           onDismissAutoComplete={dismissAutoComplete}
           wizardPointMode={isWizardPointMode}
           onWizardPointSelection={handleWizardPointSelection}
+        />
+        <ChartOverlay
+          sheet={updatedSheet}
+          onSelectChart={setSelectedChartId}
+          onMoveChart={handleMoveChart}
+          onDeleteChart={handleDeleteChart}
+          selectedChartId={selectedChartId}
         />
       </div>
 
@@ -2298,6 +2413,22 @@ function WorkbookView() {
         }}
         targetRow={wizardTargetCell?.row}
         targetCol={wizardTargetCell?.col}
+      />
+      <ChartDialog
+        isOpen={showChartDialog}
+        onClose={() => {
+          setShowChartDialog(false);
+          setEditingChart(null);
+          gridRef.current?.focus();
+        }}
+        onApply={handleChartApply}
+        sheet={sheet}
+        initialRange={
+          gridSelection
+            ? `${colToLetter(gridSelection.startCol)}${gridSelection.startRow + 1}:${colToLetter(gridSelection.endCol)}${gridSelection.endRow + 1}`
+            : undefined
+        }
+        existingChart={editingChart ?? undefined}
       />
     </div>
   );

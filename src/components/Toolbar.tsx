@@ -55,6 +55,8 @@ interface ToolbarProps {
   onCopy: () => void;
   onCut: () => void;
   onPaste: () => void;
+  // ── Chart callback ─────────────────────────────────────────────
+  onChart: () => void;
   // ── State ────────────────────────────────────────────────────────
   isBold: boolean;
   isItalic: boolean;
@@ -173,6 +175,14 @@ export function Toolbar(props: ToolbarProps) {
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
             <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
+          </svg>
+        </button>
+        <button className="toolbar-btn" onClick={props.onChart} title="Insert Chart">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2" />
+            <rect x="7" y="13" width="3" height="4" fill="currentColor" />
+            <rect x="12" y="9" width="3" height="8" fill="currentColor" />
+            <rect x="17" y="5" width="3" height="12" fill="currentColor" />
           </svg>
         </button>
       </div>

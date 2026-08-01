@@ -28,6 +28,7 @@ describe('Toolbar', () => {
     onCopy: jest.fn(),
     onCut: jest.fn(),
     onPaste: jest.fn(),
+    onChart: jest.fn(),
     isBold: false,
     isItalic: false,
     isUnderline: false,

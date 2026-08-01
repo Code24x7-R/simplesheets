@@ -1,0 +1,56 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Richard Robertson
+import { render, screen, fireEvent } from '@testing-library/react';
+import App from './App';
+
+/**
+ * Helper to find the MenuBar and click Insert → Chart.
+ */
+function openChartDialog() {
+  render(<App />);
+  // Click Insert menu
+  fireEvent.click(screen.getByText('Insert'));
+  // Click Chart…
+  fireEvent.click(screen.getByText('Chart…'));
+}
+
+describe('App Chart Integration', () => {
+  it('opens chart dialog from menu', () => {
+    openChartDialog();
+    expect(screen.getAllByText('Insert Chart').length).toBeGreaterThan(0);
+  });
+
+  it('shows chart type selector in dialog', () => {
+    openChartDialog();
+    expect(screen.getByTestId('chart-type-bar')).toBeInTheDocument();
+    expect(screen.getByTestId('chart-type-line')).toBeInTheDocument();
+    expect(screen.getByTestId('chart-type-pie')).toBeInTheDocument();
+  });
+
+  it('creates chart on apply', () => {
+    openChartDialog();
+    // Change title
+    const titleInput = screen.getByTestId('chart-title');
+    fireEvent.change(titleInput, { target: { value: 'My Sales Chart' } });
+    // Apply
+    fireEvent.click(screen.getByTestId('chart-apply'));
+    // Dialog should close
+    expect(screen.queryByText('Insert Chart')).not.toBeInTheDocument();
+    // Chart overlay should show the chart
+    expect(screen.getByTestId('chart-overlay')).toBeInTheDocument();
+  });
+
+  it('closes dialog on cancel', () => {
+    openChartDialog();
+    fireEvent.click(screen.getByText('Cancel'));
+    expect(screen.queryByText('Insert Chart')).not.toBeInTheDocument();
+  });
+
+  it('renders chart in overlay after creation', () => {
+    openChartDialog();
+    fireEvent.click(screen.getByTestId('chart-apply'));
+    // The overlay should contain an SVG chart
+    const overlay = screen.getByTestId('chart-overlay');
+    expect(overlay.querySelector('svg')).toBeInTheDocument();
+  });
+});
