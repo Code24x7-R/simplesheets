@@ -59,6 +59,51 @@ Achieve a clean, clutter-free UI with standardized dropdown menus, formula wizar
 
 ---
 
+## Phase 21g: Chart Enhancements — PLANNED 📋
+*Improve chart usability with range picker, persistent settings, and resize handles.*
+
+### Phase 21g.1: Range Picker Integration
+*Allow users to pick data ranges visually using point-mode selection.*
+- [ ] Add range picker button (📎 icon) next to data range input in ChartDialog
+- [ ] Enter point mode when picker is active (reuse FormulaWizard point-mode pattern)
+- [ ] Highlight selected range on grid with colored overlay
+- [ ] Update data range input with selected range reference (e.g., "A1:C10")
+- [ ] Support click-drag range selection and click-to-expand
+- [ ] Keyboard support: Enter to accept, Escape to cancel
+- [ ] Test: picker button click, point mode entry, range selection, accept/cancel
+
+### Phase 21g.2: Chart Settings State
+*Persist chart configuration between dialog sessions.*
+- [ ] Add `chartSettings` state to App.tsx (last used type, legend position, etc.)
+- [ ] Pre-populate dialog with last-used settings when creating new chart
+- [ ] Store settings in localStorage for cross-session persistence
+- [ ] Apply saved defaults to new charts (type, legend position, axis labels)
+- [ ] Settings survive page refresh and new workbook creation
+- [ ] Test: settings persistence across dialog opens, localStorage save/restore
+
+### Phase 21g.3: Multiple Charts Support
+*Enhance overlay to handle multiple overlapping charts gracefully.*
+- [ ] Z-index management for overlapping charts (selected chart on top)
+- [ ] Drag-to-reposition with collision avoidance hints
+- [ ] Minimize/restore chart (collapse to title bar)
+- [ ] Chart list panel (View → Charts) showing all charts with goto/select
+- [ ] Bulk operations: select all, delete all, arrange (tile/cascade)
+- [ ] Test: multiple chart creation, z-index on select, reposition, minimize
+
+### Phase 21g.4: Chart Resize Handles
+*Allow users to resize charts by dragging corner/edge handles.*
+- [ ] Add resize handles to selected chart (4 corners + 4 edges)
+- [ ] Maintain aspect ratio with Shift+drag (optional)
+- [ ] Minimum size constraint (100×100px)
+- [ ] Size handles styled consistently with Excel resize UI
+- [ ] Live preview during resize (chart redraws at new size)
+- [ ] Push to history on resize complete (not during drag)
+- [ ] Test: resize from each handle, min size constraint, history push
+
+**Estimated tests:** 40+ new tests
+
+---
+
 ## Phase 22: Conditional Formatting — PLANNED 📋
 *Apply dynamic formatting rules based on cell values or formulas.*
 
