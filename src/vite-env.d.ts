@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Richard Robertson
 /// <reference types="vite/client" />
 
 declare const __BUILD_TIMESTAMP__: string;

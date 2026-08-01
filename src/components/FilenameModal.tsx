@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Richard Robertson
 import { useState, useRef, useEffect } from 'react';
 
 interface FilenameModalProps {

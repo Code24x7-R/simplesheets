@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Richard Robertson
 import { useEffect, useRef, useCallback } from 'react';
 import { ImportExcelButton } from './ImportExcelButton';
 import { ImportCsvButton } from './ImportCsvButton';

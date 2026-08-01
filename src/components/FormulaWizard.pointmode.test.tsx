@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Richard Robertson
 import { render, screen, fireEvent } from '@testing-library/react';
 import { FormulaWizard } from './FormulaWizard';
 import { useFormulaWizard } from '../hooks/useFormulaWizard';

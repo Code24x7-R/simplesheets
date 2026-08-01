@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Richard Robertson
 import { computeFillRange } from './fillRange';
 import type { Sheet } from '../types';
 

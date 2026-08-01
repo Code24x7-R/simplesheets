@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Richard Robertson
 import { parseFormula, FormulaError, extractCellRefs, adjustFormulaRefs, prefixRefsWithSheet, cellRefToString, rangeToString } from './formulaParser';
 import type { CellRefNode, RangeNode } from './formulaParser';
 

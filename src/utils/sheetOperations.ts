@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Richard Robertson
 /**
  * Sheet Operations — pure functions for structural changes to a sheet.
  *

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Richard Robertson
 import { insertRow, deleteRow, insertCol, deleteCol } from './sheetOperations';
 import type { Sheet, Cell } from '../types';
 

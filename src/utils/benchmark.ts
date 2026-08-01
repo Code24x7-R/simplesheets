@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Richard Robertson
 /**
  * Performance benchmark for SimpleSheet.
  * Measures formula evaluation speed on a 5,000 cell workbook.

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Richard Robertson
 import { compileASTNodeToString, compileASTToFormula, validateParameter, checkCircularReference, generateNodeId, createASTNode } from '../utils/formulaWizardCompiler';
 import type { FormulaASTNode } from '../utils/formulaWizardSchema';
 

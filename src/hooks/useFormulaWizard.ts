@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Richard Robertson
 import { useState, useCallback } from 'react';
 import type { FormulaASTNode, FunctionDefinition } from '../utils/formulaWizardSchema';
 import { getFunctionSchema } from '../utils/formulaWizardSchema';

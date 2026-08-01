@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Richard Robertson
 import { useState, useCallback, useMemo } from 'react';
 import type { Workbook } from '../types';
 import { searchSheets, replaceInSheets, type SearchResult, type ReplaceResult } from '../utils/sheetSearch';

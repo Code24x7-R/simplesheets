@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Richard Robertson
 /**
  * Sheet Sort — pure functions for sorting data in a sheet.
  *

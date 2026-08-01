@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Richard Robertson
 import { evaluateFormulaPreview } from './formulaEngine';
 import type { Workbook, Sheet, Cell } from '../types';
 

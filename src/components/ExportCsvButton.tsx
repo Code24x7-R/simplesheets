@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Richard Robertson
 import { useCallback, forwardRef } from 'react';
 import { downloadCsv } from '../services/csvService';
 import type { Sheet } from '../types';

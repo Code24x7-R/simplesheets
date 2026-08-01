@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Richard Robertson
 /**
  * Tests for sheetSearch utility — search & replace engine.
  */

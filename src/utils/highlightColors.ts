@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Richard Robertson
 /**
  * Shared highlight colors for formula reference highlighting.
  * Used by both Grid.tsx (cell backgrounds) and FormulaBar.tsx (reference overlay).

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Richard Robertson
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { useState, useCallback } from 'react';
 import { Grid } from './Grid';

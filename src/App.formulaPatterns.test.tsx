@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Richard Robertson
 /**
  * Tests for various formula patterns to ensure they work correctly
  * in both the formula bar and in-cell editing.

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Richard Robertson
 /**
  * Tests for the core data model types.
  * Verifies that all interfaces can be instantiated correctly.

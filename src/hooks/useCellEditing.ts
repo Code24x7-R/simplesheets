@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Richard Robertson
 /**
  * useCellEditing — Finite State Machine for spreadsheet cell editing.
  *

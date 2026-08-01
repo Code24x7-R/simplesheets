@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Richard Robertson
 import { exportExcel, downloadExcel } from './excelExport';
 import type { Workbook } from '../types';
 

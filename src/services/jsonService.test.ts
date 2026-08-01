@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Richard Robertson
 import { exportJson, importJson, downloadJson } from './jsonService';
 import type { Workbook } from '../types';
 

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Richard Robertson
 import { runBenchmark, logBenchmark } from './benchmark';
 
 // Mock evaluateWorkbook to avoid expensive computation in tests

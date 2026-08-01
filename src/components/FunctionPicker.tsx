@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Richard Robertson
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import type { FunctionInfo } from '../utils/formulaAutocomplete';
 import { searchFunctions } from '../utils/formulaAutocomplete';

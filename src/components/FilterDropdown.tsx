@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Richard Robertson
 import { useState, useEffect, useRef } from 'react';
 import type { Sheet } from '../types';
 import { getUniqueValues } from '../utils/sheetFilter';

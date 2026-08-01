@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Richard Robertson
 import type { ClipboardData } from './clipboard';
 import type { Cell } from '../types';
 

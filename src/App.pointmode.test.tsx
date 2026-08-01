@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Richard Robertson
 /**
  * Integration tests for POINT mode — using arrow keys to select a range
  * parameter while building a formula (Excel-like data entry).

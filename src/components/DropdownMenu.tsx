@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Richard Robertson
 import { useState, useRef, useEffect, useCallback } from 'react';
 
 /** A single menu item. */

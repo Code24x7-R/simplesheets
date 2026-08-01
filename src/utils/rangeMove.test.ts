@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Richard Robertson
 import { computeRangeMove } from './rangeMove';
 import type { Selection } from '../types';
 

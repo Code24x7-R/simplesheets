@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Richard Robertson
 import { useCallback, useState, useRef } from 'react';
 import type { CellStyle, Selection, Workbook } from '../types';
 import { cellKey } from '../types';

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Richard Robertson
 import { useCallback, useRef, useState, forwardRef } from 'react';
 import { importExcelFile } from '../services/excelImport';
 import type { Workbook } from '../types';

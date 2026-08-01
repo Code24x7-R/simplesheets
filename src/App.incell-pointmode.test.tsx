@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Richard Robertson
 /**
  * Test for in-cell POINT mode editing - verifies that formulas are stored
  * correctly when using POINT mode during in-cell editing.

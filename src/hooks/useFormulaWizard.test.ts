@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Richard Robertson
 import { renderHook, act } from '@testing-library/react';
 import { useFormulaWizard, MAX_NESTING_DEPTH } from '../hooks/useFormulaWizard';
 

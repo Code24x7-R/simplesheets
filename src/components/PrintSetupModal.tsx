@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Richard Robertson
 import { usePrintSetup, type PageOrientation, type PageSize, type PrintScaling } from '../context/PrintSetupContext';
 
 interface PrintSetupModalProps {

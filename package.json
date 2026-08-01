@@ -2,6 +2,7 @@
   "name": "simplesheets",
   "version": "0.1.0",
   "description": "A lightweight, browser-based spreadsheet for small businesses",
+  "license": "MIT",
   "private": true,
   "files": [
     "dist",

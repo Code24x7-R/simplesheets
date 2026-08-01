@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Richard Robertson
 import { useEffect, useRef, useState } from 'react';
 
 export type PasteMode = 'all' | 'formulas' | 'values' | 'formatting';

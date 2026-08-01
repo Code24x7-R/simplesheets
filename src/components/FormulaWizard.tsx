@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Richard Robertson
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import type { FunctionDefinition, FunctionParameter } from '../utils/formulaWizardSchema';
 import { getAllFunctionSchemas } from '../utils/formulaWizardSchema';

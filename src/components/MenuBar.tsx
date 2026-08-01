@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Richard Robertson
 import { useCallback } from 'react';
 import { DropdownMenu, type MenuItem } from './DropdownMenu';
 

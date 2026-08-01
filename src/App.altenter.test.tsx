@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Richard Robertson
 /**
  * Integration tests for Alt+Enter (insert line break) in both FormulaBar
  * and Grid in-cell editing.

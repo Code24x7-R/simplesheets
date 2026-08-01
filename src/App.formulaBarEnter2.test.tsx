@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Richard Robertson
 /**
  * Reproduce: Typing in FormulaBar then pressing Enter clears the cell.
  *

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Richard Robertson
 import type { Selection } from '../types';
 
 export interface RangeMove {

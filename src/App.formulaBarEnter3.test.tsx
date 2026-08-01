@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Richard Robertson
 /**
  * Reproduce: Type in grid, click FormulaBar, type more, press Enter → cell cleared.
  *
