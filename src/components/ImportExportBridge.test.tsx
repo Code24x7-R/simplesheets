@@ -219,6 +219,35 @@ describe('ImportExportBridge', () => {
     readAsTextSpy.mockRestore();
   });
 
+  it('handleOpenFileChange calls onError with fallback when importJson returns no error', () => {
+    const onError = jest.fn();
+    // Mock importJson to return success: false without error field
+    const { importJson } = require('../services/jsonService');
+    importJson.mockReturnValueOnce({ success: false });
+
+    render(<PrintSetupProvider><ImportExportBridge {...defaultProps} onError={onError} /></PrintSetupProvider>);
+
+    const validWb = JSON.stringify({ id: 'wb1', title: 'Test', sheets: [], activeSheetIndex: 0, lastModified: 0 });
+    const file = new File([validWb], 'test.json', { type: 'application/json' });
+
+    const inputs = document.querySelectorAll('input[type="file"]');
+    const input = inputs[inputs.length - 1] as HTMLInputElement;
+
+    const readAsTextSpy = jest.spyOn(FileReader.prototype, 'readAsText').mockImplementation(function(this: FileReader) {
+      Object.defineProperty(this, 'result', { value: validWb });
+      this.onload?.({ target: this } as unknown as ProgressEvent<FileReader>);
+    });
+
+    act(() => {
+      Object.defineProperty(input, 'files', { value: [file], configurable: true });
+      const changeEvent = new Event('change', { bubbles: true });
+      input.dispatchEvent(changeEvent);
+    });
+
+    expect(onError).toHaveBeenCalledWith('Open failed');
+    readAsTextSpy.mockRestore();
+  });
+
   it('handleOpenFileChange does nothing when no file selected', () => {
     render(<PrintSetupProvider><ImportExportBridge {...defaultProps} /></PrintSetupProvider>);
 
