@@ -24,6 +24,8 @@ interface ChartOverlayProps {
   onResizeChart?: (id: string, width: number, height: number) => void;
   /** Callback when a chart is deleted. */
   onDeleteChart?: (id: string) => void;
+  /** Callback when a chart is edited (opens dialog). */
+  onEditChart?: (chart: ChartConfig) => void;
   /** Currently selected chart ID. */
   selectedChartId?: string | null;
 }
@@ -38,6 +40,7 @@ export function ChartOverlay({
   onMoveChart,
   onResizeChart,
   onDeleteChart,
+  onEditChart,
   selectedChartId,
 }: ChartOverlayProps) {
   const charts = useMemo(() => sheet.charts ?? [], [sheet.charts]);
@@ -224,25 +227,45 @@ export function ChartOverlay({
             data-testid={`chart-container-${chart.id}`}
           >
             <div className={`bg-white rounded-lg shadow-lg border-2 ${isSelected ? 'border-blue-500' : 'border-gray-200'} overflow-hidden relative`}>
-              {/* Chart header bar for minimize/restore */}
+              {/* Chart header bar for minimize/restore/edit */}
               <div
-                className="flex items-center justify-between px-2 py-1 bg-gray-50 border-b border-gray-100 cursor-pointer"
-                onDoubleClick={() => toggleMinimized(chart.id)}
+                className="flex items-center justify-between px-2 py-1 bg-gray-50 border-b border-gray-100"
+                onDoubleClick={() => onEditChart?.(chart)}
                 data-testid={`chart-header-${chart.id}`}
               >
-                <span className="text-xs font-medium text-gray-600 truncate max-w-[150px]">
+                <span
+                  className="text-xs font-medium text-gray-600 truncate max-w-[150px] cursor-pointer"
+                  onDoubleClick={() => onEditChart?.(chart)}
+                  title="Double-click to edit"
+                >
                   {chart.title}
                 </span>
-                <button
-                  className="text-gray-400 hover:text-gray-600 text-xs w-4 h-4 flex items-center justify-center"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggleMinimized(chart.id);
-                  }}
-                  data-testid={`minimize-chart-${chart.id}`}
-                >
-                  {isMinimized ? '□' : '−'}
-                </button>
+                <div className="flex items-center gap-1">
+                  {onEditChart && (
+                    <button
+                      className="text-gray-400 hover:text-blue-600 text-xs w-4 h-4 flex items-center justify-center"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onEditChart(chart);
+                      }}
+                      title="Edit chart"
+                      data-testid={`edit-chart-${chart.id}`}
+                    >
+                      ✎
+                    </button>
+                  )}
+                  <button
+                    className="text-gray-400 hover:text-gray-600 text-xs w-4 h-4 flex items-center justify-center"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleMinimized(chart.id);
+                    }}
+                    title={isMinimized ? 'Restore' : 'Minimize'}
+                    data-testid={`minimize-chart-${chart.id}`}
+                  >
+                    {isMinimized ? '□' : '−'}
+                  </button>
+                </div>
               </div>
               {/* Chart body */}
               {!isMinimized && (

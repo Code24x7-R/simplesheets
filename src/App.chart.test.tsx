@@ -53,4 +53,35 @@ describe('App Chart Integration', () => {
     const overlay = screen.getByTestId('chart-overlay');
     expect(overlay.querySelector('svg')).toBeInTheDocument();
   });
+
+  it('edits existing chart via edit button', () => {
+    // First create a chart
+    openChartDialog();
+    const titleInput = screen.getByTestId('chart-title');
+    fireEvent.change(titleInput, { target: { value: 'Editable Chart' } });
+    fireEvent.click(screen.getByTestId('chart-apply'));
+
+    // Find and click the edit button on the chart
+    const editButton = screen.getByTestId(/edit-chart-/);
+    fireEvent.click(editButton);
+
+    // Dialog should open with existing chart values
+    expect(screen.getByText('Edit Chart')).toBeInTheDocument();
+    expect(screen.getByTestId('chart-title')).toHaveValue('Editable Chart');
+  });
+
+  it('edits existing chart via double-click on header', () => {
+    // First create a chart
+    openChartDialog();
+    fireEvent.change(screen.getByTestId('chart-title'), { target: { value: 'Double Click Chart' } });
+    fireEvent.click(screen.getByTestId('chart-apply'));
+
+    // Double-click the chart header to edit
+    const header = screen.getByTestId(/chart-header-/);
+    fireEvent.doubleClick(header);
+
+    // Dialog should open in edit mode
+    expect(screen.getByText('Edit Chart')).toBeInTheDocument();
+    expect(screen.getByTestId('chart-title')).toHaveValue('Double Click Chart');
+  });
 });

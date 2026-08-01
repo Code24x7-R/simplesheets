@@ -1596,6 +1596,11 @@ function WorkbookView() {
     setShowChartDialog(true);
   }, []);
 
+  const handleEditChart = useCallback((chart: ChartConfig) => {
+    setEditingChart(chart);
+    setShowChartDialog(true);
+  }, []);
+
   const handleChartApply = useCallback(
     (chartConfig: ChartConfig) => {
       const currentSheet = workbook.sheets[workbook.activeSheetIndex];
@@ -2337,6 +2342,7 @@ function WorkbookView() {
           onMoveChart={handleMoveChart}
           onResizeChart={handleResizeChart}
           onDeleteChart={handleDeleteChart}
+          onEditChart={handleEditChart}
           selectedChartId={selectedChartId}
         />
       </div>
