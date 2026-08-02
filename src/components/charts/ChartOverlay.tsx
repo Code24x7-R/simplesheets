@@ -6,7 +6,7 @@
  * Supports z-index management, minimize/restore, and selection.
  */
 
-import { useCallback, useState, useRef, useMemo } from 'react';
+import { useCallback, useState, useRef, useMemo, useEffect } from 'react';
 import type { ChartConfig, Sheet, Workbook } from '../../types';
 import { ChartRenderer } from './ChartRenderer';
 import { extractChartDataFromWorkbook } from '../../utils/chartData';
@@ -98,6 +98,17 @@ export function ChartOverlay({
     window.addEventListener('mousemove', handleResizeMove);
     window.addEventListener('mouseup', handleResizeUp);
   }, [charts, onResizeChart]);
+
+  // Escape key deselects the active chart
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && selectedChartId) {
+        onSelectChart?.(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedChartId, onSelectChart]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent, chart: ChartConfig) => {
     e.stopPropagation();

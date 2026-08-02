@@ -447,6 +447,7 @@ function WorkbookView() {
   const handleCellSelect = useCallback(
     (row: number, col: number) => {
       setActiveCell({ row, col });
+      setSelectedChartId(null);
     },
     []
   );
@@ -2476,6 +2477,7 @@ function WorkbookView() {
         onClose={() => {
           setShowChartDialog(false);
           setEditingChart(null);
+          setSelectedChartId(null);
           gridRef.current?.focus();
         }}
         onApply={handleChartApply}

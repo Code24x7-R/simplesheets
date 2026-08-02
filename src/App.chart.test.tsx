@@ -84,4 +84,43 @@ describe('App Chart Integration', () => {
     expect(screen.getByText('Edit Chart')).toBeInTheDocument();
     expect(screen.getByTestId('chart-title')).toHaveValue('Double Click Chart');
   });
+
+  it('deselects chart when pressing Escape', () => {
+    openChartDialog();
+    fireEvent.click(screen.getByTestId('chart-apply'));
+
+    // Click the chart container to select it
+    const container = screen.getByTestId(/chart-container-/);
+    fireEvent.mouseDown(container);
+    expect(screen.getByTestId(/resize-nw-/)).toBeInTheDocument();
+
+    // Press Escape to deselect
+    fireEvent.keyDown(window, { key: 'Escape' });
+
+    // Resize handles should be gone (chart deselected)
+    expect(screen.queryByTestId(/resize-nw-/)).not.toBeInTheDocument();
+  });
+
+
+
+  it('deselects chart after editing dialog closes', () => {
+    openChartDialog();
+    fireEvent.click(screen.getByTestId('chart-apply'));
+
+    // Click the chart container to select it
+    const container = screen.getByTestId(/chart-container-/);
+    fireEvent.mouseDown(container);
+    expect(screen.getByTestId(/resize-nw-/)).toBeInTheDocument();
+
+    // Edit the chart via edit button
+    const editButton = screen.getByTestId(/edit-chart-/);
+    fireEvent.click(editButton);
+    expect(screen.getByText('Edit Chart')).toBeInTheDocument();
+
+    // Close dialog by clicking Apply
+    fireEvent.click(screen.getByTestId('chart-apply'));
+
+    // Chart should be deselected
+    expect(screen.queryByTestId(/resize-nw-/)).not.toBeInTheDocument();
+  });
 });
