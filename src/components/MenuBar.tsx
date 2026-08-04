@@ -74,6 +74,7 @@ interface MenuBarProps {
   // Help
   onAbout: () => void;
   onShortcuts: () => void;
+  onSimpleDocs: () => void;
 }
 
 /**
@@ -160,6 +161,7 @@ export function MenuBar(props: MenuBarProps) {
         // Help
         'help-about': props.onAbout,
         'help-shortcuts': props.onShortcuts,
+        'help-simpledocs': props.onSimpleDocs,
       };
       actions[id]?.();
       // Restore focus to grid after menu action so keyboard navigation works
@@ -315,6 +317,8 @@ export function MenuBar(props: MenuBarProps) {
   const helpItems: MenuItem[] = [
     { id: 'help-shortcuts', label: 'Keyboard Shortcuts', icon: '⌨️' },
     { id: 'help-about', label: 'About SimpleSheet', icon: 'ℹ️' },
+    { id: 'sep-help-1', label: '', separator: true },
+    { id: 'help-simpledocs', label: 'SimpleDocs', icon: '📄' },
   ];
 
   const dataItems: MenuItem[] = [

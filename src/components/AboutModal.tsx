@@ -64,6 +64,12 @@ A lightweight, browser-based spreadsheet for small businesses. No server, no acc
 
 ---
 
+## Related Apps
+
+- [SimpleDocs](https://code24x7-r.github.io/simpledocs/) — browser-based word processor for letters, mail merges, and document composition
+
+---
+
 ## License
 
 MIT
@@ -187,9 +193,9 @@ function parseTableRow(line: string): string[] {
 }
 
 function renderInline(text: string): React.ReactNode {
-  // Handle **bold** and `code` segments
+  // Handle **bold**, `code`, and [text](url) segments
   const parts: React.ReactNode[] = [];
-  const regex = /(\*\*(.+?)\*\*)|(`([^`]+?)`)/g;
+  const regex = /(\*\*(.+?)\*\*)|(`([^`]+?)`)|(\[(.+?)\]\((.+?)\))/g;
   let lastIndex = 0;
   let match: RegExpExecArray | null;
 
@@ -207,15 +213,26 @@ function renderInline(text: string): React.ReactNode {
           {match[2]}
         </strong>
       );
-    } else
-      /* istanbul ignore next - ABOUT_CONTENT has no inline code markers */
-      if (match[4]) {
-        parts.push(
-          <code key={match.index} className="px-1 py-0.5 bg-gray-100 rounded text-xs font-mono text-gray-800">
-            {match[4]}
-          </code>
-        );
-      }
+    } else if (match[4]) {
+      parts.push(
+        <code key={match.index} className="px-1 py-0.5 bg-gray-100 rounded text-xs font-mono text-gray-800">
+          {match[4]}
+        </code>
+      );
+    } else if (match[6] && match[7]) {
+      // Link
+      parts.push(
+        <a
+          key={match.index}
+          href={match[7]}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-blue-600 hover:underline"
+        >
+          {match[6]}
+        </a>
+      );
+    }
 
     lastIndex = regex.lastIndex;
   }

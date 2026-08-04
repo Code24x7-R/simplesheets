@@ -705,6 +705,10 @@ function WorkbookView() {
     setShowShortcuts(true);
   }, []);
 
+  const handleSimpleDocs = useCallback(() => {
+    window.open('https://code24x7-r.github.io/simpledocs/', '_blank', 'noopener,noreferrer');
+  }, []);
+
   const handleSearchReplace = useCallback(() => {
     setShowSearchReplace(true);
   }, []);
@@ -2201,6 +2205,7 @@ function WorkbookView() {
           isWrapText={styleState.whiteSpace === 'normal'}
           onAbout={handleAbout}
           onShortcuts={handleShortcuts}
+          onSimpleDocs={handleSimpleDocs}
           onSearchReplace={handleSearchReplace}
           onAfterMenuAction={() => gridRef.current?.focus()}
         />

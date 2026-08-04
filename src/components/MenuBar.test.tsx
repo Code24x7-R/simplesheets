@@ -64,6 +64,7 @@ describe('MenuBar', () => {
     isWrapText: false,
     onAbout: jest.fn(),
     onShortcuts: jest.fn(),
+    onSimpleDocs: jest.fn(),
     onSearchReplace: jest.fn(),
     onPasteSpecial: jest.fn(),
   };
@@ -406,5 +407,15 @@ describe('MenuBar', () => {
     fireEvent.click(screen.getByText('Help'));
     expect(screen.getByText('About SimpleSheet')).toBeTruthy();
     expect(screen.getByText('Keyboard Shortcuts')).toBeTruthy();
+  });
+
+  it('Help menu shows SimpleDocs link', () => {
+    const onSimpleDocs = jest.fn();
+    render(<MenuBar {...defaultProps} onSimpleDocs={onSimpleDocs} />);
+    fireEvent.click(screen.getByText('Help'));
+    const link = screen.getByText('SimpleDocs');
+    expect(link).toBeTruthy();
+    fireEvent.click(link);
+    expect(onSimpleDocs).toHaveBeenCalledTimes(1);
   });
 });

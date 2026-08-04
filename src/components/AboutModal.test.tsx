@@ -91,6 +91,16 @@ describe('AboutModal', () => {
     expect(screen.getByText(/build dev/)).toBeInTheDocument();
   });
 
+  it('renders Related Apps section with SimpleDocs link', () => {
+    render(<AboutModal isOpen={true} onClose={jest.fn()} />);
+    expect(screen.getByText('Related Apps')).toBeInTheDocument();
+    const link = screen.getByText('SimpleDocs') as HTMLAnchorElement;
+    expect(link).toBeInTheDocument();
+    expect(link.href).toBe('https://code24x7-r.github.io/simpledocs/');
+    expect(link.target).toBe('_blank');
+    expect(link.rel).toContain('noopener');
+  });
+
   it('displays build info with timestamp when __BUILD_TIMESTAMP__ is set', () => {
     // Mock the global constants (ISO string format, as injected by Vite)
     (global as Record<string, unknown>)['__BUILD_TIMESTAMP__'] = '2024-03-01T00:00:00.000Z';
