@@ -277,7 +277,19 @@ export function AboutModal({ isOpen, onClose }: AboutModalProps) {
 
         {/* Scrollable content */}
         <div className="flex-1 overflow-y-auto px-6 py-4">
+          <h1 className="text-2xl font-bold text-gray-900 mb-1">Simple Web Apps</h1>
+          <p className="text-green-600 text-sm mb-4">Work faster, keep it Simple</p>
           {renderMarkdown(ABOUT_CONTENT)}
+          <div className="mt-4 pt-3 border-t border-gray-200">
+            <a
+              href="https://sites.google.com/view/simplewebapps/home"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:underline text-sm"
+            >
+              Support &amp; Documentation
+            </a>
+          </div>
         </div>
 
         {/* Footer */}
