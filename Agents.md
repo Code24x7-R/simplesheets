@@ -12,7 +12,7 @@
 
 ## 2. Agent Rules & Constraints
 - **Do NOT add `/* istanbul ignore next */`** to force coverage target compliance without explicit user approval.
-- **Do NOT modify stale waterfall tasks in `tasks.json`.** Refer to `PLAN.md` (Features) or `BUGFIX.md` (Bugs).
+- **Do NOT modify stale waterfall tasks in `tasks.json`.** Refer to `docs/PLAN.md` (Features) or `docs/BUGFIX.md` (Bugs).
 - Always run static checks before declaring a task complete: `npm run lint && npm run type-check`.
 
 ---
@@ -33,19 +33,19 @@
 
 ## 4. Development Tracks & Workflows
 
-### 4.1 Feature Work Track (`PLAN.md`)
-1. Select active task in `PLAN.md`.
+### 4.1 Feature Work Track (`docs/PLAN.md`)
+1. Select active task in `docs/PLAN.md`.
 2. Write unit tests *first* targeting uncovered logic/branches.
 3. Write implementation code to pass tests.
 4. Run full verification pass.
-5. Update task status and update coverage stats in `PLAN.md`.
-6. Log completion in `PROGRESS_LOG.md` with header prefix `[FEATURE]`.
+5. Update task status and update coverage stats in `docs/PLAN.md`.
+6. Log completion in `docs/PROGRESS_LOG.md` with header prefix `[FEATURE]`.
 
-### 4.2 Bugfix Work Track (`BUGFIX.md`)
+### 4.2 Bugfix Work Track (`docs/BUGFIX.md`)
 1. **Log Open Bug:** Add symptom, suspected file, date, and impact (🔴 High / 🟡 Medium / 🟢 Low).
 2. **Reproduce:** Write a failing Jest test reproducing the issue.
 3. **Fix & Verify:** Apply root-cause fix and run full verification pass.
-4. **Update Logs:** Move bug to "Recently Fixed" in `BUGFIX.md` (documenting root cause and fix) and log in `PROGRESS_LOG.md` with header prefix `[BUGFIX]`.
+4. **Update Logs:** Move bug to "Recently Fixed" in `docs/BUGFIX.md` (documenting root cause and fix) and log in `docs/PROGRESS_LOG.md` with header prefix `[BUGFIX]`.
 
 ---
 
