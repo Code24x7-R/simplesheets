@@ -542,11 +542,42 @@ function WorkbookView() {
 
   // Navigate to source sheet for cross-sheet ref editing
   const handleNavigateToCrossSheet = useCallback(
-    () => {
-      if (!pendingCrossSheetRef) return;
-      const targetIndex = workbook.sheets.findIndex((s) => s.name === pendingCrossSheetRef.sheetName);
+    (sheetName?: string, cellRef?: string) => {
+      // Support both popup-based (pendingCrossSheetRef) and direct click (sheetName/cellRef)
+      const targetSheet = sheetName || pendingCrossSheetRef?.sheetName;
+      if (!targetSheet) return;
+      const targetIndex = workbook.sheets.findIndex((s) => s.name === targetSheet);
       if (targetIndex === -1) return;
       if (targetIndex === workbook.activeSheetIndex) return;
+
+      // Parse cell ref for navigation target (e.g., "A1" -> row 0, col 0)
+      let startRow = 0;
+      let startCol = 0;
+      let endRow = 0;
+      let endCol = 0;
+      if (cellRef) {
+        // Parse cell ref like "A1" or "A1:B5"
+        const parts = cellRef.split(':');
+        const firstCell = parts[0].match(/\$?([A-Za-z]+)\$?(\d+)/);
+        if (firstCell) {
+          startCol = firstCell[1].split('').reduce((acc, ch) => acc * 26 + (ch.toUpperCase().charCodeAt(0) - 64), 0) - 1;
+          startRow = parseInt(firstCell[2], 10) - 1;
+          endRow = startRow;
+          endCol = startCol;
+        }
+        if (parts.length === 2) {
+          const secondCell = parts[1].match(/\$?([A-Za-z]+)\$?(\d+)/);
+          if (secondCell) {
+            endCol = secondCell[1].split('').reduce((acc, ch) => acc * 26 + (ch.toUpperCase().charCodeAt(0) - 64), 0) - 1;
+            endRow = parseInt(secondCell[2], 10) - 1;
+          }
+        }
+      } else if (pendingCrossSheetRef) {
+        startRow = pendingCrossSheetRef.startRow;
+        startCol = pendingCrossSheetRef.startCol;
+        endRow = pendingCrossSheetRef.endRow;
+        endCol = pendingCrossSheetRef.endCol;
+      }
 
       // Save the source sheet (where the formula being edited lives)
       crossSheetSourceRef.current = workbook.activeSheetIndex;
@@ -556,31 +587,31 @@ function WorkbookView() {
         activeSheetIndex: targetIndex,
         lastModified: Date.now(),
       };
-      pushHistory(newWb, `Navigate to ${pendingCrossSheetRef.sheetName}`, filterStateRef.current, gridSelectionRef.current);
+      pushHistory(newWb, `Navigate to ${targetSheet}`, filterStateRef.current, gridSelectionRef.current);
 
       setCrossSheetNavigation({
-        sheetName: pendingCrossSheetRef.sheetName,
-        startRow: pendingCrossSheetRef.startRow,
-        startCol: pendingCrossSheetRef.startCol,
-        endRow: pendingCrossSheetRef.endRow,
-        endCol: pendingCrossSheetRef.endCol,
+        sheetName: targetSheet,
+        startRow,
+        startCol,
+        endRow,
+        endCol,
         sourceSheetIndex: crossSheetSourceRef.current,
       });
       setPendingCrossSheetRef(null);
-      setStatusMessage(`Viewing ${pendingCrossSheetRef.sheetName}! range — click formula bar to return`);
+      setStatusMessage(`Viewing ${targetSheet}! range — click formula bar to return`);
 
       // Highlight the target range on the source sheet
       setHighlightedRanges([{
-        startRow: pendingCrossSheetRef.startRow,
-        startCol: pendingCrossSheetRef.startCol,
-        endRow: pendingCrossSheetRef.endRow,
-        endCol: pendingCrossSheetRef.endCol,
+        startRow,
+        startCol,
+        endRow,
+        endCol,
         colorIndex: 0,
-        sheetName: pendingCrossSheetRef.sheetName,
+        sheetName: targetSheet,
       }]);
 
       // Select the target range
-      setActiveCell({ row: pendingCrossSheetRef.startRow, col: pendingCrossSheetRef.startCol });
+      setActiveCell({ row: startRow, col: startCol });
       gridRef.current?.focus();
     },
     [pendingCrossSheetRef, workbook, pushHistory]
@@ -2303,6 +2334,7 @@ function WorkbookView() {
         onHighlightsChange={setHighlightedRanges}
         onCrossSheetRefChange={handleCrossSheetRefChange}
         onFxClick={handleFxClick}
+        onCrossSheetClick={handleNavigateToCrossSheet}
       />
 
       {/* Cross-sheet navigation tip */}
@@ -2313,7 +2345,7 @@ function WorkbookView() {
           </span>
           <button
             className="px-2 py-0.5 bg-blue-600 text-white rounded text-xs hover:bg-blue-700"
-            onClick={handleNavigateToCrossSheet}
+            onClick={() => handleNavigateToCrossSheet()}
           >
             Go to sheet
           </button>

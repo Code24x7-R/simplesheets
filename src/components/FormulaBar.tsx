@@ -71,6 +71,8 @@ export interface FormulaBarProps {
   onCrossSheetRefChange?: (info: { sheetName: string; startRow: number; startCol: number; endRow: number; endCol: number; startPos: number; endPos: number } | null) => void;
   /** Callback when the fx button is clicked — opens FormulaWizard with current formula. */
   onFxClick?: (currentValue: string) => void;
+  /** Callback when a cross-sheet reference is clicked in the formula bar. */
+  onCrossSheetClick?: (sheetName: string, cellRef: string) => void;
 }
 
 /**
@@ -263,6 +265,7 @@ export const FormulaBar = forwardRef<FormulaBarHandle, FormulaBarProps>(function
   onHighlightsChange,
   onCrossSheetRefChange,
   onFxClick,
+  onCrossSheetClick,
 }, ref) {
   const [expanded, setExpanded] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -627,7 +630,7 @@ export const FormulaBar = forwardRef<FormulaBarHandle, FormulaBarProps>(function
         {/* Formula input area */}
         <div className={`flex-1 relative ${expanded ? 'min-h-[80px]' : ''} overflow-x-auto`}>
           {/* Colored display layer (underlay) */}
-          <FormulaHighlightOverlay ref={overlayRef} value={value} isEditing={isEditing} />
+          <FormulaHighlightOverlay ref={overlayRef} value={value} isEditing={isEditing} onCrossSheetClick={onCrossSheetClick} />
           {/* Actual input — horizontal scroll for long content */}
           {expanded ? (
             <textarea

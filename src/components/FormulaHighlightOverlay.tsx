@@ -1,13 +1,27 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
-import { useMemo, forwardRef } from 'react';
+import { useMemo, forwardRef, useCallback } from 'react';
 import { HIGHLIGHT_COLORS, HIGHLIGHT_BORDER_COLORS } from '../utils/highlightColors';
+
+/**
+ * Represents a segment of the formula string with optional metadata.
+ */
+export interface HighlightSegment {
+  text: string;
+  colorIndex: number | null;
+  /** For cross-sheet refs: the sheet name (e.g., "Sheet1" from "Sheet1!A1") */
+  crossSheetName?: string;
+  /** For cross-sheet refs: the cell/range portion (e.g., "A1" from "Sheet1!A1") */
+  crossSheetRef?: string;
+}
 
 interface FormulaHighlightOverlayProps {
   /** The formula value (including leading '='). */
   value: string;
   /** Whether the editor is active (editing). */
   isEditing: boolean;
+  /** Callback when a cross-sheet reference is clicked. */
+  onCrossSheetClick?: (sheetName: string, cellRef: string) => void;
 }
 
 /**
@@ -18,12 +32,12 @@ interface FormulaHighlightOverlayProps {
  * will render anything — and thus whether to apply `text-transparent`
  * to the underlying input.
  */
-export function computeHighlightSegments(value: string, isEditing: boolean): Array<{ text: string; colorIndex: number | null }> | null {
+export function computeHighlightSegments(value: string, isEditing: boolean): HighlightSegment[] | null {
   if (!isEditing || !value || !value.startsWith('=')) return null;
 
   try {
     const formula = value.slice(1);
-    const segs: Array<{ text: string; colorIndex: number | null }> = [];
+    const segs: HighlightSegment[] = [];
     let colorIdx = 0;
 
     // Prepend the leading '=' as a plain (uncolored) segment so it remains
@@ -51,9 +65,21 @@ export function computeHighlightSegments(value: string, isEditing: boolean): Arr
       // Check if token contains '!' (cross-sheet ref)
       if (/!/i.test(token)) {
         // Cross-sheet cell ref or range (Sheet1!A1, Sheet1!A1:B5, 'My Sheet'!A1, etc.)
+        // Extract sheet name and cell ref for click handling
+        const bangPos = token.indexOf('!');
+        let sheetName: string | undefined;
+        let cellRef: string | undefined;
+        if (bangPos > 0) {
+          const rawSheet = token.slice(0, bangPos);
+          // Remove surrounding quotes if present: 'My Sheet' -> My Sheet
+          sheetName = rawSheet.replace(/^'|'$/g, '');
+          cellRef = token.slice(bangPos + 1);
+        }
         segs.push({
           text: token,
           colorIndex: colorIdx % HIGHLIGHT_COLORS.length,
+          crossSheetName: sheetName,
+          crossSheetRef: cellRef,
         });
         colorIdx++;
       } else if (/^\$?[A-Za-z]+\$?\d+$/i.test(token)) {
@@ -94,8 +120,18 @@ export function computeHighlightSegments(value: string, isEditing: boolean): Arr
  * Cell references (A1, $B$2, A1:B5) get colored backgrounds; other tokens render plain.
  */
 export const FormulaHighlightOverlay = forwardRef<HTMLDivElement, FormulaHighlightOverlayProps>(
-  function FormulaHighlightOverlay({ value, isEditing }, ref) {
+  function FormulaHighlightOverlay({ value, isEditing, onCrossSheetClick }, ref) {
     const segments = useMemo(() => computeHighlightSegments(value, isEditing), [value, isEditing]);
+
+    const handleClick = useCallback(
+      (e: React.MouseEvent, seg: HighlightSegment) => {
+        if (seg.crossSheetName && seg.crossSheetRef && onCrossSheetClick) {
+          e.stopPropagation();
+          onCrossSheetClick(seg.crossSheetName, seg.crossSheetRef);
+        }
+      },
+      [onCrossSheetClick],
+    );
 
     if (!segments) return null;
 
@@ -112,9 +148,12 @@ export const FormulaHighlightOverlay = forwardRef<HTMLDivElement, FormulaHighlig
           letterSpacing: 'inherit',
         }}
       >
-        {segments.map((seg, i) => (
+        {segments.map((seg, i) => {
+          const isCrossSheet = !!seg.crossSheetName;
+          return (
           <span
             key={i}
+            onClick={(e) => handleClick(e, seg)}
             style={
               seg.colorIndex !== null
                 ? {
@@ -129,13 +168,24 @@ export const FormulaHighlightOverlay = forwardRef<HTMLDivElement, FormulaHighlig
                        ones, causing progressive misalignment (each colored
                        cell ref shifts the caret further off). */
                     color: HIGHLIGHT_BORDER_COLORS[seg.colorIndex],
+                    /* Cross-sheet refs are clickable: show pointer cursor,
+                       enable pointer events, and add underline. */
+                    ...(isCrossSheet
+                      ? {
+                          cursor: 'pointer',
+                          pointerEvents: 'auto',
+                          textDecoration: 'underline',
+                          textDecorationStyle: 'dotted',
+                        }
+                      : {}),
                   }
                 : undefined
             }
           >
             {seg.text}
           </span>
-        ))}
+        );
+        })}
       </div>
     );
   },

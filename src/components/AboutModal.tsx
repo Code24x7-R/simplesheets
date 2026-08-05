@@ -42,7 +42,7 @@ A lightweight, browser-based spreadsheet for small businesses. No server, no acc
 - **Multi-sheet workbooks** — add, rename, copy, delete sheets with cross-sheet formula references
 - **Virtualized grid** — smooth scrolling for 100k+ rows × unlimited columns
 - **Clean menu-based UI** — File, Edit, View, Insert, Format, Help dropdown menus
-- **Function bar** — one-click access to common functions (SUM, AVERAGE, COUNT, MAX, MIN, IF, etc.)
+- **Formula autocomplete** — type-ahead function search with signatures and descriptions in the formula bar
 - **R1C1 reference format** — toggle between A1 and R1C1 notation by clicking the cell reference
 - **Formula Wizard** — interactive step-by-step formula builder with nested function support
 - **Find & Replace** — search across cells with options for case sensitivity, exact match, formulas, and multi-sheet scope

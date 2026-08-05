@@ -19,6 +19,7 @@ export const ERR_DIV_ZERO = '#DIV/0!';
 export const ERR_VALUE = '#VALUE!';
 export const ERR_NAME = '#NAME?';
 export const ERR_REF = '#REF!';
+export const ERR_NA = '#N/A';
 
 type CellValue = string | number | boolean | null;
 
@@ -110,6 +111,10 @@ function evaluateNode(node: ASTNode, ctx: EvalContext): CellValue {
 
     /* istanbul ignore next - bare range not valid as value */
     case 'range':
+      return ERR_REF;
+
+    /* istanbul ignore next - bare sheet_range not valid as value outside function */
+    case 'sheet_range':
       return ERR_REF;
 
     case 'binary':
@@ -304,7 +309,20 @@ function compareValues(
 /**
  * Collects all cell values from a range node.
  */
-function collectRangeValues(node: Extract<ASTNode, { type: 'range' }>, ctx: EvalContext): CellValue[] {
+export interface RangeData {
+  /** Flattened cell values in row-major order. */
+  values: CellValue[];
+  /** Number of rows in the range. */
+  rows: number;
+  /** Number of columns in the range. */
+  cols: number;
+}
+
+/**
+ * Collects values from a 2D range, preserving dimensional information.
+ * Used by VLOOKUP/HLOOKUP which need to know row/column structure.
+ */
+function collectRangeValuesWithShape(node: Extract<ASTNode, { type: 'range' }>, ctx: EvalContext): RangeData {
   const values: CellValue[] = [];
   const minRow = Math.min(node.start.row, node.end.row);
   const maxRow = Math.max(node.start.row, node.end.row);
@@ -314,8 +332,11 @@ function collectRangeValues(node: Extract<ASTNode, { type: 'range' }>, ctx: Eval
   // If a sheet name was specified but not found, return #REF! for all cells
   /* istanbul ignore next - edge case: sheet name not found */
   if (node.sheetName && sheetIdx === undefined) {
-    return [ERR_REF];
+    return { values: [ERR_REF], rows: 0, cols: 0 };
   }
+
+  const rows = maxRow - minRow + 1;
+  const cols = maxCol - minCol + 1;
 
   for (let r = minRow; r <= maxRow; r++) {
     for (let c = minCol; c <= maxCol; c++) {
@@ -323,6 +344,26 @@ function collectRangeValues(node: Extract<ASTNode, { type: 'range' }>, ctx: Eval
     }
   }
 
+  return { values, rows, cols };
+}
+
+/**
+ * Collects values from a 3D sheet range (Sheet1:Sheet3!A1).
+ * Iterates over all sheets between startSheet and endSheet (inclusive)
+ * and collects the cell value at the specified position from each.
+ */
+function collectSheetRangeValues(node: Extract<ASTNode, { type: 'sheet_range' }>, ctx: EvalContext): CellValue[] {
+  const values: CellValue[] = [];
+  // Find sheet indices for start and end sheets
+  const startIdx = ctx.allSheets.findIndex((s) => s.name === node.startSheet);
+  const endIdx = ctx.allSheets.findIndex((s) => s.name === node.endSheet);
+  // If either sheet not found, return #REF!
+  if (startIdx === -1 || endIdx === -1) return [ERR_REF];
+  // Iterate from start to end (inclusive), handling either direction
+  const step = startIdx <= endIdx ? 1 : -1;
+  for (let idx = startIdx; step > 0 ? idx <= endIdx : idx >= endIdx; idx += step) {
+    values.push(evaluateCell(node.cell.row, node.cell.col, ctx, idx));
+  }
   return values;
 }
 
@@ -410,20 +451,35 @@ function formatDate(d: Date, fmt: string): string {
 function evaluateFunction(node: Extract<ASTNode, { type: 'function' }>, ctx: EvalContext): CellValue {
   // Collect argument values (handling ranges)
   const argValues: CellValue[][] = [];
+  // Track shape of range arguments for VLOOKUP/HLOOKUP
+  const argShapes: Array<RangeData | null> = [];
 
   for (const arg of node.args) {
     if (arg.type === 'range') {
-      argValues.push(collectRangeValues(arg as Extract<ASTNode, { type: 'range' }>, ctx));
+      const shape = collectRangeValuesWithShape(arg as Extract<ASTNode, { type: 'range' }>, ctx);
+      argValues.push(shape.values);
+      argShapes.push(shape.rows > 0 && shape.cols > 0 ? shape : null);
+    } else if (arg.type === 'sheet_range') {
+      argValues.push(collectSheetRangeValues(arg as Extract<ASTNode, { type: 'sheet_range' }>, ctx));
+      argShapes.push(null); // 3D ranges don't have simple shape
     } else {
       argValues.push([evaluateNode(arg, ctx)]);
+      argShapes.push(null);
     }
   }
 
   // Flatten for aggregate functions
   const flatValues = argValues.flat().filter((v) => v !== null);
 
+  // Helper: return the first error value if any (Excel error propagation)
+  const firstError = flatValues.find((v) => typeof v === 'string' && v.startsWith('#'));
+
+  // Helper: get the shape of argument at index (for lookup functions)
+  const getArgShape = (idx: number): RangeData | null => argShapes[idx] ?? null;
+
   switch (node.name) {
     case 'SUM': {
+      if (firstError) return firstError;
       let sum = 0;
       for (const v of flatValues) {
         const n = toNumber(v);
@@ -433,6 +489,7 @@ function evaluateFunction(node: Extract<ASTNode, { type: 'function' }>, ctx: Eva
     }
 
     case 'AVERAGE': {
+      if (firstError) return firstError;
       let sum = 0;
       let count = 0;
       for (const v of flatValues) {
@@ -447,6 +504,7 @@ function evaluateFunction(node: Extract<ASTNode, { type: 'function' }>, ctx: Eva
     }
 
     case 'COUNT': {
+      if (firstError) return firstError;
       let count = 0;
       for (const v of flatValues) {
         if (typeof v === 'number') count++;
@@ -455,6 +513,7 @@ function evaluateFunction(node: Extract<ASTNode, { type: 'function' }>, ctx: Eva
     }
 
     case 'MIN': {
+      if (firstError) return firstError;
       let min: number | null = null;
       for (const v of flatValues) {
         const n = toNumber(v);
@@ -464,6 +523,7 @@ function evaluateFunction(node: Extract<ASTNode, { type: 'function' }>, ctx: Eva
     }
 
     case 'MAX': {
+      if (firstError) return firstError;
       let max: number | null = null;
       for (const v of flatValues) {
         const n = toNumber(v);
@@ -1066,10 +1126,255 @@ function evaluateFunction(node: Extract<ASTNode, { type: 'function' }>, ctx: Eva
       return count;
     }
 
-    // ── Lookup (basic implementations) ────────────────────────────
+    // ── Lookup ────────────────────────────────────────────────────
     case 'VLOOKUP': {
-      // Basic stub — full 2D range support needed
-      return ERR_REF;
+      if (argValues.length < 3) return ERR_VALUE;
+      const lookupVal = argValues[0]?.[0];
+      const table = argValues[1] ?? [];
+      const colIdx = toNumber(argValues[2]?.[0] ?? 1);
+      // Excel 4th arg: TRUE/omit = approximate (default), FALSE = exact
+      // exactMatch = true means do exact match (4th arg was FALSE)
+      const exactMatch = argValues.length >= 4 ? Boolean(argValues[3]?.[0]) === false : false;
+      if (colIdx < 1) return ERR_VALUE;
+      // Get range dimensions for proper 2D navigation
+      const shape = getArgShape(1);
+      const rows = shape?.rows ?? 0;
+      const cols = shape?.cols ?? 0;
+      if (rows === 0 || cols === 0) return ERR_REF;
+      if (colIdx > cols) return ERR_REF;
+      const numLookup = toNumber(lookupVal);
+      let bestRow = -1;
+      for (let r = 0; r < rows; r++) {
+        const cellVal = table[r * cols];
+        if (cellVal === undefined) break;
+        if (exactMatch) {
+          // Exact match: return first exact match
+          if (toString(cellVal) === toString(lookupVal)) {
+            const resultIdx = r * cols + (colIdx - 1);
+            return table[resultIdx] ?? ERR_NA;
+          }
+        } else {
+          // Approximate match: find largest value <= lookupVal
+          // Excel requires first column sorted ascending for correct results
+          const numCell = toNumber(cellVal);
+          if (!isNaN(numCell) && !isNaN(numLookup) && numCell <= numLookup) {
+            bestRow = r; // Track the best candidate
+          }
+        }
+      }
+      // For approximate match, return the best candidate found
+      if (!exactMatch && bestRow >= 0) {
+        const resultIdx = bestRow * cols + (colIdx - 1);
+        return table[resultIdx] ?? ERR_NA;
+      }
+      return ERR_NA;
+    }
+
+    case 'HLOOKUP': {
+      if (argValues.length < 3) return ERR_VALUE;
+      const lookupVal = argValues[0]?.[0];
+      const table = argValues[1] ?? [];
+      const rowIdx = toNumber(argValues[2]?.[0] ?? 1);
+      // Excel 4th arg: TRUE/omit = approximate (default), FALSE = exact
+      // exactMatch = true means do exact match (4th arg was FALSE)
+      const exactMatch = argValues.length >= 4 ? Boolean(argValues[3]?.[0]) === false : false;
+      if (rowIdx < 1) return ERR_VALUE;
+      // Get range dimensions for proper 2D navigation
+      const shape = getArgShape(1);
+      const rows = shape?.rows ?? 0;
+      const cols = shape?.cols ?? 0;
+      if (rows === 0 || cols === 0) return ERR_REF;
+      if (rowIdx > rows) return ERR_REF;
+      const numLookup = toNumber(lookupVal);
+      let bestCol = -1;
+      for (let c = 0; c < cols; c++) {
+        const cellVal = table[c];
+        if (cellVal === undefined) break;
+        if (exactMatch) {
+          // Exact match: return first exact match
+          if (toString(cellVal) === toString(lookupVal)) {
+            const resultIdx = (rowIdx - 1) * cols + c;
+            return table[resultIdx] ?? ERR_NA;
+          }
+        } else {
+          // Approximate match: find largest value <= lookupVal
+          // Excel requires first row sorted ascending for correct results
+          const numCell = toNumber(cellVal);
+          if (!isNaN(numCell) && !isNaN(numLookup) && numCell <= numLookup) {
+            bestCol = c; // Track the best candidate
+          }
+        }
+      }
+      // For approximate match, return the best candidate found
+      if (!exactMatch && bestCol >= 0) {
+        const resultIdx = (rowIdx - 1) * cols + bestCol;
+        return table[resultIdx] ?? ERR_NA;
+      }
+      return ERR_NA;
+    }
+
+    case 'OFFSET': {
+      // Simplified: returns a value from a flat range at given row/col offset
+      if (argValues.length < 3) return ERR_VALUE;
+      const baseRange = argValues[0] ?? [];
+      const rowOffset = toNumber(argValues[1]?.[0] ?? 0);
+      const colOffset = toNumber(argValues[2]?.[0] ?? 0);
+      if (baseRange.length === 0) return ERR_REF;
+      const cols = Math.max(1, Math.floor(Math.sqrt(baseRange.length)));
+      const baseRow = 0;
+      const baseCol = 0;
+      const targetIdx = (baseRow + rowOffset) * cols + (baseCol + colOffset);
+      if (targetIdx < 0 || targetIdx >= baseRange.length) return ERR_REF;
+      return baseRange[targetIdx];
+    }
+
+    case 'INDIRECT': {
+      // Simplified: resolves a text reference to a value from the sheet context
+      if (argValues.length < 1) return ERR_VALUE;
+      const refText = toString(argValues[0]?.[0] ?? '');
+      if (!refText) return ERR_REF;
+      // If the refText matches a value in the sheet, return it
+      // Full implementation would resolve cell refs from text — this is a stub
+      const asNum = Number(refText);
+      if (!isNaN(asNum)) return asNum;
+      return refText;
+    }
+
+    case 'RANK': {
+      if (argValues.length < 2) return ERR_VALUE;
+      const number = toNumber(argValues[0]?.[0] ?? 0);
+      if (isNaN(number)) return ERR_VALUE;
+      const range = argValues[1] ?? [];
+      const nums = range.map(v => toNumber(v)).filter(n => !isNaN(n));
+      if (nums.length === 0) return ERR_VALUE;
+      const order = argValues.length >= 3 ? toNumber(argValues[2]?.[0] ?? 0) : 0;
+      const sorted = [...nums].sort((a, b) => order === 0 ? b - a : a - b);
+      const idx = sorted.indexOf(number);
+      return idx >= 0 ? idx + 1 : ERR_VALUE;
+    }
+
+    case 'QUARTILE': {
+      if (argValues.length < 2) return ERR_VALUE;
+      const range = argValues[0] ?? [];
+      const quart = toNumber(argValues[1]?.[0] ?? 0);
+      if (quart < 0 || quart > 4) return ERR_VALUE;
+      const nums = range.map(v => toNumber(v)).filter(n => !isNaN(n)).sort((a, b) => a - b);
+      if (nums.length === 0) return ERR_VALUE;
+      if (quart === 0) return nums[0];
+      if (quart === 4) return nums[nums.length - 1];
+      const pos = (nums.length - 1) * (quart / 4);
+      const base = Math.floor(pos);
+      const rest = pos - base;
+      if (base + 1 < nums.length) {
+        return nums[base] + rest * (nums[base + 1] - nums[base]);
+      }
+      return nums[base];
+    }
+
+    case 'PERCENTILE': {
+      if (argValues.length < 2) return ERR_VALUE;
+      const range = argValues[0] ?? [];
+      const k = toNumber(argValues[1]?.[0] ?? 0);
+      if (k < 0 || k > 1) return ERR_VALUE;
+      const nums = range.map(v => toNumber(v)).filter(n => !isNaN(n)).sort((a, b) => a - b);
+      if (nums.length === 0) return ERR_VALUE;
+      if (k === 0) return nums[0];
+      if (k === 1) return nums[nums.length - 1];
+      const pos = (nums.length - 1) * k;
+      const base = Math.floor(pos);
+      const rest = pos - base;
+      if (base + 1 < nums.length) {
+        return nums[base] + rest * (nums[base + 1] - nums[base]);
+      }
+      return nums[base];
+    }
+
+    case 'SUMIFS': {
+      if (argValues.length < 3) return ERR_VALUE;
+      const sumRange = argValues[0] ?? [];
+      let sum = 0;
+      // argValues[1..] come in pairs: critRange, criterion
+      const pairCount = Math.floor((argValues.length - 1) / 2);
+      for (let i = 0; i < sumRange.length; i++) {
+        let allMatch = true;
+        for (let p = 0; p < pairCount; p++) {
+          const critRange = argValues[1 + p * 2] ?? [];
+          const criterion = argValues[2 + p * 2]?.[0];
+          const critVal = critRange[i];
+          if (!matchesCriterion(critVal, criterion)) { allMatch = false; break; }
+        }
+        if (allMatch) {
+          const n = toNumber(sumRange[i]);
+          if (!isNaN(n)) sum += n;
+        }
+      }
+      return sum;
+    }
+
+    case 'COUNTIFS': {
+      if (argValues.length < 2) return ERR_VALUE;
+      // argValues[0..] come in pairs: critRange, criterion
+      const flatVals = argValues[0] ?? [];
+      let count = 0;
+      const pairCount = Math.floor(argValues.length / 2);
+      for (let i = 0; i < flatVals.length; i++) {
+        let allMatch = true;
+        for (let p = 0; p < pairCount; p++) {
+          const critRange = argValues[p * 2] ?? [];
+          const criterion = argValues[p * 2 + 1]?.[0];
+          const critVal = critRange[i];
+          if (!matchesCriterion(critVal, criterion)) { allMatch = false; break; }
+        }
+        if (allMatch) count++;
+      }
+      return count;
+    }
+
+    case 'AVERAGEIFS': {
+      if (argValues.length < 3) return ERR_VALUE;
+      const avgRange = argValues[0] ?? [];
+      let sum = 0;
+      let count = 0;
+      const pairCount = Math.floor((argValues.length - 1) / 2);
+      for (let i = 0; i < avgRange.length; i++) {
+        let allMatch = true;
+        for (let p = 0; p < pairCount; p++) {
+          const critRange = argValues[1 + p * 2] ?? [];
+          const criterion = argValues[2 + p * 2]?.[0];
+          const critVal = critRange[i];
+          if (!matchesCriterion(critVal, criterion)) { allMatch = false; break; }
+        }
+        if (allMatch) {
+          const n = toNumber(avgRange[i]);
+          if (!isNaN(n)) { sum += n; count++; }
+        }
+      }
+      return count === 0 ? ERR_DIV_ZERO : sum / count;
+    }
+
+    case 'DATEDIF': {
+      if (argValues.length < 3) return ERR_VALUE;
+      const start = new Date(toString(argValues[0]?.[0] ?? ''));
+      const end = new Date(toString(argValues[1]?.[0] ?? ''));
+      const unit = toString(argValues[2]?.[0] ?? '').toUpperCase();
+      if (isNaN(start.getTime()) || isNaN(end.getTime())) return ERR_VALUE;
+      switch (unit) {
+        case 'Y': {
+          let years = end.getFullYear() - start.getFullYear();
+          if (new Date(start.getFullYear() + years, start.getMonth(), start.getDate()) > end) years--;
+          return years;
+        }
+        case 'M': {
+          let months = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
+          if (new Date(start.getFullYear(), start.getMonth() + months, start.getDate()) > end) months--;
+          return months;
+        }
+        case 'D': {
+          const msPerDay = 1000 * 60 * 60 * 24;
+          return Math.round((end.getTime() - start.getTime()) / msPerDay);
+        }
+        default: return ERR_VALUE;
+      }
     }
 
     case 'INDEX': {

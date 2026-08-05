@@ -17,6 +17,7 @@ export type ASTNode =
   | BooleanNode
   | CellRefNode
   | RangeNode
+  | SheetRangeNode
   | BinaryOpNode
   | UnaryOpNode
   | FunctionNode;
@@ -66,6 +67,18 @@ export interface RangeNode {
   endPos?: number;
 }
 
+export interface SheetRangeNode {
+  type: 'sheet_range';
+  /** First sheet name in the 3D range (e.g., "Sheet1" in Sheet1:Sheet3!A1). */
+  startSheet: string;
+  /** Last sheet name in the 3D range (e.g., "Sheet3" in Sheet1:Sheet3!A1). */
+  endSheet: string;
+  /** Cell reference within each sheet (e.g., {row: 0, col: 0} for A1). */
+  cell: { row: number; col: number; absoluteCol: boolean; absoluteRow: boolean };
+  pos?: number;
+  endPos?: number;
+}
+
 export interface BinaryOpNode {
   type: 'binary';
   op: '+' | '-' | '*' | '/' | '&' | '=' | '<>' | '<' | '>' | '<=' | '>=';
@@ -93,6 +106,7 @@ type TokenType =
   | 'BOOLEAN'
   | 'CELL'
   | 'SHEET_NAME'
+  | 'SHEET_RANGE'
   | 'BANG'
   | 'FUNCTION'
   | 'OPERATOR'
@@ -213,6 +227,14 @@ function tokenize(input: string): Token[] {
         throw new FormulaError('Unterminated sheet name', i);
       }
       i++; // skip closing quote
+      // Check for 3D sheet range: 'Sheet 1':'Sheet 3'!A1
+      if (i < input.length && input[i] === ':') {
+        // 3D range: emit SHEET_NAME + COLON (merge happens in parser)
+        tokens.push({ type: 'SHEET_NAME', value: str, pos: i - str.length - 3 });
+        tokens.push({ type: 'COLON', value: ':', pos: i });
+        i++; // consume ':'
+        continue;
+      }
       // Must be followed by "!" to be a sheet qualifier
       if (i < input.length && input[i] === '!') {
         i++; // consume '!'
@@ -255,6 +277,7 @@ function tokenize(input: string): Token[] {
 
       // Check if the word (including trailing digits) is a function name
       // This handles cases like LOG10 which would otherwise be treated as cell ref
+      // MUST run before digit consumption
       let wordEnd = i;
       while (wordEnd < input.length && /[0-9]/.test(input[wordEnd])) {
         wordEnd++;
@@ -267,6 +290,45 @@ function tokenize(input: string): Token[] {
         continue;
       }
 
+      // ── 3D Sheet Range Detection (before digit consumption) ──────
+      // Pattern: Sheet1:Sheet3!A1 or SheetA:SheetC!A1
+      // At this point: ref="Sheet" or "SheetA", i points to ':' or digit or '!'
+      // We need to check if there's a ':' after optional digits
+      if (i < input.length && /^[A-Za-z_][A-Za-z0-9_]*$/.test(ref) && !FUNCTIONS.has(ref.toUpperCase())) {
+        const savedI = i;
+        // Skip optional digits (part of first sheet name)
+        let sheet1Suffix = '';
+        while (i < input.length && /[0-9]/.test(input[i])) {
+          sheet1Suffix += input[i++];
+        }
+        // Check for ':' followed by second sheet name
+        if (i < input.length && input[i] === ':' && ref.length >= 2) {
+          i++; // consume ':'
+          // Read second sheet name (alpha)
+          let sheet2 = '';
+          while (i < input.length && /[A-Za-z]/.test(input[i])) {
+            sheet2 += input[i++];
+          }
+          // Consume optional digits for second sheet name
+          let sheet2Suffix = '';
+          while (i < input.length && /[0-9]/.test(input[i])) {
+            sheet2Suffix += input[i++];
+          }
+          // Must be followed by ! then cell ref (starts with letter)
+          if (sheet2 && i < input.length && input[i] === '!') {
+            const bangPos = i;
+            i++; // consume '!'
+            if (i < input.length && /[A-Za-z]/.test(input[i])) {
+              tokens.push({ type: 'SHEET_RANGE', value: `${ref}${sheet1Suffix}:${sheet2}${sheet2Suffix}`, pos: startPos });
+              tokens.push({ type: 'BANG', value: '!', pos: bangPos });
+              continue;
+            }
+          }
+        }
+        // Not a 3D range — rollback
+        i = savedI;
+      }
+
       // Handle dots in named references (e.g., Hello.World)
       // Consume any dots and following characters as part of the name
       while (i < input.length && input[i] === '.') {
@@ -276,20 +338,38 @@ function tokenize(input: string): Token[] {
         }
       }
 
-      // Check if followed by digits or $digit (cell ref) or not (function name)
-      if (i < input.length && (/[0-9]/.test(input[i]) || (input[i] === '$' && /[0-9]/.test(input[i + 1] ?? '')))) {
-        let absoluteRow = false;
-        if (input[i] === '$') {
-          absoluteRow = true;
-          i++;
+      // Consume trailing digits (part of cell ref or sheet name)
+      // Handle absolute row marker: A$1
+      let absoluteRow = false;
+      if (i < input.length && input[i] === '$') {
+        absoluteRow = true;
+        i++;
+      }
+      let row = '';
+      while (i < input.length && /[0-9]/.test(input[i])) {
+        row += input[i++];
+      }
+
+      // Handle dots in named references (e.g., Hello.World)
+      // Consume any dots and following characters as part of the name
+      while (i < input.length && input[i] === '.') {
+        ref += input[i++]; // add the dot
+        while (i < input.length && /[A-Za-z0-9_]/.test(input[i])) {
+          ref += input[i++];
         }
-        let row = '';
+      }
+
+      // Note: digits (row) were already consumed above before 3D check.
+      // If there are more digits here (shouldn't happen normally), handle them.
+      if (i < input.length && /[0-9]/.test(input[i]) && row.length === 0) {
         while (i < input.length && /[0-9]/.test(input[i])) {
           row += input[i++];
         }
+      }
+
+      if (row.length > 0) {
         // Check for sheet qualifier: word! means this is a sheet name (e.g., Sheet1!A1)
         if (i < input.length && input[i] === '!') {
-          // This is a sheet name qualifier — emit SHEET_NAME and BANG
           i++; // consume '!'
           const sheetName = `${absoluteCol ? '$' : ''}${ref}${absoluteRow ? '$' : ''}${row}`;
           tokens.push({ type: 'SHEET_NAME', value: sheetName, pos: startPos });
@@ -300,6 +380,7 @@ function tokenize(input: string): Token[] {
           tokens.push({ type: 'CELL', value: cellRef, pos: startPos });
         }
       } else {
+        // No digits — check if function name or bare sheet name
         const upperRef = ref.toUpperCase();
         // Check for sheet qualifier on bare names (e.g., Sheet!A1 where Sheet has no digits)
         if (i < input.length && input[i] === '!') {
@@ -423,7 +504,46 @@ class Parser {
   private pos = 0;
 
   constructor(tokens: Token[]) {
-    this.tokens = tokens;
+    // Merge 3D sheet range tokens: SHEET_NAME COLON SHEET_NAME BANG → SHEET_RANGE BANG
+    this.tokens = Parser.merge3DRangeTokens(tokens);
+  }
+
+  /**
+   * Merges consecutive tokens representing a 3D sheet range into a single SHEET_RANGE token.
+   * Pattern: SHEET_NAME COLON SHEET_NAME BANG → SHEET_RANGE(start:end) BANG
+   * Example: Sheet1:Sheet3!A1 → [SHEET_RANGE("Sheet1:Sheet3"), BANG, CELL("A1")]
+   *
+   * Only merges when the first SHEET_NAME is preceded by LPAREN, COMMA, or start of input
+   * (i.e., it's a function argument or start of expression). This avoids incorrectly
+   * merging cross-sheet ranges like Sheet1!A1:Sheet1!B5 which also contain the
+   * SHEET_NAME COLON SHEET_NAME BANG token subsequence.
+   */
+  private static merge3DRangeTokens(tokens: Token[]): Token[] {
+    const result: Token[] = [];
+    let i = 0;
+    while (i < tokens.length) {
+      // Look for: [LPAREN|COMMA|start] SHEET_NAME COLON SHEET_NAME BANG
+      const prevToken = i > 0 ? result[result.length - 1] : null;
+      const isArgStart = !prevToken || prevToken.type === 'LPAREN' || prevToken.type === 'COMMA';
+      if (
+        isArgStart &&
+        i + 3 < tokens.length &&
+        tokens[i].type === 'SHEET_NAME' &&
+        tokens[i + 1].type === 'COLON' &&
+        tokens[i + 2].type === 'SHEET_NAME' &&
+        tokens[i + 3].type === 'BANG'
+      ) {
+        const startSheet = tokens[i].value;
+        const endSheet = tokens[i + 2].value;
+        result.push({ type: 'SHEET_RANGE', value: `${startSheet}:${endSheet}`, pos: tokens[i].pos });
+        result.push({ type: 'BANG', value: '!', pos: tokens[i + 3].pos });
+        i += 4;
+      } else {
+        result.push(tokens[i]);
+        i++;
+      }
+    }
+    return result;
   }
 
   private current(): Token {
@@ -585,6 +705,25 @@ class Parser {
         }
 
         return { type: 'cell', row: ref.row, col: ref.col, absoluteCol: ref.absoluteCol, absoluteRow: ref.absoluteRow, sheetName, pos: startPos, endPos: nextToken.pos + nextToken.value.length };
+      }
+
+      case 'SHEET_RANGE': {
+        // 3D sheet range: Sheet1:Sheet3!A1
+        const [startSheet, endSheet] = token.value.split(':');
+        const startPos = token.pos;
+        this.advance(); // consume SHEET_RANGE token
+        this.expect('BANG');
+        // Next must be a cell ref
+        const nextToken = this.expect('CELL');
+        const ref = parseCellRef(nextToken.value);
+        return {
+          type: 'sheet_range',
+          startSheet,
+          endSheet,
+          cell: { row: ref.row, col: ref.col, absoluteCol: ref.absoluteCol, absoluteRow: ref.absoluteRow },
+          pos: startPos,
+          endPos: nextToken.pos + nextToken.value.length,
+        };
       }
 
       case 'CELL': {
@@ -845,6 +984,14 @@ export function extractCellRefs(node: ASTNode): SheetCellRef[] {
       case 'function':
         n.args.forEach(walk);
         break;
+      case 'sheet_range': {
+        // 3D range: add a ref for the cell on each sheet in the range
+        refs.push({ row: n.cell.row, col: n.cell.col, absoluteCol: n.cell.absoluteCol, absoluteRow: n.cell.absoluteRow, sheetName: n.startSheet });
+        if (n.endSheet !== n.startSheet) {
+          refs.push({ row: n.cell.row, col: n.cell.col, absoluteCol: n.cell.absoluteCol, absoluteRow: n.cell.absoluteRow, sheetName: n.endSheet });
+        }
+        break;
+      }
     }
   }
 

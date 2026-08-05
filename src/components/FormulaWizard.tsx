@@ -373,6 +373,17 @@ export function FormulaWizard({
             )}
           </div>
           <div className="text-xs text-blue-500 mt-0.5">{schema.description}</div>
+          {/* Constraints / guidance */}
+          {schema.constraints && schema.constraints.length > 0 && (
+            <div className="mt-1.5 space-y-0.5">
+              {schema.constraints.map((constraint, i) => (
+                <div key={i} className="flex items-start gap-1 text-xs text-amber-600">
+                  <span className="text-amber-400 mt-px">⚠</span>
+                  <span>{constraint}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Parameter inputs */}

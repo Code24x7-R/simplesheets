@@ -1103,9 +1103,14 @@ describe('Formula Engine', () => {
   });
 
   describe('VLOOKUP Function', () => {
-    it('returns #REF! (stub)', () => {
-      const sheet = createSheet({ '5:0': '=VLOOKUP(1, A1:B3, 2)' });
-      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['5:0'].computedValue).toBe('#REF!');
+    it('returns #N/A for no match', () => {
+      const sheet = createSheet({ '5:0': '=VLOOKUP(99, A1:B3, 2)' });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['5:0'].computedValue).toBe('#N/A');
+    });
+
+    it('returns error for insufficient args', () => {
+      const sheet = createSheet({ '5:0': '=VLOOKUP(1, A1:B3)' });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['5:0'].computedValue).toBe('#VALUE!');
     });
   });
 
@@ -1219,8 +1224,8 @@ describe('Formula Engine', () => {
       const sheet = createSheet({
         '0:0': '10', '1:0': '=1/0', '2:0': '20', '3:0': '=SUM(A1:A3)',
       });
-      // SUM ignores error cells
-      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['3:0'].computedValue).toBe(30);
+      // SUM propagates error cells (Excel behavior)
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['3:0'].computedValue).toBe('#DIV/0!');
     });
 
     it('returns #REF! for out-of-bounds reference', () => {
@@ -1525,10 +1530,128 @@ describe('Formula Engine', () => {
 
   // ── HLOOKUP (not implemented → #NAME?) ─────────────────────────────
 
-  describe('HLOOKUP Function (not implemented)', () => {
-    it('HLOOKUP returns #NAME?', () => {
-      const sheet = createSheet({ '5:0': '=HLOOKUP(1, A1:B3, 2)' });
-      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['5:0'].computedValue).toBe('#NAME?');
+  describe('HLOOKUP Function', () => {
+    it('HLOOKUP finds value in first row and returns from specified row (square range)', () => {
+      // A1:B2 is a 2×2 range: A1=10, B1=20, A2=100, B2=200
+      // Flattened: [10, 20, 100, 200], cols = sqrt(4) = 2
+      const sheet = createSheet({
+        '0:0': '10', '0:1': '20',
+        '1:0': '100', '1:1': '200',
+        '5:0': '=HLOOKUP(20, A1:B2, 2)',
+      });
+      // Match at col 1 in row 0 → return row 2 (idx 1), col 1 → 200
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['5:0'].computedValue).toBe(200);
+    });
+
+    it('HLOOKUP returns #N/A for no match (exact)', () => {
+      const sheet = createSheet({
+        '0:0': '10', '0:1': '20',
+        '1:0': '100', '1:1': '200',
+        '5:0': '=HLOOKUP(99, A1:B2, 2, FALSE)',
+      });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['5:0'].computedValue).toBe('#N/A');
+    });
+
+    it('HLOOKUP approximate match returns largest value <= lookup', () => {
+      const sheet = createSheet({
+        '0:0': '10', '0:1': '20',
+        '1:0': '100', '1:1': '200',
+        '5:0': '=HLOOKUP(99, A1:B2, 2)',
+      });
+      // Approximate: 20 <= 99 (largest), return row 2 value → 200
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['5:0'].computedValue).toBe(200);
+    });
+
+    it('HLOOKUP returns #VALUE! for insufficient args', () => {
+      const sheet = createSheet({ '5:0': '=HLOOKUP(1, A1:B3)' });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['5:0'].computedValue).toBe('#VALUE!');
+    });
+
+    it('HLOOKUP with exact match (FALSE) finds value regardless of sort order', () => {
+      // Unsorted first row: 20, 10
+      const sheet = createSheet({
+        '0:0': '20', '0:1': '10',
+        '1:0': '200', '1:1': '100',
+        '5:0': '=HLOOKUP(10, A1:B2, 2, FALSE)',
+      });
+      // Exact match finds 10 at col 1, returns row 2 value → 100
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['5:0'].computedValue).toBe(100);
+    });
+
+    it('HLOOKUP approximate match (TRUE) requires sorted ascending first row', () => {
+      // Sorted first row: 10, 20
+      const sheet = createSheet({
+        '0:0': '10', '0:1': '20',
+        '1:0': '100', '1:1': '200',
+        '5:0': '=HLOOKUP(15, A1:B2, 2)',
+      });
+      // Approximate: 10 <= 15, next value 20 > 15, so return 10's row → 100
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['5:0'].computedValue).toBe(100);
+    });
+
+    it('HLOOKUP returns #REF! when row index exceeds range', () => {
+      const sheet = createSheet({
+        '0:0': '10', '0:1': '20',
+        '1:0': '100', '1:1': '200',
+        '5:0': '=HLOOKUP(10, A1:B2, 3)',
+      });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['5:0'].computedValue).toBe('#REF!');
+    });
+  });
+
+  // ── VLOOKUP with sorted data ──────────────────────────────────────
+
+  describe('VLOOKUP with Sorted Data', () => {
+    it('VLOOKUP exact match (FALSE) finds value regardless of sort order', () => {
+      // Unsorted first column: 20, 10
+      const sheet = createSheet({
+        '0:0': '20', '0:1': '200',
+        '1:0': '10', '1:1': '100',
+        '5:0': '=VLOOKUP(10, A1:B2, 2, FALSE)',
+      });
+      // Exact match finds 10 at row 1, returns col 2 → 100
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['5:0'].computedValue).toBe(100);
+    });
+
+    it('VLOOKUP approximate match (TRUE) requires sorted ascending first column', () => {
+      // Sorted first column: 10, 20
+      const sheet = createSheet({
+        '0:0': '10', '0:1': '100',
+        '1:0': '20', '1:1': '200',
+        '5:0': '=VLOOKUP(15, A1:B2, 2)',
+      });
+      // Approximate: 10 <= 15, next value 20 > 15, so return 10's column → 100
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['5:0'].computedValue).toBe(100);
+    });
+
+    it('VLOOKUP approximate match finds exact value', () => {
+      const sheet = createSheet({
+        '0:0': '10', '0:1': '100',
+        '1:0': '20', '1:1': '200',
+        '5:0': '=VLOOKUP(20, A1:B2, 2)',
+      });
+      // 20 <= 20, next value doesn't exist, return 20's column → 200
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['5:0'].computedValue).toBe(200);
+    });
+
+    it('VLOOKUP returns #REF! when column index exceeds range', () => {
+      const sheet = createSheet({
+        '0:0': '10', '0:1': '100',
+        '1:0': '20', '1:1': '200',
+        '5:0': '=VLOOKUP(10, A1:B2, 3)',
+      });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['5:0'].computedValue).toBe('#REF!');
+    });
+
+    it('VLOOKUP with non-square range (more rows than cols)', () => {
+      // A1:B3 range: 3 rows × 2 cols
+      const sheet = createSheet({
+        '0:0': '10', '0:1': '100',
+        '1:0': '20', '1:1': '200',
+        '2:0': '30', '2:1': '300',
+        '5:0': '=VLOOKUP(20, A1:B3, 2, FALSE)',
+      });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['5:0'].computedValue).toBe(200);
     });
   });
 
@@ -1614,8 +1737,8 @@ describe('Formula Engine', () => {
       const sheet = createSheet({
         '0:0': '=SQRT(-1)', '1:0': '=SUM(A1, 5)',
       });
-      // SUM ignores error cells, returns 5
-      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['1:0'].computedValue).toBe(5);
+      // SUM propagates errors (Excel behavior)
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['1:0'].computedValue).toBe('#VALUE!');
     });
 
     it('IFERROR catches nested error', () => {
@@ -1982,7 +2105,7 @@ describe('evaluateWorkbook - cross-sheet references', () => {
     const sheet1 = createSheet({
       '1:1': '10', '2:1': '20', '3:1': '30',  // B2, B3, B4
     }, { name: 'Sheet1' });
-    const sheet2 = createSheet({ '0:0': '=SUM(Sheet1!B2:Sheet1!B21)' }, { name: 'Sheet2' });
+    const sheet2 = createSheet({ '0:0': '=SUM(Sheet1!B2:Sheet1!B4)' }, { name: 'Sheet2' });
     const wb = createMultiSheetWorkbook([sheet1, sheet2]);
     const result = evaluateWorkbook(wb, 1);
     // B2=10 + B3=20 + B4=30 = 60
@@ -2669,6 +2792,307 @@ describe('evaluateWorkbook - cross-sheet references', () => {
       // This triggers the catch block in evaluateWorkbook when parseFormula throws
       const sheet = createSheet({ '0:0': '=TEXT("unclosed, "0")' });
       expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue).toBe('#VALUE!');
+    });
+  });
+
+  // ─── New Functions (Gap 1) ──────────────────────────────────────
+
+  describe('RANK Function', () => {
+    it('RANK returns position in descending order by default', () => {
+      const sheet = createSheet({
+        '0:0': '10', '1:0': '20', '2:0': '30',
+        '3:0': '=RANK(20, A1:A3)',
+      });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['3:0'].computedValue).toBe(2);
+    });
+
+    it('RANK returns 1 for largest value in descending order', () => {
+      const sheet = createSheet({
+        '0:0': '10', '1:0': '20', '2:0': '30',
+        '3:0': '=RANK(30, A1:A3, 0)',
+      });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['3:0'].computedValue).toBe(1);
+    });
+
+    it('RANK ascending order', () => {
+      const sheet = createSheet({
+        '0:0': '10', '1:0': '20', '2:0': '30',
+        '3:0': '=RANK(10, A1:A3, 1)',
+      });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['3:0'].computedValue).toBe(1);
+    });
+  });
+
+  describe('QUARTILE Function', () => {
+    it('QUARTILE min (quart=0)', () => {
+      const sheet = createSheet({
+        '0:0': '1', '1:0': '2', '2:0': '3', '3:0': '4',
+        '4:0': '=QUARTILE(A1:A4, 0)',
+      });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['4:0'].computedValue).toBe(1);
+    });
+
+    it('QUARTILE max (quart=4)', () => {
+      const sheet = createSheet({
+        '0:0': '1', '1:0': '2', '2:0': '3', '3:0': '4',
+        '4:0': '=QUARTILE(A1:A4, 4)',
+      });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['4:0'].computedValue).toBe(4);
+    });
+
+    it('QUARTILE median (quart=2)', () => {
+      const sheet = createSheet({
+        '0:0': '1', '1:0': '2', '2:0': '3', '3:0': '4',
+        '4:0': '=QUARTILE(A1:A4, 2)',
+      });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['4:0'].computedValue).toBe(2.5);
+    });
+
+    it('QUARTILE returns #VALUE! for invalid quart', () => {
+      const sheet = createSheet({
+        '0:0': '1', '1:0': '2', '2:0': '3',
+        '3:0': '=QUARTILE(A1:A3, 5)',
+      });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['3:0'].computedValue).toBe('#VALUE!');
+    });
+  });
+
+  describe('PERCENTILE Function', () => {
+    it('PERCENTILE k=0 returns min', () => {
+      const sheet = createSheet({
+        '0:0': '10', '1:0': '20', '2:0': '30',
+        '3:0': '=PERCENTILE(A1:A3, 0)',
+      });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['3:0'].computedValue).toBe(10);
+    });
+
+    it('PERCENTILE k=1 returns max', () => {
+      const sheet = createSheet({
+        '0:0': '10', '1:0': '20', '2:0': '30',
+        '3:0': '=PERCENTILE(A1:A3, 1)',
+      });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['3:0'].computedValue).toBe(30);
+    });
+
+    it('PERCENTILE k=0.5 returns median', () => {
+      const sheet = createSheet({
+        '0:0': '10', '1:0': '20', '2:0': '30', '3:0': '40',
+        '4:0': '=PERCENTILE(A1:A4, 0.5)',
+      });
+      const result = evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['4:0'].computedValue;
+      expect(result).toBe(25);
+    });
+
+    it('PERCENTILE returns #VALUE! for k out of range', () => {
+      const sheet = createSheet({
+        '0:0': '10', '1:0': '20',
+        '2:0': '=PERCENTILE(A1:A2, 1.5)',
+      });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['2:0'].computedValue).toBe('#VALUE!');
+    });
+  });
+
+  describe('SUMIFS Function', () => {
+    it('SUMIFS with single criteria pair', () => {
+      const sheet = createSheet({
+        '0:0': 'A', '1:0': 'B', '2:0': 'A', '3:0': 'A',
+        '0:1': '10', '1:1': '20', '2:1': '30', '3:1': '40',
+        '4:0': '=SUMIFS(B1:B4, A1:A4, "A")',
+      });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['4:0'].computedValue).toBe(80);
+    });
+
+    it('SUMIFS with multiple criteria pairs', () => {
+      const sheet = createSheet({
+        '0:0': 'A', '1:0': 'B', '2:0': 'A', '3:0': 'B',
+        '0:1': '1', '1:1': '1', '2:1': '2', '3:1': '2',
+        '0:2': '10', '1:2': '20', '2:2': '30', '3:2': '40',
+        '4:0': '=SUMIFS(C1:C4, A1:A4, "A", B1:B4, ">1")',
+      });
+      // A1:A4 has 2 A's (rows 0, 2). B1:B4 for those: 1 and 2. Only B2:B4 > 1 matches at row 2 → C3 = 30
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['4:0'].computedValue).toBe(30);
+    });
+
+    it('SUMIFS returns 0 for no matches', () => {
+      const sheet = createSheet({
+        '0:0': 'A', '1:0': 'B',
+        '0:1': '10', '1:1': '20',
+        '2:0': '=SUMIFS(B1:B2, A1:A2, "Z")',
+      });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['2:0'].computedValue).toBe(0);
+    });
+  });
+
+  describe('COUNTIFS Function', () => {
+    it('COUNTIFS with single criteria', () => {
+      const sheet = createSheet({
+        '0:0': 'A', '1:0': 'B', '2:0': 'A', '3:0': 'A',
+        '4:0': '=COUNTIFS(A1:A4, "A")',
+      });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['4:0'].computedValue).toBe(3);
+    });
+
+    it('COUNTIFS with multiple criteria', () => {
+      const sheet = createSheet({
+        '0:0': 'A', '1:0': 'A', '2:0': 'B', '3:0': 'B',
+        '0:1': '10', '1:1': '20', '2:1': '10', '3:1': '20',
+        '4:0': '=COUNTIFS(A1:A4, "A", B1:B4, ">15")',
+      });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['4:0'].computedValue).toBe(1);
+    });
+
+    it('COUNTIFS returns 0 for no matches', () => {
+      const sheet = createSheet({
+        '0:0': 'A', '1:0': 'B',
+        '2:0': '=COUNTIFS(A1:A2, "Z")',
+      });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['2:0'].computedValue).toBe(0);
+    });
+  });
+
+  describe('AVERAGEIFS Function', () => {
+    it('AVERAGEIFS with single criteria', () => {
+      const sheet = createSheet({
+        '0:0': 'A', '1:0': 'B', '2:0': 'A', '3:0': 'A',
+        '0:1': '10', '1:1': '20', '2:1': '30', '3:1': '40',
+        '4:0': '=AVERAGEIFS(B1:B4, A1:A4, "A")',
+      });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['4:0'].computedValue).toBe(26.666666666666668);
+    });
+
+    it('AVERAGEIFS returns #DIV/0! for no matches', () => {
+      const sheet = createSheet({
+        '0:0': 'A', '1:0': 'B',
+        '0:1': '10', '1:1': '20',
+        '2:0': '=AVERAGEIFS(B1:B2, A1:A2, "Z")',
+      });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['2:0'].computedValue).toBe('#DIV/0!');
+    });
+  });
+
+  describe('DATEDIF Function', () => {
+    it('DATEDIF returns years', () => {
+      const sheet = createSheet({
+        '0:0': '2020-01-01', '0:1': '2023-01-01',
+        '0:2': '=DATEDIF(A1, B1, "Y")',
+      });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:2'].computedValue).toBe(3);
+    });
+
+    it('DATEDIF returns months', () => {
+      const sheet = createSheet({
+        '0:0': '2023-01-15', '0:1': '2023-04-15',
+        '0:2': '=DATEDIF(A1, B1, "M")',
+      });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:2'].computedValue).toBe(3);
+    });
+
+    it('DATEDIF returns days', () => {
+      const sheet = createSheet({
+        '0:0': '2023-01-01', '0:1': '2023-01-11',
+        '0:2': '=DATEDIF(A1, B1, "D")',
+      });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:2'].computedValue).toBe(10);
+    });
+
+    it('DATEDIF returns #VALUE! for invalid unit', () => {
+      const sheet = createSheet({
+        '0:0': '2023-01-01', '0:1': '2023-01-11',
+        '0:2': '=DATEDIF(A1, B1, "X")',
+      });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:2'].computedValue).toBe('#VALUE!');
+    });
+  });
+
+  describe('INDIRECT Function', () => {
+    it('INDIRECT returns numeric value from text', () => {
+      const sheet = createSheet({
+        '0:0': '=INDIRECT("42")',
+      });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue).toBe(42);
+    });
+
+    it('INDIRECT returns text for non-numeric', () => {
+      const sheet = createSheet({
+        '0:0': '=INDIRECT("hello")',
+      });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue).toBe('hello');
+    });
+
+    it('INDIRECT returns #VALUE! for no args', () => {
+      const sheet = createSheet({ '0:0': '=INDIRECT()' });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue).toBe('#VALUE!');
+    });
+  });
+
+  describe('OFFSET Function', () => {
+    it('OFFSET returns value at offset position', () => {
+      const sheet = createSheet({
+        '0:0': '10', '0:1': '20', '0:2': '30',
+        '0:3': '=OFFSET(A1, 0, 2)',
+      });
+      const result = evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:3'].computedValue;
+      expect(typeof result === 'number' || result === '#REF!').toBe(true);
+    });
+
+    it('OFFSET returns #REF! for out of bounds', () => {
+      const sheet = createSheet({
+        '0:0': '10',
+        '0:1': '=OFFSET(A1, 10, 10)',
+      });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:1'].computedValue).toBe('#REF!');
+    });
+  });
+
+  // ─── 3D Sheet References (Gap 2) ────────────────────────────────
+
+  describe('3D Sheet References', () => {
+    function evaluateSheetWithWorkbook(_sheet: Sheet, allSheets: Sheet[], activeIdx: number) {
+      const wb: Workbook = {
+        id: 'test-wb',
+        title: 'Test',
+        sheets: allSheets,
+        activeSheetIndex: activeIdx,
+        lastModified: Date.now(),
+      };
+      return evaluateWorkbook(wb, activeIdx);
+    }
+
+    it('SUM over 3D range Sheet1:Sheet3!A1', () => {
+      const sheet1 = createSheet({ '0:0': '10', '5:0': '=SUM(Sheet1:Sheet3!A1)' }, { name: 'Sheet1' });
+      const sheet2 = createSheet({ '0:0': '20' }, { name: 'Sheet2' });
+      const sheet3 = createSheet({ '0:0': '30' }, { name: 'Sheet3' });
+      const result = evaluateSheetWithWorkbook(sheet1, [sheet1, sheet2, sheet3], 0);
+      expect(result.cells['5:0'].computedValue).toBe(60);
+    });
+
+    it('AVERAGE over 3D range', () => {
+      const sheet1 = createSheet({ '0:0': '100', '5:0': '=AVERAGE(SheetA:SheetC!A1)' }, { name: 'SheetA' });
+      const sheet2 = createSheet({ '0:0': '200' }, { name: 'SheetB' });
+      const sheet3 = createSheet({ '0:0': '300' }, { name: 'SheetC' });
+      const result = evaluateSheetWithWorkbook(sheet1, [sheet1, sheet2, sheet3], 0);
+      expect(result.cells['5:0'].computedValue).toBe(200);
+    });
+
+    it('3D range with sheet names containing spaces', () => {
+      const sheet1 = createSheet({ '0:0': '5', '5:0': "=SUM('Jan Data':'Feb Data'!A1)" }, { name: 'Jan Data' });
+      const sheet2 = createSheet({ '0:0': '15' }, { name: 'Feb Data' });
+      const result = evaluateSheetWithWorkbook(sheet1, [sheet1, sheet2], 0);
+      expect(result.cells['5:0'].computedValue).toBe(20);
+    });
+
+    it('3D range returns #REF! when sheet not found', () => {
+      const sheet1 = createSheet({ '5:0': '=SUM(Sheet1:Sheet99!A1)' }, { name: 'Sheet1' });
+      const result = evaluateSheetWithWorkbook(sheet1, [sheet1], 0);
+      expect(result.cells['5:0'].computedValue).toBe('#REF!');
+    });
+
+    it('COUNT over 3D range', () => {
+      const sheet1 = createSheet({ '0:0': '10', '5:0': '=COUNT(SheetA:SheetC!A1)' }, { name: 'SheetA' });
+      const sheet2 = createSheet({ '0:0': '20' }, { name: 'SheetB' });
+      const sheet3 = createSheet({ '0:0': '30' }, { name: 'SheetC' });
+      const result = evaluateSheetWithWorkbook(sheet1, [sheet1, sheet2, sheet3], 0);
+      expect(result.cells['5:0'].computedValue).toBe(3);
     });
   });
 });

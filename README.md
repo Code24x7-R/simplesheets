@@ -1,200 +1,10 @@
 # SimpleSheet
 
-A lightweight, browser‑based spreadsheet no bloat — just a fast, offline‑capable grid that reads and writes Excel files.
+A lightweight, browser-based spreadsheet — fully client-side, reads and writes Excel files.
 
-**🌐 Live demo:** [https://code24x7-r.github.io/simplesheets/](https://code24x7-r.github.io/simplesheets/)
+**Live demo:** [https://code24x7-r.github.io/simplesheets/](https://code24x7-r.github.io/simplesheets/)
 
----
-
-## Features
-
-- 🖊️ **Cell editing** with Excel/Sheets-style interactions (point mode, F4 ref cycling, auto-complete)
-- 📊 **Formulas** — 50+ functions (SUM, AVERAGE, IF, date, math, string, logical) + arithmetic
-- 📋 **Copy / paste & drag‑fill** series extension
-- ↩️ **Undo / redo** — 50 levels
-- ↔️ **Column & row resizing** + freeze panes
-- 📏 **Column / Row Size dialog** — set exact widths and heights with preset buttons (50–200px columns, 20–80px rows) or a custom value; apply to one column/row or set as default. Touch-friendly for mobile devices.
-- 📥 **Import** — .xlsx, .csv, .tsv, .json
-- 📤 **Export** — .xlsx, .csv, .tsv, .json, .pdf
-- 🖨️ **PDF export** with page setup (orientation, margins, scaling)
-- 💾 **Auto-save** to localStorage + named save slots
-- 📑 **Multi-sheet workbooks** — add, rename, copy, delete sheets with cross-sheet formula references
-- ⚡ **Virtualized grid** — smooth scrolling for 100 k+ rows × unlimited columns
-- 🎯 **Clean menu-based UI** — File, Edit, View, Insert, Format, Help dropdown menus
-- 📌 **Tool bar** — one-click access to common functions
-- 🔢 **R1C1 reference format** — toggle between A1 and R1C1 notation by clicking the cell reference
-- 🧙 **Formula Wizard** — interactive step-by-step formula builder with nested function support, breadcrumb navigation, and live preview
-- 🔍 **Find & Replace** — search across cells with options for case sensitivity, exact match, formulas, and multi-sheet scope
-- 📐 **Smart cell alignment** — numbers, dates, and times auto-right-aligned; text stays left-aligned
-- 💰 **Accounting format** — left-aligned `$` symbol, right-aligned numbers, dash for zero values, decimal points align perfectly
-
----
-
-## UI Overview
-
-SimpleSheet uses a clean, menu-based interface:
-
-```
-┌──────────────────────────────────────────────────────────────────┐
-│  SimpleSheet                              File  Edit  View  Help │  Menu bar
-├──────────────────────────────────────────────────────────────────┤
-│  [A1 ▾]  fx  [═══════════════════════════════════════]           │  Formula bar
-│          SUM  AVERAGE  COUNT  MAX  MIN  IF  ...                  │  Function bar
-├──────────────────────────────────────────────────────────────────┤
-│  [Sheet1] [Sheet2] [+]                                           │  Sheet tabs
-├──────────────────────────────────────────────────────────────────┤
-│  │ A │ B │ C │ D │ E │                                           │  Grid
-│  └────────────────────────────────────────────────────────────   │
-│  Ready                                          100,000 × 26     │  Status bar
-└──────────────────────────────────────────────────────────────────┘
-```
-
-### Menu Structure
-
-| Menu | Actions |
-|------|---------|
-| **File** | New, Save, Open, Import (Excel/CSV/JSON), Export (Excel/CSV/JSON/PDF), Page Setup |
-| **Edit** | Undo, Redo, Copy, Cut, Paste, Clear Contents, Find & Replace, Delete (Row/Column/Cells) |
-| **View** | Freeze Panes, Unfreeze Panes |
-| **Insert** | Row Above, Row Below, Column Left, Column Right |
-| **Format** | Bold, Italic, Underline, Wrap Text, Alignment, Colors, Number Format, Clear Styles |
-| **Help** | Keyboard Shortcuts, About |
-
-### Keyboard Shortcuts
-
-| Shortcut | Action |
-|----------|--------|
-| `Ctrl+Z` | Undo |
-| `Ctrl+Y` | Redo |
-| `Ctrl+C` | Copy |
-| `Ctrl+X` | Cut |
-| `Ctrl+V` | Paste |
-| `Ctrl+H` | Find & Replace |
-| `Delete` | Clear cell contents |
-| `F2` | Edit cell / Toggle edit mode |
-| `F4` | Cycle reference absolute/relative |
-| `Enter` | Commit edit |
-| `Escape` | Cancel edit |
-
-### Number Formatting
-
-SimpleSheet supports Excel-style number formatting, accessible from the toolbar:
-
-| Button | Format | Example |
-|--------|--------|---------|
-| Gen | General (no formatting) | `42.5` |
-| 123 | Number (2 decimals) | `42.50` |
-| $ | Currency | `$42.50` |
-| Acct | Accounting | `$         42.50` (left-aligned $, right-aligned number, dash for zero) |
-| % | Percentage | `42.50%` |
-
-**Smart alignment**: Numbers, dates, and times are automatically right-aligned in cells. Text remains left-aligned. The Accounting format pins the `$` to the far-left edge and the number to the far-right edge, with decimal points aligning perfectly down the column. Zero values display as `-` for better readability.
-
-Supported format patterns include:
-- **Number**: `0`, `0.00`, `#,##0`, `#,##0.00`
-- **Currency**: `$#,##0.00`
-- **Accounting**: `_($* #,##0.00_);...` (Excel-compatible)
-- **Percentage**: `0%`, `0.00%`
-- **Date**: `mm/dd/yyyy`, `mm/dd/yy`, `yyyy-mm-dd`, `dd-mmm-yy`, `mmmm d, yyyy`
-- **Time**: `hh:mm`, `hh:mm:ss`, `h:mm AM/PM`
-- **Date+Time**: `mm/dd/yyyy hh:mm` (combined)
-- **Text**: `@` (preserves literal string, e.g., leading zeros in ZIP codes)
-- **Scientific**: `0.00E+00`
-
-**Date & Time serial numbers**: Excel stores dates as serial numbers (day 1 = Jan 1, 1900) and times as fractional days (0.5 = noon). SimpleSheet decodes these automatically when a date/time format is applied.
-
-**Text format (`@`)**: Forces numeric entries to be treated as literal text, preserving leading zeros (ZIP codes, ID numbers, credit card numbers) that would otherwise be stripped.
-
-### Charts
-
-Create data visualizations from your spreadsheet data:
-
-- **Insert** — Insert → Chart… (or use the chart button in the toolbar)
-- **Supported types** — Bar, Column, Line, Pie, Area, Scatter
-- **Data source** — Uses your current cell selection as the default data range
-- **Configuration** — Set title, axis labels, legend position, and data range
-- **Live preview** — See changes in real-time as you configure
-- **Floating placement** — Charts float on the sheet and can be repositioned by dragging
-- **Auto-update** — Charts refresh automatically when source data changes
-- **PDF export** — Charts are included when exporting to PDF
-- **Persistence** — Charts are saved and loaded with the workbook
-
-To create a chart:
-1. Select the data range you want to visualize (including headers)
-2. Open Insert → Chart… or click the chart button in the toolbar
-3. Choose a chart type and configure options
-4. Click "Insert Chart" to place it on the sheet
-
-### Reference Format Toggle
-
-Click the cell reference button (e.g., `A1`) in the formula bar to toggle between **A1** and **R1C1** notation. The preference is saved to localStorage.
-
-### Formula Wizard
-
-Open the interactive Formula Wizard using any of these methods:
-
-- **fx button** — Click the **fx** button in the formula bar
-- **Menu** — Insert → Formula Wizard…
-- **Keyboard shortcut** — `Ctrl+Shift+F`
-
-#### Smart Open Behavior
-
-The wizard intelligently adapts based on the current cell's contents:
-
-- **Cell has a formula** (e.g., `=SUM(B4:D4)`) — Wizard opens with all parameters pre-populated from the formula. Nested functions are shown as clickable elements you can drill into.
-- **Cell is empty** (or has a non-formula like `=A1+B1`) — A **Function Picker** appears with a searchable list of all 50+ functions. Pick one to start building.
-
-#### Import Example
-
-Opening the wizard on a cell containing `=IF(A1>0, SUM(B4:D4), 0)`:
-
-1. Wizard opens at root level showing IF parameters:
-   - `Condition`: `A1>0`
-   - `True_val`: `SUM(B4:D4)` (clickable — drills into nested SUM)
-   - `False_val`: `0`
-2. Click `SUM(B4:D4)` to navigate into the nested function:
-   - Breadcrumb shows: `f(x) IF > f(x) SUM`
-   - `Number1`: `B4:D4`
-3. Result preview updates in real-time as you edit parameters.
-4. Click **Apply to Cell** to commit the formula back to the cell.
-
-The wizard guides you through building complex formulas step-by-step:
-
-- **Breadcrumb navigation** — Track your position in nested functions (e.g., `f(x) ROUND > f(x) SUMIF`)
-- **Parameter inputs** — Each parameter has a labeled input with type validation
-- **Range picker** — Click the 🗗 icon to select ranges directly from the grid
-- **Nested functions** — Add functions within functions (up to 8 levels deep)
-- **Live preview** — See the compiled formula and result in real-time
-- **Type validation** — Inline warnings for parameter type mismatches
-- **Circular reference detection** — Warns when formula references its own cell
-
-#### Supported Functions
-
-The wizard supports 50+ functions organized by category:
-
-| Category | Functions |
-|----------|----------|
-| Math | SUM, AVERAGE, COUNT, COUNTA, MIN, MAX, PRODUCT, ABS, ROUND, SQRT, POWER, MOD, INT |
-| Conditional | SUMIF, COUNTIF, AVERAGEIF, SUMIFS, COUNTIFS |
-| Logical | IF, AND, OR, NOT, IFERROR |
-| Text | CONCAT, CONCATENATE, LEFT, RIGHT, MID, LEN, LOWER, UPPER, TRIM, TEXT, VALUE |
-| Statistical | MEDIAN, MODE, STDEV, VAR, LARGE, SMALL |
-| Date | NOW, TODAY, YEAR, MONTH, DAY, DATE, WEEKDAY |
-| Info | ROW, COLUMN, ROWS, COLUMNS |
-| Lookup | VLOOKUP, HLOOKUP, INDEX, MATCH, OFFSET |
-
-#### Wizard State Machine
-
-```
-INACTIVE → WIZARD_ROOT → NESTED_STEP → POINT_SELECTION
-              ↑               │
-              └──── Back ─────┘
-```
-
-1. **INACTIVE** — Spreadsheet in normal SELECT/EDIT mode
-2. **WIZARD_ROOT** — Top-level function parameters
-3. **NESTED_STEP** — Inside a nested function parameter
-4. **POINT_SELECTION** — Selecting a range on the grid for a RANGE parameter
+**For end-user documentation, see [MANUAL.md](./MANUAL.md).**
 
 ---
 
@@ -205,11 +15,127 @@ INACTIVE → WIZARD_ROOT → NESTED_STEP → POINT_SELECTION
 | Build | Vite 5 |
 | UI | React 18 + TypeScript |
 | Styling | Tailwind CSS (CDN) |
-| Virtualization | @tanstack/react-virtual |
-| Excel | SheetJS (xlsx) |
+| Virtualization | `@tanstack/react-virtual` |
+| Excel | SheetJS (`xlsx`) |
 | CSV/TSV | PapaParse |
 | PDF | html2pdf.js |
-| Testing | Jest |
+| Testing | Jest + React Testing Library |
+| Linting | ESLint + react-hooks plugin |
+
+---
+
+## Architecture
+
+SimpleSheet is a client-side SPA with no backend. State lives in React Context + `useReducer`, with a formula engine operating on sparse cell maps.
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                          App.tsx                                │
+│   (useReducer for UI state, orchestrates all handlers)          │
+├──────────────┬──────────────┬──────────────┬────────────────────┤
+│ HistoryCtx   │  FreezeCtx   │ PrintCtx     │  Local State       │
+│ (undo/redo)  │ (frozen rows │ (PDF export  │  (selection,       │
+│  useReducer  │  /cols)      │  config)     │   modal flags,     │
+│  50 levels)  │              │              │   editing FSM)     │
+├──────────────┴──────────────┴──────────────┴────────────────────┤
+│                   Component Tree                                 │
+│  MenuBar → Toolbar → FormulaBar → Grid (virtualized)            │
+│                ↓                                                │
+│  SheetTabs + Modals (Wizard, Charts, Find/Replace, etc.)       │
+├─────────────────────────────────────────────────────────────────┤
+│                    Formula Pipeline                              │
+│  formulaParser.ts → AST → formulaEngine.ts → computed values   │
+│       ↑                          ↓                              │
+│  formulaAutocomplete.ts    evaluateWorkbook (multi-sheet)       │
+│  formulaWizardSchema.ts    formulaWizardCompiler.ts             │
+├─────────────────────────────────────────────────────────────────┤
+│                   Service Layer                                  │
+│  excelImport/Export │ csvService │ jsonService │ pdfExport      │
+│  storageService (localStorage auto-save)                        │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### State Management
+
+No global store library (no Redux/Zustand). State is split across:
+
+1. **React Context providers** — `HistoryContext`, `FreezeContext`, `PrintSetupContext`
+2. **`useReducer` in `App.tsx`** — UI state (selection, modal flags, chart settings, filter state)
+3. **Custom hooks** — encapsulate behavior (editing FSM, autosave, cell styles, reference format)
+
+### Data Model
+
+Sparse cell storage for performance. Cells only exist in the map if they contain data:
+
+```ts
+// Key format: "row:col" (0-based), e.g. "0:0" → A1
+Sheet.cells: Record<string, Cell>
+
+interface Cell {
+  rawValue: string;             // user input ("=SUM(A1:A10)" or "42")
+  computedValue?: string|number|boolean|null;  // formula result
+  style?: CellStyle;            // optional formatting
+}
+
+interface Workbook {
+  sheets: Sheet[];              // ordered tabs
+  activeSheetIndex: number;
+  lastModified: number;
+}
+```
+
+### Formula Pipeline
+
+```
+Source text  →  formulaParser.ts (tokenizer + Pratt parser)  →  AST
+AST          →  formulaEngine.ts (evaluator with dep graph)   →  Value
+                                                    ↑
+                              evaluateWorkbook (multi-sheet cache)
+```
+
+- **`formulaParser.ts`** — Recursive descent parser producing AST nodes for refs, ranges, functions, operators
+- **`formulaEngine.ts`** — Tree-walking evaluator with 50+ built-in functions, cross-sheet dependency resolution
+- **`formulaWizardCompiler.ts`** — Compiles wizard parameter state into formula strings
+- **`formulaWizardSchema.ts`** — Function signatures and parameter metadata for the wizard UI
+- **`formulaAutocomplete.ts`** — Fuzzy function search for the formula bar dropdown
+
+### Cell Editing FSM
+
+`useCellEditing.ts` implements a formal state machine:
+
+```
+SELECT → ENTER → EDIT → POINT
+           ↑        │
+           └────────┘ (Escape returns to previous state)
+```
+
+| State | Trigger | Behavior |
+|-------|---------|----------|
+| SELECT | Default | Cell highlighted, no editing |
+| ENTER | Printable key / F2 | New value replaces content |
+| EDIT | F2 / click formula bar | Modify existing content in-place |
+| POINT | `=` + cell selection | Visual formula building with colored range highlights |
+
+### Build Defines
+
+Injected at compile time via `vite.config.ts`:
+
+| Define | Source | Fallback |
+|--------|--------|----------|
+| `__BUILD_TIMESTAMP__` | `BUILD_TIMESTAMP` env var or `new Date().toISOString()` | Current time |
+| `__GIT_COMMIT_HASH__` | `GITHUB_SHA` env var or `git rev-parse --short HEAD` | `"unknown"` |
+
+Declared in `src/vite-env.d.ts`. Used by `AboutModal` for build info display.
+
+### Code Chunking
+
+Production build splits vendor bundles:
+
+| Chunk | Contents |
+|-------|----------|
+| `vendor` | react, react-dom |
+| `xlsx` | SheetJS (large, lazy-loadable) |
+| `html2pdf.js` | PDF export engine |
 
 ---
 
@@ -223,80 +149,22 @@ INACTIVE → WIZARD_ROOT → NESTED_STEP → POINT_SELECTION
 ### Install & Run
 
 ```bash
-# Install dependencies
 npm install
-
-# Start dev server
-npm run dev
-
-# Build for production
-npm run build
-
-# Preview production build
-npm run preview
+npm run dev          # Vite dev server on port 3000
+npm run build        # tsc + vite build → dist/
+npm run preview      # Preview production build locally
 ```
 
-### Testing
+### Quality Gates
 
 ```bash
-# Unit tests (Jest) with coverage
-npm test
+npm test             # Jest with coverage
+npm run lint         # ESLint (max-warnings 0)
+npm run type-check   # tsc --noEmit
+npm run build        # Full production build
 ```
 
-Current test suite: **2076 tests** across 80 suites with **~96% line coverage**.
-
----
-
-## Offline Release
-
-SimpleSheet can be packaged into a self-contained `.tgz` that bundles the production build **and** all dependencies — no internet required to install or run it.
-
-### Create the package
-
-```bash
-npm run release:offline
-```
-
-This runs three steps in sequence:
-
-1. **`npm run build`** — TypeScript compiles and Vite produces the static `dist/` bundle.
-2. **`prepack-offline`** — temporarily prepares `package.json` for packing (flips `private`, sets `bundledDependencies`, includes `node_modules`).
-3. **`npm pack`** — produces `simplesheets-<version>.tgz` in the project root.
-
-After packing, a `postpack` hook automatically restores `package.json` to its original state, so your working tree stays clean.
-
-### Output
-
-| Detail | Value |
-|--------|-------|
-| File | `simplesheets-0.1.0.tgz` |
-| Compressed size | ~18 MB |
-| Unpacked size | ~105 MB |
-| Total files | ~8,800 (includes bundled deps) |
-
-### Install offline
-
-```bash
-# Install from the tarball (no registry access needed)
-npm install ./simplesheets-0.1.0.tgz
-
-# Or install globally to run from anywhere
-npm install -g ./simplesheets-0.1.0.tgz
-```
-
-### Serve the static build
-
-The tarball also contains the full `dist/` folder — a static site you can host anywhere:
-
-```bash
-# Unpack the tarball
-tar -xzf simplesheets-0.1.0.tgz
-
-# Serve with any static file server
-npx serve package/dist
-# or
-cd package/dist && python -m http.server 8080
-```
+Current targets: **≥95% line coverage**, **≥85% branch coverage**, **0 lint errors**, **0 type errors**.
 
 ---
 
@@ -305,205 +173,178 @@ cd package/dist && python -m http.server 8080
 ```
 simplesheets/
 ├── src/
+│   ├── App.tsx                    # Root component, useReducer orchestration
+│   ├── main.tsx                   # React entry point
+│   ├── types.ts                   # Core data model (Workbook, Sheet, Cell, Selection)
+│   ├── vite-env.d.ts              # Build define declarations
+│   │
 │   ├── components/
-│   │   ├── DropdownMenu.tsx    # Reusable dropdown menu component
-│   │   ├── MenuBar.tsx          # Top-level menu bar
-│   │   ├── FormulaBar.tsx       # Formula bar with function bar
-│   │   ├── Grid.tsx             # Virtualized grid
-│   │   ├── SheetTabs.tsx        # Multi-sheet tab strip
+│   │   ├── Grid.tsx               # Virtualized grid (@tanstack/react-virtual)
+│   │   ├── FormulaBar.tsx         # Formula input + autocomplete
+│   │   ├── FormulaWizard.tsx      # Step-by-step formula builder
+│   │   ├── FunctionPicker.tsx     # Searchable function list for wizard
+│   │   ├── MenuBar.tsx            # Top-level dropdown menus
+│   │   ├── Toolbar.tsx            # Formatting toolbar
+│   │   ├── SheetTabs.tsx          # Multi-sheet tab strip
+│   │   ├── FormulaHighlightOverlay.tsx  # Color-coded ref highlights
+│   │   ├── DropdownMenu.tsx       # Reusable dropdown component
+│   │   ├── ResizeHandle.tsx       # Column/row drag resize (mouse + touch)
+│   │   ├── ChartDialog.tsx        # Chart creation/config dialog
+│   │   ├── charts/
+│   │   │   ├── ChartRenderer.tsx  # Pure SVG chart rendering (6 types)
+│   │   │   └── ChartOverlay.tsx   # Floating chart display with drag
 │   │   ├── ImportExportBridge.tsx # Menu-to-import/export bridge
-│   │   └── ...                  # Import/Export/Print buttons
-│   ├── context/         # React Context providers (History, Freeze, PrintSetup)
-│   ├── hooks/           # Custom hooks (useCellEditing FSM, useAutosave, useReferenceFormat)
-│   ├── services/        # Import/Export services (Excel, CSV, JSON, PDF)
-│   ├── utils/           # Formula parser, evaluator, clipboard, benchmark
-│   ├── types.ts         # Core data model (Workbook, Sheet, Cell…)
-│   ├── App.tsx          # Root application component
-│   └── main.tsx         # React entry point
-├── docs/                # Requirements, feasibility, architecture
-├── cypress/e2e/         # End‑to‑end tests
-└── .github/workflows/   # CI configuration
+│   │   ├── ImportCsvButton.tsx / ImportExcelButton.tsx / ImportJsonButton.tsx
+│   │   ├── ExportCsvButton.tsx / ExportExcelButton.tsx / ExportJsonButton.tsx / ExportPdfButton.tsx
+│   │   ├── PasteModal.tsx / PasteSpecialModal.tsx
+│   │   ├── SearchReplaceModal.tsx / ColumnRowSizeModal.tsx
+│   │   ├── PrintSetupModal.tsx / FilenameModal.tsx
+│   │   ├── ShortcutsModal.tsx / AboutModal.tsx / FilterDropdown.tsx
+│   │   └── *.test.tsx              # Component tests (co-located)
+│   │
+│   ├── context/
+│   │   ├── HistoryContext.tsx     # Undo/redo via useReducer (50 levels)
+│   │   ├── FreezeContext.tsx      # Frozen panes state
+│   │   └── PrintSetupContext.tsx  # PDF export config
+│   │
+│   ├── hooks/
+│   │   ├── useCellEditing.ts      # Editing FSM (SELECT→ENTER→EDIT→POINT)
+│   │   ├── useCellStyles.ts       # Cell formatting state
+│   │   ├── useCellStyle.ts        # Single cell style helpers
+│   │   ├── useAutosave.ts         # Debounced localStorage persistence
+│   │   ├── useReferenceFormat.ts  # A1/R1C1 toggle
+│   │   ├── useFormulaWizard.ts    # Wizard state management
+│   │   ├── useChartSettings.ts    # Chart config persistence
+│   │   └── *.test.ts              # Hook tests (co-located)
+│   │
+│   ├── services/
+│   │   ├── excelImport.ts / excelExport.ts  # SheetJS read/write
+│   │   ├── csvService.ts          # PapaParse import/export
+│   │   ├── jsonService.ts         # JSON workbook serialization
+│   │   ├── pdfExport.ts           # html2pdf.js wrapper
+│   │   └── storageService.ts      # localStorage auto-save/load
+│   │
+│   └── utils/
+│       ├── formulaParser.ts       # Tokenizer + Pratt parser → AST
+│       ├── formulaEngine.ts       # AST evaluator, 50+ functions, dep graph
+│       ├── formulaAutocomplete.ts # Function search/fuzzy match
+│       ├── formulaValidation.ts   # Formula syntax validation
+│       ├── formulaWizardSchema.ts # Function signatures for wizard UI
+│       ├── formulaWizardCompiler.ts # Wizard state → formula string
+│       ├── formulaWizardImport.ts # Parse existing formula into wizard state
+│       ├── clipboard.ts           # Internal clipboard (copy/cut/paste)
+│       ├── clipboardParse.ts      # Parse system clipboard (plain text + HTML)
+│       ├── clipboard.styles.test.ts
+│       ├── pasteSpecial.ts        # Paste modes (values, formulas, formatting, transpose)
+│       ├── pasteWidths.ts         # Column width paste
+│       ├── fillRange.ts / fillSeries.ts  # Drag-fill with pattern detection
+│       ├── rangeMove.ts           # Range shift operations
+│       ├── numberFormat.ts        # Excel-compatible number formatting
+│       ├── chartData.ts           # Data extraction for charts
+│       ├── sheetOperations.ts     # Insert/delete rows/columns
+│       ├── sheetSort.ts           # Multi-column sort with ref adjustment
+│       ├── sheetFilter.ts         # Column filtering (checkbox + custom)
+│       ├── sheetSearch.ts         # Find implementation
+│       ├── highlightColors.ts     # Color assignment for formula refs
+│       ├── benchmark.ts           # Performance measurement utilities
+│       └── *.test.ts              # Utility tests (co-located)
+│
+├── docs/
+│   ├── PLAN.md            # Development roadmap (30+ phases)
+│   ├── BUGFIX.md          # Bug tracker
+│   ├── PROGRESS_LOG.md    # Change log
+│   ├── requirements.md    # Functional requirements
+│   └── feasibility.md     # Technical feasibility analysis
+│
+├── scripts/
+│   ├── prepack-offline.mjs # Prepare package.json for offline pack
+│   └── postpack-offline.mjs # Restore package.json after pack
+│
+├── .github/workflows/     # CI configuration
+├── coverage/              # Jest coverage output
+├── tasks.json             # Waterfall task breakdown
+├── vite.config.ts         # Build config + define injection
+├── jest.config.cjs        # Test configuration
+├── tsconfig.json          # TypeScript config
+└── tailwind.config.js     # Tailwind CSS config
 ```
+
+---
+
+## Testing
+
+Tests are co-located with source files (`*.test.ts` / `*.test.tsx`). Uses Jest + React Testing Library with jsdom environment.
+
+```bash
+npm test                          # All tests + coverage
+npx jest --testPathPattern=formulaEngine   # Single file
+npx jest --watch                  # Watch mode
+```
+
+Key testing patterns:
+- **Virtualizer mocks** — always include `measure: jest.fn()` when mocking `@tanstack/react-virtual`
+- **Ref-based state** — handlers use refs (`selectionRef`, `sessionRef`) to avoid stale closures
+- **Modal inputs** — call `e.stopPropagation()` on inputs inside modals to prevent global shortcuts
+- **Edit input timing** — `editInputRef.current` is `null` on first render; null-check before invoking methods
+
+---
+
+## Offline Release
+
+Produces a self-contained `.tgz` with all dependencies bundled — no internet required:
+
+```bash
+npm run release:offline
+```
+
+This runs: `npm run build` → `prepack-offline` (prepare package.json, set `bundledDependencies`) → `npm pack` → `postpack` (restore original package.json).
+
+| Detail | Value |
+|--------|-------|
+| Output | `simplesheets-0.1.0.tgz` |
+| Compressed | ~18 MB |
+| Unpacked | ~105 MB |
+
+Install: `npm install ./simplesheets-0.1.0.tgz` or `npm install -g ./simplesheets-0.1.0.tgz`
+
+The tarball contains the full `dist/` — a static site servable by any HTTP server.
 
 ---
 
 ## Desktop Installer (Tauri)
 
-SimpleSheet can be packaged as a native Windows desktop app with an installer using [Tauri](https://v2.tauri.app/). Tauri produces a lightweight `.msi` installer — no Electron bloat, the app uses the system webview.
-
-### Prerequisites
-
-| Tool | Purpose | Install |
-|------|---------|---------|
-| Rust | Tauri's backend + toolchain | [rustup.rs](https://rustup.rs/) (install `stable-msvc`) |
-| Windows SDK | MSVC build tools | Included with Visual Studio Build Tools |
-| Node.js ≥ 18 | Frontend build | Already required by SimpleSheet |
-
-> **Note:** The Rust + MSVC toolchain is ~4 GB. The initial Tauri build will take several minutes; subsequent builds are incremental and much faster.
-
-### Add Tauri to the project
+Package as a native Windows app with MSI installer:
 
 ```bash
-# Install the Tauri CLI and dependencies
-npm install -D @tauri-apps/cli@latest
-npm install @tauri-apps/api@latest
-
-# Initialize Tauri (creates src-tauri/ with default config)
-npx tauri init \
-  --app-name simplesheets \
-  --dev-url http://localhost:5173 \
-  --dist-dir ../dist \
-  --before-dev-command "npm run dev" \
-  --before-build-command "npm run build"
-```
-
-After init, update `src-tauri/tauri.conf.json` to match the project:
-
-```json
-{
-  "productName": "SimpleSheet",
-  "version": "0.1.0",
-  "identifier": "com.simplesheets.app",
-  "build": {
-    "beforeBuildCommand": "npm run build",
-    "beforeDevCommand": "npm run dev",
-    "devUrl": "http://localhost:5173",
-    "frontendDist": "../dist"
-  },
-  "app": {
-    "windows": [
-      {
-        "title": "SimpleSheet",
-        "width": 1200,
-        "height": 800,
-        "minWidth": 800,
-        "minHeight": 600,
-        "resizable": true,
-        "fullscreen": false
-      }
-    ],
-    "security": {
-      "csp": null
-    }
-  },
-  "bundle": {
-    "active": true,
-    "targets": ["msi", "nsis"],
-    "icon": [
-      "icons/32x32.png",
-      "icons/128x128.png",
-      "icons/128x128@2x.png",
-      "icons/icon.icns",
-      "icons/icon.ico"
-    ],
-    "resources": [],
-    "externalBin": [],
-    "category": "Productivity",
-    "shortDescription": "Lightweight spreadsheet for small businesses",
-    "longDescription": "A fast, offline-capable spreadsheet that reads and writes Excel files. No server, no account — just your data."
-  }
-}
-```
-
-### Generate app icons
-
-Tauri requires icons in multiple formats. Place them in `src-tauri/icons/`:
-
-```bash
-# Using the Tauri CLI (recommended)
-npx tauri icon path/to/source-image.png
-
-# Or manually create the icons/ directory with:
-#   32x32.png, 128x128.png, 128x128@2x.png, icon.icns, icon.ico
-```
-
-### Build the Windows installer
-
-```bash
-# Build the MSI installer (production)
+npm install -D @tauri-apps/cli @tauri-apps/api
+npx tauri init
 npx tauri build
 ```
 
-Output:
+Output: `src-tauri/target/release/bundle/msi/`, `nsis/`, and standalone `.exe`. MSI is ~5–8 MB (uses system WebView2).
 
-| Artifact | Path | Notes |
-|----------|------|-------|
-| MSI installer | `src-tauri/target/release/bundle/msi/` | Double-click to install per-user |
-| NSIS installer | `src-tauri/target/release/bundle/nsis/` | Classic installer with wizard |
-| Portable exe | `src-tauri/target/release/simplesheets.exe` | Standalone executable |
-
-The MSI is ~5–8 MB (vs ~150+ MB for Electron) because it uses the system WebView2.
-
-### Development with Tauri
-
-```bash
-# Run the app natively with hot reload
-npm run tauri dev
-```
-
-This starts the Vite dev server, then opens a native window pointing at it. All keyboard shortcuts, menus, and grid interactions work identically to the browser version.
-
-### CI/CD (GitHub Actions)
-
-Add a workflow to build and publish the Windows installer automatically:
-
-```yaml
-# .github/workflows/tauri-release.yml
-name: Release Desktop App
-on:
-  push:
-    tags: ['v*']
-
-jobs:
-  build-windows:
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: stable-msvc
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-      - run: npm ci
-      - uses: tauri-apps/tauri-action@v0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tagName: v__VERSION__
-          releaseName: "SimpleSheet v__VERSION__"
-          releaseBody: "Windows desktop installer for SimpleSheet."
-          releaseDraft: true
-          prerelease: false
-```
-
-Pushing a `v*` tag builds the MSI and creates a GitHub Release with the installer attached.
-
-### Permissions
-
-SimpleSheet needs no special Tauri capabilities — it's a pure frontend app. No filesystem, clipboard, or dialog permissions are required because:
-
-- File I/O uses the browser's native `<input type="file">` and Blob downloads
-- Clipboard uses the standard `navigator.clipboard` API
-- No native dialogs needed
-
-The default `tauri.conf.json` (with no capability permissions) is sufficient.
+SimpleSheet needs no Tauri capabilities — file I/O uses `<input type="file">` + Blob downloads, clipboard uses `navigator.clipptr`, no native dialogs.
 
 ---
 
 ## Deployment
 
-The production build (`dist/`) is a static site that can be hosted anywhere:
+`dist/` is a static site — deployable to:
+- **GitHub Pages** — push `dist/` to `gh-pages` (set `GITHUB_PAGES=true` for subpath base)
+- **Netlify/Vercel** — connect repo
+- **Any static host** — upload `dist/`
+- **Desktop** — see Tauri section above
 
-- **Netlify:** Connect the repo → done. See `netlify.toml`.
-- **Vercel:** `vercel --prod`.
-- **GitHub Pages:** Push `dist/` to `gh-pages` branch.
-- **Any static host:** Upload the `dist/` folder.
-- **Desktop:** See [Desktop Installer (Tauri)](#desktop-installer-tauri) above.
+---
+
+## Contributing
+
+- Read [AGENTS.md](./AGENTS.md) for AI-assisted development guidelines
+- Follow the Feature Track or Bugfix Track workflow in `AGENTS.md`
+- Run full verification before submitting: `npm test && npm run lint && npm run type-check && npm run build`
 
 ---
 
 ## License
 
-MIT
+MIT — see [LICENSE](./LICENSE).

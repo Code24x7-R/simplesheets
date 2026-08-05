@@ -30,6 +30,8 @@ export interface FunctionDefinition {
   parameters: FunctionParameter[];
   returnType: ParameterType;
   syntaxTemplate: string;
+  /** Optional list of constraints/guidance notes displayed to the user. */
+  constraints?: string[];
 }
 
 export interface ParameterNodeValue {
@@ -615,6 +617,11 @@ export const FUNCTION_SCHEMAS: Record<string, FunctionDefinition> = {
     description: 'Vertical lookup in a table',
     returnType: 'ANY',
     syntaxTemplate: 'VLOOKUP(value, table, col, [exact])',
+    constraints: [
+      'Approximate match (default) requires the first column sorted in ascending order',
+      'Column index is 1-based (1 = first column of the table)',
+      'Returns #N/A if value not found (exact match) or value is smaller than all entries (approximate)',
+    ],
     parameters: [
       { id: 'value', name: 'Value', description: 'Value to look up', type: 'ANY', isRequired: true, allowNestedFunction: true },
       { id: 'table', name: 'Table', description: 'Table range to search', type: 'RANGE', isRequired: true, allowNestedFunction: false },
@@ -628,6 +635,11 @@ export const FUNCTION_SCHEMAS: Record<string, FunctionDefinition> = {
     description: 'Horizontal lookup in a table',
     returnType: 'ANY',
     syntaxTemplate: 'HLOOKUP(value, table, row, [exact])',
+    constraints: [
+      'Approximate match (default) requires the first row sorted in ascending order (left to right)',
+      'Row index is 1-based (1 = first row of the table)',
+      'Returns #N/A if value not found (exact match) or value is smaller than all entries (approximate)',
+    ],
     parameters: [
       { id: 'value', name: 'Value', description: 'Value to look up', type: 'ANY', isRequired: true, allowNestedFunction: true },
       { id: 'table', name: 'Table', description: 'Table range to search', type: 'RANGE', isRequired: true, allowNestedFunction: false },
@@ -641,6 +653,10 @@ export const FUNCTION_SCHEMAS: Record<string, FunctionDefinition> = {
     description: 'Value at row/col in range',
     returnType: 'ANY',
     syntaxTemplate: 'INDEX(range, row, [col])',
+    constraints: [
+      'Row and column numbers are 1-based (1 = first row/column)',
+      'Returns #REF! if row or column exceeds range dimensions',
+    ],
     parameters: [
       { id: 'range', name: 'Range', description: 'Range to index', type: 'RANGE', isRequired: true, allowNestedFunction: false },
       { id: 'row', name: 'Row', description: 'Row number (1-based)', type: 'NUMBER', isRequired: true, allowNestedFunction: false },
@@ -653,6 +669,12 @@ export const FUNCTION_SCHEMAS: Record<string, FunctionDefinition> = {
     description: 'Position of value in range',
     returnType: 'NUMBER',
     syntaxTemplate: 'MATCH(value, range, [type])',
+    constraints: [
+      'Type 0: exact match — range can be unsorted',
+      'Type 1 (default): largest value ≤ lookup — range must be sorted ascending',
+      'Type -1: smallest value ≥ lookup — range must be sorted descending',
+      'Returns #N/A if no match found',
+    ],
     parameters: [
       { id: 'value', name: 'Value', description: 'Value to find', type: 'ANY', isRequired: true, allowNestedFunction: true },
       { id: 'range', name: 'Range', description: 'Range to search', type: 'RANGE', isRequired: true, allowNestedFunction: false },
@@ -671,6 +693,86 @@ export const FUNCTION_SCHEMAS: Record<string, FunctionDefinition> = {
       { id: 'cols', name: 'Cols', description: 'Columns to offset (positive=right)', type: 'NUMBER', isRequired: true, allowNestedFunction: false },
       { id: 'h', name: 'H', description: 'Height of returned range', type: 'NUMBER', isRequired: false, allowNestedFunction: false },
       { id: 'w', name: 'W', description: 'Width of returned range', type: 'NUMBER', isRequired: false, allowNestedFunction: false },
+    ],
+  },
+
+  // ── Statistical (expanded) ────────────────────────────────────
+  RANK: {
+    name: 'RANK',
+    category: 'STATISTICAL',
+    description: 'Rank of a number in a data set',
+    returnType: 'NUMBER',
+    syntaxTemplate: 'RANK(number, range, [order])',
+    parameters: [
+      { id: 'number', name: 'Number', description: 'Value to rank', type: 'NUMBER', isRequired: true, allowNestedFunction: true },
+      { id: 'range', name: 'Range', description: 'Data set to rank against', type: 'RANGE', isRequired: true, allowNestedFunction: false },
+      { id: 'order', name: 'Order', description: '0=descending (default), 1=ascending', type: 'NUMBER', isRequired: false, allowNestedFunction: false },
+    ],
+  },
+  QUARTILE: {
+    name: 'QUARTILE',
+    category: 'STATISTICAL',
+    description: 'Quartile of a data set (0=min, 1=25%, 2=median, 3=75%, 4=max)',
+    returnType: 'NUMBER',
+    syntaxTemplate: 'QUARTILE(range, quart)',
+    parameters: [
+      { id: 'range', name: 'Range', description: 'Data set', type: 'RANGE', isRequired: true, allowNestedFunction: false },
+      { id: 'quart', name: 'Quart', description: 'Quartile (0-4)', type: 'NUMBER', isRequired: true, allowNestedFunction: false },
+    ],
+  },
+  PERCENTILE: {
+    name: 'PERCENTILE',
+    category: 'STATISTICAL',
+    description: 'K-th percentile of a data set (k between 0 and 1)',
+    returnType: 'NUMBER',
+    syntaxTemplate: 'PERCENTILE(range, k)',
+    parameters: [
+      { id: 'range', name: 'Range', description: 'Data set', type: 'RANGE', isRequired: true, allowNestedFunction: false },
+      { id: 'k', name: 'K', description: 'Percentile value (0-1)', type: 'NUMBER', isRequired: true, allowNestedFunction: false },
+    ],
+  },
+
+  // ── Conditional Aggregation (expanded) ─────────────────────────
+  AVERAGEIFS: {
+    name: 'AVERAGEIFS',
+    category: 'CONDITIONAL',
+    description: 'Average of cells matching multiple criteria',
+    returnType: 'NUMBER',
+    syntaxTemplate: 'AVERAGEIFS(avgRange, critRange1, crit1, ...)',
+    parameters: [
+      { id: 'avg_range', name: 'Avg_range', description: 'Range to average', type: 'RANGE', isRequired: true, allowNestedFunction: false },
+      { id: 'crit_range1', name: 'Crit_range1', description: 'First criteria range', type: 'RANGE', isRequired: true, allowNestedFunction: false },
+      { id: 'crit1', name: 'Crit1', description: 'First criteria', type: 'STRING', isRequired: true, allowNestedFunction: false },
+    ],
+  },
+
+  // ── Date (expanded) ───────────────────────────────────────────
+  DATEDIF: {
+    name: 'DATEDIF',
+    category: 'DATE',
+    description: 'Difference between two dates in years, months, or days',
+    returnType: 'NUMBER',
+    syntaxTemplate: 'DATEDIF(start, end, unit)',
+    constraints: [
+      'Unit must be "Y" (years), "M" (months), or "D" (days)',
+      'Returns #VALUE! for invalid unit or if start date > end date',
+    ],
+    parameters: [
+      { id: 'start', name: 'Start', description: 'Start date', type: 'NUMBER', isRequired: true, allowNestedFunction: false },
+      { id: 'end', name: 'End', description: 'End date', type: 'NUMBER', isRequired: true, allowNestedFunction: false },
+      { id: 'unit', name: 'Unit', description: 'Y=years, M=months, D=days', type: 'STRING', isRequired: true, allowNestedFunction: false },
+    ],
+  },
+
+  // ── Lookup (expanded) ─────────────────────────────────────────
+  INDIRECT: {
+    name: 'INDIRECT',
+    category: 'LOOKUP',
+    description: 'Reference specified by a text string',
+    returnType: 'ANY',
+    syntaxTemplate: 'INDIRECT(refText)',
+    parameters: [
+      { id: 'ref_text', name: 'Ref_text', description: 'Reference as text', type: 'STRING', isRequired: true, allowNestedFunction: false },
     ],
   },
 };
