@@ -4,6 +4,77 @@
 
 ---
 
+### 2026-07-31 [FEATURE] Phase 21g: Chart Enhancements
+- **Goal**: Improve chart usability with range picker, persistent settings, and resize handles
+- **Changes**:
+  - Stage 21g.1: Range picker integration — 📎 icon in ChartDialog, POINT mode for range selection (6 tests)
+  - Stage 11g.2: Chart settings persistence — useChartSettings hook with localStorage (7 tests)
+  - Stage 21g.3: Multiple charts support — z-index management, drag-to-reposition, minimize/restore
+  - Stage 21g.4: Chart resize handles — 8 corner/edge handles with live preview, undo/redo support
+- **Files**: `src/components/ChartDialog.tsx`, `src/components/charts/ChartOverlay.tsx`, `src/hooks/useChartSettings.ts`, `src/App.tsx`
+- **Tests**: 13+ new tests (6 range picker + 7 settings hook)
+- **Results**: 2602 tests pass, lint clean, type-check clean, build clean
+
+### 2026-07-31 [FEATURE] Phase 29: Number Formatting — Date/Time & Text
+- **Goal**: Extend number format engine for Excel-compatible date/time serial numbers and text format
+- **Changes**:
+  - `numberFormat.ts` — Extended with `formatDate`, `formatTime`, `parseDateTimeFormat`, `tokenizeFormat`, `isTextFormat`. Updated `isNumberFormat` to include date/time formats
+  - `numberFormat.dateTime.test.ts` — 68 new tests covering date serial decoding, all format tokens, AM/PM, text format preservation
+  - Toolbar buttons — Added Date (📅) and Text (Abc) format buttons
+  - Format menu — Added Date/Text options under Number Format
+- **Files**: `src/utils/numberFormat.ts`, `src/utils/numberFormat.dateTime.test.ts`, `src/components/Toolbar.tsx`, `src/components/MenuBar.tsx`, `src/components/Grid.tsx`
+- **Test results**: 2373 tests pass (was 2304), lint clean, type-check clean, build clean
+
+### 2026-07-31 [FEATURE] Phase 28: Feature Enhancements — Mobility Platforms
+- **Goal**: Improve FormulaWizard usability on mobile/touch platforms and fix related bugs
+- **Changes**:
+  - Stage 28a: Touch-friendly Accept button for POINT mode (can't press Enter on touch devices)
+  - Stage 28b: Fix formula placement bug (B-011) — formula placed in target cell, not last range cell
+  - Stage 28c: Fix false circular reference warning (B-012) — proper numeric range containment check
+  - Stage 28d: Focus restoration after wizard closes — `focusCell` method on GridHandle
+- **Files**: `src/components/FormulaWizard.tsx`, `src/components/Grid.tsx`, `src/App.tsx`, `src/utils/formulaWizardCompiler.ts`
+- **Tests**: 16 new tests across 4 test files
+- **Bug fixes**: B-011 (wrong cell placement), B-012 (false circular warning)
+
+### 2026-07-30 [FEATURE] Phase 27: POINT Mode & Modal Interaction
+- **Goal**: Fix FormulaWizard modal interfering with POINT-mode range selection
+- **Changes**:
+  - Stage 27a: Reproduce 5 bugs with 20 tests
+  - Stage 27b: Modal transparency in POINT mode — semi-transparent overlay, click-through to grid
+  - Stage 27c: POINT state preservation across modal re-renders
+  - Stage 27d: Double-Escape behavior — first Esc cancels POINT mode, second Esc closes modal
+- **Files**: `src/components/FormulaWizard.tsx`, `src/components/FormulaBar.tsx`, `src/hooks/useFormulaWizard.ts`, `src/components/Grid.tsx`, `src/App.tsx`
+- **Tests**: 38 new tests across 4 test files (FormulaWizard.pointmode, transparency, statepreserv, escape)
+
+### 2026-07-30 [FEATURE] Phase 26: Range Operations Improvements
+- **Goal**: Improve range copy/paste, drag-and-drop, fill handle, and paste-special
+- **Changes**:
+  - Stage 26a: Style-preserving copy — 19 tests (clipboard.styles + App.pasteStyles)
+  - Stage 26b: Paste Special modal — Everything/Formulas/Values/Formatting modes + transpose checkbox (53 tests)
+  - Stage 26c: Drag-and-drop range move — drag handle, ghost preview, onMoveRange callback (23 tests)
+  - Stage 26d: Cross-sheet paste with formatting — column width carrying via extractColumnWidths/applyColumnWidths (17 tests)
+  - Stage 26e: Fill handle for ranges — computeFillRange with filtered row support (11 tests)
+- **New files**: `src/utils/pasteSpecial.ts`, `src/utils/rangeMove.ts`, `src/utils/fillRange.ts`, `src/utils/pasteWidths.ts`, `src/components/PasteSpecialModal.tsx`
+- **Modified**: `src/components/Grid.tsx`, `src/App.tsx`, `src/components/Clipboard.ts`
+- **Tests**: 129 new tests across 5 stages
+
+---
+
+### 2026-08-05 [FEATURE] Phase 30: Mobile Support — Column/Row Size Selector
+- **Problem**: No way to set exact column widths or row heights; drag handles are imprecise and difficult on mobile/touch devices
+- **Solution**: Added `ColumnRowSizeModal` dialog + touch support for `ResizeHandle`
+- **Changes**:
+  - New `ColumnRowSizeModal.tsx` — toggle between Column/Row mode, preset buttons (50/80/100/150/200 for columns, 20/28/40/60/80 for rows), custom number input, "set as default" checkbox, touch-friendly 44px min tap targets
+  - Touch event support added to `ResizeHandle.tsx` (touchstart/touchmove/touchend)
+  - Added `onColumnRowSize` prop to `MenuBar` with "Column / Row Size…" item under Format menu
+  - Added `handleColumnRowSizeApply` handler in App.tsx — sets per-column/row size or default size, with status message
+  - Renders modal in App.tsx with current cell position and sheet defaults
+- **Files**: `src/components/ColumnRowSizeModal.tsx`, `src/components/ColumnRowSizeModal.test.tsx`, `src/components/ResizeHandle.tsx`, `src/components/ResizeHandle.test.tsx`, `src/components/MenuBar.tsx`, `src/components/MenuBar.test.tsx`, `src/App.tsx`, `src/App.menu.test.tsx`, `README.md`, `docs/PLAN.md`
+- **Tests**: 31 new tests (20 modal + 4 touch + 1 menu + 2 integration + 4 test setup fixes)
+- **Results**: 2647 tests pass, lint clean, type-check clean, build clean
+
+---
+
 ### 2026-08-01 [COVERAGE] ImportExportBridge event handlers + file open
 - **Target**: ImportExportBridge.tsx was at 0% branches (never tested)
 - **Gap**: Component was tested for import events but not export events or file open handler

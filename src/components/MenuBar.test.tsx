@@ -53,6 +53,7 @@ describe('MenuBar', () => {
     onSetBorderAll: jest.fn(),
     onSetBorderOutside: jest.fn(),
     onClearBorders: jest.fn(),
+    onColumnRowSize: jest.fn(),
     onSortAscending: jest.fn(),
     onSortDescending: jest.fn(),
     onToggleFilter: jest.fn(),
@@ -400,6 +401,13 @@ describe('MenuBar', () => {
     fireEvent.click(screen.getByText('Format'));
     fireEvent.click(screen.getByText('Clear Styles'));
     expect(defaultProps.onClearStyles).toHaveBeenCalled();
+  });
+
+  it('Format menu triggers Column / Row Size callback', () => {
+    render(<MenuBar {...defaultProps} />);
+    fireEvent.click(screen.getByText('Format'));
+    fireEvent.click(screen.getByText('Column / Row Size…'));
+    expect(defaultProps.onColumnRowSize).toHaveBeenCalled();
   });
 
   it('Help menu shows About and Shortcuts', () => {

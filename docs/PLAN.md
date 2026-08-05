@@ -4,11 +4,11 @@
 Achieve a clean, clutter-free UI with standardized dropdown menus, formula wizard, formula bar, and R1C1 reference format.
 
 ## Current State
-- **2378 tests** across **96 suites**, All passing
+- **2647 tests** across **105 suites**, All passing
 - Lint clean (0 warnings), Type-check clean, Build clean
-- Coverage: **93.94% stmts, 85.03% branches, 95.76% funcs, 95.31% lines**
-- Phases 1–29 defined; Phases 1–28 and 29a/29b/29c complete ✅
-- Phase 29d (docs/tests) and Phases 21–23 (Charts, Conditional Formatting, Data Validation) planned 📋
+- Coverage: **91.29% stmts, 84.47% branches, 90.6% funcs, 92.69% lines**
+- Phases 1–30 complete ✅
+- Phases 22–23 (Conditional Formatting, Data Validation) planned 📋
 
 ---
 
@@ -235,7 +235,7 @@ Achieve a clean, clutter-free UI with standardized dropdown menus, formula wizar
 
 ---
 
-## Phase 20: Number Formatting Enhancements (2026-07-29)
+## Phase 20: Number Formatting Enhancements — COMPLETE ✅ (2026-07-29)
 *Auto-alignment for numbers/dates/times and Accounting format with left-aligned $ and right-aligned numbers.*
 
 ### Phase 20a: Auto-Alignment for Numeric Values — COMPLETE ✅
@@ -308,7 +308,7 @@ Achieve a clean, clutter-free UI with standardized dropdown menus, formula wizar
 
 ---
 
-## Phase 2: FSM Hook Completion (`useCellEditing.ts`)
+## Phase 2: FSM Hook Completion (`useCellEditing.ts`) — COMPLETE ✅
 *Current: 92.89% lines, 87.02% branches. Target: 100% of remaining uncovered lines.*
 
 | Uncovered Lines | What They Do |
@@ -332,7 +332,7 @@ Achieve a clean, clutter-free UI with standardized dropdown menus, formula wizar
 
 ---
 
-## Phase 3: FormulaBar.tsx (94.73% lines, 84.55% branches)
+## Phase 3: FormulaBar.tsx — COMPLETE ✅
 *Current: 94.73% lines, 84.55% branches. Remaining gaps: L346-350,412,463-467,499.*
 
 **Subtasks:**
@@ -348,7 +348,7 @@ Achieve a clean, clutter-free UI with standardized dropdown menus, formula wizar
 
 ---
 
-## Phase 4: Grid.tsx (87.63% lines, 87.16% branches)
+## Phase 4: Grid.tsx — COMPLETE ✅
 *Current: 87.63% lines, 87.16% branches. Remaining gaps: L225,276,327-328,520-521,530,677,718-719,881-883,889-891,1146-1149,1188-1192,1207-1224,1291-1316,1567,1749-1750,1792-1794,1933-1934,2033-2091,2100,2131,2146,2151,2163,2176-2178,2228,2247,2260-2262.*
 
 **Subtasks:**
@@ -366,7 +366,7 @@ Achieve a clean, clutter-free UI with standardized dropdown menus, formula wizar
 
 ---
 
-## Phase 5: App.tsx (91.05% lines, 76.04% branches)
+## Phase 5: App.tsx — COMPLETE ✅
 *Current: 91.05% lines, 76.04% branches. Remaining gaps: L236-242,289-290,394-397,464,513-517,538,978-979,1034,1062,1147-1157,1200-1205,1220-1225,1233-1234,1246-1264,1316-1317,1328-1338,1384-1385,1612-1613,1697-1699.*
 
 **Subtasks:**
@@ -405,7 +405,7 @@ Achieve a clean, clutter-free UI with standardized dropdown menus, formula wizar
 
 ---
 
-## Phase 7: formulaEngine.ts (97.53% lines, 76.04% branches)
+## Phase 7: formulaEngine.ts — COMPLETE ✅
 *Current: 97.53% lines, 76.04% branches. Remaining gaps: L183,291,293-295,589,612-618,693,951,956,1034,1157,1202.*
 
 **Subtasks:**
@@ -423,7 +423,7 @@ Achieve a clean, clutter-free UI with standardized dropdown menus, formula wizar
 
 ---
 
-## Phase 9: UI Overhaul (2026-07-25)
+## Phase 9: UI Overhaul — COMPLETE ✅ (2026-07-25)
 *Consolidate all UI into clean dropdown menus with formula wizard and function bar.*
 
 ### Phase 9a: Dropdown Menu System — COMPLETE ✅
@@ -455,7 +455,7 @@ Achieve a clean, clutter-free UI with standardized dropdown menus, formula wizar
 
 ---
 
-## Phase 10: Nested Formula Wizard (2026-07-25)
+## Phase 10: Nested Formula Wizard — COMPLETE ✅ (2026-07-25)
 - [ ] Interactive step-by-step formula builder with nested function support.
 
 ### Phase 10a: Function Schema & Data Model — COMPLETE ✅
@@ -500,7 +500,7 @@ Achieve a clean, clutter-free UI with standardized dropdown menus, formula wizar
 
 > **Note:** Phase 11 is not present in this plan (gap in numbering between Phases 10 and 12).
 
-## Phase 12: Search & Replace (2026-07-26)
+## Phase 12: Search & Replace — COMPLETE ✅ (2026-07-26)
 *Find & Replace modal with configurable search options and multi-sheet scope.*
 
 ### Phase 12a: Core Search Engine — COMPLETE ✅
@@ -533,7 +533,7 @@ Achieve a clean, clutter-free UI with standardized dropdown menus, formula wizar
 
 ---
 
-## Phase 13: Paste Experience Improvements (2026-07-27)
+## Phase 13: Paste Experience Improvements — COMPLETE ✅ (2026-07-27)
 *Make plain text pasting better than Excel/Sheets with bounds safety, inline editing, text wrapping, preview, and formula adjustment.*
 
 ### Phase 13a: Bounds Checking — COMPLETE ✅
@@ -583,7 +583,7 @@ Achieve a clean, clutter-free UI with standardized dropdown menus, formula wizar
 
 ---
 
-## Phase 14: Keyboard Shortcut Audit & Fixes (2026-07-27)
+## Phase 14: Keyboard Shortcut Audit & Fixes — COMPLETE ✅ (2026-07-27)
 *- [x] Review all keyboard shortcuts, identify implementation/wiring gaps, and fix them.*
 
 ### Phase 14a: Global Shortcuts — COMPLETE ✅
@@ -612,7 +612,7 @@ Achieve a clean, clutter-free UI with standardized dropdown menus, formula wizar
 ---
 
 
-## Phase 18: Sort & Filter (2026-07-28)
+## Phase 18: Sort & Filter — COMPLETE ✅ (2026-07-28)
 *Implement Excel/Google Sheets-style sort and filter functionality.*
 
 ### Phase 18a: Sort Utility — COMPLETE ✅
@@ -730,7 +730,7 @@ Achieve a clean, clutter-free UI with standardized dropdown menus, formula wizar
 
 ---
 
-## Phase 16: Keyboard Shortcut Gaps (2026-07-27)
+## Phase 16: Keyboard Shortcut Gaps — COMPLETE ✅ (2026-07-27)
 *Fill gaps identified by comparing implementation against `excel_web_editor_shortcuts-v4.json`.*
 
 ### Phase 16a: Edit Mode Enhancements — COMPLETE ✅
@@ -755,7 +755,7 @@ Achieve a clean, clutter-free UI with standardized dropdown menus, formula wizar
 
 ---
 
-## Phase 17: Cell Editing Workflows (2026-07-27)
+## Phase 17: Cell Editing Workflows — COMPLETE ✅ (2026-07-27)
 *Implement Excel-compatible cell editing workflows per specification.*
 
 ### Phase 17a: Formula View Toggle — COMPLETE ✅
@@ -1686,7 +1686,7 @@ Improve FormulaWizard usability on mobile/touch platforms (iOS Safari, Android C
 
 ---
 
-## Phase 29: Number Formatting — Date/Time & Text — PLANNED 📋
+## Phase 29: Number Formatting — Date/Time & Text — COMPLETE ✅ (2026-07-31)
 *Extend the number format engine to support Excel-compatible date/time serialization and text-format preservation of numeric values.*
 
 **Current state**: `numberFormat.ts` already handles currency, percent, number (with decimal/thousand separators), and accounting formats. Phase 20 added auto-alignment and accounting layout. However, two important Excel number format categories are missing:
@@ -1746,8 +1746,6 @@ Improve FormulaWizard usability on mobile/touch platforms (iOS Safari, Android C
 
 **Test results:** 2373 tests pass (was 2304), lint clean, type-check clean, build clean.
 
-**Remaining phases:** Phase 29c (UI: Toolbar + Menu items), Phase 29d (README docs).
-
 ---
 
 ### Phase 29 Dependencies
@@ -1770,3 +1768,57 @@ Improve FormulaWizard usability on mobile/touch platforms (iOS Safari, Android C
 | `src/components/MenuBar.tsx` | Add Format → Date / Format → Text menu items |
 | `src/utils/numberFormat.test.ts` | New date/time/text tests |
 | `README.md` | Document new format options |
+
+---
+
+## Phase 30: Mobile Support — Column/Row Size Selector — COMPLETE ✅ (2026-08-05)
+
+**Problem**: There is no way to set exact column widths or row heights. The only resize mechanism is the drag handle on headers, which is imprecise and especially difficult on mobile/touch devices.
+
+**Solution**: Add a `ColumnRowSizeModal` dialog with touch-friendly number inputs and preset buttons. Also add touch event support to the existing `ResizeHandle` component.
+
+### Phase 30a: ColumnRowSizeModal Component — COMPLETE ✅
+- [x] Create `src/components/ColumnRowSizeModal.tsx` — modal with:
+  - Column width mode (number input + preset buttons: 50, 80, 100, 150, 200)
+  - Row height mode (number input + preset buttons: 20, 28, 40, 60, 80)
+  - Apply to current column/row OR apply to all columns/rows (default)
+  - Touch-friendly large tap targets (min 44px height)
+  - OK / Cancel buttons
+- [x] Create `src/components/ColumnRowSizeModal.test.tsx` — 20 tests covering:
+  - Renders in column mode and row mode
+  - Preset buttons set the value
+  - Number input changes value
+  - Apply to all checkbox toggles
+  - onApply called with correct params
+  - onCancel closes modal
+  - Clamping (min 10px, max 500px)
+
+### Phase 30b: ResizeHandle Touch Support — COMPLETE ✅
+- [x] Add `onTouchStart` handler to `ResizeHandle.tsx` that mirrors the mouse drag logic
+- [x] Use `touchstart`/`touchmove`/`touchend` events with passive: false for `touchmove`
+- [x] Prevent default on touchstart to avoid scroll interference
+- [x] Add 4 touch tests to `ResizeHandle.test.tsx`
+
+### Phase 30c: Menu Integration & Wiring — COMPLETE ✅
+- [x] Add `onColumnRowSize` prop to MenuBar
+- [x] Add "Column/Row Size…" item to Format menu
+- [x] Add handler in App.tsx that opens the modal with current sheet data
+- [x] Wire modal apply → handleColumnRowSizeApply (sets per-column/row or default size)
+- [x] 2 integration tests in App.menu.test.tsx (column width + row height)
+
+### Phase 30d: Documentation — COMPLETE ✅
+- [x] Update README.md with Column/Row Size feature
+- [x] Update PLAN.md with completion status
+
+**Files modified/created:**
+- `src/components/ColumnRowSizeModal.tsx` (new — 170 lines)
+- `src/components/ColumnRowSizeModal.test.tsx` (new — 20 tests)
+- `src/components/ResizeHandle.tsx` (touch support added)
+- `src/components/ResizeHandle.test.tsx` (4 new touch tests)
+- `src/components/MenuBar.tsx` (menu item + prop)
+- `src/App.tsx` (handler + state + render modal + status message)
+- `src/App.menu.test.tsx` (2 integration tests)
+- `README.md` (documentation)
+
+**Tests:** 31 new tests (20 modal + 4 touch + 1 menu + 2 integration + 4 test setup fixes)
+**Results:** 2647 tests pass, lint clean, type-check clean, build clean |

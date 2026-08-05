@@ -14,6 +14,7 @@ import type { PointModeSelection } from './components/Grid';
 import { FormulaBar } from './components/FormulaBar';
 import type { HighlightedRange } from './components/FormulaBar';
 import { PrintSetupModal } from './components/PrintSetupModal';
+import { ColumnRowSizeModal } from './components/ColumnRowSizeModal';
 import { ShortcutsModal } from './components/ShortcutsModal';
 import { AboutModal } from './components/AboutModal';
 import { FilenameModal } from './components/FilenameModal';
@@ -167,6 +168,7 @@ function WorkbookView() {
   useAutosave(workbook);
   const { format: referenceFormat, toggle: toggleReferenceFormat } = useReferenceFormat();
   const [showPrintSetup, setShowPrintSetup] = useState(false);
+  const [showColumnRowSize, setShowColumnRowSize] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
   const [showSearchReplace, setShowSearchReplace] = useState(false);
@@ -907,6 +909,40 @@ function WorkbookView() {
         lastModified: Date.now(),
       };
       pushHistory(newWorkbook, `Resize row ${row + 1} to ${newHeight}px`, filterStateRef.current, gridSelectionRef.current);
+    },
+    [workbook, pushHistory]
+  );
+
+  const handleColumnRowSizeApply = useCallback(
+    (params: { type: 'col' | 'row'; size: number; applyToAll: boolean; index: number }) => {
+      const { type, size, applyToAll, index } = params;
+      const newSheets = workbook.sheets.map((s, idx) => {
+        if (idx !== workbook.activeSheetIndex) return s;
+        if (applyToAll) {
+          return {
+            ...s,
+            ...(type === 'col'
+              ? { defaultColWidth: size }
+              : { defaultRowHeight: size }),
+          };
+        }
+        return {
+          ...s,
+          ...(type === 'col'
+            ? { columnWidths: { ...s.columnWidths, [index]: size } }
+            : { rowHeights: { ...s.rowHeights, [index]: size } }),
+        };
+      });
+      const newWorkbook: Workbook = {
+        ...workbook,
+        sheets: newSheets,
+        lastModified: Date.now(),
+      };
+      const label = applyToAll
+        ? `Default ${type === 'col' ? 'column width' : 'row height'} -> ${size}px`
+        : `${type === 'col' ? `Column ${colToLetter(index)}` : `Row ${index + 1}`} -> ${size}px`;
+      pushHistory(newWorkbook, label, filterStateRef.current, gridSelectionRef.current);
+      setStatusMessage(label);
     },
     [workbook, pushHistory]
   );
@@ -2194,6 +2230,7 @@ function WorkbookView() {
           onSetBorderAll={setBorderAll}
           onSetBorderOutside={setBorderOutside}
           onClearBorders={clearBorders}
+          onColumnRowSize={() => setShowColumnRowSize(true)}
           onSortAscending={handleSortAscending}
           onSortDescending={handleSortDescending}
           onToggleFilter={handleToggleFilter}
@@ -2396,6 +2433,15 @@ function WorkbookView() {
 
       {/* Modals */}
       <PrintSetupModal isOpen={showPrintSetup} onClose={() => { setShowPrintSetup(false); gridRef.current?.focus(); }} />
+      <ColumnRowSizeModal
+        isOpen={showColumnRowSize}
+        onClose={() => { setShowColumnRowSize(false); gridRef.current?.focus(); }}
+        currentCol={activeCell?.col ?? 0}
+        currentRow={activeCell?.row ?? 0}
+        defaultColWidth={workbook.sheets[workbook.activeSheetIndex]?.defaultColWidth ?? 100}
+        defaultRowHeight={workbook.sheets[workbook.activeSheetIndex]?.defaultRowHeight ?? 28}
+        onApply={handleColumnRowSizeApply}
+      />
       <ShortcutsModal isOpen={showShortcuts} onClose={() => { setShowShortcuts(false); gridRef.current?.focus(); }} />
       <AboutModal isOpen={showAbout} onClose={() => { setShowAbout(false); gridRef.current?.focus(); }} />
       <FilenameModal

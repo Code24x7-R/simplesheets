@@ -13,6 +13,7 @@ A lightweight, browser‑based spreadsheet no bloat — just a fast, offline‑c
 - 📋 **Copy / paste & drag‑fill** series extension
 - ↩️ **Undo / redo** — 50 levels
 - ↔️ **Column & row resizing** + freeze panes
+- 📏 **Column / Row Size dialog** — set exact widths and heights with preset buttons (50–200px columns, 20–80px rows) or a custom value; apply to one column/row or set as default. Touch-friendly for mobile devices.
 - 📥 **Import** — .xlsx, .csv, .tsv, .json
 - 📤 **Export** — .xlsx, .csv, .tsv, .json, .pdf
 - 🖨️ **PDF export** with page setup (orientation, margins, scaling)

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
-import { useCallback, useRef } from 'react';
+import { useCallback, useRef, useEffect } from 'react';
 
 interface ResizeHandleProps {
   /** Orientation of the resize handle. */
@@ -39,6 +39,7 @@ export function ResizeHandle({
   const startPos = useRef(0);
   const startSize = useRef(0);
   const isActive = useRef(false);
+  const handleRef = useRef<HTMLDivElement>(null);
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
@@ -83,8 +84,60 @@ export function ResizeHandle({
 
   const isColumn = orientation === 'column';
 
+  // Touch support for mobile devices.
+  // Mirrors the mouse drag logic using touch events.
+  useEffect(() => {
+    const el = handleRef.current;
+    if (!el) return;
+
+    const handleTouchStart = (e: TouchEvent) => {
+      // Only handle single-finger drags
+      if (e.touches.length !== 1) return;
+      e.preventDefault();
+
+      isActive.current = true;
+      startPos.current = isColumn ? e.touches[0].clientX : e.touches[0].clientY;
+      startSize.current = currentSize;
+
+      onResizeStart?.();
+
+      const handleTouchMove = (moveEvent: TouchEvent) => {
+        /* istanbul ignore next - defensive guard */
+        if (!isActive.current) return;
+        moveEvent.preventDefault();
+        const clientPos = isColumn ? moveEvent.touches[0].clientX : moveEvent.touches[0].clientY;
+        const delta = clientPos - startPos.current;
+        const newSize = Math.min(maxSize, Math.max(minSize, startSize.current + delta));
+        onResizeMove?.(newSize);
+      };
+
+      const handleTouchEnd = (endEvent: TouchEvent) => {
+        /* istanbul ignore next - defensive guard */
+        if (!isActive.current) return;
+        isActive.current = false;
+        const touch = endEvent.changedTouches[0];
+        const clientPos = isColumn ? touch.clientX : touch.clientY;
+        const delta = clientPos - startPos.current;
+        const newSize = Math.min(maxSize, Math.max(minSize, startSize.current + delta));
+        onResizeEnd?.(newSize);
+        document.removeEventListener('touchmove', handleTouchMove);
+        document.removeEventListener('touchend', handleTouchEnd);
+      };
+
+      document.addEventListener('touchmove', handleTouchMove, { passive: false });
+      document.addEventListener('touchend', handleTouchEnd);
+    };
+
+    el.addEventListener('touchstart', handleTouchStart, { passive: false });
+
+    return () => {
+      el.removeEventListener('touchstart', handleTouchStart);
+    };
+  }, [orientation, currentSize, minSize, maxSize, isColumn, onResizeStart, onResizeMove, onResizeEnd]);
+
   return (
     <div
+      ref={handleRef}
       className={`resize-handle absolute ${
         isColumn
           ? 'right-0 top-0 bottom-0 w-1.5 cursor-col-resize'

@@ -149,4 +149,95 @@ describe('ResizeHandle', () => {
     fireEvent.mouseMove(document, { clientX: 200 });
     expect(onResizeMove).toHaveBeenCalledTimes(callCountAfterUp);
   });
+
+  // ─── Touch support (mobile) ─────────────────────────────────────────
+
+  it('calls onResizeStart, onResizeMove, and onResizeEnd during a touch drag', () => {
+    const onResizeStart = jest.fn();
+    const onResizeMove = jest.fn();
+    const onResizeEnd = jest.fn();
+    const { container } = render(
+      <ResizeHandle
+        orientation="column"
+        currentSize={100}
+        onResizeStart={onResizeStart}
+        onResizeMove={onResizeMove}
+        onResizeEnd={onResizeEnd}
+      />
+    );
+
+    const handle = container.firstChild as HTMLElement;
+
+    // Start touch
+    fireEvent.touchStart(handle, { touches: [{ clientX: 100 }] });
+    expect(onResizeStart).toHaveBeenCalledTimes(1);
+
+    // Move touch
+    fireEvent.touchMove(document, { touches: [{ clientX: 150 }] });
+    expect(onResizeMove).toHaveBeenCalledWith(150);
+
+    // End touch
+    fireEvent.touchEnd(document, { changedTouches: [{ clientX: 150 }] });
+    expect(onResizeEnd).toHaveBeenCalledWith(150);
+  });
+
+  it('supports touch drag in row orientation', () => {
+    const onResizeEnd = jest.fn();
+    const { container } = render(
+      <ResizeHandle
+        orientation="row"
+        currentSize={28}
+        onResizeEnd={onResizeEnd}
+      />
+    );
+
+    const handle = container.firstChild as HTMLElement;
+    fireEvent.touchStart(handle, { touches: [{ clientY: 50 }] });
+    fireEvent.touchMove(document, { touches: [{ clientY: 80 }] });
+    fireEvent.touchEnd(document, { changedTouches: [{ clientY: 80 }] });
+
+    expect(onResizeEnd).toHaveBeenCalledWith(58);
+  });
+
+  it('enforces minimum size on touch drag', () => {
+    const onResizeEnd = jest.fn();
+    const { container } = render(
+      <ResizeHandle
+        orientation="column"
+        currentSize={100}
+        minSize={50}
+        onResizeEnd={onResizeEnd}
+      />
+    );
+
+    const handle = container.firstChild as HTMLElement;
+    fireEvent.touchStart(handle, { touches: [{ clientX: 100 }] });
+    fireEvent.touchMove(document, { touches: [{ clientX: 10 }] });
+    fireEvent.touchEnd(document, { changedTouches: [{ clientX: 10 }] });
+
+    expect(onResizeEnd).toHaveBeenCalledWith(50);
+  });
+
+  it('does not call onResizeMove after touchEnd', () => {
+    const onResizeMove = jest.fn();
+    const { container } = render(
+      <ResizeHandle
+        orientation="column"
+        currentSize={100}
+        onResizeMove={onResizeMove}
+        onResizeEnd={jest.fn()}
+      />
+    );
+
+    const handle = container.firstChild as HTMLElement;
+    fireEvent.touchStart(handle, { touches: [{ clientX: 100 }] });
+    fireEvent.touchMove(document, { touches: [{ clientX: 150 }] });
+    fireEvent.touchEnd(document, { changedTouches: [{ clientX: 150 }] });
+
+    const callCountAfterEnd = onResizeMove.mock.calls.length;
+
+    // Move again after release — should not trigger
+    fireEvent.touchMove(document, { touches: [{ clientX: 200 }] });
+    expect(onResizeMove).toHaveBeenCalledTimes(callCountAfterEnd);
+  });
 });

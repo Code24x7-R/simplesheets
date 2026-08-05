@@ -61,6 +61,7 @@ interface MenuBarProps {
   onSetBorderAll: () => void;
   onSetBorderOutside: () => void;
   onClearBorders: () => void;
+  onColumnRowSize: () => void;
   isBold: boolean;
   isItalic: boolean;
   isUnderline: boolean;
@@ -153,6 +154,7 @@ export function MenuBar(props: MenuBarProps) {
         'format-border-right': props.onSetBorderRight,
         'format-border-clear': props.onClearBorders,
         'format-clear-styles': props.onClearStyles,
+        'format-column-row-size': props.onColumnRowSize,
         // Data
         'data-sort-asc': props.onSortAscending,
         'data-sort-desc': props.onSortDescending,
@@ -312,6 +314,8 @@ export function MenuBar(props: MenuBarProps) {
     },
     { id: 'sep-format-3', label: '', separator: true },
     { id: 'format-clear-styles', label: 'Clear Styles', icon: '⊡' },
+    { id: 'sep-format-4', label: '', separator: true },
+    { id: 'format-column-row-size', label: 'Column / Row Size…', icon: '↔️' },
   ];
 
   const helpItems: MenuItem[] = [

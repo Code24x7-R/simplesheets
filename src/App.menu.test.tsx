@@ -598,4 +598,46 @@ describe('App - Cell Style System (single cell & range)', () => {
     fireEvent.keyDown(window, { key: 'z', ctrlKey: true });
     expect(statusBar?.textContent).toContain('Undo performed');
   });
+
+  it('opens Column/Row Size modal from Format menu and applies column width', () => {
+    render(<App />);
+    const statusBar = screen.getByTestId('status-message');
+
+    // Open the modal via Format menu
+    fireEvent.click(screen.getByText('Format'));
+    fireEvent.click(screen.getByText('Column / Row Size…'));
+
+    expect(screen.getByText('Column / Row Size')).toBeInTheDocument();
+
+    // Select a preset width
+    fireEvent.click(screen.getByRole('button', { name: '150' }));
+
+    // Apply
+    fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
+
+    // Modal should close and status should show the resize
+    expect(screen.queryByText('Column / Row Size')).not.toBeInTheDocument();
+    expect(statusBar?.textContent).toContain('150px');
+  });
+
+  it('opens Column/Row Size modal and applies row height', () => {
+    render(<App />);
+    const statusBar = screen.getByTestId('status-message');
+
+    // Open the modal via Format menu
+    fireEvent.click(screen.getByText('Format'));
+    fireEvent.click(screen.getByText('Column / Row Size…'));
+
+    // Switch to Row mode
+    fireEvent.click(screen.getByRole('button', { name: 'Row' }));
+
+    // Select a preset height
+    fireEvent.click(screen.getByRole('button', { name: '40' }));
+
+    // Apply
+    fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
+
+    expect(screen.queryByText('Column / Row Size')).not.toBeInTheDocument();
+    expect(statusBar?.textContent).toContain('40px');
+  });
 });
