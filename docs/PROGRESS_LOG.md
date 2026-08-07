@@ -4,6 +4,13 @@
 
 ---
 
+### 2026-08-07 [BUGFIX] B-024: Cross-sheet cache pollution in formula evaluation
+- **Symptom**: Sheet4 B2:B8 returned wrong values (44, 48, 46, ...) while B9:B15 were correct. All A column values were 2, so all B cells should be 4.
+- **Root cause**: Shared evaluation cache in `evaluateWorkbook` keyed same-sheet cell refs by bare `"row:col"` without a sheet index prefix, so Sheet1's A2=22 was cached as `"1:0" -> 22` and Sheet4's `=A2*2` read that stale entry.
+- **Fix**: Changed cache key in `evaluateCell` to `` `${targetIndex}:${key}` `` — always scoped by sheet index.
+- **Files**: `src/utils/formulaEngine.ts`, `src/utils/formulaEngine.test.ts`
+- **Tests**: 2717 pass, lint clean, type-check clean, build clean
+
 ### 2026-07-31 [FEATURE] Phase 21g: Chart Enhancements
 - **Goal**: Improve chart usability with range picker, persistent settings, and resize handles
 - **Changes**:

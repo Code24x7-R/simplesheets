@@ -154,8 +154,9 @@ function evaluateCell(row: number, col: number, ctx: EvalContext, sheetIndex?: n
 
   const key = cellKey(row, col);
 
-  // Check cache (include sheet index in cache key for cross-sheet)
-  const cacheKey = sheetIndex !== undefined ? `${targetIndex}:${key}` : key;
+  // Always scope the cache key by sheet index to prevent cross-sheet
+  // pollution when the shared cache is used across multiple sheets.
+  const cacheKey = `${targetIndex}:${key}`;
   if (ctx.cache.has(cacheKey)) {
     return ctx.cache.get(cacheKey)!;
   }

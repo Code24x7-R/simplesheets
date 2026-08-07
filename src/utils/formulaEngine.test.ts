@@ -2163,6 +2163,44 @@ describe('evaluateWorkbook - cross-sheet references', () => {
     });
   });
 
+  it('detects cross-sheet circular references via shared evalStack', () => {
+    // With sheet-index-prefixed cache keys, the evalStack correctly detects
+    // cycles that span multiple sheets (e.g. Sheet1!A1 -> Sheet2!A1 -> Sheet1!A1).
+    const sheet1 = createSheet({ '0:0': '=Sheet2!A1' }, { name: 'Sheet1' });
+    const sheet2 = createSheet({ '0:0': '=Sheet1!A1' }, { name: 'Sheet2' });
+    const wb = createMultiSheetWorkbook([sheet1, sheet2]);
+    const result = evaluateWorkbook(wb, 0);
+    // The mutual cross-sheet reference should produce #CIRC! (not infinite loop)
+    expect(result.cells['0:0'].computedValue).toBe('#CIRC!');
+  });
+
+  it('does not let earlier sheets pollute same-sheet cache for later sheets', () => {
+    // Regression: shared cache must scope same-sheet refs by sheet index.
+    // Without the fix, Sheet1 A2=22 gets cached as "1:0" -> 22, and when
+    // Sheet4 later evaluates B2=A2*2 it reads the stale "1:0" entry.
+    const sheet1 = createSheet({
+      '1:0': '22', '1:1': '=A2*2',
+    }, { name: 'Sheet1' });
+    const sheet2 = createSheet({}, { name: 'Sheet2' });
+    const sheet3 = createSheet({}, { name: 'Sheet3' });
+    const sheet4 = createSheet({
+      '1:0': '2', '2:0': '2', '3:0': '2', '4:0': '2',
+      '5:0': '2', '6:0': '2', '7:0': '2', '8:0': '2',
+      '9:0': '2', '10:0': '2', '11:0': '2', '12:0': '2',
+      '13:0': '2', '14:0': '2',
+      '1:1': '=A2*2', '2:1': '=A3*2', '3:1': '=A4*2', '4:1': '=A5*2',
+      '5:1': '=A6*2', '6:1': '=A7*2', '7:1': '=A8*2', '8:1': '=A9*2',
+      '9:1': '=A10*2', '10:1': '=A11*2', '11:1': '=A12*2', '12:1': '=A13*2',
+      '13:1': '=A14*2', '14:1': '=A15*2',
+    }, { name: 'Sheet4' });
+    const wb = createMultiSheetWorkbook([sheet1, sheet2, sheet3, sheet4]);
+    const result = evaluateWorkbook(wb, 3);
+    // Every B cell should be 4 (A*2 where A=2), NOT polluted by Sheet1's A2=22
+    for (let row = 1; row <= 14; row++) {
+      expect(result.cells[`${row}:1`].computedValue).toBe(4);
+    }
+  });
+
   // ─── String Comparison Operators (branch coverage) ──────────────
 
   describe('String comparison operators', () => {

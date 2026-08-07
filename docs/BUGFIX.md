@@ -24,6 +24,14 @@ This file tracks bugs in **existing** code, functions, and UI elements. New feat
 
 <!-- Bugs resolved in this session or recent past. Newest first. -->
 
+### 2026-08-07: B-024 — Cross-sheet cache pollution: same-sheet cell refs read stale values from earlier sheets ✅ VERIFIED
+- **Symptom**: On Sheet4, `=A2*2` in B2 returns 44 instead of 4, B3 returns 48, etc. — only rows 9+ are correct. Column A values are all 2, so every B cell should be 4. The wrong values matched `Sheet1!A2` (22) * 2 = 44, indicating Sheet1's computed values were leaking into Sheet4's evaluation.
+- **Root cause**: In `evaluateCell` (`src/utils/formulaEngine.ts`), the shared evaluation cache keyed same-sheet cell references by bare `"row:col"` (e.g. `"1:0"` for A2) without a sheet-index prefix. The cache is shared across all sheets in `evaluateWorkbook`. When Sheet1 evaluated A2=22 and cached `"1:0" -> 22`, Sheet4's later evaluation of `=A2*2` found the stale entry and used 22 instead of reading Sheet4's own A2 (which is 2). Rows without a prior-sheet counterpart (A9+) fell through to the correct sheet data, explaining why only B2:B8 were wrong.
+- **Fix**: Changed the cache key to always include the sheet index: `` `${targetIndex}:${key}` ``. This scopes every cache entry by sheet, eliminating cross-sheet collisions.
+- **Files**: `src/utils/formulaEngine.ts` (cache key fix in `evaluateCell`), `src/utils/formulaEngine.test.ts` (regression test with 4-sheet workbook)
+- **Note**: The fix also makes evalStack keys uniform (always sheet-index-prefixed). Previously same-sheet refs used bare `"row:col"` while cross-sheet refs used `"sheetIndex:row:col"`. The `evalStack` is shared across sheets via sub-context spread, so uniform keys make cross-sheet circular detection marginally more robust (though existing tests already passed due to the shared stack).
+- **Tests**: 2718 pass (2 new regression tests), lint clean, type-check clean, build clean
+
 ### 2026-08-01: B-023 — In-cell editor initial cursor position not right-most ✅ VERIFIED
 - **Symptom**: (1) When double-clicking a cell to edit it, the cursor appeared at the beginning of the text instead of at the end. (2) When editing a long formula like `=SUM(Sheet1!B2:Sheet1!B21)+A3+SUM(F14:F22)`, the caret was placed at the end but the input wasn't scrolled to show it — the user only saw the beginning of the formula.
 - **Root cause**: (1) The cursor sync effect (`useEffect`) had a guard `document.activeElement !== input` that prevented syncing when the input wasn't focused yet. When the input first mounted with `autoFocus`, the effect could run before the browser had established focus. (2) The Grid cell editor lacked the scroll-to-caret logic that FormulaBar has.
