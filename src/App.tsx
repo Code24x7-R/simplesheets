@@ -43,7 +43,9 @@ import { computeFillSeries } from './utils/fillSeries';
 import { applyPasteOptions } from './utils/pasteSpecial';
 import type { PasteMode } from './utils/pasteSpecial';
 import { extractColumnWidths, applyColumnWidths } from './utils/pasteWidths';
-import { sortRange } from './utils/sheetSort';
+import { sortRange, getCurrentRegion } from './utils/sheetSort';
+import { SortDialog } from './components/SortDialog';
+import type { SortDirection } from './utils/sheetSort';
 import {
   createFilterState,
   type FilterState,
@@ -172,6 +174,8 @@ function WorkbookView() {
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
   const [showSearchReplace, setShowSearchReplace] = useState(false);
+  const [showSortDialog, setShowSortDialog] = useState(false);
+  const [pendingSortDirection, setPendingSortDirection] = useState<SortDirection>('asc');
   const [showPasteModal, setShowPasteModal] = useState(false);
   const [pendingPasteHtml, setPendingPasteHtml] = useState<string | null>(null);
   const [pendingPastePlain, setPendingPastePlain] = useState<string | null>(null);
@@ -1604,45 +1608,103 @@ function WorkbookView() {
 
   // ─── Sort ──────────────────────────────────────────────────────────
 
+  /**
+   * Resolves the actual sort range, expanding a single-cell selection
+   * to its surrounding data region (Excel's "Current Region").
+   */
+  const resolveSortRange = useCallback(
+    (sheet: Sheet): { startRow: number; endRow: number; startCol: number; endCol: number } => {
+      if (!selection) return { startRow: 0, endRow: 0, startCol: 0, endCol: 0 };
+
+      const isSingleCell =
+        selection.startRow === selection.endRow && selection.startCol === selection.endCol;
+
+      if (isSingleCell) {
+        // Expand to the contiguous data region around the active cell
+        return getCurrentRegion(sheet, selection.startRow, selection.startCol);
+      }
+
+      return {
+        startRow: Math.min(selection.startRow, selection.endRow),
+        endRow: Math.max(selection.startRow, selection.endRow),
+        startCol: Math.min(selection.startCol, selection.endCol),
+        endCol: Math.max(selection.startCol, selection.endCol),
+      };
+    },
+    [selection]
+  );
+
+  /** Applies a sort given resolved params. Shared by quick-sort and dialog. */
+  const applySort = useCallback(
+    (
+      sheet: Sheet,
+      startRow: number,
+      endRow: number,
+      sortColumns: Array<{ column: number; direction: SortDirection }>,
+      hasHeader: boolean
+    ) => {
+      const sorted = sortRange(sheet, startRow, endRow, sortColumns, hasHeader);
+      if (sorted === sheet) return; // No change
+
+      const newSheets = workbook.sheets.map((s, idx) =>
+        idx === workbook.activeSheetIndex ? sorted : s
+      );
+      const newWb: Workbook = { ...workbook, sheets: newSheets, lastModified: Date.now() };
+      const colDesc =
+        sortColumns.length === 1
+          ? `column ${colToLetter(sortColumns[0].column)}`
+          : `${sortColumns.length} columns`;
+      const dirDesc = sortColumns[0].direction === 'asc' ? 'ascending' : 'descending';
+      pushHistory(newWb, `Sorted ${colDesc} ${dirDesc}`, filterStateRef.current, gridSelectionRef.current);
+      setStatusMessage(`Sorted ${colDesc} — ${dirDesc}`);
+
+      // Recompute filter against sorted data so hiddenRows indices stay correct.
+      // sortRange physically reorders rows, invalidating the old hiddenRows set.
+      if (filterState?.active) {
+        const currentSheet = newSheets[workbook.activeSheetIndex];
+        const recomputed = createFilterState(currentSheet, filterState.headerRow, filterState.filters);
+        recomputed.active = true;
+        setFilterState(recomputed);
+      }
+    },
+    [workbook, pushHistory, filterState]
+  );
+
+  /** Quick sort A→Z: active cell's column, no header pinning (matches Excel quick sort). */
   const handleSortAscending = useCallback(() => {
-    if (!selection) return;
+    if (!selection || !activeCell) return;
     const currentSheet = workbook.sheets[workbook.activeSheetIndex];
-    const sorted = sortRange(
-      currentSheet,
-      selection.startRow,
-      selection.endRow,
-      [{ column: selection.startCol, direction: 'asc' }],
-      true
-    );
-    if (sorted === currentSheet) return; // No change
+    const range = resolveSortRange(currentSheet);
+    applySort(currentSheet, range.startRow, range.endRow, [{ column: activeCell.col, direction: 'asc' }], false);
+  }, [workbook, selection, activeCell, resolveSortRange, applySort]);
 
-    const newSheets = workbook.sheets.map((s, idx) =>
-      idx === workbook.activeSheetIndex ? sorted : s
-    );
-    const newWb: Workbook = { ...workbook, sheets: newSheets, lastModified: Date.now() };
-    pushHistory(newWb, `Sorted column ${colToLetter(selection.startCol)} ascending`, filterStateRef.current, gridSelectionRef.current);
-    setStatusMessage(`Sorted column ${colToLetter(selection.startCol)} — ascending`);
-  }, [workbook, pushHistory, selection]);
-
+  /** Quick sort Z→A: active cell's column, no header pinning. */
   const handleSortDescending = useCallback(() => {
-    if (!selection) return;
+    if (!selection || !activeCell) return;
     const currentSheet = workbook.sheets[workbook.activeSheetIndex];
-    const sorted = sortRange(
-      currentSheet,
-      selection.startRow,
-      selection.endRow,
-      [{ column: selection.startCol, direction: 'desc' }],
-      true
-    );
-    if (sorted === currentSheet) return; // No change
+    const range = resolveSortRange(currentSheet);
+    applySort(currentSheet, range.startRow, range.endRow, [{ column: activeCell.col, direction: 'desc' }], false);
+  }, [workbook, selection, activeCell, resolveSortRange, applySort]);
 
-    const newSheets = workbook.sheets.map((s, idx) =>
-      idx === workbook.activeSheetIndex ? sorted : s
-    );
-    const newWb: Workbook = { ...workbook, sheets: newSheets, lastModified: Date.now() };
-    pushHistory(newWb, `Sorted column ${colToLetter(selection.startCol)} descending`, filterStateRef.current, gridSelectionRef.current);
-    setStatusMessage(`Sorted column ${colToLetter(selection.startCol)} — descending`);
-  }, [workbook, pushHistory, selection]);
+  /** Opens the multi-column Sort dialog, pre-filled with the active cell's column. */
+  const handleOpenSortDialog = useCallback(
+    (direction: SortDirection) => {
+      if (!selection || !activeCell) return;
+      setPendingSortDirection(direction);
+      setShowSortDialog(true);
+    },
+    [selection, activeCell]
+  );
+
+  /** Applies a sort from the dialog (multi-column + header option). */
+  const handleSortDialogApply = useCallback(
+    (levels: Array<{ column: number; direction: SortDirection }>, hasHeader: boolean) => {
+      const currentSheet = workbook.sheets[workbook.activeSheetIndex];
+      const range = resolveSortRange(currentSheet);
+      applySort(currentSheet, range.startRow, range.endRow, levels, hasHeader);
+    },
+    [workbook, resolveSortRange, applySort]
+  );
 
   // ─── Filter ──────────────────────────────────────────────────────────
 
@@ -2264,6 +2326,7 @@ function WorkbookView() {
           onColumnRowSize={() => setShowColumnRowSize(true)}
           onSortAscending={handleSortAscending}
           onSortDescending={handleSortDescending}
+          onOpenSortDialog={handleOpenSortDialog}
           onToggleFilter={handleToggleFilter}
           onClearAllFilters={handleClearAllFilters}
           isFilterActive={filterState?.active || false}
@@ -2473,6 +2536,16 @@ function WorkbookView() {
         defaultColWidth={workbook.sheets[workbook.activeSheetIndex]?.defaultColWidth ?? 100}
         defaultRowHeight={workbook.sheets[workbook.activeSheetIndex]?.defaultRowHeight ?? 28}
         onApply={handleColumnRowSizeApply}
+      />
+      <SortDialog
+        isOpen={showSortDialog}
+        onClose={() => { setShowSortDialog(false); gridRef.current?.focus(); }}
+        columnCount={sheet.columnCount}
+        defaultColumn={activeCell?.col ?? 0}
+        defaultDirection={pendingSortDirection}
+        defaultHasHeader={false}
+        rowCount={selection ? Math.abs(selection.endRow - selection.startRow) + 1 : 0}
+        onApply={handleSortDialogApply}
       />
       <ShortcutsModal isOpen={showShortcuts} onClose={() => { setShowShortcuts(false); gridRef.current?.focus(); }} />
       <AboutModal isOpen={showAbout} onClose={() => { setShowAbout(false); gridRef.current?.focus(); }} />

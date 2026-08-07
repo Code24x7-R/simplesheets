@@ -4,6 +4,13 @@
 
 ---
 
+### 2026-08-08 [BUGFIX] B-025: Sorting with active filter leaves stale hiddenRows indices
+- **Symptom**: After sorting with an active filter, wrong rows were hidden/shown because `filterState.hiddenRows` (row indices) became stale when `sortRange` physically reordered data.
+- **Root cause**: `applySort` in `App.tsx` never recomputed the filter after sorting.
+- **Fix**: After sort, if filter is active, recompute `createFilterState(sortedSheet, headerRow, filters)` to recalculate hidden row indices.
+- **Files**: `src/App.tsx`, `src/utils/sheetSort.test.ts`
+- **Tests**: 2720 pass, lint clean, type-check clean, build clean
+
 ### 2026-08-07 [BUGFIX] B-024: Cross-sheet cache pollution in formula evaluation
 - **Symptom**: Sheet4 B2:B8 returned wrong values (44, 48, 46, ...) while B9:B15 were correct. All A column values were 2, so all B cells should be 4.
 - **Root cause**: Shared evaluation cache in `evaluateWorkbook` keyed same-sheet cell refs by bare `"row:col"` without a sheet index prefix, so Sheet1's A2=22 was cached as `"1:0" -> 22` and Sheet4's `=A2*2` read that stale entry.

@@ -24,6 +24,13 @@ This file tracks bugs in **existing** code, functions, and UI elements. New feat
 
 <!-- Bugs resolved in this session or recent past. Newest first. -->
 
+### 2026-08-08: B-025 — Sorting with active filter leaves stale hiddenRows indices ✅ VERIFIED
+- **Symptom**: After applying a sort while a filter is active, wrong rows are hidden/shown. Rows that should be visible appear hidden and vice versa.
+- **Root cause**: The filter state stores `hiddenRows` as a `Set<number>` of row indices. `sortRange` physically reorders cell data to new row positions, but `applySort` in `App.tsx` never updated `filterState.hiddenRows`. The stale indices pointed to different data after sorting.
+- **Fix**: After sorting, if a filter is active, recompute the filter state against the sorted sheet using `createFilterState(sortedSheet, headerRow, filters)`. This recalculates which row indices should be hidden based on the new positions while preserving the user's filter criteria.
+- **Files**: `src/App.tsx` (`applySort` recomputes filter), `src/utils/sheetSort.test.ts` (2 new integration tests)
+- **Tests**: 2720 pass (was 2718), lint clean, type-check clean, build clean
+
 ### 2026-08-07: B-024 — Cross-sheet cache pollution: same-sheet cell refs read stale values from earlier sheets ✅ VERIFIED
 - **Symptom**: On Sheet4, `=A2*2` in B2 returns 44 instead of 4, B3 returns 48, etc. — only rows 9+ are correct. Column A values are all 2, so every B cell should be 4. The wrong values matched `Sheet1!A2` (22) * 2 = 44, indicating Sheet1's computed values were leaking into Sheet4's evaluation.
 - **Root cause**: In `evaluateCell` (`src/utils/formulaEngine.ts`), the shared evaluation cache keyed same-sheet cell references by bare `"row:col"` (e.g. `"1:0"` for A2) without a sheet-index prefix. The cache is shared across all sheets in `evaluateWorkbook`. When Sheet1 evaluated A2=22 and cached `"1:0" -> 22`, Sheet4's later evaluation of `=A2*2` found the stale entry and used 22 instead of reading Sheet4's own A2 (which is 2). Rows without a prior-sheet counterpart (A9+) fell through to the correct sheet data, explaining why only B2:B8 were wrong.

@@ -69,6 +69,7 @@ interface MenuBarProps {
   // Data
   onSortAscending: () => void;
   onSortDescending: () => void;
+  onOpenSortDialog: (direction: 'asc' | 'desc') => void;
   onToggleFilter: () => void;
   onClearAllFilters: () => void;
   isFilterActive: boolean;
@@ -158,6 +159,8 @@ export function MenuBar(props: MenuBarProps) {
         // Data
         'data-sort-asc': props.onSortAscending,
         'data-sort-desc': props.onSortDescending,
+        'data-sort-dialog-asc': () => props.onOpenSortDialog('asc'),
+        'data-sort-dialog-desc': () => props.onOpenSortDialog('desc'),
         'data-toggle-filter': props.onToggleFilter,
         'data-clear-filter': props.onClearAllFilters,
         // Help
@@ -328,6 +331,8 @@ export function MenuBar(props: MenuBarProps) {
   const dataItems: MenuItem[] = [
     { id: 'data-sort-asc', label: 'Sort A → Z', icon: '↑' },
     { id: 'data-sort-desc', label: 'Sort Z → A', icon: '↓' },
+    { id: 'data-sort-dialog-asc', label: 'Sort Range (A→Z)…', icon: '↑+' },
+    { id: 'data-sort-dialog-desc', label: 'Sort Range (Z→A)…', icon: '↓+' },
     { id: 'data-separator-2', label: '-', icon: '', separator: true },
     { id: 'data-toggle-filter', label: props.isFilterActive ? 'Filter ✓' : 'Toggle Filter', icon: '🔍', shortcut: 'Ctrl+Shift+L' },
     { id: 'data-clear-filter', label: 'Clear All Filters', icon: '✕' },

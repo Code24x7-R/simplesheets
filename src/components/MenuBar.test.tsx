@@ -56,6 +56,7 @@ describe('MenuBar', () => {
     onColumnRowSize: jest.fn(),
     onSortAscending: jest.fn(),
     onSortDescending: jest.fn(),
+    onOpenSortDialog: jest.fn(),
     onToggleFilter: jest.fn(),
     onClearAllFilters: jest.fn(),
     isFilterActive: false,

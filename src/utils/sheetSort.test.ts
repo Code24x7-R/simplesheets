@@ -5,8 +5,11 @@ import {
   sortEntireSheet,
   sortSelection,
   findUsedRange,
+  getCurrentRegion,
   type SortColumn,
 } from './sheetSort';
+import { createFilterState } from './sheetFilter';
+import { cellKey } from '../types';
 import type { Sheet, Cell } from '../types';
 
 function createTestSheet(): Sheet {
@@ -51,6 +54,100 @@ describe('sheetSort', () => {
       sheet.cells['3:2'] = makeCell('c');
       const range = findUsedRange(sheet);
       expect(range).toEqual({ startRow: 2, endRow: 5, startCol: 1, endCol: 4 });
+    });
+  });
+
+  describe('getCurrentRegion', () => {
+    it('returns just the cell when it is empty', () => {
+      const sheet = createTestSheet();
+      const region = getCurrentRegion(sheet, 5, 5);
+      expect(region).toEqual({ startRow: 5, endRow: 5, startCol: 5, endCol: 5 });
+    });
+
+    it('returns just the single populated cell when isolated', () => {
+      const sheet = createTestSheet();
+      sheet.cells['3:3'] = makeCell('solo');
+      const region = getCurrentRegion(sheet, 3, 3);
+      expect(region).toEqual({ startRow: 3, endRow: 3, startCol: 3, endCol: 3 });
+    });
+
+    it('expands to contiguous block of data', () => {
+      const sheet = createTestSheet();
+      // 3x3 block at rows 2-4, cols 1-3
+      sheet.cells['2:1'] = makeCell('a');
+      sheet.cells['2:2'] = makeCell('b');
+      sheet.cells['2:3'] = makeCell('c');
+      sheet.cells['3:1'] = makeCell('d');
+      sheet.cells['3:2'] = makeCell('e');
+      sheet.cells['3:3'] = makeCell('f');
+      sheet.cells['4:1'] = makeCell('g');
+      sheet.cells['4:2'] = makeCell('h');
+      sheet.cells['4:3'] = makeCell('i');
+
+      // Start from center cell
+      const region = getCurrentRegion(sheet, 3, 2);
+      expect(region).toEqual({ startRow: 2, endRow: 4, startCol: 1, endCol: 3 });
+    });
+
+    it('does not cross an empty row', () => {
+      const sheet = createTestSheet();
+      // Row 1 has data, row 2 is empty, row 3 has data
+      sheet.cells['1:0'] = makeCell('top');
+      sheet.cells['3:0'] = makeCell('bottom');
+
+      // From row 1, should not expand past the gap
+      const region = getCurrentRegion(sheet, 1, 0);
+      expect(region).toEqual({ startRow: 1, endRow: 1, startCol: 0, endCol: 0 });
+
+      // From row 3, same
+      const region2 = getCurrentRegion(sheet, 3, 0);
+      expect(region2).toEqual({ startRow: 3, endRow: 3, startCol: 0, endCol: 0 });
+    });
+
+    it('does not cross an empty column', () => {
+      const sheet = createTestSheet();
+      // Col A has data, col B is empty, col C has data
+      sheet.cells['0:0'] = makeCell('left');
+      sheet.cells['0:2'] = makeCell('right');
+
+      const region = getCurrentRegion(sheet, 0, 0);
+      expect(region).toEqual({ startRow: 0, endRow: 0, startCol: 0, endCol: 0 });
+    });
+
+    it('expands around an L-shaped region', () => {
+      const sheet = createTestSheet();
+      // Horizontal: row 2, cols 0-2
+      sheet.cells['2:0'] = makeCell('a');
+      sheet.cells['2:1'] = makeCell('b');
+      sheet.cells['2:2'] = makeCell('c');
+      // Vertical: col 1, rows 3-4 (connected via row 2)
+      sheet.cells['3:1'] = makeCell('d');
+      sheet.cells['4:1'] = makeCell('e');
+
+      const region = getCurrentRegion(sheet, 2, 1);
+      expect(region).toEqual({ startRow: 2, endRow: 4, startCol: 0, endCol: 2 });
+    });
+
+    it('expands from any interior cell', () => {
+      const sheet = createTestSheet();
+      // 4x2 block at rows 5-8, cols 3-4
+      for (let r = 5; r <= 8; r++) {
+        for (let c = 3; c <= 4; c++) {
+          sheet.cells[cellKey(r, c)] = makeCell(`${r},${c}`);
+        }
+      }
+
+      // Start from bottom-right
+      const region = getCurrentRegion(sheet, 8, 4);
+      expect(region).toEqual({ startRow: 5, endRow: 8, startCol: 3, endCol: 4 });
+    });
+
+    it('stops at sheet boundaries', () => {
+      const sheet = createTestSheet();
+      // Data in top-left corner
+      sheet.cells['0:0'] = makeCell('corner');
+      const region = getCurrentRegion(sheet, 0, 0);
+      expect(region).toEqual({ startRow: 0, endRow: 0, startCol: 0, endCol: 0 });
     });
   });
 
@@ -396,6 +493,96 @@ describe('sheetSort', () => {
       expect(result.cells['0:0']?.rawValue).toBe('Alice');
       expect(result.cells['1:0']?.rawValue).toBe('Bob');
       expect(result.cells['2:0']?.rawValue).toBe('Charlie');
+    });
+  });
+
+  // ─── Sort + Filter Integration ─────────────────────────────────────
+  // When a sort is applied with an active filter, the filter's hiddenRows
+  // (row indices) become stale because sortRange physically reorders rows.
+  // The fix: recompute the filter against the sorted sheet.
+  describe('sort + filter interaction', () => {
+    it('recomputing filter after sort keeps hidden rows correct', () => {
+      // Sheet: header row 0, data rows 1-4
+      // Col A = category, Col B = value
+      // Row 1: A=1, B=30   (visible — A=1)
+      // Row 2: A=2, B=10   (hidden — A=2)
+      // Row 3: A=1, B=40   (visible — A=1)
+      // Row 4: A=2, B=20   (hidden — A=2)
+      const sheet = createTestSheet();
+      sheet.rowCount = 5;
+      sheet.cells['0:0'] = makeCell('Category');
+      sheet.cells['0:1'] = makeCell('Value');
+      sheet.cells['1:0'] = makeCell('1');
+      sheet.cells['1:1'] = makeCell('30');
+      sheet.cells['2:0'] = makeCell('2');
+      sheet.cells['2:1'] = makeCell('10');
+      sheet.cells['3:0'] = makeCell('1');
+      sheet.cells['3:1'] = makeCell('40');
+      sheet.cells['4:0'] = makeCell('2');
+      sheet.cells['4:1'] = makeCell('20');
+
+      // Filter: show only rows where column A = "1"
+      const filterCols: Record<number, import('./sheetFilter').ColumnFilter> = {
+        0: { conditions: [{ type: 'equals', value: '1' }] },
+      };
+      const filterBefore = createFilterState(sheet, 0, filterCols);
+      // Rows 2 and 4 (category=2) should be hidden
+      expect(filterBefore.hiddenRows).toEqual(new Set([2, 4]));
+
+      // Sort by column B (Value) ascending (header pinned)
+      const sorted = sortRange(sheet, 0, 4, [{ column: 1, direction: 'asc' }], true);
+
+      // After sort (header pinned, data sorted by B):
+      // Row 0: header (stays)
+      // Row 1: A=2, B=10  (was row 2)
+      // Row 2: A=2, B=20  (was row 4)
+      // Row 3: A=1, B=30  (was row 1)
+      // Row 4: A=1, B=40  (was row 3)
+      expect(sorted.cells['1:1']?.rawValue).toBe('10');
+      expect(sorted.cells['2:1']?.rawValue).toBe('20');
+      expect(sorted.cells['3:1']?.rawValue).toBe('30');
+      expect(sorted.cells['4:1']?.rawValue).toBe('40');
+
+      // THE BUG: old hiddenRows {2, 4} would now:
+      //   - hide row 2 (A=2, B=20) — correct by luck
+      //   - hide row 4 (A=1, B=40) — WRONG (A=1 should be visible!)
+      //   - NOT hide row 1 (A=2, B=10) — WRONG (A=2 should be hidden!)
+      expect(filterBefore.hiddenRows.has(1)).toBe(false); // bug: row 1 not hidden
+      expect(filterBefore.hiddenRows.has(4)).toBe(true);  // bug: row 4 wrongly hidden
+
+      // THE FIX: recompute filter against the sorted sheet
+      const filterAfter = createFilterState(sorted, 0, filterCols);
+      // Rows with category=2 are now at positions 1 and 2
+      expect(filterAfter.hiddenRows).toEqual(new Set([1, 2]));
+      expect(filterAfter.hiddenRows.has(1)).toBe(true);  // correct: row 1 now hidden
+      expect(filterAfter.hiddenRows.has(4)).toBe(false); // correct: row 4 now visible
+    });
+
+    it('filter recomputation is stable across multiple sorts', () => {
+      const sheet = createTestSheet();
+      sheet.rowCount = 4;
+      sheet.cells['0:0'] = makeCell('Header');
+      sheet.cells['1:0'] = makeCell('B');
+      sheet.cells['2:0'] = makeCell('A');
+      sheet.cells['3:0'] = makeCell('C');
+
+      const filterCols: Record<number, import('./sheetFilter').ColumnFilter> = {
+        0: { conditions: [{ type: 'equals', value: 'A' }] },
+      };
+
+      // Ascending sort by col 0 (header pinned): A, B, C
+      const sortedAsc = sortRange(sheet, 0, 3, [{ column: 0, direction: 'asc' }], true);
+      const filterAsc = createFilterState(sortedAsc, 0, filterCols);
+      // Row 0 = header, Row 1 = A (visible), Row 2 = B (hidden), Row 3 = C (hidden)
+      expect(sortedAsc.cells['1:0']?.rawValue).toBe('A');
+      expect(filterAsc.hiddenRows).toEqual(new Set([2, 3]));
+
+      // Descending sort by col 0 (header pinned): C, B, A
+      const sortedDesc = sortRange(sheet, 0, 3, [{ column: 0, direction: 'desc' }], true);
+      const filterDesc = createFilterState(sortedDesc, 0, filterCols);
+      // Row 0 = header, Row 1 = C (hidden), Row 2 = B (hidden), Row 3 = A (visible)
+      expect(sortedDesc.cells['3:0']?.rawValue).toBe('A');
+      expect(filterDesc.hiddenRows).toEqual(new Set([1, 2]));
     });
   });
 });

@@ -209,6 +209,77 @@ export function sortRange(
 }
 
 /**
+ * Finds the contiguous region of data surrounding a given cell (Excel's "Current Region").
+ * Expands in all four directions until it hits an entirely empty row or column.
+ * If the starting cell is empty, returns just that cell.
+ */
+export function getCurrentRegion(
+  sheet: Sheet,
+  row: number,
+  col: number,
+): {
+  startRow: number;
+  endRow: number;
+  startCol: number;
+  endCol: number;
+} {
+  // If the starting cell itself has no data, return just that cell
+  if (!sheet.cells[cellKey(row, col)]) {
+    return { startRow: row, endRow: row, startCol: col, endCol: col };
+  }
+
+  let startRow = row;
+  let endRow = row;
+  let startCol = col;
+  let endCol = col;
+
+  // Iteratively expand in all 4 directions until no more expansion
+  let expanded = true;
+  while (expanded) {
+    expanded = false;
+
+    // Expand up: check if row (startRow-1) has any data in [startCol, endCol]
+    if (startRow > 0 && rowHasAnyCell(sheet, startRow - 1, startCol, endCol)) {
+      startRow--;
+      expanded = true;
+    }
+    // Expand down: check if row (endRow+1) has any data in [startCol, endCol]
+    if (rowHasAnyCell(sheet, endRow + 1, startCol, endCol)) {
+      endRow++;
+      expanded = true;
+    }
+    // Expand left: check if col (startCol-1) has any data in [startRow, endRow]
+    if (startCol > 0 && colHasAnyCell(sheet, startCol - 1, startRow, endRow)) {
+      startCol--;
+      expanded = true;
+    }
+    // Expand right: check if col (endCol+1) has any data in [startRow, endRow]
+    if (colHasAnyCell(sheet, endCol + 1, startRow, endRow)) {
+      endCol++;
+      expanded = true;
+    }
+  }
+
+  return { startRow, endRow, startCol, endCol };
+}
+
+/** Checks whether a row has any cells with data within a column range. */
+function rowHasAnyCell(sheet: Sheet, row: number, startCol: number, endCol: number): boolean {
+  for (let c = startCol; c <= endCol; c++) {
+    if (sheet.cells[cellKey(row, c)]) return true;
+  }
+  return false;
+}
+
+/** Checks whether a column has any cells with data within a row range. */
+function colHasAnyCell(sheet: Sheet, col: number, startRow: number, endRow: number): boolean {
+  for (let r = startRow; r <= endRow; r++) {
+    if (sheet.cells[cellKey(r, col)]) return true;
+  }
+  return false;
+}
+
+/**
  * Convenience function: sorts the entire sheet by a single column.
  * Detects the used range automatically.
  *
