@@ -24,6 +24,13 @@ This file tracks bugs in **existing** code, functions, and UI elements. New feat
 
 <!-- Bugs resolved in this session or recent past. Newest first. -->
 
+### 2026-08-08: B-026 — TEXT() ignores format codes when value is a string date (e.g., from NOW()) ✅ VERIFIED
+- **Symptom**: `=TEXT(G1, "ddd")`, `=TEXT(G1, "mmm")`, `=TEXT(G1, "yyyy")` return the raw ISO string from `=NOW()` instead of formatting the date. Format codes are completely ignored.
+- **Root cause**: `NOW()` returns an ISO 8601 string (e.g., `"2026-08-08T12:34:56.789Z"`). The TEXT function's date-formatting branch only checked `typeof val === 'number'` (Excel serial dates). String values fell through to `toString(val)`, bypassing `formatDate()` entirely.
+- **Fix**: Added a string-date branch in the TEXT case: when `val` is a non-empty string, attempt `new Date(val)`; if valid and the format contains date codes, route through `formatDate()`. This handles NOW(), TODAY(), and any cell containing an ISO date string. 6 lines added in `formulaEngine.ts`.
+- **Files**: `src/utils/formulaEngine.ts`, `src/utils/formulaEngine.test.ts`
+- **Tests**: +4 tests (ddd, mmm, yyyy, dd/mm/yyyy with string date values)
+
 ### 2026-08-08: B-025 — Sorting with active filter leaves stale hiddenRows indices ✅ VERIFIED
 - **Symptom**: After applying a sort while a filter is active, wrong rows are hidden/shown. Rows that should be visible appear hidden and vice versa.
 - **Root cause**: The filter state stores `hiddenRows` as a `Set<number>` of row indices. `sortRange` physically reorders cell data to new row positions, but `applySort` in `App.tsx` never updated `filterState.hiddenRows`. The stale indices pointed to different data after sorting.

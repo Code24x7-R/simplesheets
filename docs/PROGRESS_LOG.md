@@ -4,6 +4,13 @@
 
 ---
 
+### 2026-08-08 [BUGFIX] B-026 — TEXT() ignores format codes for string dates from NOW()
+- **What**: Fixed `=TEXT(G1, "ddd")` (and `mmm`, `yyyy`, etc.) returning raw ISO string instead of formatted date
+- **Root cause**: TEXT's date branch only handled numbers (serial dates); string dates from NOW() fell through to `toString()`
+- **Fix**: Added string-date parsing in TEXT case — `new Date(val)` routed through `formatDate()` when format has date codes
+- **Files**: `src/utils/formulaEngine.ts`, `src/utils/formulaEngine.test.ts`
+- **Tests**: +4 (2804 total)
+
 ### 2026-08-08 [FEATURE] Phase 33: SheetLink Cross-Tab Data Bridge
 - **What**: Built a cross-tab data bridge allowing any same-origin app (e.g., SimpleDocs) to read live SimpleSheet cell values, formulas, and ranges via BroadcastChannel
 - **Architecture**: Separate `@simplesheets/sheetlink` package (protocol + transport + client) + SimpleSheets-side Provider component with trust prompt and range picker modal

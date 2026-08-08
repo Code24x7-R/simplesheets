@@ -2821,6 +2821,39 @@ describe('evaluateWorkbook - cross-sheet references', () => {
       const result = evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue;
       expect(result).toBe('2');
     });
+
+    it('TEXT with string date value formats ddd from ISO string', () => {
+      // Simulates =TEXT(G1, "ddd") where G1 has =NOW() (returns ISO string)
+      const sheet = createSheet({
+        '0:0': '2025-03-15T10:30:00.000Z', // Saturday
+        '1:0': '=TEXT(A1, "ddd")',
+      });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['1:0'].computedValue).toBe('Sat');
+    });
+
+    it('TEXT with string date value formats mmm from ISO string', () => {
+      const sheet = createSheet({
+        '0:0': '2025-03-15T10:30:00.000Z', // March
+        '1:0': '=TEXT(A1, "mmm")',
+      });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['1:0'].computedValue).toBe('Mar');
+    });
+
+    it('TEXT with string date value formats yyyy from ISO string', () => {
+      const sheet = createSheet({
+        '0:0': '2025-03-15T10:30:00.000Z',
+        '1:0': '=TEXT(A1, "yyyy")',
+      });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['1:0'].computedValue).toBe('2025');
+    });
+
+    it('TEXT with string date value formats dd/mm/yyyy from ISO string', () => {
+      const sheet = createSheet({
+        '0:0': '2025-03-15T10:30:00.000Z',
+        '1:0': '=TEXT(A1, "dd/mm/yyyy")',
+      });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['1:0'].computedValue).toBe('15/03/2025');
+    });
   });
 
   // ─── Formula parse error catch block (line 1294) ────────────────

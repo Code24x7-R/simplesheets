@@ -842,6 +842,13 @@ function evaluateFunction(node: Extract<ASTNode, { type: 'function' }>, ctx: Eva
         if (fmt === '0.00') return val.toFixed(2);
         if (fmt.includes('%')) return (val * 100).toFixed(fmt.split('%')[0].split('.')[1]?.length ?? 0) + '%';
       }
+      // Handle string values that can be parsed as dates (e.g., output of NOW() / TODAY())
+      if (typeof val === 'string' && val) {
+        const d = new Date(val);
+        if (!isNaN(d.getTime()) && /[dmyhsDMyHsS]/.test(fmt)) {
+          return formatDate(d, fmt);
+        }
+      }
       return toString(val);
     }
 
