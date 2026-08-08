@@ -4,6 +4,15 @@
 
 ---
 
+### 2026-08-08 [FEATURE] Demo Workbook — comprehensive formula reference sheet
+- **What**: Replaced the minimal demo workbook (SUM/AVERAGE with random data) with a comprehensive multi-sheet reference
+- **Sheet1 "Formula Guide"**: 90+ formulas organized by category (Math, Logical, Text, Date, Statistical, Conditional Aggregation, Lookup, Information) — each showing description, computed result, and syntax
+- **Sheet2 "Sales Data"**: Fixed 10-row dataset (Product, Region, Q1-Q4) referenced by Sheet1 for range, lookup, conditional, and cross-sheet examples
+- **Cross-sheet refs**: VLOOKUP, SUMIF, INDEX, MATCH, etc. all reference Sheet2! ranges
+- **TEXT date fix showcased**: Includes =TEXT(NOW(),"ddd"), =TEXT(NOW(),"mmm"), =TEXT(NOW(),"yyyy") examples
+- **Files**: New `src/utils/demoWorkbook.ts` (extracted from inline App.tsx), updated `App.menu.test.tsx`
+- **Tests**: 2804 total passing
+
 ### 2026-08-08 [BUGFIX] B-026 — TEXT() ignores format codes for string dates from NOW()
 - **What**: Fixed `=TEXT(G1, "ddd")` (and `mmm`, `yyyy`, etc.) returning raw ISO string instead of formatted date
 - **Root cause**: TEXT's date branch only handled numbers (serial dates); string dates from NOW() fell through to `toString()`

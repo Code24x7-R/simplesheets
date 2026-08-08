@@ -254,21 +254,19 @@ describe('App - Menu Handlers (Insert)', () => {
     // Load the demo workbook for this test
     fireEvent.click(screen.getByText('File'));
     fireEvent.click(screen.getByText('Load Demo'));
-    // The demo workbook has =SUM(B2:D2) in cell E2 (row index 1, col 4).
-    // We need to select a cell in that row, then insert a row above it.
-    // First, let's select cell at row 1 (second row) by clicking it.
-    // The demo sheet renders headers in row 0, data starting row 1.
-    // Cell "Item 1" is at row 1, col 0.
-    const item1Cell = screen.getByText('Item 1');
-    fireEvent.mouseDown(item1Cell);
+    // The demo sheet renders a title in row 0, headers in row 3,
+    // and the first formula example "Sum of range" in row 4, col 0.
+    // Select that cell, then insert a row above it.
+    const sumCell = screen.getByText('Sum of range');
+    fireEvent.mouseDown(sumCell);
 
-    // Insert row above. "Item 1" is at row index 1 (1-indexed row 2).
+    // Insert row above. "Sum of range" is at row index 4 (1-indexed row 5).
     fireEvent.click(screen.getByText('Insert'));
     fireEvent.click(screen.getByText('Row Above'));
 
     // Status message confirms the insert happened (1-indexed).
     const statusBar = screen.getByTestId('status-message');
-    expect(statusBar?.textContent).toContain('Inserted row 2');
+    expect(statusBar?.textContent).toContain('Inserted row 5');
 
     // Now undo and verify it reverts
     fireEvent.click(screen.getByText('Edit'));

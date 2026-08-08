@@ -54,6 +54,7 @@ import type { ColumnFilter } from './utils/sheetFilter';
 import { ChartDialog } from './components/ChartDialog';
 import { ChartOverlay } from './components/charts/ChartOverlay';
 import type { ChartConfig } from './types';
+import { createDemoWorkbook } from './utils/demoWorkbook';
 import { useChartSettings } from './hooks/useChartSettings';
 import { SheetLinkProvider } from './components/SheetLink';
 
@@ -74,60 +75,6 @@ function createEmptyWorkbook(): Workbook {
         rowHeights: {},
         columnCount: 26,
         rowCount: 1000,
-        frozenColumns: 0,
-        frozenRows: 0,
-      },
-    ],
-    activeSheetIndex: 0,
-    lastModified: Date.now(),
-  };
-}
-
-// ─── Demo Workbook ───────────────────────────────────────────────────────────
-
-function createDemoWorkbook(): Workbook {
-  const rows = 100000;
-  const cols = 26;
-  const cells: Workbook['sheets'][0]['cells'] = {};
-
-  // Add headers
-  const headers = ['Name', 'Q1', 'Q2', 'Q3', 'Total', 'Average'];
-  for (let c = 0; c < headers.length; c++) {
-    cells[`0:${c}`] = {
-      rawValue: headers[c],
-      style: { fontWeight: 'bold', backgroundColor: '#e8f0fe', textAlign: 'center' },
-    };
-  }
-
-  // Add sample data rows
-  for (let r = 1; r <= 20; r++) {
-    cells[`${r}:0`] = { rawValue: `Item ${r}` };
-    cells[`${r}:1`] = { rawValue: String(Math.round(Math.random() * 1000)) };
-    cells[`${r}:2`] = { rawValue: String(Math.round(Math.random() * 1000)) };
-    cells[`${r}:3`] = { rawValue: String(Math.round(Math.random() * 1000)) };
-    cells[`${r}:4`] = { rawValue: `=SUM(B${r + 1}:D${r + 1})` };
-    cells[`${r}:5`] = { rawValue: `=AVERAGE(B${r + 1}:D${r + 1})` };
-  }
-
-  // Add some formula examples
-  cells[`21:0`] = { rawValue: 'Grand Total', style: { fontWeight: 'bold' } };
-  cells[`21:4`] = { rawValue: '=SUM(E2:E21)' };
-  cells[`21:5`] = { rawValue: '=AVERAGE(F2:F21)' };
-
-  return {
-    id: 'demo-wb',
-    title: 'SimpleSheet Demo',
-    sheets: [
-      {
-        id: 'sheet-1',
-        name: 'Sheet1',
-        cells,
-        defaultColWidth: 100,
-        defaultRowHeight: 28,
-        columnWidths: { 0: 150 },
-        rowHeights: {},
-        columnCount: cols,
-        rowCount: rows,
         frozenColumns: 0,
         frozenRows: 0,
       },
