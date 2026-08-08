@@ -55,6 +55,7 @@ import { ChartDialog } from './components/ChartDialog';
 import { ChartOverlay } from './components/charts/ChartOverlay';
 import type { ChartConfig } from './types';
 import { useChartSettings } from './hooks/useChartSettings';
+import { SheetLinkProvider } from './components/SheetLink';
 
 // ─── Empty Workbook ──────────────────────────────────────────────────────────
 
@@ -2650,6 +2651,7 @@ function WorkbookView() {
         onSettingsChange={updateChartSettings}
         workbook={workbook}
       />
+      <SheetLinkProvider workbook={workbook} />
     </div>
   );
 }

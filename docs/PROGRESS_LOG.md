@@ -4,6 +4,25 @@
 
 ---
 
+### 2026-08-08 [FEATURE] Phase 33: SheetLink Cross-Tab Data Bridge
+- **What**: Built a cross-tab data bridge allowing any same-origin app (e.g., SimpleDocs) to read live SimpleSheet cell values, formulas, and ranges via BroadcastChannel
+- **Architecture**: Separate `@simplesheets/sheetlink` package (protocol + transport + client) + SimpleSheets-side Provider component with trust prompt and range picker modal
+- **Package** (`packages/sheetlink/`):
+  - `sheetLinkProtocol.ts` — Typed message protocol (HELLO/WELCOME, REQUEST/RESPONSE, SUBSCRIBE/UPDATE, PICK_RANGE)
+  - `sheetLinkTransport.ts` — BroadcastChannel transport
+  - `SheetLinkClient.ts` — Framework-agnostic promise-based client with connection state, timeouts, auto-retry
+  - `SheetLinkError.ts` — Typed error hierarchy (NO_PROVIDER, TIMEOUT, INVALID_RANGE, etc.)
+- **Provider** (`src/components/SheetLink/`):
+  - `SheetLinkProvider.tsx` — Mounts in App.tsx, responds to requests with live workbook data, auto-pushes subscription updates
+  - `SheetLinkTrustPrompt.tsx` — "Allow this tab" authorization dialog
+  - `SheetLinkRangePicker.tsx` — Modal with text input + sheet tabs for visual range selection
+  - `setupTests.ts` — BroadcastChannel polyfill for JSDOM
+- **Operations**: getCellValue, getRangeValues, getFormula, getFormulas, listSheets, getUsedRange, getDependencies
+- **Files**: `packages/sheetlink/src/*`, `src/components/SheetLink/*`, `src/App.tsx` (Provider mount), `src/setupTests.ts` (polyfill), `jest.config.cjs`
+- **Tests**: 2800 pass (was 2720), lint clean, type-check clean, build clean
+
+---
+
 ### 2026-08-08 [FEATURE] Phase 32: Menu & Toolbar Icon Refactor
 - **What**: Migrated all menu and toolbar icons from emoji strings and inline SVGs to consistent lucide-react icons
 - **Design rules**: All icons `w-4 h-4` (16px), no explicit color (inherit from parent), no wrapper spans, `gap-2` spacing, color inheritance for active states (text-blue-700 → icon turns blue)

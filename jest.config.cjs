@@ -2,7 +2,7 @@
 module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'jsdom',
-  roots: ['<rootDir>/src'],
+  roots: ['<rootDir>/src', '<rootDir>/packages/sheetlink/src'],
   testMatch: ['**/*.test.ts', '**/*.test.tsx'],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
   transform: {
@@ -13,7 +13,9 @@ module.exports = {
   ],
   collectCoverageFrom: [
     'src/**/*.{ts,tsx}',
+    'packages/sheetlink/src/**/*.{ts,tsx}',
     '!src/**/*.test.{ts,tsx}',
+    '!packages/sheetlink/src/**/*.test.{ts,tsx}',
     '!src/main.tsx',
     '!src/vite-env.d.ts',
   ],
