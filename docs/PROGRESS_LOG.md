@@ -4,6 +4,12 @@
 
 ---
 
+### 2026-08-08 [BUGFIX] B-027 — Six copy/paste gaps vs Excel spec
+- **What**: Reviewed `excel-copypaste.md` against implementation and fixed 6 functional/UX gaps
+- **Fixes**: typing clears clipboard, filtered paste skips hidden rows, values paste preserves numberFormat, Ctrl+Shift+V shortcut for Paste Special, true marching-ants animation, copy/cut status shows cell count
+- **Files**: `App.tsx`, `pasteSpecial.ts`, `index.css`, `Grid.tsx`, `MenuBar.tsx`
+- **Tests**: +7 new tests (2812 total)
+
 ### 2026-08-08 [FEATURE] Demo Workbook — comprehensive formula reference sheet
 - **What**: Replaced the minimal demo workbook (SUM/AVERAGE with random data) with a comprehensive multi-sheet reference
 - **Sheet1 "Formula Guide"**: 90+ formulas organized by category (Math, Logical, Text, Date, Statistical, Conditional Aggregation, Lookup, Information) — each showing description, computed result, and syntax

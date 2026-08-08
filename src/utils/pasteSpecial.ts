@@ -45,12 +45,16 @@ export function applyPasteOptions(clipboard: ClipboardData, options: PasteOption
         }
 
         case 'values': {
-          // Convert formulas to values, strip styles
+          // Convert formulas to values, but preserve number formatting
           let newRawValue = cell.rawValue;
           if (cell.rawValue.startsWith('=')) {
             newRawValue = computedValueToString(cell.computedValue);
           }
-          return { rawValue: newRawValue };
+          // Keep numberFormat so $1,234.50 stays formatted after paste-values
+          const preservedStyle = cell.style?.numberFormat
+            ? { numberFormat: cell.style.numberFormat }
+            : undefined;
+          return { rawValue: newRawValue, style: preservedStyle };
         }
 
         case 'formatting': {

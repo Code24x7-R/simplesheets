@@ -119,7 +119,7 @@ describe('App - Copy/Cut with Row/Col Selection', () => {
       detail: { startRow: 0, startCol: 0, endRow: 0, endCol: 5, selectionType: 'row' },
     });
     act(() => { window.dispatchEvent(copyEvent); });
-    expect(screen.getByText(/Row copied/)).toBeInTheDocument();
+    expect(screen.getByText(/Copied.*\d+ cell/)).toBeInTheDocument();
   });
 
   it('copies multiple rows', () => {
@@ -128,7 +128,7 @@ describe('App - Copy/Cut with Row/Col Selection', () => {
       detail: { startRow: 0, startCol: 0, endRow: 2, endCol: 5, selectionType: 'row' },
     });
     act(() => { window.dispatchEvent(copyEvent); });
-    expect(screen.getByText(/Rows copied/)).toBeInTheDocument();
+    expect(screen.getByText(/Copied.*\d+ cell/)).toBeInTheDocument();
   });
 
   it('copies a single column', () => {
@@ -137,7 +137,7 @@ describe('App - Copy/Cut with Row/Col Selection', () => {
       detail: { startRow: 0, startCol: 0, endRow: 5, endCol: 0, selectionType: 'col' },
     });
     act(() => { window.dispatchEvent(copyEvent); });
-    expect(screen.getByText(/Column copied/)).toBeInTheDocument();
+    expect(screen.getByText(/Copied.*\d+ cell/)).toBeInTheDocument();
   });
 
   it('copies multiple columns', () => {
@@ -146,7 +146,7 @@ describe('App - Copy/Cut with Row/Col Selection', () => {
       detail: { startRow: 0, startCol: 0, endRow: 5, endCol: 2, selectionType: 'col' },
     });
     act(() => { window.dispatchEvent(copyEvent); });
-    expect(screen.getByText(/Columns copied/)).toBeInTheDocument();
+    expect(screen.getByText(/Copied.*\d+ cell/)).toBeInTheDocument();
   });
 
   it('cuts a single row', () => {
@@ -155,7 +155,7 @@ describe('App - Copy/Cut with Row/Col Selection', () => {
       detail: { startRow: 0, startCol: 0, endRow: 0, endCol: 5, selectionType: 'row' },
     });
     act(() => { window.dispatchEvent(cutEvent); });
-    expect(screen.getByText(/Row cut/)).toBeInTheDocument();
+    expect(screen.getByText(/Cut.*\d+ cell/)).toBeInTheDocument();
   });
 
   it('cuts multiple rows', () => {
@@ -164,7 +164,7 @@ describe('App - Copy/Cut with Row/Col Selection', () => {
       detail: { startRow: 0, startCol: 0, endRow: 2, endCol: 5, selectionType: 'row' },
     });
     act(() => { window.dispatchEvent(cutEvent); });
-    expect(screen.getByText(/Rows cut/)).toBeInTheDocument();
+    expect(screen.getByText(/Cut.*\d+ cell/)).toBeInTheDocument();
   });
 
   it('cuts a single column', () => {
@@ -173,7 +173,7 @@ describe('App - Copy/Cut with Row/Col Selection', () => {
       detail: { startRow: 0, startCol: 0, endRow: 5, endCol: 0, selectionType: 'col' },
     });
     act(() => { window.dispatchEvent(cutEvent); });
-    expect(screen.getByText(/Column cut/)).toBeInTheDocument();
+    expect(screen.getByText(/Cut.*\d+ cell/)).toBeInTheDocument();
   });
 
   it('cuts multiple columns', () => {
@@ -182,7 +182,7 @@ describe('App - Copy/Cut with Row/Col Selection', () => {
       detail: { startRow: 0, startCol: 0, endRow: 5, endCol: 2, selectionType: 'col' },
     });
     act(() => { window.dispatchEvent(cutEvent); });
-    expect(screen.getByText(/Columns cut/)).toBeInTheDocument();
+    expect(screen.getByText(/Cut.*\d+ cell/)).toBeInTheDocument();
   });
 });
 

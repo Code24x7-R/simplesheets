@@ -670,14 +670,22 @@ function WorkbookView() {
     [startEdit],
   );
 
+  // Clears both the marching-ants range and the clipboard data (Esc / typing)
+  const handleClearClipboard = useCallback(() => {
+    setClipboardRange(null);
+    clearClipboard();
+  }, []);
+
   const handleGridStartEnter = useCallback(
     (row: number, col: number, char: string) => {
       // Update active cell so FSM uses correct row/col
       // Pass row/col explicitly to avoid stale closure values
       setActiveCell({ row, col });
+      // Excel behavior: typing clears clipboard (marching ants disappear)
+      handleClearClipboard();
       startEnter(char, row, col);
     },
-    [startEnter],
+    [startEnter, handleClearClipboard],
   );
 
   // ─── Help / Utility Actions ──────────────────────────────────────────
@@ -809,12 +817,6 @@ function WorkbookView() {
   useEffect(() => {
     if (!activeCell) setGridSelection(null);
   }, [activeCell]);
-
-  // Clears both the marching-ants range and the clipboard data (Esc / typing)
-  const handleClearClipboard = useCallback(() => {
-    setClipboardRange(null);
-    clearClipboard();
-  }, []);
 
   const handleUndo = useCallback(() => {
     const prev = undo();
@@ -1191,12 +1193,13 @@ function WorkbookView() {
         endCol: Math.max(detail.startCol, detail.endCol),
         isCut: false,
       });
+      const copyCount = clipboardData.rowCount * clipboardData.colCount;
       setStatusMessage(
         detail.selectionType === 'row'
-          ? `Row${detail.startRow !== detail.endRow ? 's' : ''} copied`
+          ? `Copied ${copyCount} cell(s) (row${detail.startRow !== detail.endRow ? 's' : ''})`
           : detail.selectionType === 'col'
-          ? `Column${detail.startCol !== detail.endCol ? 's' : ''} copied`
-          : 'Selection copied'
+          ? `Copied ${copyCount} cell(s) (column${detail.startCol !== detail.endCol ? 's' : ''})`
+          : `Copied ${copyCount} cell(s)`
       );
       // Also write to system clipboard for pasting into external applications
       writeClipboardToSystem(clipboardData).catch(() => {
@@ -1226,12 +1229,13 @@ function WorkbookView() {
         endCol: Math.max(detail.startCol, detail.endCol),
         isCut: true,
       });
+      const cutCount = cutData.rowCount * cutData.colCount;
       setStatusMessage(
         detail.selectionType === 'row'
-          ? `Row${detail.startRow !== detail.endRow ? 's' : ''} cut`
+          ? `Cut ${cutCount} cell(s) (row${detail.startRow !== detail.endRow ? 's' : ''})`
           : detail.selectionType === 'col'
-          ? `Column${detail.startCol !== detail.endCol ? 's' : ''} cut`
-          : 'Selection cut'
+          ? `Cut ${cutCount} cell(s) (column${detail.startCol !== detail.endCol ? 's' : ''})`
+          : `Cut ${cutCount} cell(s)`
       );
       // Also write to system clipboard for pasting into external applications
       writeClipboardToSystem(cutData).catch(() => {
@@ -1316,6 +1320,14 @@ function WorkbookView() {
           const destRow = targetRow + r;
           const destCol = targetCol + c;
           const destKey = cellKey(destRow, destCol);
+
+          // Filtered paste protection: skip hidden rows so we don't
+          // silently overwrite data the user can't see (Excel behavior).
+          const fs = filterStateRef.current;
+          if (fs?.active && fs.hiddenRows.has(destRow)) {
+            cellsSkipped++;
+            continue;
+          }
 
           // Adjust formulas if pasting
           let newValue = cell?.rawValue ?? '';
@@ -1427,10 +1439,10 @@ function WorkbookView() {
           : isCut ? `Cut ${cellsUpdated} cell(s)` : `Paste ${cellsUpdated} cell(s)`;
       pushHistory(newWorkbook, actionLabel, filterStateRef.current, gridSelectionRef.current);
 
-      // Build status message with skip blanks info
+      // Build status message with skip info (blanks + hidden rows)
       let statusMsg = `${isCut ? 'Moved' : 'Pasted'} ${cellsUpdated} cell(s)`;
-      if (skipBlanks && cellsSkipped > 0) {
-        statusMsg += ` (${cellsSkipped} blank(s) skipped)`;
+      if (cellsSkipped > 0) {
+        statusMsg += ` (${cellsSkipped} skipped — hidden rows / blanks)`;
       }
       setStatusMessage(statusMsg);
       // Clear marching ants after paste
@@ -2211,10 +2223,15 @@ function WorkbookView() {
         e.preventDefault();
         handleFxClick(getActiveCellValue());
       }
+      // Ctrl+Shift+V opens Paste Special dialog (Excel shortcut)
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'v' || e.key === 'V')) {
+        e.preventDefault();
+        handlePasteSpecial();
+      }
     };
     window.addEventListener('keydown', handleGlobalKeyDown);
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-  }, [handleUndo, handleRedo, handleNewSheet, handleSaveMenu, handleLoadMenu, handleSearchReplace, toggleBoldStyle, toggleItalicStyle, toggleUnderlineStyle, handleToggleFilter, handleFxClick, getActiveCellValue, activeCell]);
+  }, [handleUndo, handleRedo, handleNewSheet, handleSaveMenu, handleLoadMenu, handleSearchReplace, toggleBoldStyle, toggleItalicStyle, toggleUnderlineStyle, handleToggleFilter, handleFxClick, getActiveCellValue, handlePasteSpecial, activeCell]);
 
   return (
     <div className="h-screen flex flex-col">

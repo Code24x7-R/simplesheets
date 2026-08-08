@@ -24,6 +24,18 @@ This file tracks bugs in **existing** code, functions, and UI elements. New feat
 
 <!-- Bugs resolved in this session or recent past. Newest first. -->
 
+### 2026-08-08: B-027 — Six copy/paste gaps vs Excel spec (excel-copypaste.md review) ✅ VERIFIED
+- **Symptom**: Review against `excel-copypaste.md` revealed 6 functional/UX deviations from Excel copy/paste behavior.
+- **Gaps & fixes**:
+  1. **Clipboard not cleared on typing** — `handleGridStartEnter` now calls `handleClearClipboard()` so typing dismisses marching ants (matches Excel: "stays active until you press Esc or start typing").
+  2. **Filtered paste overwrites hidden rows** — Paste loop now checks `filterStateRef.current.hiddenRows` and skips hidden destination rows.
+  3. **Values paste mode strips number formatting** — `applyPasteOptions` now preserves `cell.style.numberFormat` when mode is `values` (e.g., `$1,234.50` stays formatted).
+  4. **No keyboard shortcut for Paste Special** — Added `Ctrl+Shift+V` global shortcut handler.
+  5. **Marching ants were opacity pulse only** — Replaced with animated diagonal-stripe gradient (`marching-ants-travel` keyframe) applied via CSS class on clipboard-range cells.
+  6. **Copy/cut status lacked cell count** — Status messages now include cell count: `"Copied 6 cell(s)"`.
+- **Files**: `src/App.tsx`, `src/utils/pasteSpecial.ts`, `src/index.css`, `src/components/Grid.tsx`, `src/components/MenuBar.tsx`
+- **Tests**: +7 new tests (2812 total): `pasteSpecial.test.ts` +3, `App.externalpaste.test.tsx` +2, `App.coverage-gaps.test.tsx` +2; existing tests in `App.handlers.test.tsx` and `Grid.test.tsx` updated for new status messages and class-based marching ants
+
 ### 2026-08-08: B-026 — TEXT() ignores format codes when value is a string date (e.g., from NOW()) ✅ VERIFIED
 - **Symptom**: `=TEXT(G1, "ddd")`, `=TEXT(G1, "mmm")`, `=TEXT(G1, "yyyy")` return the raw ISO string from `=NOW()` instead of formatting the date. Format codes are completely ignored.
 - **Root cause**: `NOW()` returns an ISO 8601 string (e.g., `"2026-08-08T12:34:56.789Z"`). The TEXT function's date-formatting branch only checked `typeof val === 'number'` (Excel serial dates). String values fell through to `toString(val)`, bypassing `formatDate()` entirely.

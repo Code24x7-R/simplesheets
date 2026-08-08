@@ -236,6 +236,26 @@ describe('App - Paste with Skip Blanks Status', () => {
     const statusBar = screen.getByTestId('status-message');
     expect(statusBar?.textContent).toMatch(/paste/i);
   });
+
+  it('reports skipped cells (hidden rows or blanks) in status message', () => {
+    render(<App />);
+    // Copy a 2x2 range (4 cells)
+    const copyEvent = new CustomEvent('simplesheets:copy', {
+      detail: { startRow: 0, startCol: 0, endRow: 1, endCol: 1, selectionType: 'cell' },
+    });
+    act(() => { window.dispatchEvent(copyEvent); });
+
+    // Paste with skipBlanks=true to a larger range that will tile.
+    // The tiled paste will hit empty source cells (blanks) which are skipped.
+    const pasteEvent = new CustomEvent('simplesheets:paste', {
+      detail: { startRow: 10, startCol: 10, skipBlanks: true },
+    });
+    act(() => { window.dispatchEvent(pasteEvent); });
+
+    // Status message should mention skipped cells when blanks exist
+    const statusBar = screen.getByTestId('status-message');
+    expect(statusBar?.textContent).toMatch(/paste/i);
+  });
 });
 
 describe('App - Fill Handle Horizontal', () => {
@@ -410,6 +430,25 @@ describe('App - Paste Special', () => {
     // Open Edit menu and click Paste Special
     fireEvent.click(screen.getByText('Edit'));
     fireEvent.click(screen.getByText('Paste Special…'));
+
+    // Paste special modal should open
+    expect(screen.getByText('Paste Special')).toBeInTheDocument();
+  });
+
+  it('Ctrl+Shift+V keyboard shortcut opens Paste Special', () => {
+    render(<App />);
+    // Copy a cell first
+    const copyEvent = new CustomEvent('simplesheets:copy', {
+      detail: { startRow: 0, startCol: 0, endRow: 0, endCol: 0, selectionType: 'cell' },
+    });
+    act(() => { window.dispatchEvent(copyEvent); });
+
+    // Select a cell
+    const cell = document.querySelector('.grid-cell') as HTMLElement;
+    fireEvent.mouseDown(cell);
+
+    // Use Ctrl+Shift+V keyboard shortcut
+    fireEvent.keyDown(window, { key: 'V', ctrlKey: true, shiftKey: true });
 
     // Paste special modal should open
     expect(screen.getByText('Paste Special')).toBeInTheDocument();

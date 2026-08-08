@@ -273,7 +273,7 @@ export function MenuBar(props: MenuBarProps) {
     { id: 'edit-copy', label: 'Copy', shortcut: 'Ctrl+C', icon: Copy },
     { id: 'edit-cut', label: 'Cut', shortcut: 'Ctrl+X', icon: Scissors },
     { id: 'edit-paste', label: 'Paste', shortcut: 'Ctrl+V', icon: ClipboardPaste },
-    { id: 'edit-paste-special', label: 'Paste Special…', icon: ClipboardEdit },
+    { id: 'edit-paste-special', label: 'Paste Special…', shortcut: 'Ctrl+Shift+V', icon: ClipboardEdit },
     { id: 'edit-clear', label: 'Clear Contents', shortcut: 'Delete', icon: Eraser },
     { id: 'edit-search-replace', label: 'Find & Replace…', shortcut: 'Ctrl+H', icon: Search },
     { id: 'sep-edit-2', label: '', separator: true },

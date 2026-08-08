@@ -2158,7 +2158,9 @@ describe('Grid Component', () => {
     const cellA1 = screen.getByText('A1').closest('.grid-cell') as HTMLElement;
     expect(cellA1.style.borderTop).toContain('dashed');
     expect(cellA1.style.borderLeft).toContain('dashed');
-    expect(cellA1.style.animation).toContain('marching-ants');
+    // Marching-ants is now a CSS class (not inline animation)
+    expect(cellA1.className).toContain('clipboard-range-cell');
+    expect(cellA1.className).toContain('marching-active');
   });
 
   it('does not render marching-ants on cells outside clipboardRange', () => {
@@ -2177,7 +2179,9 @@ describe('Grid Component', () => {
     );
     // Cell at (1,0) displays '42' and is outside the single-cell range at A1
     const cellOutside = screen.getByText('42').closest('.grid-cell') as HTMLElement;
-    expect(cellOutside.style.animation).toBe('');
+    // Marching-ants is class-based — outside cells should not have the classes
+    expect(cellOutside.className).not.toContain('clipboard-range-cell');
+    expect(cellOutside.className).not.toContain('marching-active');
   });
 
   it('uses red dashed border for cut range vs blue for copy', () => {

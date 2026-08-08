@@ -503,7 +503,7 @@ describe('App - Paste Special (Skip Blanks)', () => {
 
     // For now, verify the paste works without error
     const status = screen.getByTestId('status-message')?.textContent;
-    expect(status).toContain('copied');
+    expect(status).toMatch(/copied/i);
   });
 
   it('pastes text starting with = as plain text (prefixed with single quote)', () => {
@@ -548,6 +548,54 @@ describe('App - Paste Special (Skip Blanks)', () => {
     // The cell should display the text as-is
     const cellA1After = document.querySelector('.grid-cell') as HTMLElement;
     expect(cellA1After.textContent).toBe('Hello World');
+  });
+});
+
+describe('App — Clipboard clears on typing (Excel behavior)', () => {
+  it('typing a printable character clears the marching-ants clipboard', () => {
+    render(<App />);
+    const grid = document.querySelector('[tabindex="0"]') as HTMLElement;
+
+    // Copy a range to put marching ants on screen
+    const copyEvent = new CustomEvent('simplesheets:copy', {
+      detail: { startRow: 0, startCol: 0, endRow: 1, endCol: 1, selectionType: 'cell' },
+    });
+    act(() => { window.dispatchEvent(copyEvent); });
+
+    // Verify clipboard has data (marching ants active)
+    expect(screen.getByTestId('status-message')?.textContent).toMatch(/copied/i);
+
+    // Now type a character in a cell — this should clear the clipboard
+    const cell = document.querySelector('.grid-cell') as HTMLElement;
+    fireEvent.mouseDown(cell);
+    fireEvent.keyDown(grid, { key: 'A' }); // printable char triggers startEnter
+
+    // The clipboard should be cleared (no marching ants)
+    // Verify by checking that a subsequent paste reports "nothing to paste"
+    fireEvent.click(screen.getByText('Edit'));
+    fireEvent.click(screen.getByText('Paste Special…'));
+    expect(screen.getByTestId('status-message')?.textContent).toContain('Nothing to paste');
+  });
+
+  it('Escape key clears clipboard when grid is focused', () => {
+    render(<App />);
+    const grid = document.querySelector('[tabindex="0"]') as HTMLElement;
+
+    // Copy a range
+    const copyEvent = new CustomEvent('simplesheets:copy', {
+      detail: { startRow: 0, startCol: 0, endRow: 0, endCol: 0, selectionType: 'cell' },
+    });
+    act(() => { window.dispatchEvent(copyEvent); });
+    expect(screen.getByTestId('status-message')?.textContent).toMatch(/copied/i);
+
+    // Focus the grid so its Escape handler fires
+    act(() => { grid.focus(); });
+    fireEvent.keyDown(grid, { key: 'Escape' });
+
+    // Paste Special should report nothing to paste
+    fireEvent.click(screen.getByText('Edit'));
+    fireEvent.click(screen.getByText('Paste Special…'));
+    expect(screen.getByTestId('status-message')?.textContent).toContain('Nothing to paste');
   });
 });
 

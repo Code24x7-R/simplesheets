@@ -2042,7 +2042,8 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
                 cellStyle.outlineOffset = '-2px';
                 cellStyle.backgroundColor = 'rgba(59, 130, 246, 0.10)';
               }
-              // Highlight cells in the clipboard range with a dashed pulsing border
+              // Highlight cells in the clipboard range with a dashed border + marching overlay
+              let cellClipClass = '';
               if (clipboardRange) {
                 const inRange =
                   row >= clipboardRange.startRow &&
@@ -2060,7 +2061,9 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
                   if (isBottom) cellStyle.borderBottom = `2px dashed ${antColor}`;
                   if (isLeft) cellStyle.borderLeft = `2px dashed ${antColor}`;
                   if (isRight) cellStyle.borderRight = `2px dashed ${antColor}`;
-                  cellStyle.animation = 'marching-ants 1s ease-in-out infinite';
+                  // Drive the marching-ants gradient color via CSS variable
+                  (cellStyle as Record<string, string>)['--ant-color'] = antColor;
+                  cellClipClass = ' clipboard-range-cell marching-active';
                 }
               }
               const cellFrozen = isCellFrozen(row, col);
@@ -2210,7 +2213,7 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
                 <div
                   key={`cell-${key}`}
                   data-col={col}
-                  className={`grid-cell ${cellFrozen ? 'grid-cell-frozen' : 'absolute'} ${isSelected ? 'grid-cell-selected' : ''}`}
+                  className={`grid-cell ${cellFrozen ? 'grid-cell-frozen' : 'absolute'} ${isSelected ? 'grid-cell-selected' : ''}${cellClipClass}`}
                   style={cellStyle}
                   onMouseDown={(e) => handleCellMouseDown(row, col, e.shiftKey)}
                   onDoubleClick={() => onStartEdit?.(row, col)}

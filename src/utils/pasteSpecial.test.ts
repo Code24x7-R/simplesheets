@@ -121,6 +121,34 @@ describe('applyPasteOptions', () => {
       expect(result.cells[0][0]?.style).toBeUndefined();
       expect(result.cells[0][1]?.style).toBeUndefined();
     });
+
+    it('preserves numberFormat from style when pasting values', () => {
+      const clipboard = createClipboard([
+        [{ rawValue: '=A1*2', computedValue: 1000, style: { numberFormat: '$#,##0.00' } }],
+      ]);
+      const result = applyPasteOptions(clipboard, { mode: 'values' });
+      expect(result.cells[0][0]?.rawValue).toBe('1000');
+      // numberFormat is preserved so the value stays formatted as currency
+      expect(result.cells[0][0]?.style).toEqual({ numberFormat: '$#,##0.00' });
+    });
+
+    it('preserves numberFormat for literal values (non-formula)', () => {
+      const clipboard = createClipboard([
+        [{ rawValue: '42.5', style: { numberFormat: '0.0%' } }],
+      ]);
+      const result = applyPasteOptions(clipboard, { mode: 'values' });
+      expect(result.cells[0][0]?.rawValue).toBe('42.5');
+      expect(result.cells[0][0]?.style).toEqual({ numberFormat: '0.0%' });
+    });
+
+    it('returns undefined style when no numberFormat present', () => {
+      const clipboard = createClipboard([
+        [{ rawValue: '=A1', computedValue: 42, style: { fontWeight: 'bold', color: '#f00' } }],
+      ]);
+      const result = applyPasteOptions(clipboard, { mode: 'values' });
+      expect(result.cells[0][0]?.rawValue).toBe('42');
+      expect(result.cells[0][0]?.style).toBeUndefined();
+    });
   });
 
   describe('paste mode: formatting', () => {
