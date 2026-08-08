@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
 import { useState, useRef, useEffect, useCallback } from 'react';
+import type { ComponentType, SVGProps } from 'react';
+
+/** Any component that accepts SVGProps (lucide icons, custom SVG components, etc.). */
+type IconComponent = ComponentType<SVGProps<SVGSVGElement>>;
 
 /** A single menu item. */
 export interface MenuItem {
@@ -10,14 +14,16 @@ export interface MenuItem {
   label: string;
   /** Optional keyboard shortcut display (e.g., "Ctrl+Z"). */
   shortcut?: string;
-  /** Optional emoji/icon prefix. */
-  icon?: string;
+  /** Optional icon component (rendered at w-4 h-4). */
+  icon?: IconComponent;
   /** Whether the item is disabled. */
   disabled?: boolean;
   /** Whether this item is a separator line. */
   separator?: boolean;
   /** Submenu items (if present, clicking opens submenu instead of triggering action). */
   submenu?: MenuItem[];
+  /** Whether the item is in an active/checked state (renders blue). */
+  active?: boolean;
 }
 
 interface DropdownMenuProps {
@@ -102,16 +108,18 @@ export function DropdownMenu({ label, items, onSelect }: DropdownMenuProps) {
       return <div key={item.id} className="menu-separator" />;
     }
 
+    const Icon = item.icon;
+
     return (
       <div
         key={item.id}
-        className={`menu-item ${item.disabled ? 'menu-item-disabled' : ''} ${item.submenu ? 'menu-item-submenu' : ''}`}
+        className={`menu-item ${item.disabled ? 'menu-item-disabled' : ''} ${item.active ? 'menu-item-active' : ''} ${item.submenu ? 'menu-item-submenu' : ''}`}
         onClick={() => handleItemClick(item)}
         onMouseEnter={() => handleMouseEnter(item)}
         role="menuitem"
         aria-disabled={item.disabled}
       >
-        <span className="menu-item-icon">{item.icon ?? ''}</span>
+        {Icon && <Icon className="w-4 h-4" />}
         <span className="menu-item-label">{item.label}</span>
         {item.shortcut && <span className="menu-item-shortcut">{item.shortcut}</span>}
         {item.submenu && <span className="menu-item-arrow">▸</span>}
@@ -137,7 +145,7 @@ export function DropdownMenu({ label, items, onSelect }: DropdownMenuProps) {
       </button>
       {isOpen && (
         <div className="menu-dropdown" role="menu">
-          {items.map(renderItem)}
+          {items.map((item) => renderItem(item))}
         </div>
       )}
     </div>

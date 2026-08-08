@@ -14,6 +14,7 @@ A lightweight, browser-based spreadsheet — fully client-side, reads and writes
 |-------|--------|
 | Build | Vite 5 |
 | UI | React 18 + TypeScript |
+| Icons | lucide-react |
 | Styling | Tailwind CSS (CDN) |
 | Virtualization | `@tanstack/react-virtual` |
 | Excel | SheetJS (`xlsx`) |

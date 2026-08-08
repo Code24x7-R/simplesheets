@@ -1,6 +1,25 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
 import { useState, useRef, useEffect, useCallback } from 'react';
+import {
+  Undo2,
+  Redo2,
+  Copy,
+  Scissors,
+  ClipboardPaste,
+  BarChart3,
+  Bold,
+  Italic,
+  Underline,
+  Strikethrough,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  Palette,
+  PaintBucket,
+  ChevronDown,
+} from 'lucide-react';
+import { BorderAll } from './icons/BorderIcons';
 import { BORDER_COLORS } from '../hooks/useCellStyle';
 
 /** Border preset definition with icon pattern. */
@@ -140,10 +159,7 @@ export function Toolbar(props: ToolbarProps) {
           title="Undo (Ctrl+Z)"
           disabled={!props.canUndo}
         >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={!props.canUndo ? 'opacity-30' : ''}>
-            <polyline points="1 4 1 10 7 10" />
-            <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
-          </svg>
+          <Undo2 className="w-4 h-4" />
         </button>
         <button
           className="toolbar-btn"
@@ -151,39 +167,19 @@ export function Toolbar(props: ToolbarProps) {
           title="Redo (Ctrl+Y)"
           disabled={!props.canRedo}
         >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={!props.canRedo ? 'opacity-30' : ''}>
-            <polyline points="23 4 23 10 17 10" />
-            <path d="M20.49 15a9 9 0 1 1-2.13-9.36L23 10" />
-          </svg>
+          <Redo2 className="w-4 h-4" />
         </button>
         <button className="toolbar-btn" onClick={props.onCopy} title="Copy (Ctrl+C)">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-          </svg>
+          <Copy className="w-4 h-4" />
         </button>
         <button className="toolbar-btn" onClick={props.onCut} title="Cut (Ctrl+X)">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="6" cy="6" r="3" />
-            <circle cx="6" cy="18" r="3" />
-            <line x1="20" y1="4" x2="8.12" y2="15.88" />
-            <line x1="14.47" y1="14.48" x2="20" y2="20" />
-            <line x1="8.12" y1="8.12" x2="12" y2="12" />
-          </svg>
+          <Scissors className="w-4 h-4" />
         </button>
         <button className="toolbar-btn" onClick={props.onPaste} title="Paste (Ctrl+V)">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
-            <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
-          </svg>
+          <ClipboardPaste className="w-4 h-4" />
         </button>
         <button className="toolbar-btn" onClick={props.onChart} title="Insert Chart">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="3" y="3" width="18" height="18" rx="2" />
-            <rect x="7" y="13" width="3" height="4" fill="currentColor" />
-            <rect x="12" y="9" width="3" height="8" fill="currentColor" />
-            <rect x="17" y="5" width="3" height="12" fill="currentColor" />
-          </svg>
+          <BarChart3 className="w-4 h-4" />
         </button>
       </div>
 
@@ -192,32 +188,32 @@ export function Toolbar(props: ToolbarProps) {
       {/* ── Font Formatting Section ─────────────────────────────────── */}
       <div className="toolbar-section flex items-center gap-0.5">
         <button
-          className={`toolbar-btn font-bold ${props.isBold ? 'bg-blue-100 text-blue-700' : ''}`}
+          className={`toolbar-btn ${props.isBold ? 'bg-blue-100 text-blue-700' : ''}`}
           onClick={props.onToggleBold}
           title="Bold (Ctrl+B)"
         >
-          B
+          <Bold className="w-4 h-4" />
         </button>
         <button
-          className={`toolbar-btn italic ${props.isItalic ? 'bg-blue-100 text-blue-700' : ''}`}
+          className={`toolbar-btn ${props.isItalic ? 'bg-blue-100 text-blue-700' : ''}`}
           onClick={props.onToggleItalic}
           title="Italic (Ctrl+I)"
         >
-          I
+          <Italic className="w-4 h-4" />
         </button>
         <button
-          className={`toolbar-btn underline ${props.isUnderline ? 'bg-blue-100 text-blue-700' : ''}`}
+          className={`toolbar-btn ${props.isUnderline ? 'bg-blue-100 text-blue-700' : ''}`}
           onClick={props.onToggleUnderline}
           title="Underline (Ctrl+U)"
         >
-          U
+          <Underline className="w-4 h-4" />
         </button>
         <button
-          className="toolbar-btn line-through"
+          className="toolbar-btn"
           onClick={props.onToggleStrikethrough}
           title="Strikethrough"
         >
-          S
+          <Strikethrough className="w-4 h-4" />
         </button>
       </div>
 
@@ -232,7 +228,7 @@ export function Toolbar(props: ToolbarProps) {
             onClick={() => setColorPickerOpen(colorPickerOpen === 'text' ? null : 'text')}
             title="Text Color"
           >
-            <span className="font-bold text-sm leading-none">A</span>
+            <Palette className="w-4 h-4" />
             <span className="w-4 h-1 rounded-sm mt-0.5" style={{ backgroundColor: '#000000' }} />
           </button>
           {colorPickerOpen === 'text' && (
@@ -262,10 +258,7 @@ export function Toolbar(props: ToolbarProps) {
             onClick={() => setColorPickerOpen(colorPickerOpen === 'fill' ? null : 'fill')}
             title="Fill Color"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <rect x="3" y="3" width="18" height="18" rx="2" fill="#FFFF00" stroke="none" />
-              <path d="M3 3h18v18H3z" fill="none" stroke="currentColor" strokeWidth="1.5" />
-            </svg>
+            <PaintBucket className="w-4 h-4" />
             <span className="w-4 h-1 rounded-sm mt-0.5 bg-yellow-300" />
           </button>
           {colorPickerOpen === 'fill' && (
@@ -295,9 +288,7 @@ export function Toolbar(props: ToolbarProps) {
             onClick={() => setColorPickerOpen(colorPickerOpen === 'border' ? null : 'border')}
             title="Border Color"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <rect x="4" y="4" width="16" height="16" rx="1" />
-            </svg>
+            <BorderAll className="w-4 h-4" />
             <span className="w-4 h-1 rounded-sm mt-0.5" style={{ backgroundColor: props.borderColor }} />
           </button>
           {colorPickerOpen === 'border' && (
@@ -326,25 +317,13 @@ export function Toolbar(props: ToolbarProps) {
       {/* ── Alignment Section ───────────────────────────────────────── */}
       <div className="toolbar-section flex items-center gap-0.5">
         <button className="toolbar-btn" onClick={props.onSetAlignLeft} title="Align Left">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <line x1="3" y1="6" x2="21" y2="6" />
-            <line x1="3" y1="12" x2="15" y2="12" />
-            <line x1="3" y1="18" x2="18" y2="18" />
-          </svg>
+          <AlignLeft className="w-4 h-4" />
         </button>
         <button className="toolbar-btn" onClick={props.onSetAlignCenter} title="Align Center">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <line x1="3" y1="6" x2="21" y2="6" />
-            <line x1="6" y1="12" x2="18" y2="12" />
-            <line x1="4" y1="18" x2="20" y2="18" />
-          </svg>
+          <AlignCenter className="w-4 h-4" />
         </button>
         <button className="toolbar-btn" onClick={props.onSetAlignRight} title="Align Right">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <line x1="3" y1="6" x2="21" y2="6" />
-            <line x1="9" y1="12" x2="21" y2="12" />
-            <line x1="6" y1="18" x2="21" y2="18" />
-          </svg>
+          <AlignRight className="w-4 h-4" />
         </button>
       </div>
 
@@ -358,14 +337,8 @@ export function Toolbar(props: ToolbarProps) {
           onClick={() => setBorderDropdownOpen(!borderDropdownOpen)}
           title="Borders"
         >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-            <rect x="4" y="4" width="16" height="16" rx="1" />
-            <line x1="12" y1="4" x2="12" y2="20" />
-            <line x1="4" y1="12" x2="20" y2="12" />
-          </svg>
-          <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="opacity-60">
-            <polyline points="6 9 12 15 18 9" />
-          </svg>
+          <BorderAll className="w-4 h-4" />
+          <ChevronDown className="w-3 h-3 opacity-60" />
         </button>
 
         {borderDropdownOpen && (

@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
 import { render, screen, fireEvent } from '@testing-library/react';
+import { ClipboardCopy } from 'lucide-react';
 import { DropdownMenu, type MenuItem } from './DropdownMenu';
 
 describe('DropdownMenu', () => {
   const items: MenuItem[] = [
-    { id: 'action-1', label: 'Action 1', icon: '📋' },
+    { id: 'action-1', label: 'Action 1', icon: ClipboardCopy },
     { id: 'action-2', label: 'Action 2', shortcut: 'Ctrl+X' },
     { id: 'sep-1', label: '', separator: true },
     { id: 'disabled-action', label: 'Disabled', disabled: true },

@@ -4,6 +4,14 @@
 
 ---
 
+### 2026-08-08 [FEATURE] Phase 32: Menu & Toolbar Icon Refactor
+- **What**: Migrated all menu and toolbar icons from emoji strings and inline SVGs to consistent lucide-react icons
+- **Design rules**: All icons `w-4 h-4` (16px), no explicit color (inherit from parent), no wrapper spans, `gap-2` spacing, color inheritance for active states (text-blue-700 → icon turns blue)
+- **Files**: `src/components/DropdownMenu.tsx`, `src/components/MenuBar.tsx`, `src/components/Toolbar.tsx`, `src/components/icons/BorderIcons.tsx` (new), `src/index.css`, `package.json`
+- **Tests**: 2720 pass, lint clean, type-check clean, build clean
+
+---
+
 ### 2026-08-08 [BUGFIX] B-025: Sorting with active filter leaves stale hiddenRows indices
 - **Symptom**: After sorting with an active filter, wrong rows were hidden/shown because `filterState.hiddenRows` (row indices) became stale when `sortRange` physically reordered data.
 - **Root cause**: `applySort` in `App.tsx` never recomputed the filter after sorting.

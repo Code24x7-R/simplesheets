@@ -1822,3 +1822,39 @@ Improve FormulaWizard usability on mobile/touch platforms (iOS Safari, Android C
 
 **Tests:** 31 new tests (20 modal + 4 touch + 1 menu + 2 integration + 4 test setup fixes)
 **Results:** 2647 tests pass, lint clean, type-check clean, build clean |
+
+---
+
+## Phase 32: Menu & Toolbar Icon Refactor — COMPLETE ✅ (2026-08-08)
+*Migrate all menu and toolbar icons from emoji strings and inline SVGs to consistent lucide-react icons.*
+
+### Design Rules
+1. **All icons are `w-4 h-4` (16px)** — no variation in size across menus/toolbars
+2. **No explicit icon color** — icons inherit `text-color` from parent button
+3. **Color inheritance trick**: active item gets `text-blue-700` → icon turns blue automatically
+4. **No wrapper `<span>`, no `shrink-0`, no margin utilities** — bare icon with size classes only
+5. **Spacing via `gap-2`** on flex parent (8px between icon and label)
+
+### Phase 32a: Component Migration — COMPLETE ✅
+- [x] Installed `lucide-react` (^1.30.0)
+- [x] `DropdownMenu.tsx`: icon type `string` → `ComponentType<SVGProps<SVGSVGElement>>`; removed wrapper span; renders `<Icon className="w-4 h-4" />`; added `active` prop → `menu-item-active` class
+- [x] `MenuBar.tsx`: all 60+ menu items converted from emoji to lucide components; Bold/Italic/Underline/Wrap/Filter items use `active` prop
+- [x] `Toolbar.tsx`: all inline SVGs (clipboard, alignment, palette, borders) → lucide icons; B/I/U/S use `<Bold/>`, `<Italic/>`, `<Underline/>`, `<Strikethrough/>`
+- [x] `icons/BorderIcons.tsx`: custom SVG border icons (lucide v1.30 doesn't ship border-specific icons)
+
+### Phase 32b: Styling & CSS — COMPLETE ✅
+- [x] Removed `.menu-item-icon` wrapper class from CSS
+- [x] Added `.menu-item-active { bg-blue-50 text-blue-700 font-medium }`
+- [x] Softened borders from `gray-300` to `gray-200` for cleaner look
+- [x] Updated `DropdownMenu.test.tsx` to use `ClipboardCopy` icon instead of emoji string
+
+**Files modified/created:**
+- `src/components/DropdownMenu.tsx` (icon rendering + `active` prop)
+- `src/components/DropdownMenu.test.tsx` (test fixture update)
+- `src/components/MenuBar.tsx` (all icons migrated)
+- `src/components/Toolbar.tsx` (all icons migrated)
+- `src/components/icons/BorderIcons.tsx` (new — custom border icons)
+- `src/index.css` (menu-item-active, border color cleanup)
+- `package.json` / `package-lock.json` (lucide-react dependency)
+
+**Tests:** 2720 tests pass, lint clean, type-check clean, build clean

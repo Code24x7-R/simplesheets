@@ -117,7 +117,7 @@
   }
 
   .menu-dropdown {
-    @apply absolute top-full left-0 mt-0 bg-white border border-gray-300 rounded shadow-lg z-[100] min-w-[200px] py-1;
+    @apply absolute top-full left-0 mt-0 bg-white border border-gray-200 rounded shadow-lg z-[100] min-w-[200px] py-1;
   }
 
   .menu-item {
@@ -128,8 +128,8 @@
     @apply text-gray-400 cursor-not-allowed hover:bg-transparent hover:text-gray-400;
   }
 
-  .menu-item-icon {
-    @apply w-5 text-center flex-shrink-0;
+  .menu-item-active {
+    @apply bg-blue-50 text-blue-700 font-medium;
   }
 
   .menu-item-label {
@@ -145,11 +145,11 @@
   }
 
   .menu-separator {
-    @apply border-t border-gray-300 my-1;
+    @apply border-t border-gray-100 my-1;
   }
 
   .menu-submenu {
-    @apply absolute left-full top-0 ml-0 bg-white border border-gray-300 rounded shadow-lg z-[100] min-w-[180px] py-1;
+    @apply absolute left-full top-0 ml-0 bg-white border border-gray-200 rounded shadow-lg z-[100] min-w-[180px] py-1;
   }
 
   .menu-item-submenu:hover .menu-submenu {
