@@ -2305,7 +2305,7 @@ function WorkbookView() {
     <div className="h-screen flex flex-col">
       {/* Header with Menu Bar */}
       <header className="flex items-center justify-between px-4 py-1.5 border-b border-gray-200 bg-white">
-        <h1 className="text-lg font-bold text-blue-700">SimpleSheet</h1>
+        <h1 className="text-lg font-bold text-blue-700">SimpleSheets</h1>
         <MenuBar
           onNew={() => handleNewSheet(createEmptyWorkbook())}
           onLoadDemo={() => handleNewSheet(createDemoWorkbook())}
