@@ -2063,6 +2063,14 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
                   if (isRight) cellStyle.borderRight = `2px dashed ${antColor}`;
                   // Drive the marching-ants gradient color via CSS variable
                   (cellStyle as Record<string, string>)['--ant-color'] = antColor;
+                  // Guard: keep the cell absolutely positioned. A CSS rule that
+                  // sets position:relative on this class would otherwise override
+                  // the cell's .absolute class (equal specificity, later source
+                  // order) and displace the marching-ants cells off-grid. Frozen
+                  // cells must keep their sticky positioning, so skip them.
+                  if (!isCellFrozen(row, col)) {
+                    cellStyle.position = 'absolute';
+                  }
                   cellClipClass = ' clipboard-range-cell marching-active';
                 }
               }

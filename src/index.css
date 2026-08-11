@@ -440,11 +440,6 @@
   }
 }
 
-/* Applied to cells inside the clipboard range for true crawling-ants effect */
-.clipboard-range-cell {
-  position: relative;
-}
-
 /* Marching ants — cells in the clipboard range get this class.
    The dashed border is applied inline by Grid. This adds a subtle
    animated highlight that makes the selection feel "alive". */

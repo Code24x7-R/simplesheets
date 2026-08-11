@@ -24,6 +24,13 @@ This file tracks bugs in **existing** code, functions, and UI elements. New feat
 
 <!-- Bugs resolved in this session or recent past. Newest first. -->
 
+### 2026-08-11: B-028 — Marching ants appear at offset after copy/cut (Ctrl+C/X) ✅ VERIFIED
+- **Symptom**: After selecting a range and pressing Ctrl+C/Ctrl+X, the marching-ants dashed border appears offset from the actual selection. Single cell: ants shift ~½ cell width right. Horizontal range (e.g. C2:D2): each cell offset by its own width plus a gap. Vertical range: cells shift right with no vertical gaps. The selection ref itself stays correct (paste works), but the visual ants are displaced.
+- **Root cause**: `.clipboard-range-cell { position: relative; }` in `src/index.css` overrode the cell's `position: absolute` (from Tailwind's `.absolute` class). Both rules have equal specificity, and the custom rule comes later in source order, so it won. With `position: relative`, the inline `left`/`top` offsets (meant for absolute positioning) were applied relative to the cell's normal-flow position instead of the grid container — producing the width-proportional offset. The `position: relative` was a leftover from an unimplemented `::before` pseudo-element design (the actual ants use `background-image` directly on the cell).
+- **Fix**: (1) Removed `position: relative` from `.clipboard-range-cell` in `src/index.css`. (2) Added defensive inline `cellStyle.position = 'absolute'` in the marching-ants block in `Grid.tsx`, guarded by `!isCellFrozen(row, col)` so frozen-column cells keep their `sticky` positioning.
+- **Files**: `src/index.css`, `src/components/Grid.tsx`, `src/App.copyants.test.tsx`
+- **Tests**: +7 new tests (2818 total): shift+click range, shift+arrow range, cut color, paste clears ants, single-cell, inline position:absolute guard, frozen-column keeps sticky
+
 ### 2026-08-08: B-027 — Six copy/paste gaps vs Excel spec (excel-copypaste.md review) ✅ VERIFIED
 - **Symptom**: Review against `excel-copypaste.md` revealed 6 functional/UX deviations from Excel copy/paste behavior.
 - **Gaps & fixes**:

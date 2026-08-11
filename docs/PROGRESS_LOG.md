@@ -4,6 +4,13 @@
 
 ---
 
+### 2026-08-11 [BUGFIX] B-028 — Marching ants offset after copy/cut
+- **What**: Marching-ants dashed border appeared offset from the selection after Ctrl+C/Ctrl+X (½ cell right for single cell, width-proportional gaps for ranges)
+- **Root cause**: `.clipboard-range-cell { position: relative; }` in `index.css` overrode the cell's `position: absolute` (equal specificity, later source order), so inline left/top offsets applied relative to flow position instead of grid container
+- **Fix**: Removed `position: relative` from CSS; added defensive inline `position: absolute` in Grid.tsx marching-ants block (guarded to preserve frozen-cell sticky positioning)
+- **Files**: `index.css`, `Grid.tsx`, `App.copyants.test.tsx`
+- **Tests**: +7 new tests (2818 total)
+
 ### 2026-08-08 [BUGFIX] B-027 — Six copy/paste gaps vs Excel spec
 - **What**: Reviewed `excel-copypaste.md` against implementation and fixed 6 functional/UX gaps
 - **Fixes**: typing clears clipboard, filtered paste skips hidden rows, values paste preserves numberFormat, Ctrl+Shift+V shortcut for Paste Special, true marching-ants animation, copy/cut status shows cell count
