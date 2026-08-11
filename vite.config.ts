@@ -2,9 +2,6 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { execSync } from 'child_process';
 
-// When building for GitHub Pages, serve from /<repo-name>/ subpath
-const isGithubPages = process.env.GITHUB_PAGES === 'true';
-
 // Build timestamp — injected at compile time
 // CI can set BUILD_TIMESTAMP env var; otherwise use current time
 const BUILD_TIMESTAMP = process.env.BUILD_TIMESTAMP || new Date().toISOString();
@@ -27,7 +24,7 @@ const GIT_COMMIT_HASH = getGitCommitHash();
 
 export default defineConfig({
   plugins: [react()],
-  base: isGithubPages ? '/simplesheets/' : '/',
+  base: '/',
   define: {
     __BUILD_TIMESTAMP__: JSON.stringify(BUILD_TIMESTAMP),
     __GIT_COMMIT_HASH__: JSON.stringify(GIT_COMMIT_HASH),

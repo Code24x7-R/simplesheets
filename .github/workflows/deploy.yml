@@ -39,6 +39,9 @@ jobs:
       - name: Add 404 SPA fallback
         run: cp dist/index.html dist/404.html
 
+      - name: Add CNAME for custom domain
+        run: echo 'simplesheets.mouseclick.au' > dist/CNAME
+
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
