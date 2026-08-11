@@ -287,7 +287,7 @@ describe('App - Resize', () => {
     fireEvent.mouseDown(handle, { clientX: 100, clientY: 0, bubbles: true });
     fireEvent.mouseMove(document, { clientX: 150, clientY: 0 });
     fireEvent.mouseUp(document, { clientX: 150, clientY: 0 });
-    expect(document.querySelector('h1')?.textContent).toBe('SimpleSheet');
+    expect(document.querySelector('h1')?.textContent).toBe('SimpleSheets');
   });
 
   it('handles row resize via ResizeHandle', () => {
@@ -298,7 +298,7 @@ describe('App - Resize', () => {
     fireEvent.mouseDown(handle, { clientX: 0, clientY: 28, bubbles: true });
     fireEvent.mouseMove(document, { clientX: 0, clientY: 56 });
     fireEvent.mouseUp(document, { clientX: 0, clientY: 56 });
-    expect(document.querySelector('h1')?.textContent).toBe('SimpleSheet');
+    expect(document.querySelector('h1')?.textContent).toBe('SimpleSheets');
   });
 });
 
