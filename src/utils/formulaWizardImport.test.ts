@@ -147,6 +147,43 @@ describe('formulaWizardImport', () => {
       expect(result!.root.parameterValues['condition']?.rawValue).toBe('Sheet2!A1 > 0');
     });
 
+    it('preserves sheet refs across multiple range-using formulas', () => {
+      // AVERAGE with cross-sheet range
+      const avg = importFormulaToWizard('=AVERAGE(Sheet2!C2:C11)');
+      expect(avg).not.toBeNull();
+      expect(avg!.root.parameterValues['number1']?.rawValue).toBe('Sheet2!C2:C11');
+
+      // COUNT with cross-sheet range
+      const count = importFormulaToWizard('=COUNT(Sheet2!A1:A10)');
+      expect(count).not.toBeNull();
+      expect(count!.root.parameterValues['value1']?.rawValue).toBe('Sheet2!A1:A10');
+
+      // MAX with cross-sheet range
+      const max = importFormulaToWizard('=MAX(Sheet2!D2:D11)');
+      expect(max).not.toBeNull();
+      expect(max!.root.parameterValues['number1']?.rawValue).toBe('Sheet2!D2:D11');
+
+      // SUMIF with cross-sheet range and sum_range
+      const sumif = importFormulaToWizard('=SUMIF(Sheet2!A2:A10, "Widget", Sheet2!C2:C10)');
+      expect(sumif).not.toBeNull();
+      expect(sumif!.root.parameterValues['range']?.rawValue).toBe('Sheet2!A2:A10');
+      expect(sumif!.root.parameterValues['sum_range']?.rawValue).toBe('Sheet2!C2:C10');
+
+      // VLOOKUP with cross-sheet table array
+      const vlookup = importFormulaToWizard('=VLOOKUP(A1, Sheet2!A1:D10, 2, FALSE)');
+      expect(vlookup).not.toBeNull();
+      expect(vlookup!.root.parameterValues['table']?.rawValue).toBe('Sheet2!A1:D10');
+
+      // Nested: IF with cross-sheet SUM
+      const nested = importFormulaToWizard('=IF(Sheet2!A1>0, SUM(Sheet2!C2:C11), 0)');
+      expect(nested).not.toBeNull();
+      expect(nested!.root.parameterValues['condition']?.rawValue).toBe('Sheet2!A1 > 0');
+      const trueVal = nested!.root.parameterValues['true_val'];
+      expect(trueVal.isNestedFunction).toBe(true);
+      const innerSum = nested!.nodeMap.get(trueVal.nestedNodeId!);
+      expect(innerSum!.parameterValues['number1']?.rawValue).toBe('Sheet2!C2:C11');
+    });
+
     it('imports function with mixed absolute refs', () => {
       const result = importFormulaToWizard('=SUM($A1:B$2)');
       expect(result).not.toBeNull();
