@@ -51,7 +51,6 @@ import {
   X,
   Keyboard,
   Info,
-  BookOpen,
 } from 'lucide-react';
 import {
   BorderAll,
@@ -60,6 +59,7 @@ import {
   BorderBottom,
   BorderLeft,
   BorderRight,
+  SimpleDocs,
 } from './icons/BorderIcons';
 import { DropdownMenu, type MenuItem } from './DropdownMenu';
 
@@ -385,7 +385,7 @@ export function MenuBar(props: MenuBarProps) {
     { id: 'help-shortcuts', label: 'Keyboard Shortcuts', icon: Keyboard },
     { id: 'help-about', label: 'About SimpleSheet', icon: Info },
     { id: 'sep-help-1', label: '', separator: true },
-    { id: 'help-simpledocs', label: 'SimpleDocs', icon: BookOpen },
+    { id: 'help-simpledocs', label: 'SimpleDocs', icon: SimpleDocs },
   ];
 
   const dataItems: MenuItem[] = [
