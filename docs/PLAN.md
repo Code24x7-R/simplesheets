@@ -1858,3 +1858,110 @@ Improve FormulaWizard usability on mobile/touch platforms (iOS Safari, Android C
 - `package.json` / `package-lock.json` (lucide-react dependency)
 
 **Tests:** 2720 tests pass, lint clean, type-check clean, build clean
+
+---
+
+## Phase 33: Formula Error Prevention Suite — COMPLETE ✅ (2026-08-11)
+*Implemented high-priority formula error preventions identified from the top-10 error audit.*
+
+**Final state:** 2851 tests across 115 suites, lint clean, type-check clean, build clean.
+
+### Phase 33a: SUBTOTAL Function — COMPLETE ✅
+*Addresses errors #6 (double-counting via subtotal overlaps) and #10 (hidden row/filtering miscalculations).*
+
+Excel's `SUBTOTAL(function_num, range, ...)` function:
+- Function codes 1-11 include hidden rows; codes 101-111 ignore hidden rows.
+- Ignores other SUBTOTAL results within its range (prevents double-counting).
+- Common codes: 1=AVERAGE, 2=COUNT, 3=COUNTA, 4=MAX, 5=MIN, 6=PRODUCT, 9=SUM.
+
+**Implementation:**
+- Added `SUBTOTAL` case via `evaluateSubtotal` helper in `formulaEngine.ts`.
+- Threaded `hiddenRows: Set<number>` through `EvalContext` from `filterState`.
+- Collects range values while skipping: (a) hidden rows when code ≥ 101, (b) cells whose formula is itself a SUBTOTAL (always — prevents double-counting).
+- Intercepts SUBTOTAL at top of `evaluateFunction` before arg flattening (preserves row position info).
+- Added `SUBTOTAL` to wizard schema with a function-code parameter and variadic ranges.
+
+**Phase 33a.1: Engine implementation**
+- [x] Add `hiddenRows?: Set<number>` to `EvalContext` interface
+- [x] Thread `filterState.hiddenRows` through `evaluateWorkbook` and `evaluateFormulaPreview`
+- [x] Add `evaluateSubtotal` helper that collects range values with skip logic
+- [x] Add `SUBTOTAL` interception at top of `evaluateFunction` (before arg flattening)
+- [x] Handle invalid function codes (return `#VALUE!`)
+
+**Phase 33a.2: Wizard schema**
+- [x] Add `SUBTOTAL` definition to `formulaWizardSchema.ts` (function_code NUMBER + variadic RANGE params)
+
+**Phase 33a.3: Tests**
+- [x] `formulaEngine.test.ts`: SUBTOTAL(9, range) = SUM including hidden; SUBTOTAL(109, range) = SUM excluding hidden; SUBTOTAL ignores nested SUBTOTALs; invalid code → `#VALUE!`
+- [x] Integration: filter rows → SUBTOTAL(109) differs from SUM
+- [x] Wizard: SUBTOTAL schema exists, parameters render, compile produces valid formula
+
+---
+
+### Phase 33b: TRIM/CLEAN/VALUE + Number-as-Text Indicator — COMPLETE ✅
+*Addresses error #9 (data type mismatches & trailing character errors).*
+
+TRIM and VALUE already existed in the engine. CLEAN was missing.
+A number-as-text indicator flags cells where a numeric value is stored as text, causing math to ignore it.
+
+**Phase 33b.1: CLEAN function**
+- [x] Add `CLEAN` case to `evaluateFunction` (strips ASCII 0-31 non-printable chars)
+- [x] Add `CLEAN` definition to wizard schema
+- [x] Tests: CLEAN removes non-printable chars, preserves normal text
+
+**Phase 33b.2: Number-as-text indicator**
+- [x] Add `isNumberStoredAsText(cell)` utility — detects numeric value stored as text
+- [x] Add small visual indicator (green triangle) on affected cells in Grid rendering
+- [x] Tests: detection logic, Grid renders indicator class
+
+---
+
+### Phase 33c: Delete Guard with Reverse Dependency Index — COMPLETE ✅
+*Addresses error #1 (reference errors / #REF! from deleting referenced cells).*
+
+`buildDependencyGraph` already returns `reverseDeps` (cell → set of formulas depending on it). The delete-row/col handlers now check this before committing.
+
+**Phase 33c.1: Delete guard logic**
+- [x] In `handleDeleteRow`/`handleDeleteCol`, collect all cell keys in the deleted row/col
+- [x] Query `reverseDeps` for each key to find dependent formulas
+- [x] If dependents exist, show confirmation dialog: "Deleting this row will break N formula(s) that reference it. Continue?"
+- [x] Proceed with delete only on confirm; cancel otherwise
+
+**Phase 33c.2: Tests**
+- [x] Delete row with dependent formulas → confirmation shown
+- [x] Cancel → row not deleted, formulas intact
+- [x] Delete row with no dependents → no confirmation, immediate delete
+
+---
+
+### Phase 33d: F4 Anchor Cycling Verification — COMPLETE ✅
+*Error #5 (incorrect cell anchoring) — F4 cycling already exists in the shared FSM. Verified.*
+
+F4 reference cycling is implemented in `useCellEditing.ts` (`findRefAtCaret` + `cycleReference`) and works from both formula bar and grid (shared FSM via `onRawKeyDown`).
+
+**Phase 33d.1: Verification**
+- [x] Add test: F4 cycles B1 → $B$1 → B$1 → $B1 from formula bar (full cycle verified)
+- [x] Documented: F4 works from formula bar via shared FSM `onRawKeyDown`
+
+---
+
+### Files Expected
+
+| File | Action |
+|------|--------|
+| `src/utils/formulaEngine.ts` | SUBTOTAL + CLEAN cases, hiddenRows in EvalContext |
+| `src/utils/formulaWizardSchema.ts` | SUBTOTAL + CLEAN definitions |
+| `src/components/Grid.tsx` | Number-as-text indicator rendering |
+| `src/App.tsx` | Delete guard with reverseDeps lookup, filterState threading |
+| `src/utils/formulaEngine.test.ts` | SUBTOTAL + CLEAN tests |
+| `src/App.test.tsx` | Delete guard tests |
+
+### Dependencies
+
+| Dependency | Phase |
+|------------|-------|
+| `formulaEngine.ts` aggregate functions | Phase 7 |
+| `buildDependencyGraph` / `reverseDeps` | Stage 5 / formulaEngine |
+| `filterState.hiddenRows` | Phase 18 (Sort & Filter) |
+| `useCellEditing` F4 cycling | Phase 2g |
+| Wizard schema/compiler | Phase 10, 25 |

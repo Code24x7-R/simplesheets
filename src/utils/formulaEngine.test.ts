@@ -143,6 +143,132 @@ describe('Formula Engine', () => {
     });
   });
 
+  describe('SUBTOTAL Function', () => {
+    it('SUBTOTAL(9, range) sums all values including hidden rows', () => {
+      const sheet = createSheet({
+        '0:0': '10',
+        '1:0': '20',
+        '2:0': '30',
+        '3:0': '=SUBTOTAL(9, A1:A3)',
+      });
+      const result = evaluateWorkbook(sheetToWorkbook(sheet), 0);
+      expect(result.cells['3:0'].computedValue).toBe(60);
+    });
+
+    it('SUBTOTAL(109, range) ignores hidden rows', () => {
+      const sheet = createSheet({
+        '0:0': '10',
+        '1:0': '20',
+        '2:0': '30',
+        '3:0': '=SUBTOTAL(109, A1:A3)',
+      });
+      // Row 1 (A2=20) is hidden → only 10 + 30 = 40
+      const hiddenRows = new Set<number>([1]);
+      const result = evaluateWorkbook(sheetToWorkbook(sheet), 0, hiddenRows);
+      expect(result.cells['3:0'].computedValue).toBe(40);
+    });
+
+    it('SUBTOTAL(109) includes all rows when none hidden', () => {
+      const sheet = createSheet({
+        '0:0': '10',
+        '1:0': '20',
+        '2:0': '30',
+        '3:0': '=SUBTOTAL(109, A1:A3)',
+      });
+      const result = evaluateWorkbook(sheetToWorkbook(sheet), 0);
+      expect(result.cells['3:0'].computedValue).toBe(60);
+    });
+
+    it('SUBTOTAL(9) includes hidden rows (unlike 109)', () => {
+      const sheet = createSheet({
+        '0:0': '10',
+        '1:0': '20',
+        '2:0': '30',
+        '3:0': '=SUBTOTAL(9, A1:A3)',
+      });
+      const hiddenRows = new Set<number>([1]);
+      const result = evaluateWorkbook(sheetToWorkbook(sheet), 0, hiddenRows);
+      expect(result.cells['3:0'].computedValue).toBe(60);
+    });
+
+    it('SUBTOTAL ignores nested SUBTOTAL formulas (no double-counting)', () => {
+      const sheet = createSheet({
+        '0:0': '10',
+        '1:0': '20',
+        '2:0': '=SUBTOTAL(9, A1:A2)', // nested subtotal = 30
+        '3:0': '=SUBTOTAL(9, A1:A3)', // should skip A3's subtotal → 10 + 20 = 30
+      });
+      const result = evaluateWorkbook(sheetToWorkbook(sheet), 0);
+      expect(result.cells['3:0'].computedValue).toBe(30);
+    });
+
+    it('SUBTOTAL(1, range) computes AVERAGE', () => {
+      const sheet = createSheet({
+        '0:0': '10',
+        '1:0': '20',
+        '2:0': '30',
+        '3:0': '=SUBTOTAL(1, A1:A3)',
+      });
+      const result = evaluateWorkbook(sheetToWorkbook(sheet), 0);
+      expect(result.cells['3:0'].computedValue).toBe(20);
+    });
+
+    it('SUBTOTAL(4, range) computes MAX', () => {
+      const sheet = createSheet({
+        '0:0': '10',
+        '1:0': '50',
+        '2:0': '30',
+        '3:0': '=SUBTOTAL(4, A1:A3)',
+      });
+      const result = evaluateWorkbook(sheetToWorkbook(sheet), 0);
+      expect(result.cells['3:0'].computedValue).toBe(50);
+    });
+
+    it('SUBTOTAL(5, range) computes MIN', () => {
+      const sheet = createSheet({
+        '0:0': '10',
+        '1:0': '50',
+        '2:0': '30',
+        '3:0': '=SUBTOTAL(5, A1:A3)',
+      });
+      const result = evaluateWorkbook(sheetToWorkbook(sheet), 0);
+      expect(result.cells['3:0'].computedValue).toBe(10);
+    });
+
+    it('SUBTOTAL(2, range) computes COUNT', () => {
+      const sheet = createSheet({
+        '0:0': '10',
+        '1:0': 'text',
+        '2:0': '30',
+        '3:0': '=SUBTOTAL(2, A1:A3)',
+      });
+      const result = evaluateWorkbook(sheetToWorkbook(sheet), 0);
+      expect(result.cells['3:0'].computedValue).toBe(2);
+    });
+
+    it('SUBTOTAL with invalid function code returns #VALUE!', () => {
+      const sheet = createSheet({
+        '0:0': '10',
+        '1:0': '20',
+        '2:0': '=SUBTOTAL(99, A1:A2)',
+      });
+      const result = evaluateWorkbook(sheetToWorkbook(sheet), 0);
+      expect(result.cells['2:0'].computedValue).toBe('#VALUE!');
+    });
+
+    it('SUBTOTAL(101, range) computes AVERAGE ignoring hidden', () => {
+      const sheet = createSheet({
+        '0:0': '10',
+        '1:0': '20',
+        '2:0': '30',
+        '3:0': '=SUBTOTAL(101, A1:A3)',
+      });
+      const hiddenRows = new Set<number>([1]);
+      const result = evaluateWorkbook(sheetToWorkbook(sheet), 0, hiddenRows);
+      expect(result.cells['3:0'].computedValue).toBe(20); // (10+30)/2
+    });
+  });
+
   describe('AVERAGE Function', () => {
     it('computes average of a range', () => {
       const sheet = createSheet({
@@ -2671,6 +2797,18 @@ describe('evaluateWorkbook - cross-sheet references', () => {
       expect(res['1:0'].computedValue).toBe('hello');
       expect(res['2:0'].computedValue).toBe('HELLO');
       expect(res['3:0'].computedValue).toBe('hi');
+    });
+
+    it('CLEAN removes non-printable characters', () => {
+      const sheet = createSheet({
+        '0:0': '=CLEAN("hello\x00world")',
+        '1:0': '=CLEAN("\x01\x02text\x1f")',
+        '2:0': '=CLEAN("normal")',
+      });
+      const res = evaluateWorkbook(sheetToWorkbook(sheet), 0).cells;
+      expect(res['0:0'].computedValue).toBe('helloworld');
+      expect(res['1:0'].computedValue).toBe('text');
+      expect(res['2:0'].computedValue).toBe('normal');
     });
 
     it('RIGHT and MID extract substrings', () => {

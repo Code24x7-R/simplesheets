@@ -14,6 +14,7 @@ import type { FunctionInfo } from '../utils/formulaAutocomplete';
 import { ResizeHandle } from './ResizeHandle';
 import { FilterDropdown } from './FilterDropdown';
 import { formatNumberValue, isNumberFormat, isNumericValue, isAccountingFormat, shouldRightAlign } from '../utils/numberFormat';
+import { isNumberStoredAsText } from '../utils/numberAsText';
 import { hasClipboardData } from '../utils/clipboard';
 import type { ColumnFilter } from '../utils/sheetFilter';
 import { HIGHLIGHT_COLORS, HIGHLIGHT_BORDER_COLORS } from '../utils/highlightColors';
@@ -1899,21 +1900,26 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
                           )}
                         </div>
                       ) : (
-                        <span
-                          className={`flex items-center px-1 ${cell?.style?.whiteSpace === 'normal' ? 'whitespace-normal' : cell?.style?.whiteSpace === 'pre' ? 'whitespace-pre' : 'truncate'}`}
-                          style={{
-                            fontStyle: cell?.style?.fontStyle,
-                            textDecoration: cell?.style?.textDecoration,
-                            color: cell?.style?.color,
-                            fontWeight: cell?.style?.fontWeight,
-                            backgroundColor: cell?.style?.backgroundColor,
-                            textAlign: cell?.style?.textAlign
-                              ? cell.style.textAlign
-                              : 'left',
-                          }}
-                        >
-                          {getDisplayValue(cell)}
-                        </span>
+                        <>
+                          <span
+                            className={`flex items-center px-1 ${cell?.style?.whiteSpace === 'normal' ? 'whitespace-normal' : cell?.style?.whiteSpace === 'pre' ? 'whitespace-pre' : 'truncate'}`}
+                            style={{
+                              fontStyle: cell?.style?.fontStyle,
+                              textDecoration: cell?.style?.textDecoration,
+                              color: cell?.style?.color,
+                              fontWeight: cell?.style?.fontWeight,
+                              backgroundColor: cell?.style?.backgroundColor,
+                              textAlign: cell?.style?.textAlign
+                                ? cell.style.textAlign
+                                : 'left',
+                            }}
+                          >
+                            {getDisplayValue(cell)}
+                          </span>
+                          {isNumberStoredAsText(cell) && (
+                            <span className="number-as-text-indicator" title="Number stored as text" />
+                          )}
+                        </>
                       )}
                     </div>
                   );
@@ -2273,6 +2279,9 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
                       </span>
                     );
                   })()}
+                  {isNumberStoredAsText(cell) && (
+                    <span className="number-as-text-indicator" title="Number stored as text" />
+                  )}
                 </div>
               );
             })}

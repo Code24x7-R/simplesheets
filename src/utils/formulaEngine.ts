@@ -45,6 +45,8 @@ interface EvalContext {
   /** Sheet dimensions (for bounds checking). */
   rowCount: number;
   colCount: number;
+  /** Hidden rows for SUBTOTAL visibility filtering. */
+  hiddenRows?: Set<number>;
 }
 
 // ─── Utility ─────────────────────────────────────────────────────────────────
@@ -90,6 +92,100 @@ function resolveSheetIndex(sheetName: string | undefined, ctx: EvalContext): num
   const idx = ctx.allSheets.findIndex((s) => s.name === sheetName);
   return idx >= 0 ? idx : undefined;
 }
+
+/**
+ * Evaluates SUBTOTAL, skipping hidden rows (codes 101-111) and nested SUBTOTAL formulas.
+ */
+function evaluateSubtotal(node: Extract<ASTNode, { type: 'function' }>, ctx: EvalContext): CellValue {
+  const rawCode = toNumber(evaluateNode(node.args[0], ctx));
+  if (isNaN(rawCode)) return ERR_VALUE;
+  // Excel codes: 1-11 include hidden rows, 101-111 ignore them
+  const ignoreHidden = rawCode >= 101;
+  const code = ignoreHidden ? rawCode - 100 : rawCode;
+  if (code < 1 || code > 11) return ERR_VALUE;
+
+  const values: number[] = [];
+  for (let i = 1; i < node.args.length; i++) {
+    const arg = node.args[i];
+    if (arg.type === 'range') {
+      const minRow = Math.min(arg.start.row, arg.end.row);
+      const maxRow = Math.max(arg.start.row, arg.end.row);
+      const minCol = Math.min(arg.start.col, arg.end.col);
+      const maxCol = Math.max(arg.start.col, arg.end.col);
+      const sheetIdx = resolveSheetIndex(arg.sheetName, ctx);
+      if (arg.sheetName && sheetIdx === undefined) return ERR_REF;
+      for (let r = minRow; r <= maxRow; r++) {
+        if (ignoreHidden && ctx.hiddenRows?.has(r)) continue;
+        for (let c = minCol; c <= maxCol; c++) {
+          const sheet = ctx.allSheets[sheetIdx ?? ctx.activeSheetIndex];
+          const cell = sheet?.cells[cellKey(r, c)];
+          if (cell?.rawValue.startsWith('=SUBTOTAL')) continue;
+          const val = evaluateCell(r, c, ctx, sheetIdx);
+          const num = toNumber(val);
+          if (!isNaN(num)) values.push(num);
+        }
+      }
+    } else {
+      const num = toNumber(evaluateNode(arg, ctx));
+      if (!isNaN(num)) values.push(num);
+    }
+  }
+
+  if (values.length === 0) return ERR_VALUE;
+  return applySubtotalOp(code, values);
+}
+
+/**
+ * Applies a SUBTOTAL operation code (1-11) to a set of values.
+ */
+function applySubtotalOp(code: number, values: number[]): CellValue {
+  if (values.length === 0) return ERR_VALUE;
+  switch (code) {
+    case 1: // AVERAGE
+      return values.reduce((a, b) => a + b, 0) / values.length;
+    case 2: // COUNT
+      return values.length;
+    case 3: // COUNTA
+      return values.length;
+    case 4: // MAX
+      return Math.max(...values);
+    case 5: // MIN
+      return Math.min(...values);
+    case 6: // PRODUCT
+      return values.reduce((a, b) => a * b, 1);
+    case 7: {
+      // STDEV
+      if (values.length < 2) return ERR_VALUE;
+      const mean = values.reduce((a, b) => a + b, 0) / values.length;
+      const variance = values.reduce((sum, n) => sum + (n - mean) ** 2, 0) / (values.length - 1);
+      return Math.sqrt(variance);
+    }
+    case 8: {
+      // STDEVP (population)
+      if (values.length < 2) return ERR_VALUE;
+      const mean2 = values.reduce((a, b) => a + b, 0) / values.length;
+      const variance2 = values.reduce((sum, n) => sum + (n - mean2) ** 2, 0) / values.length;
+      return Math.sqrt(variance2);
+    }
+    case 9: // SUM
+      return values.reduce((a, b) => a + b, 0);
+    case 10: {
+      // VAR
+      if (values.length < 2) return ERR_VALUE;
+      const mean3 = values.reduce((a, b) => a + b, 0) / values.length;
+      return values.reduce((sum, n) => sum + (n - mean3) ** 2, 0) / (values.length - 1);
+    }
+    case 11: {
+      // VARP (population)
+      if (values.length < 2) return ERR_VALUE;
+      const mean4 = values.reduce((a, b) => a + b, 0) / values.length;
+      return values.reduce((sum, n) => sum + (n - mean4) ** 2, 0) / values.length;
+    }
+    default:
+      return ERR_VALUE;
+  }
+}
+
 
 function evaluateNode(node: ASTNode, ctx: EvalContext): CellValue {
   switch (node.type) {
@@ -450,6 +546,12 @@ function formatDate(d: Date, fmt: string): string {
  * Evaluates a function call node.
  */
 function evaluateFunction(node: Extract<ASTNode, { type: 'function' }>, ctx: EvalContext): CellValue {
+  // SUBTOTAL requires special handling: skip hidden rows and nested SUBTOTALs.
+  // Must intercept before generic arg flattening to preserve row position info.
+  if (node.name === 'SUBTOTAL') {
+    return evaluateSubtotal(node, ctx);
+  }
+
   // Collect argument values (handling ranges)
   const argValues: CellValue[][] = [];
   // Track shape of range arguments for VLOOKUP/HLOOKUP
@@ -824,6 +926,11 @@ function evaluateFunction(node: Extract<ASTNode, { type: 'function' }>, ctx: Eva
 
     case 'TRIM': {
       return toString(flatValues[0] ?? '').trim().replace(/\s+/g, ' ');
+    }
+    case 'CLEAN': {
+      // Remove non-printable characters (ASCII 0-31)
+      // eslint-disable-next-line no-control-regex
+      return toString(flatValues[0] ?? '').replace(/[\u0000-\u001f]/g, '');
     }
 
     case 'TEXT': {
@@ -1556,7 +1663,7 @@ export interface EvaluationResult {
  * @param activeSheetIndex - Index of the sheet to evaluate.
  * @returns EvaluationResult with computed values and circular reference info.
  */
-export function evaluateWorkbook(workbook: import('../types').Workbook, activeSheetIndex: number): EvaluationResult {
+export function evaluateWorkbook(workbook: import('../types').Workbook, activeSheetIndex: number, hiddenRows?: Set<number>): EvaluationResult {
   const sheets = workbook.sheets;
   if (activeSheetIndex < 0 || activeSheetIndex >= sheets.length) {
     return { cells: {}, circularRefs: [], success: false };
@@ -1586,6 +1693,7 @@ export function evaluateWorkbook(workbook: import('../types').Workbook, activeSh
       evalStack: new Set(),
       rowCount: sheet.rowCount,
       colCount: sheet.columnCount,
+      hiddenRows,
     };
 
     const { deps } = buildDependencyGraph(sheet);
@@ -1659,6 +1767,7 @@ export function evaluateFormulaPreview(
   formula: string,
   workbook: import('../types').Workbook,
   activeSheetIndex: number,
+  hiddenRows?: Set<number>,
 ): string | number | boolean | null {
   if (!formula) return null;
 
@@ -1678,6 +1787,7 @@ export function evaluateFormulaPreview(
       evalStack: new Set(),
       rowCount: sheet.rowCount,
       colCount: sheet.columnCount,
+      hiddenRows,
     };
     const { deps } = buildDependencyGraph(sheet);
     const evaluationOrder = topologicalSort(deps, sheet.cells);
@@ -1708,6 +1818,7 @@ export function evaluateFormulaPreview(
     evalStack: new Set(),
     rowCount: activeSheet.rowCount,
     colCount: activeSheet.columnCount,
+    hiddenRows,
   };
 
   try {

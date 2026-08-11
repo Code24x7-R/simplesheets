@@ -63,6 +63,18 @@ export const FUNCTION_SCHEMAS: Record<string, FunctionDefinition> = {
       { id: 'number2', name: 'Number2', description: 'Additional ranges or numbers to add', type: 'RANGE', isRequired: false, isVariadic: true, allowNestedFunction: true },
     ],
   },
+  SUBTOTAL: {
+    name: 'SUBTOTAL',
+    category: 'MATH',
+    description: 'Returns a subtotal using a specified aggregate function; ignores hidden rows and nested subtotals',
+    returnType: 'NUMBER',
+    syntaxTemplate: 'SUBTOTAL(function_num, range1, [range2], ...)',
+    parameters: [
+      { id: 'function_code', name: 'Function_code', description: '1-11 includes hidden rows, 101-111 ignores hidden (9=SUM, 1=AVERAGE, 4=MAX, 5=MIN, 2=COUNT)', type: 'NUMBER', isRequired: true, allowNestedFunction: false },
+      { id: 'range1', name: 'Range1', description: 'Primary range to aggregate', type: 'RANGE', isRequired: true, allowNestedFunction: false },
+      { id: 'range2', name: 'Range2', description: 'Additional ranges (optional)', type: 'RANGE', isRequired: false, isVariadic: true, allowNestedFunction: false },
+    ],
+  },
   AVERAGE: {
     name: 'AVERAGE',
     category: 'MATH',
@@ -405,6 +417,16 @@ export const FUNCTION_SCHEMAS: Record<string, FunctionDefinition> = {
     syntaxTemplate: 'TRIM(text)',
     parameters: [
       { id: 'text', name: 'Text', description: 'Text string to trim', type: 'STRING', isRequired: true, allowNestedFunction: false },
+    ],
+  },
+  CLEAN: {
+    name: 'CLEAN',
+    category: 'TEXT',
+    description: 'Removes non-printable characters',
+    returnType: 'STRING',
+    syntaxTemplate: 'CLEAN(text)',
+    parameters: [
+      { id: 'text', name: 'Text', description: 'Text string to clean', type: 'STRING', isRequired: true, allowNestedFunction: false },
     ],
   },
   TEXT: {

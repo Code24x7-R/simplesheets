@@ -4,6 +4,17 @@
 
 ---
 
+### 2026-08-11 [FEATURE] Phase 33 — Formula Error Prevention Suite
+- **What**: Implemented 4 high-priority formula error preventions from the top-10 error audit:
+  - **33a SUBTOTAL function**: Engine support for codes 1-11 (include hidden) and 101-111 (ignore hidden), skips nested SUBTOTALs to prevent double-counting. Threaded `hiddenRows` through `EvalContext`, `evaluateWorkbook`, and `evaluateFormulaPreview`. Added to wizard schema.
+  - **33b CLEAN function + number-as-text indicator**: CLEAN strips non-printable ASCII 0-31. Number-as-text utility detects numeric values stored as text and renders a green triangle indicator in Grid cells.
+  - **33c Delete guard with reverse dependency index**: `handleDeleteRow`/`handleDeleteCol` query `reverseDeps` from `buildDependencyGraph` to detect dependent formulas and show confirmation before breaking references.
+  - **33d F4 anchor cycling verification**: Verified F4 cycling works from formula bar via shared FSM (`findRefAtCaret` + `cycleReference`).
+- **Files**: `formulaEngine.ts`, `formulaWizardSchema.ts`, `Grid.tsx`, `App.tsx`, `numberAsText.ts`, `index.css`, `formulaEngine.test.ts`, `numberAsText.test.ts`, `App.test.tsx`
+- **Tests**: +23 new tests (2851 total)
+
+---
+
 ### 2026-08-11 [BUGFIX] B-030 — FormulaWizard strips sheet reference on import
 - **What**: Opening the Nested Formula Wizard on `=SUM(Sheet2!C2:C11)` showed the parameter as bare `C2:C11`, dropping the `Sheet2!` prefix. Applying wrote `=SUM(C2:C11)` which evaluated against the active sheet (returning 0) instead of Sheet2
 - **Root cause**: `cellRefToString`/`rangeToString` in `formulaParser.ts` ignored the `sheetName` property; the parser populates it correctly but the stringifiers dropped it during wizard import

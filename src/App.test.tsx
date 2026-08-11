@@ -836,4 +836,77 @@ describe('App - Global Keyboard Shortcuts', () => {
     // (not =SUM(C2:C11) which would evaluate against Sheet1 and return 0)
     expect(formulaBarInput.value).toBe('=SUM(Sheet2!C2:C11)');
   });
+
+  it('Phase 33c: Delete row with dependent formulas shows confirmation', () => {
+    render(<App />);
+    const formulaBarInput = screen.getByPlaceholderText(/Enter a value or formula/) as HTMLInputElement;
+
+    // Enter a formula in A1 that references B1
+    act(() => { formulaBarInput.focus(); });
+    act(() => { fireEvent.change(formulaBarInput, { target: { value: '=B1+10' } }); });
+    act(() => { fireEvent.keyDown(formulaBarInput, { key: 'Enter' }); });
+
+    // Navigate to B1 (the referenced cell) and delete its row
+    const cells = document.querySelectorAll('.grid-cell');
+    act(() => { fireEvent.mouseDown(cells[0 * 5 + 1]); }); // B1
+
+    const confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(false);
+    fireEvent.click(screen.getByText('Edit'));
+    // "Delete" submenu trigger (the shortcut "Delete" for Clear Contents also matches)
+    const deleteMenu = screen.getAllByText('Delete').find(
+      (el) => el.closest('.menu-item-submenu'),
+    )!;
+    fireEvent.click(deleteMenu);
+    fireEvent.click(screen.getByText('Row'));
+
+    expect(confirmSpy).toHaveBeenCalledWith(
+      expect.stringContaining('break 1 formula(s)'),
+    );
+    expect(confirmSpy).toHaveBeenCalledTimes(1);
+    confirmSpy.mockRestore();
+  });
+
+  it('Phase 33c: Delete row without dependents proceeds without confirmation', () => {
+    render(<App />);
+
+    // Navigate to B1 (no formulas reference it)
+    const cells = document.querySelectorAll('.grid-cell');
+    act(() => { fireEvent.mouseDown(cells[0 * 5 + 1]); }); // B1
+
+    const confirmSpy = jest.spyOn(window, 'confirm');
+    fireEvent.click(screen.getByText('Edit'));
+    const deleteMenu = screen.getAllByText('Delete').find(
+      (el) => el.closest('.menu-item-submenu'),
+    )!;
+    fireEvent.click(deleteMenu);
+    fireEvent.click(screen.getByText('Row'));
+
+    expect(confirmSpy).not.toHaveBeenCalled();
+    confirmSpy.mockRestore();
+  });
+
+  it('Phase 33d: F4 cycles reference anchoring in formula bar', () => {
+    render(<App />);
+    const formulaBarInput = screen.getByPlaceholderText(/Enter a value or formula/) as HTMLInputElement;
+
+    // Enter a formula ending with a relative reference (caret at end → on the ref)
+    act(() => { formulaBarInput.focus(); });
+    act(() => { fireEvent.change(formulaBarInput, { target: { value: '=B1' } }); });
+
+    // Press F4 to cycle anchoring: B1 -> $B$1
+    act(() => { fireEvent.keyDown(formulaBarInput, { key: 'F4' }); });
+    expect(formulaBarInput.value).toBe('=$B$1');
+
+    // F4 again: $B$1 -> B$1
+    act(() => { fireEvent.keyDown(formulaBarInput, { key: 'F4' }); });
+    expect(formulaBarInput.value).toBe('=B$1');
+
+    // F4 again: B$1 -> $B1
+    act(() => { fireEvent.keyDown(formulaBarInput, { key: 'F4' }); });
+    expect(formulaBarInput.value).toBe('=$B1');
+
+    // F4 again: $B1 -> B1 (back to relative)
+    act(() => { fireEvent.keyDown(formulaBarInput, { key: 'F4' }); });
+    expect(formulaBarInput.value).toBe('=B1');
+  });
 });

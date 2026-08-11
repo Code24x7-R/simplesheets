@@ -23,7 +23,7 @@ import { SheetTabs } from './components/SheetTabs';
 import { MenuBar } from './components/MenuBar';
 import { Toolbar } from './components/Toolbar';
 import { ImportExportBridge } from './components/ImportExportBridge';
-import { evaluateWorkbook, evaluateFormulaPreview } from './utils/formulaEngine';
+import { evaluateWorkbook, evaluateFormulaPreview, buildDependencyGraph } from './utils/formulaEngine';
 import { copyRange, cutRange as clipCutRange, getClipboard, clearClipboard, hasClipboardData, writeClipboardToSystem } from './utils/clipboard';
 import { adjustFormulaRefs, prefixRefsWithSheet } from './utils/formulaParser';
 import { useAutosave } from './hooks/useAutosave';
@@ -318,12 +318,12 @@ function WorkbookView() {
 
   // Evaluate formulas
   useMemo(() => {
-    const result = evaluateWorkbook({ ...workbook, sheets: workbook.sheets.map((s, idx) => idx === workbook.activeSheetIndex ? updatedSheet : s) }, workbook.activeSheetIndex);
+    const result = evaluateWorkbook({ ...workbook, sheets: workbook.sheets.map((s, idx) => idx === workbook.activeSheetIndex ? updatedSheet : s) }, workbook.activeSheetIndex, filterState?.hiddenRows);
     /* istanbul ignore next - circular ref warning requires self-referencing formula (tested in formulaEngine.test.ts) */
     if (result.circularRefs.length > 0) {
       setStatusMessage(`Warning: ${result.circularRefs.length} circular reference(s) detected`);
     }
-  }, [workbook, updatedSheet]);
+  }, [workbook, updatedSheet, filterState?.hiddenRows]);
 
   // ─── Window Blur Handler (Spec §5) ──────────────────────────────────────
   // Commit any active edit when the window loses focus, clear pointing overlays,
@@ -1149,8 +1149,9 @@ function WorkbookView() {
       formulaWizard.compiledFormula,
       workbook,
       workbook.activeSheetIndex,
+      filterState?.hiddenRows,
     );
-  }, [formulaWizard.isOpen, formulaWizard.compiledFormula, workbook]);
+  }, [formulaWizard.isOpen, formulaWizard.compiledFormula, workbook, filterState?.hiddenRows]);
 
   // ─── Status Bar: Cell Mode + Quick Calculations ──────────────────────────
 
@@ -2131,9 +2132,43 @@ function WorkbookView() {
     setStatusMessage(`Inserted column ${colToLetter(colIndex)}`);
   }, [workbook, pushHistory, activeCell]);
 
+  // ─── Delete Guard: check reverse dependencies before deleting ───────
+  /**
+   * Returns the set of formula cell keys that depend on any of the given
+   * cell keys (via the reverse dependency graph). Used to warn before
+   * deleting rows/columns that would break formula references.
+   */
+  const getDependentsForKeys = useCallback(
+    (keys: string[]): string[] => {
+      const sheet = workbook.sheets[workbook.activeSheetIndex];
+      if (!sheet) return [];
+      const { reverseDeps } = buildDependencyGraph(sheet);
+      const dependents = new Set<string>();
+      for (const key of keys) {
+        const deps = reverseDeps.get(key);
+        if (deps) {
+          for (const d of deps) dependents.add(d);
+        }
+      }
+      return [...dependents];
+    },
+    [workbook],
+  );
+
   const handleDeleteRow = useCallback(() => {
     if (!activeCell) return;
     const rowIndex = activeCell.row;
+    // Collect all cell keys in the row being deleted
+    const sheet = workbook.sheets[workbook.activeSheetIndex];
+    const keysInRow: string[] = [];
+    for (let c = 0; c < sheet.columnCount; c++) {
+      keysInRow.push(cellKey(rowIndex, c));
+    }
+    const dependents = getDependentsForKeys(keysInRow);
+    if (dependents.length > 0) {
+      const msg = `Deleting this row will break ${dependents.length} formula(s) that reference it. Continue?`;
+      if (!window.confirm(msg)) return;
+    }
     const newSheets = workbook.sheets.map((s, idx) =>
       idx === workbook.activeSheetIndex ? deleteRow(s, rowIndex) : s
     );
@@ -2141,11 +2176,22 @@ function WorkbookView() {
     pushHistory(newWb, `Delete row ${rowIndex + 1}`, filterStateRef.current, gridSelectionRef.current);
     setActiveCell({ row: Math.max(0, rowIndex - 1), col: activeCell.col });
     setStatusMessage(`Deleted row ${rowIndex + 1}`);
-  }, [workbook, pushHistory, activeCell]);
+  }, [workbook, pushHistory, activeCell, getDependentsForKeys]);
 
   const handleDeleteCol = useCallback(() => {
     if (!activeCell) return;
     const colIndex = activeCell.col;
+    // Collect all cell keys in the column being deleted
+    const sheet = workbook.sheets[workbook.activeSheetIndex];
+    const keysInCol: string[] = [];
+    for (let r = 0; r < sheet.rowCount; r++) {
+      keysInCol.push(cellKey(r, colIndex));
+    }
+    const dependents = getDependentsForKeys(keysInCol);
+    if (dependents.length > 0) {
+      const msg = `Deleting this column will break ${dependents.length} formula(s) that reference it. Continue?`;
+      if (!window.confirm(msg)) return;
+    }
     const newSheets = workbook.sheets.map((s, idx) =>
       idx === workbook.activeSheetIndex ? deleteCol(s, colIndex) : s
     );
@@ -2153,7 +2199,7 @@ function WorkbookView() {
     pushHistory(newWb, `Delete col ${colToLetter(colIndex)}`, filterStateRef.current, gridSelectionRef.current);
     setActiveCell({ row: activeCell.row, col: Math.max(0, colIndex - 1) });
     setStatusMessage(`Deleted column ${colToLetter(colIndex)}`);
-  }, [workbook, pushHistory, activeCell]);
+  }, [workbook, pushHistory, activeCell, getDependentsForKeys]);
 
   const handleDeleteCells = useCallback(() => {
     handleClear();
