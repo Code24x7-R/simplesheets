@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
+import { HelpCircle } from 'lucide-react';
 import packageJson from '../../package.json';
 
 interface AboutModalProps {
@@ -285,8 +286,9 @@ export function AboutModal({ isOpen, onClose }: AboutModalProps) {
               href="https://sites.google.com/view/simplewebapps/home"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-blue-600 hover:underline text-sm"
+              className="text-blue-600 hover:underline text-sm inline-flex items-center gap-1.5"
             >
+              <HelpCircle className="w-4 h-4" />
               Support &amp; Documentation
             </a>
           </div>
