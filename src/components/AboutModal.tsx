@@ -25,43 +25,7 @@ function getBuildInfo(): { date: string; time: string; raw: string; commit: stri
 
 const ABOUT_CONTENT = `# SimpleSheet
 
-A lightweight, browser-based spreadsheet for small businesses. No server, no account, no bloat — just a fast, offline-capable grid that reads and writes Excel files.
-
----
-
-## Features
-
-- **Cell editing** with Excel/Sheets-style interactions (point mode, F4 ref cycling, auto-complete)
-- **Formulas** — 50+ functions (SUM, AVERAGE, IF, date, math, string, logical) + arithmetic
-- **Copy / paste & drag-fill** series extension
-- **Undo / redo** — 50 levels
-- **Column & row resizing** + freeze panes
-- **Import** — .xlsx, .csv, .tsv, .json
-- **Export** — .xlsx, .csv, .tsv, .json, .pdf
-- **PDF export** with page setup (orientation, margins, scaling)
-- **Auto-save** to localStorage + named save slots
-- **Multi-sheet workbooks** — add, rename, copy, delete sheets with cross-sheet formula references
-- **Virtualized grid** — smooth scrolling for 100k+ rows × unlimited columns
-- **Clean menu-based UI** — File, Edit, View, Insert, Format, Help dropdown menus
-- **Formula autocomplete** — type-ahead function search with signatures and descriptions in the formula bar
-- **R1C1 reference format** — toggle between A1 and R1C1 notation by clicking the cell reference
-- **Formula Wizard** — interactive step-by-step formula builder with nested function support
-- **Find & Replace** — search across cells with options for case sensitivity, exact match, formulas, and multi-sheet scope
-
----
-
-## Tech Stack
-
-| Layer | Choice |
-|-------|--------|
-| Build | Vite 5 |
-| UI | React 18 + TypeScript |
-| Styling | Tailwind CSS |
-| Virtualization | @tanstack/react-virtual |
-| Excel | SheetJS (xlsx) |
-| CSV/TSV | PapaParse |
-| PDF | html2pdf.js |
-| Testing | Jest |
+A lightweight, browser-based spreadsheet built with React, TypeScript, and Tailwind CSS. No server, no account, no bloat — just a fast, offline-capable grid that reads and writes Excel files. Powered by Vite, SheetJS, PapaParse, and html2pdf.js.
 
 ---
 
@@ -257,7 +221,7 @@ export function AboutModal({ isOpen, onClose }: AboutModalProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
       <div
-        className="bg-white rounded-lg shadow-xl w-[720px] max-h-[80vh] flex flex-col"
+        className="bg-white rounded-lg shadow-xl w-[600px] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}

@@ -51,33 +51,29 @@ describe('AboutModal', () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
-  it('renders markdown content with features list', () => {
+  it('renders the app description', () => {
     render(<AboutModal isOpen={true} onClose={jest.fn()} />);
-    expect(screen.getByText(/Cell editing/)).toBeInTheDocument();
-    expect(screen.getByText(/Formulas/)).toBeInTheDocument();
-    expect(screen.getByText(/Copy \/ paste & drag-fill/)).toBeInTheDocument();
+    expect(screen.getByText(/lightweight, browser-based spreadsheet/)).toBeInTheDocument();
+    expect(screen.getByText(/React, TypeScript, and Tailwind CSS/)).toBeInTheDocument();
+    expect(screen.getByText(/Vite, SheetJS, PapaParse/)).toBeInTheDocument();
   });
 
-  it('renders bold text with strong tags', () => {
+  it('renders section headings', () => {
     render(<AboutModal isOpen={true} onClose={jest.fn()} />);
-    // The markdown has **bold** text which should be rendered as <strong> elements
-    const strongElements = document.querySelectorAll('strong');
-    expect(strongElements.length).toBeGreaterThan(0);
+    expect(screen.getByText('Related Apps')).toBeInTheDocument();
+    expect(screen.getByText('License')).toBeInTheDocument();
   });
 
-  it('renders inline code markers in feature descriptions', () => {
+  it('renders the no-server tagline', () => {
     render(<AboutModal isOpen={true} onClose={jest.fn()} />);
-    // The markdown has `code` markers in feature descriptions
-    // Check that feature text is rendered (the inline code is parsed)
-    expect(screen.getByText(/50\+ functions/)).toBeInTheDocument();
-    expect(screen.getByText(/50 levels/)).toBeInTheDocument();
+    expect(screen.getByText(/No server, no account, no bloat/)).toBeInTheDocument();
   });
 
-  it('renders tech stack table', () => {
+  it('renders tech stack in description', () => {
     render(<AboutModal isOpen={true} onClose={jest.fn()} />);
-    expect(screen.getByText('Vite 5')).toBeInTheDocument();
-    expect(screen.getByText('React 18 + TypeScript')).toBeInTheDocument();
-    expect(screen.getByText('Tailwind CSS')).toBeInTheDocument();
+    expect(screen.getByText(/Vite/)).toBeInTheDocument();
+    expect(screen.getByText(/SheetJS/)).toBeInTheDocument();
+    expect(screen.getByText(/html2pdf\.js/)).toBeInTheDocument();
   });
 
   it('renders license section', () => {
