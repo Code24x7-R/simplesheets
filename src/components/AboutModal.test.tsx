@@ -96,7 +96,7 @@ describe('AboutModal', () => {
     expect(screen.getByText('Related Apps')).toBeInTheDocument();
     const link = screen.getByText('SimpleDocs') as HTMLAnchorElement;
     expect(link).toBeInTheDocument();
-    expect(link.href).toBe('https://code24x7-r.github.io/simpledocs/');
+    expect(link.href).toBe('https://simpledocs.mouseclick.au/');
     expect(link.target).toBe('_blank');
     expect(link.rel).toContain('noopener');
   });

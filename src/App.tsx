@@ -721,7 +721,7 @@ function WorkbookView() {
   }, []);
 
   const handleSimpleDocs = useCallback(() => {
-    window.open('https://code24x7-r.github.io/simpledocs/', '_blank', 'noopener,noreferrer');
+    window.open('https://simpledocs.mouseclick.au', '_blank', 'noopener,noreferrer');
   }, []);
 
   const handleSearchReplace = useCallback(() => {

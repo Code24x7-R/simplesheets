@@ -2,7 +2,7 @@
 
 A lightweight, browser-based spreadsheet — fully client-side, reads and writes Excel files.
 
-**Live demo:** [https://code24x7-r.github.io/simplesheets/](https://code24x7-r.github.io/simplesheets/)
+**Live demo:** [https://simplesheets.mouseclick.au](https://simplesheets.mouseclick.au)
 
 **For end-user documentation, see [MANUAL.md](./MANUAL.md).**
 

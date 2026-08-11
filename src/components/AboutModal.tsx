@@ -66,7 +66,7 @@ A lightweight, browser-based spreadsheet for small businesses. No server, no acc
 
 ## Related Apps
 
-- [SimpleDocs](https://code24x7-r.github.io/simpledocs/) — browser-based word processor for letters, mail merges, and document composition
+- [SimpleDocs](https://simpledocs.mouseclick.au) — browser-based word processor for letters, mail merges, and document composition
 
 ---
 
