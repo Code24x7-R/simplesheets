@@ -46,7 +46,7 @@ jest.mock('@tanstack/react-virtual', () => ({
 describe('App', () => {
   it('renders the application header', () => {
     render(<App />);
-    expect(screen.getByText('SimpleSheet')).toBeInTheDocument();
+    expect(screen.getByText('SimpleSheets')).toBeInTheDocument();
   });
 
   it('renders the formula bar', () => {
@@ -139,7 +139,7 @@ describe('App', () => {
   it('opens Help menu and shows About item', () => {
     render(<App />);
     fireEvent.click(screen.getByText('Help'));
-    expect(screen.getByText('About SimpleSheet')).toBeTruthy();
+    expect(screen.getByText('About SimpleSheets')).toBeTruthy();
   });
 
   it('handles copy event', () => {
@@ -321,7 +321,7 @@ describe('App - Global Keyboard Shortcuts', () => {
     // Verify download was triggered
     expect(URL.createObjectURL).toHaveBeenCalled();
     // Verify app still renders
-    expect(screen.getByText('SimpleSheet')).toBeInTheDocument();
+    expect(screen.getByText('SimpleSheets')).toBeInTheDocument();
   });
 
   it('Ctrl+O triggers load', () => {
@@ -336,7 +336,7 @@ describe('App - Global Keyboard Shortcuts', () => {
     expect(openCalls.length).toBe(1);
     dispatchSpy.mockRestore();
     // Verify app still renders
-    expect(screen.getByText('SimpleSheet')).toBeInTheDocument();
+    expect(screen.getByText('SimpleSheets')).toBeInTheDocument();
   });
 
   it('Ctrl+H opens Find & Replace', () => {

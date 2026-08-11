@@ -383,7 +383,7 @@ export function MenuBar(props: MenuBarProps) {
 
   const helpItems: MenuItem[] = [
     { id: 'help-shortcuts', label: 'Keyboard Shortcuts', icon: Keyboard },
-    { id: 'help-about', label: 'About SimpleSheet', icon: Info },
+    { id: 'help-about', label: 'About SimpleSheets', icon: Info },
     { id: 'sep-help-1', label: '', separator: true },
     { id: 'help-simpledocs', label: 'SimpleDocs', icon: SimpleDocs },
   ];

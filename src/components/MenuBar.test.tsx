@@ -414,7 +414,7 @@ describe('MenuBar', () => {
   it('Help menu shows About and Shortcuts', () => {
     render(<MenuBar {...defaultProps} />);
     fireEvent.click(screen.getByText('Help'));
-    expect(screen.getByText('About SimpleSheet')).toBeTruthy();
+    expect(screen.getByText('About SimpleSheets')).toBeTruthy();
     expect(screen.getByText('Keyboard Shortcuts')).toBeTruthy();
   });
 

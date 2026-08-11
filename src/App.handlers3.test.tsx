@@ -286,12 +286,12 @@ describe('App - Help Handlers', () => {
     expect(screen.getByText(/Keyboard Shortcuts/)).toBeInTheDocument();
   });
 
-  it('Help → About SimpleSheet opens about modal', () => {
+  it('Help → About SimpleSheets opens about modal', () => {
     render(<App />);
     fireEvent.click(screen.getByText('Help'));
-    fireEvent.click(screen.getByText('About SimpleSheet'));
+    fireEvent.click(screen.getByText('About SimpleSheets'));
 
-    expect(screen.getByText('About SimpleSheet')).toBeInTheDocument();
+    expect(screen.getByText('About SimpleSheets')).toBeInTheDocument();
   });
 });
 

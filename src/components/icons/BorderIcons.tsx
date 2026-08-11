@@ -128,7 +128,7 @@ export function BorderLeft(props: IconProps) {
 }
 
 /** SimpleDocs word-processor icon — document with grid lines, green-tinted. */
-export function SimpleDocs(props: IconProps) {
+export function SimpleDocs({ className, ...rest }: IconProps) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -140,8 +140,8 @@ export function SimpleDocs(props: IconProps) {
       strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
-      className="lucide lucide-file-spreadsheet w-4 h-4 text-green-600"
-      {...props}
+      className={`lucide lucide-file-spreadsheet w-4 h-4 text-green-600 ${className ?? ''}`}
+      {...rest}
     >
       <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
       <path d="M14 2v4a2 2 0 0 0 2 2h4" />

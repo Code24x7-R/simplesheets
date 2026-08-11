@@ -48,20 +48,20 @@ describe('App - Menu Handlers', () => {
     jest.clearAllMocks();
   });
 
-  it('shows About SimpleSheet modal from Help menu', () => {
+  it('shows About SimpleSheets modal from Help menu', () => {
     render(<App />);
     fireEvent.click(screen.getByText('Help'));
-    fireEvent.click(screen.getByText('About SimpleSheet'));
-    expect(screen.getByText('About SimpleSheet')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('About SimpleSheets'));
+    expect(screen.getByText('About SimpleSheets')).toBeInTheDocument();
   });
 
-  it('closes About SimpleSheet modal on close button click', () => {
+  it('closes About SimpleSheets modal on close button click', () => {
     render(<App />);
     fireEvent.click(screen.getByText('Help'));
-    fireEvent.click(screen.getByText('About SimpleSheet'));
-    expect(screen.getByText('About SimpleSheet')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('About SimpleSheets'));
+    expect(screen.getByText('About SimpleSheets')).toBeInTheDocument();
     fireEvent.click(screen.getByText('Close'));
-    expect(screen.queryByText('About SimpleSheet')).not.toBeInTheDocument();
+    expect(screen.queryByText('About SimpleSheets')).not.toBeInTheDocument();
   });
 
   it('shows keyboard shortcuts modal from Help menu', () => {
@@ -321,7 +321,7 @@ describe('App - Menu Handlers (Delete)', () => {
     fireEvent.mouseEnter(deleteLabel);
     fireEvent.click(screen.getByText('Row'));
     // App should still render without errors
-    expect(document.querySelector('h1')?.textContent).toBe('SimpleSheet');
+    expect(document.querySelector('h1')?.textContent).toBe('SimpleSheets');
   });
 
   it('handles Delete > Column without throwing', () => {
@@ -334,7 +334,7 @@ describe('App - Menu Handlers (Delete)', () => {
     )!;
     fireEvent.mouseEnter(deleteLabel);
     fireEvent.click(screen.getByText('Column'));
-    expect(document.querySelector('h1')?.textContent).toBe('SimpleSheet');
+    expect(document.querySelector('h1')?.textContent).toBe('SimpleSheets');
   });
 
   it('handles Delete > Cells (clear contents)', () => {

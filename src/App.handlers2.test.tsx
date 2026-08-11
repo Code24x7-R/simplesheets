@@ -343,8 +343,8 @@ describe('App - Help Menu', () => {
   it('shows About via Help menu', () => {
     render(<App />);
     fireEvent.click(screen.getByText('Help'));
-    fireEvent.click(screen.getByText('About SimpleSheet').closest('.menu-item') as HTMLElement);
-    expect(screen.getByText('About SimpleSheet')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('About SimpleSheets').closest('.menu-item') as HTMLElement);
+    expect(screen.getByText('About SimpleSheets')).toBeInTheDocument();
   });
 
   it('opens Keyboard Shortcuts modal', () => {

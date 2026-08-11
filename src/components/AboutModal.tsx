@@ -247,7 +247,7 @@ function renderInline(text: string): React.ReactNode {
 
 /**
  * Modal displaying the SimpleSheet README / about information.
- * Triggered from the Help → About SimpleSheet menu.
+ * Triggered from the Help → About SimpleSheets menu.
  */
 export function AboutModal({ isOpen, onClose }: AboutModalProps) {
   if (!isOpen) return null;
@@ -262,7 +262,7 @@ export function AboutModal({ isOpen, onClose }: AboutModalProps) {
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
           <div className="flex items-center gap-3">
-            <h2 className="text-lg font-bold">About SimpleSheet</h2>
+            <h2 className="text-lg font-bold">About SimpleSheets</h2>
             <span className="text-xs font-mono text-gray-400 bg-gray-100 px-2 py-0.5 rounded">v{APP_VERSION}</span>
             <span className="text-xs text-gray-400" title={`${build.raw} (${build.commit})`}>build {build.date}{build.time ? ` ${build.time}` : ''} ({build.commit})</span>
           </div>
