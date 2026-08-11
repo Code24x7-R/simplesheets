@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
 import { compileASTNodeToString, compileASTToFormula, validateParameter, checkCircularReference, generateNodeId, createASTNode } from '../utils/formulaWizardCompiler';
+import { importFormulaToWizard } from '../utils/formulaWizardImport';
 import type { FormulaASTNode } from '../utils/formulaWizardSchema';
 
 describe('formulaWizardCompiler', () => {
@@ -160,6 +161,15 @@ describe('formulaWizardCompiler', () => {
       const nodeMap = new Map([['node_1', node]]);
       const result = compileASTToFormula(node, nodeMap);
       expect(result).toBe('=SUM(A1:A10)');
+    });
+
+    it('preserves cross-sheet reference through import→compile round-trip', () => {
+      // Simulates the wizard pipeline: import a formula with a sheet-qualified
+      // range, then compile it back. The sheet ref must survive (B-030).
+      const imported = importFormulaToWizard('=SUM(Sheet2!C2:C11)');
+      expect(imported).not.toBeNull();
+      const result = compileASTToFormula(imported!.root, imported!.nodeMap);
+      expect(result).toBe('=SUM(Sheet2!C2:C11)');
     });
   });
 

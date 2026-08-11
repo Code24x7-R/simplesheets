@@ -4,6 +4,13 @@
 
 ---
 
+### 2026-08-11 [BUGFIX] B-030 — FormulaWizard strips sheet reference on import
+- **What**: Opening the Nested Formula Wizard on `=SUM(Sheet2!C2:C11)` showed the parameter as bare `C2:C11`, dropping the `Sheet2!` prefix. Applying wrote `=SUM(C2:C11)` which evaluated against the active sheet (returning 0) instead of Sheet2
+- **Root cause**: `cellRefToString`/`rangeToString` in `formulaParser.ts` ignored the `sheetName` property; the parser populates it correctly but the stringifiers dropped it during wizard import
+- **Fix**: `cellRefToString` prepends `sheetName!` when present; `rangeToString` emits the prefix once at range level (avoids redundant `Sheet2!C2:Sheet2!D11`)
+- **Files**: `formulaParser.ts`, `formulaParser.test.ts`, `formulaWizardImport.test.ts`, `formulaWizardCompiler.test.ts`, `App.test.tsx`
+- **Tests**: +7 new tests (2827 total)
+
 ### 2026-08-11 [BUGFIX] B-029 — FormulaWizard Apply writes to wrong sheet after cross-sheet navigation
 - **What**: With a cross-sheet formula open in the Nested Formula Wizard, navigating to another sheet during POINT mode then pressing Apply wrote the formula to the navigated sheet instead of the source sheet, and left focus there
 - **Root cause**: B-011 captured target cell row/col but not the source sheet index; `handleCellChange` wrote to whichever sheet was active after navigation

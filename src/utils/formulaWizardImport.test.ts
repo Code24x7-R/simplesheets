@@ -134,6 +134,19 @@ describe('formulaWizardImport', () => {
       expect(result!.root.parameterValues['number1']?.rawValue).toBe('$A$1:$B$2');
     });
 
+    it('imports cross-sheet range =SUM(Sheet2!C2:C11) preserving sheet ref', () => {
+      const result = importFormulaToWizard('=SUM(Sheet2!C2:C11)');
+      expect(result).not.toBeNull();
+      expect(result!.root.functionName).toBe('SUM');
+      expect(result!.root.parameterValues['number1']?.rawValue).toBe('Sheet2!C2:C11');
+    });
+
+    it('imports cross-sheet cell ref =IF(Sheet2!A1>0, 1, 0) preserving sheet ref', () => {
+      const result = importFormulaToWizard('=IF(Sheet2!A1>0, 1, 0)');
+      expect(result).not.toBeNull();
+      expect(result!.root.parameterValues['condition']?.rawValue).toBe('Sheet2!A1 > 0');
+    });
+
     it('imports function with mixed absolute refs', () => {
       const result = importFormulaToWizard('=SUM($A1:B$2)');
       expect(result).not.toBeNull();

@@ -805,16 +805,26 @@ export function cellRefToString(node: CellRefNode): string {
   const rowNumber = node.row + 1;
   const colPart = node.absoluteCol ? `$${colLetter}` : colLetter;
   const rowPart = node.absoluteRow ? `$${rowNumber}` : String(rowNumber);
-  return `${colPart}${rowPart}`;
+  const ref = `${colPart}${rowPart}`;
+  return node.sheetName ? `${node.sheetName}!${ref}` : ref;
 }
 
 /**
  * Converts a range node to its A1-style string representation.
  * @param node - The RangeNode to convert.
- * @returns A1-style range string (e.g., "A1:B5").
+ * @returns A1-style range string (e.g., "A1:B5" or "Sheet2!A1:B5").
  */
 export function rangeToString(node: RangeNode): string {
-  return `${cellRefToString(node.start)}:${cellRefToString(node.end)}`;
+  // If the range itself carries a sheet qualifier, emit it once at the front
+  // and suppress per-cell qualifiers to avoid "Sheet2!C2:Sheet2!D11".
+  const start = node.sheetName
+    ? cellRefToString({ ...node.start, sheetName: undefined })
+    : cellRefToString(node.start);
+  const end = node.sheetName
+    ? cellRefToString({ ...node.end, sheetName: undefined })
+    : cellRefToString(node.end);
+  const base = `${start}:${end}`;
+  return node.sheetName ? `${node.sheetName}!${base}` : base;
 }
 
 /**

@@ -694,6 +694,38 @@ describe('Formula Parser', () => {
       };
       expect(rangeToString(node)).toBe('$A$1:$B$5');
     });
+
+    it('emits sheet prefix on range', () => {
+      const node: RangeNode = {
+        type: 'range',
+        sheetName: 'Sheet2',
+        start: { type: 'cell', row: 1, col: 2, absoluteCol: false, absoluteRow: false, sheetName: 'Sheet2' },
+        end: { type: 'cell', row: 10, col: 2, absoluteCol: false, absoluteRow: false, sheetName: 'Sheet2' },
+      };
+      expect(rangeToString(node)).toBe('Sheet2!C2:C11');
+    });
+
+    it('emits sheet prefix on absolute range', () => {
+      const node: RangeNode = {
+        type: 'range',
+        sheetName: 'Sheet2',
+        start: { type: 'cell', row: 0, col: 0, absoluteCol: true, absoluteRow: true, sheetName: 'Sheet2' },
+        end: { type: 'cell', row: 4, col: 1, absoluteCol: true, absoluteRow: true, sheetName: 'Sheet2' },
+      };
+      expect(rangeToString(node)).toBe('Sheet2!$A$1:$B$5');
+    });
+  });
+
+  describe('cellRefToString with sheet name', () => {
+    it('emits sheet prefix on relative cell', () => {
+      const node: CellRefNode = { type: 'cell', row: 1, col: 2, absoluteCol: false, absoluteRow: false, sheetName: 'Sheet2' };
+      expect(cellRefToString(node)).toBe('Sheet2!C2');
+    });
+
+    it('emits sheet prefix on absolute cell', () => {
+      const node: CellRefNode = { type: 'cell', row: 0, col: 0, absoluteCol: true, absoluteRow: true, sheetName: 'Sheet2' };
+      expect(cellRefToString(node)).toBe('Sheet2!$A$1');
+    });
   });
 });
 

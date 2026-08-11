@@ -24,6 +24,13 @@ This file tracks bugs in **existing** code, functions, and UI elements. New feat
 
 <!-- Bugs resolved in this session or recent past. Newest first. -->
 
+### 2026-08-11: B-030 — FormulaWizard strips sheet reference on import ✅ VERIFIED
+- **Symptom**: Opening the Nested Formula Wizard on a cell with a cross-sheet formula (e.g. `=SUM(Sheet2!C2:C11)`) displays the parameter as a bare range (`C2:C11`) without the `Sheet2!` prefix. Applying without editing writes `=SUM(C2:C11)` to the source sheet, which evaluates against the active sheet (Sheet1) instead of Sheet2 — returning 0 when Sheet1 cells contain text.
+- **Root cause**: `cellRefToString()` and `rangeToString()` in `src/utils/formulaParser.ts` ignored the `sheetName` property on `CellRefNode`/`RangeNode`. The parser correctly populates `sheetName` (e.g. `"Sheet2"`), but the stringifiers dropped it. The wizard's `importFormulaToWizard` uses these helpers to convert AST args to `rawValue` strings, so the sheet ref was silently lost at import time.
+- **Fix**: `cellRefToString` now prepends `sheetName!` when present. `rangeToString` emits the range-level prefix once and suppresses per-cell prefixes to avoid the redundant `Sheet2!C2:Sheet2!D11` form.
+- **Files**: `src/utils/formulaParser.ts`, `src/utils/formulaParser.test.ts`, `src/utils/formulaWizardImport.test.ts`, `src/utils/formulaWizardCompiler.test.ts`, `src/App.test.tsx`
+- **Tests**: +7 new tests (2827 total): cell/range stringifier with sheet name, import preserves cross-sheet range and cell ref, import→compile round-trip, end-to-end wizard open+apply preserves sheet ref.
+
 ### 2026-08-11: B-029 — FormulaWizard Apply writes to wrong sheet after cross-sheet navigation ✅ VERIFIED
 - **Symptom**: With a cross-sheet formula in a cell (e.g. `=SUM(Sheet2!C2:C11)` in Sheet1!B5), opening the Nested Formula Wizard (Ctrl+Shift+F), navigating to Sheet2 during POINT mode to pick a new range, and pressing Apply writes the formula to Sheet2!B5 instead of the source Sheet1!B5. Focus also stays on Sheet2 instead of returning to the source cell.
 - **Root cause**: The B-011 fix captured the target cell's row/col when the wizard opened, but NOT the source sheet index. When the user navigated to another sheet during POINT mode (which changes `workbook.activeSheetIndex`), `handleCellChange` wrote to whichever sheet was active (Sheet2) instead of the source sheet (Sheet1). No code switched the active sheet back on apply.

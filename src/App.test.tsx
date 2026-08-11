@@ -733,10 +733,10 @@ describe('App - Global Keyboard Shortcuts', () => {
     });
     expect(screen.getByText('Nested Formula Wizard')).toBeInTheDocument();
 
-    // Verify the wizard opened with the imported formula (cross-sheet prefix
-    // is stripped on import, so the parameter shows just the range)
+    // Verify the wizard opened with the imported formula — the cross-sheet
+    // prefix must be preserved (B-030 fix)
     const sumParamInput = screen.getByPlaceholderText(/Primary range or value to sum/) as HTMLInputElement;
-    expect(sumParamInput.value).toContain('C2:C11');
+    expect(sumParamInput.value).toBe('Sheet2!C2:C11');
 
     // Switch to Sheet2 while wizard is open (reproduces cross-sheet navigation
     // the user does during POINT mode range picking)
@@ -783,5 +783,57 @@ describe('App - Global Keyboard Shortcuts', () => {
       fireEvent.mouseDown(sheet2CellsAfter[4 * 5 + 1]); // B5 on Sheet2
     });
     expect(formulaBarInput.value).not.toContain('SUM(');
+  });
+
+  it('B-030: FormulaWizard preserves sheet reference when importing cross-sheet formula', () => {
+    render(<App />);
+
+    // Add a second sheet so we can use a cross-sheet reference
+    const addSheetBtn = screen.getByText('+');
+    act(() => { fireEvent.click(addSheetBtn); });
+    const sheet1Tab = screen.getByText('Sheet1');
+    act(() => { fireEvent.click(sheet1Tab); });
+
+    const formulaBarInput = screen.getByPlaceholderText(/Enter a value or formula/) as HTMLInputElement;
+
+    // Navigate to B5 on Sheet1
+    const cells = document.querySelectorAll('.grid-cell');
+    act(() => { fireEvent.mouseDown(cells[4 * 5 + 1]); });
+
+    // Enter a cross-sheet formula referencing Sheet2!C2:C11 (Q1 sales data)
+    act(() => { formulaBarInput.focus(); });
+    act(() => {
+      fireEvent.change(formulaBarInput, { target: { value: '=SUM(Sheet2!C2:C11)' } });
+    });
+    act(() => { fireEvent.keyDown(formulaBarInput, { key: 'Enter' }); });
+
+    // Re-select B5 (Enter moved to B6)
+    const cellsAfter = document.querySelectorAll('.grid-cell');
+    act(() => { fireEvent.mouseDown(cellsAfter[4 * 5 + 1]); });
+
+    // Open wizard via Ctrl+Shift+F — imports =SUM(Sheet2!C2:C11)
+    act(() => { fireGlobalKeyDown('F', { ctrlKey: true, shiftKey: true }); });
+    expect(screen.getByText('Nested Formula Wizard')).toBeInTheDocument();
+
+    // BUG CHECK 1: the parameter must show the sheet-qualified range, not
+    // a bare C2:C11 (which would evaluate against Sheet1 and return 0)
+    const sumParamInput = screen.getByPlaceholderText(/Primary range or value to sum/) as HTMLInputElement;
+    expect(sumParamInput.value).toBe('Sheet2!C2:C11');
+
+    // Apply WITHOUT modifying the parameter — the formula must be preserved
+    act(() => {
+      const applyButton = screen.getByRole('button', { name: /Apply to Cell/ });
+      fireEvent.click(applyButton);
+    });
+    expect(screen.queryByText('Nested Formula Wizard')).not.toBeInTheDocument();
+
+    // Flush the setTimeout that restores focus to B5, then re-select B5
+    act(() => { jest.runAllTimers(); });
+    const cellsApply = document.querySelectorAll('.grid-cell');
+    act(() => { fireEvent.mouseDown(cellsApply[4 * 5 + 1]); });
+
+    // BUG CHECK 2: formula bar must show the full cross-sheet formula
+    // (not =SUM(C2:C11) which would evaluate against Sheet1 and return 0)
+    expect(formulaBarInput.value).toBe('=SUM(Sheet2!C2:C11)');
   });
 });
