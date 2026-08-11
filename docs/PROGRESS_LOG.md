@@ -4,6 +4,13 @@
 
 ---
 
+### 2026-08-11 [BUGFIX] B-029 — FormulaWizard Apply writes to wrong sheet after cross-sheet navigation
+- **What**: With a cross-sheet formula open in the Nested Formula Wizard, navigating to another sheet during POINT mode then pressing Apply wrote the formula to the navigated sheet instead of the source sheet, and left focus there
+- **Root cause**: B-011 captured target cell row/col but not the source sheet index; `handleCellChange` wrote to whichever sheet was active after navigation
+- **Fix**: Capture `wizardTargetSheetIndex` at wizard open; `handleCellChange` accepts optional `sheetIndex` and sets `activeSheetIndex` atomically; `handleWizardApply` passes captured index; `handleCloseWizard` resets it
+- **Files**: `App.tsx`, `App.test.tsx`
+- **Tests**: +1 new test (2819 total)
+
 ### 2026-08-11 [BUGFIX] B-028 — Marching ants offset after copy/cut
 - **What**: Marching-ants dashed border appeared offset from the selection after Ctrl+C/Ctrl+X (½ cell right for single cell, width-proportional gaps for ranges)
 - **Root cause**: `.clipboard-range-cell { position: relative; }` in `index.css` overrode the cell's `position: absolute` (equal specificity, later source order), so inline left/top offsets applied relative to flow position instead of grid container

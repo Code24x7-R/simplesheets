@@ -147,6 +147,11 @@ function WorkbookView() {
   // the user selects a range during POINT mode (which changes activeCell)
   const [wizardTargetCell, setWizardTargetCell] = useState<{ row: number; col: number } | null>(null);
 
+  // State to capture the source sheet index when the wizard opens (B-029 fix)
+  // This prevents the formula from being written to the wrong sheet when
+  // the user navigates to another sheet during POINT mode range selection
+  const [wizardTargetSheetIndex, setWizardTargetSheetIndex] = useState<number | null>(null);
+
   // Wrapper that restores focus to grid after wizard closes
   const handleCloseWizard = useCallback(() => {
     // Capture target cell before resetting it
@@ -154,6 +159,8 @@ function WorkbookView() {
     closeFormulaWizard();
     // Reset target cell so next wizard open captures fresh target
     setWizardTargetCell(null);
+    // Reset source sheet index so next wizard open captures fresh sheet
+    setWizardTargetSheetIndex(null);
     // Restore focus to the target cell after modal closes
     setTimeout(() => {
       if (targetCell) {
@@ -334,10 +341,13 @@ function WorkbookView() {
   // ─── Cell Action Handlers ─────────────────────────────────────────────────
 
   const handleCellChange = useCallback(
-    (row: number, col: number, value: string) => {
+    (row: number, col: number, value: string, sheetIndex?: number) => {
+      // Allow writing to a specific sheet (used by FormulaWizard B-029 fix)
+      // Falls back to the active sheet when not provided
+      const targetSheetIdx = sheetIndex ?? workbook.activeSheetIndex;
       // Create a new workbook with the updated cell
       const newSheets = workbook.sheets.map((s, idx) => {
-        if (idx !== workbook.activeSheetIndex) return s;
+        if (idx !== targetSheetIdx) return s;
         const key = cellKey(row, col);
         const existingCell = s.cells[key];
         const newCell: Cell = {
@@ -352,6 +362,9 @@ function WorkbookView() {
       const newWorkbook: Workbook = {
         ...workbook,
         sheets: newSheets,
+        // When writing to a non-active sheet, switch active sheet too so
+        // focus lands on the source sheet (B-029 fix)
+        activeSheetIndex: targetSheetIdx,
         lastModified: Date.now(),
       };
       const cellRef = `${colToLetter(col)}${row + 1}`;
@@ -425,12 +438,17 @@ function WorkbookView() {
       // This prevents the formula from being placed in the wrong cell
       // when the user selects a range during POINT mode
       const cell = wizardTargetCell ?? activeCellRef.current;
+      // Use the source sheet index captured when the wizard opened (B-029 fix)
+      // This prevents the formula from being written to the wrong sheet
+      // when the user navigates to another sheet during POINT mode.
+      // handleCellChange writes to that sheet and switches activeSheetIndex.
+      const targetSheetIdx = wizardTargetSheetIndex ?? workbook.activeSheetIndex;
       if (cell) {
-        handleCellChange(cell.row, cell.col, formula);
+        handleCellChange(cell.row, cell.col, formula, targetSheetIdx);
       }
       handleCloseWizard();
     },
-    [handleCellChange, handleCloseWizard, wizardTargetCell]
+    [handleCellChange, handleCloseWizard, wizardTargetCell, wizardTargetSheetIndex, workbook.activeSheetIndex]
   );
 
   /**
@@ -469,6 +487,10 @@ function WorkbookView() {
       // even if activeCell changes during POINT mode range selection
       setWizardTargetCell(activeCell ?? null);
 
+      // Capture source sheet index so formula is placed on the correct
+      // sheet even if the user navigates to another sheet during POINT mode
+      setWizardTargetSheetIndex(workbook.activeSheetIndex);
+
       // Try to import the existing formula
       if (currentValue && currentValue.startsWith('=')) {
         const imported = importFormulaToWizard(currentValue, targetCellRef);
@@ -480,7 +502,7 @@ function WorkbookView() {
       // No formula to import — show autocomplete picker
       openWizardWithAutocomplete(targetCellRef);
     },
-    [activeCell, importFormulaToWizard, openWizardWithAutocomplete]
+    [activeCell, importFormulaToWizard, openWizardWithAutocomplete, workbook]
   );
 
   // ─── Cross-Sheet Navigation ──────────────────────────────────────
@@ -2584,6 +2606,8 @@ function WorkbookView() {
             : undefined;
           // Capture target cell so formula is placed in the correct cell
           setWizardTargetCell(activeCell ?? null);
+          // Capture source sheet so formula is placed on the correct sheet
+          setWizardTargetSheetIndex(workbook.activeSheetIndex);
           openFormulaWizard(functionName, targetCellRef);
         }}
         onAcceptPointSelection={() => {
