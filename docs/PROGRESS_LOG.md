@@ -4,6 +4,13 @@
 
 ---
 
+### 2026-08-13 [BUGFIX] B-031 — Active cell position not preserved when switching sheets
+- **What**: Selecting B17 on Sheet1, switching to Sheet2, moving to A3, then switching back to Sheet1 showed A3 active instead of B17. The active cell position bled across sheets.
+- **Root cause**: `activeCell` was a single global `useState` in `App.tsx`; on sheet switch `setActiveCell(null)` was called. Grid was not remounted (no `key` prop) so its internal selection persisted. Grid's sync effect only fires when `selectedCell` is truthy, so the stale selection bled through.
+- **Fix**: Per-sheet active cell tracking via `Map<sheetId, {row,col}>` ref; sync effect persists on change; all sheet-switch handlers save outgoing + restore incoming position (default A1) via `restoreActiveCellForSheet`; range selection cleared on switch.
+- **Files**: `App.tsx`, `App.sheetActiveCell.test.tsx`
+- **Tests**: +4 new tests (2855 total)
+
 ### 2026-08-11 [FEATURE] Phase 33 — Formula Error Prevention Suite
 - **What**: Implemented 4 high-priority formula error preventions from the top-10 error audit:
   - **33a SUBTOTAL function**: Engine support for codes 1-11 (include hidden) and 101-111 (ignore hidden), skips nested SUBTOTALs to prevent double-counting. Threaded `hiddenRows` through `EvalContext`, `evaluateWorkbook`, and `evaluateFormulaPreview`. Added to wizard schema.

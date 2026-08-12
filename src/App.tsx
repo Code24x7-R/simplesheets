@@ -206,6 +206,29 @@ function WorkbookView() {
   const activeCellRef = useRef(activeCell);
   activeCellRef.current = activeCell;
 
+  // Per-sheet active cell tracking — each sheet remembers its own active cell
+  // so switching sheets restores the correct position (keyed by sheet id).
+  const sheetActiveCellsRef = useRef<Map<string, { row: number; col: number }>>(new Map());
+
+  // Whenever activeCell changes, persist it into the per-sheet map
+  // keyed by the current sheet's id.
+  useEffect(() => {
+    if (activeCell) {
+      const currentSheet = workbook.sheets[workbook.activeSheetIndex];
+      if (currentSheet) {
+        sheetActiveCellsRef.current.set(currentSheet.id, { row: activeCell.row, col: activeCell.col });
+      }
+    }
+  }, [activeCell, workbook.sheets, workbook.activeSheetIndex]);
+
+  // Helper: restore the saved active cell for a given sheet (or default to A1).
+  // Used by all sheet-switching handlers so each sheet remembers its position.
+  const restoreActiveCellForSheet = useCallback((sheetId: string) => {
+    const saved = sheetActiveCellsRef.current.get(sheetId);
+    setActiveCell(saved ?? { row: 0, col: 0 });
+    setGridSelection(null);
+  }, []);
+
   // Paste Special options
   const [pasteSkipBlanks, setPasteSkipBlanks] = useState(false);
   const [showPasteSpecial, setShowPasteSpecial] = useState(false);
@@ -556,6 +579,12 @@ function WorkbookView() {
       // Save the source sheet (where the formula being edited lives)
       crossSheetSourceRef.current = workbook.activeSheetIndex;
 
+      // Save current active cell for the sheet we're leaving so return works correctly
+      const currentSheet = workbook.sheets[workbook.activeSheetIndex];
+      if (currentSheet && activeCell) {
+        sheetActiveCellsRef.current.set(currentSheet.id, { row: activeCell.row, col: activeCell.col });
+      }
+
       const newWb: Workbook = {
         ...workbook,
         activeSheetIndex: targetIndex,
@@ -588,7 +617,7 @@ function WorkbookView() {
       setActiveCell({ row: startRow, col: startCol });
       gridRef.current?.focus();
     },
-    [pendingCrossSheetRef, workbook, pushHistory]
+    [pendingCrossSheetRef, workbook, pushHistory, activeCell]
   );
 
   // Return from cross-sheet navigation to source sheet
@@ -606,9 +635,11 @@ function WorkbookView() {
       crossSheetSourceRef.current = null;
       setCrossSheetNavigation(null);
       setPendingCrossSheetRef(null);
+      // Restore the source sheet's saved active cell
+      restoreActiveCellForSheet(workbook.sheets[sourceIndex].id);
       gridRef.current?.focus();
     },
-    [workbook, pushHistory]
+    [workbook, pushHistory, restoreActiveCellForSheet]
   );
 
   // ─── Raw Event Handlers for FormulaBar ──────────────────────────
@@ -1004,27 +1035,39 @@ function WorkbookView() {
   const handleNewSheet = useCallback(
     (wb: Workbook) => {
       resetHistory(wb);
-      setActiveCell(null);
+      // Clear per-sheet active cells — new workbook has fresh sheet ids
+      sheetActiveCellsRef.current.clear();
+      // Default to A1 on the first sheet
+      restoreActiveCellForSheet(wb.sheets[0].id);
       setStatusMessage('Created new workbook');
       gridRef.current?.focus();
     },
-    [resetHistory]
+    [resetHistory, restoreActiveCellForSheet]
   );
 
   const handleSwitchSheet = useCallback(
     (index: number) => {
       if (index === workbook.activeSheetIndex) return;
       if (index < 0 || index >= workbook.sheets.length) return;
+
+      // Save current active cell for the sheet we're leaving
+      const currentSheet = workbook.sheets[workbook.activeSheetIndex];
+      if (currentSheet && activeCell) {
+        sheetActiveCellsRef.current.set(currentSheet.id, { row: activeCell.row, col: activeCell.col });
+      }
+
       const newWb: Workbook = {
         ...workbook,
         activeSheetIndex: index,
         lastModified: Date.now(),
       };
       pushHistory(newWb, `Switch to ${workbook.sheets[index].name}`, filterStateRef.current, gridSelectionRef.current);
-      setActiveCell(null);
+
+      // Restore the target sheet's saved active cell (or default to A1)
+      restoreActiveCellForSheet(workbook.sheets[index].id);
       gridRef.current?.focus();
     },
-    [workbook, pushHistory]
+    [workbook, pushHistory, activeCell, restoreActiveCellForSheet]
   );
 
   const handleAddSheet = useCallback(() => {
@@ -1049,9 +1092,10 @@ function WorkbookView() {
       lastModified: Date.now(),
     };
     pushHistory(newWb, `Add Sheet${sheetNum}`, filterStateRef.current, gridSelectionRef.current);
-    setActiveCell(null);
+    // New sheet has no saved position — defaults to A1
+    restoreActiveCellForSheet(newSheet.id);
     gridRef.current?.focus();
-  }, [workbook, pushHistory]);
+  }, [workbook, pushHistory, restoreActiveCellForSheet]);
 
   const handleRenameSheet = useCallback(
     (index: number, newName: string) => {
@@ -1093,10 +1137,11 @@ function WorkbookView() {
         lastModified: Date.now(),
       };
       pushHistory(newWb, `Copy sheet "${source.name}"`, filterStateRef.current, gridSelectionRef.current);
-      setActiveCell(null);
+      // Copied sheet has no saved position — defaults to A1
+      restoreActiveCellForSheet(copied.id);
       gridRef.current?.focus();
     },
-    [workbook, pushHistory]
+    [workbook, pushHistory, restoreActiveCellForSheet]
   );
 
   const handleDeleteSheet = useCallback(
@@ -1113,10 +1158,14 @@ function WorkbookView() {
         lastModified: Date.now(),
       };
       pushHistory(newWb, `Delete sheet "${sheetName}"`, filterStateRef.current, gridSelectionRef.current);
-      setActiveCell(null);
+      // Clean up the deleted sheet's saved position
+      sheetActiveCellsRef.current.delete(workbook.sheets[index].id);
+      // Restore the target sheet's saved active cell (or default to A1)
+      const newActiveSheet = newSheets[newActive < 0 ? 0 : newActive];
+      restoreActiveCellForSheet(newActiveSheet.id);
       gridRef.current?.focus();
     },
-    [workbook, pushHistory]
+    [workbook, pushHistory, restoreActiveCellForSheet]
   );
 
   /* istanbul ignore next - handleImportError requires import failure (tested in ImportButtons.test.tsx) */

@@ -24,6 +24,13 @@ This file tracks bugs in **existing** code, functions, and UI elements. New feat
 
 <!-- Bugs resolved in this session or recent past. Newest first. -->
 
+### 2026-08-13: B-031 — Active cell position not preserved when switching sheets ✅ VERIFIED
+- **Symptom**: Selecting a cell on Sheet1 (e.g. B17), switching to Sheet2, moving to A3, then switching back to Sheet1 shows A3 as the active cell instead of B17. The active cell position bleeds across sheets.
+- **Root cause**: `activeCell` was a single global `useState` in `src/App.tsx` — not tracked per-sheet. On sheet switch, `handleSwitchSheet` called `setActiveCell(null)`. The `Grid` component is not remounted on sheet switch (no `key` prop), so its internal selection state persisted. Grid's sync effect (`Grid.tsx` line ~307) only fires when `selectedCell` is truthy, so a `null` activeCell left the stale selection in place. When the user navigated on Sheet2, the global `activeCell` updated to that position, and switching back left Sheet2's position showing on Sheet1.
+- **Fix**: Added per-sheet active cell tracking via a `Map<string, {row, col}>` ref keyed by sheet id. A sync effect persists `activeCell` into the map whenever it changes. All sheet-switching handlers (`handleSwitchSheet`, `handleNewSheet`, `handleAddSheet`, `handleCopySheet`, `handleDeleteSheet`, `handleReturnFromCrossSheet`, `handleNavigateToCrossSheet`) now save the outgoing sheet's position and restore the incoming sheet's saved position (defaulting to A1) via a `restoreActiveCellForSheet` helper. Range selection (`gridSelection`) is explicitly cleared on each switch.
+- **Files**: `src/App.tsx`, `src/App.sheetActiveCell.test.tsx`
+- **Tests**: +4 new tests (2855 total): restore on switch-back, no cross-sheet bleed, three-sheet preservation, range-clear on switch.
+
 ### 2026-08-11: B-030 — FormulaWizard strips sheet reference on import ✅ VERIFIED
 - **Symptom**: Opening the Nested Formula Wizard on a cell with a cross-sheet formula (e.g. `=SUM(Sheet2!C2:C11)`) displays the parameter as a bare range (`C2:C11`) without the `Sheet2!` prefix. Applying without editing writes `=SUM(C2:C11)` to the source sheet, which evaluates against the active sheet (Sheet1) instead of Sheet2 — returning 0 when Sheet1 cells contain text.
 - **Root cause**: `cellRefToString()` and `rangeToString()` in `src/utils/formulaParser.ts` ignored the `sheetName` property on `CellRefNode`/`RangeNode`. The parser correctly populates `sheetName` (e.g. `"Sheet2"`), but the stringifiers dropped it. The wizard's `importFormulaToWizard` uses these helpers to convert AST args to `rawValue` strings, so the sheet ref was silently lost at import time.
