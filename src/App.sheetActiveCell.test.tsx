@@ -9,10 +9,23 @@ beforeAll(() => {
   URL.revokeObjectURL = jest.fn();
 });
 
+// Track all scrollToIndex mock instances across virtualizer renders.
+// The Grid creates a fresh virtualizer each render, so we collect all of them
+// and assert that at least one was called with the expected args.
+let rowScrollSpies: jest.Mock[] = [];
+let colScrollSpies: jest.Mock[] = [];
+
+beforeEach(() => {
+  rowScrollSpies = [];
+  colScrollSpies = [];
+});
+
 // Mock the virtualizer
 jest.mock('@tanstack/react-virtual', () => ({
   useVirtualizer: (options: { horizontal?: boolean }) => {
     if (options.horizontal) {
+      const scrollToIndex = jest.fn();
+      colScrollSpies.push(scrollToIndex);
       return {
         getVirtualItems: () => {
           const items = [];
@@ -22,10 +35,12 @@ jest.mock('@tanstack/react-virtual', () => ({
           return items;
         },
         getTotalSize: () => 500,
-        scrollToIndex: jest.fn(),
+        scrollToIndex,
         measure: jest.fn(),
       };
     }
+    const scrollToIndex = jest.fn();
+    rowScrollSpies.push(scrollToIndex);
     return {
       getVirtualItems: () => {
         const items = [];
@@ -35,11 +50,19 @@ jest.mock('@tanstack/react-virtual', () => ({
         return items;
       },
       getTotalSize: () => 140,
-      scrollToIndex: jest.fn(),
+      scrollToIndex,
       measure: jest.fn(),
     };
   },
 }));
+
+// Helper: check if any scroll spy was called with the given index
+function anyRowScrollToIndex(targetRow: number): boolean {
+  return rowScrollSpies.some(spy => spy.mock.calls.some(call => call[0] === targetRow));
+}
+function anyColScrollToIndex(targetCol: number): boolean {
+  return colScrollSpies.some(spy => spy.mock.calls.some(call => call[0] === targetCol));
+}
 
 // Helper: get all grid cells in row-major order (5 visible columns in mock)
 function getAllCells(): HTMLElement[] {
@@ -184,5 +207,36 @@ describe('App - Per-Sheet Active Cell Preservation', () => {
     // Switch to Sheet2 — active cell should be A1 (default), single cell selected
     fireEvent.click(screen.getByText('Sheet2'));
     expect(getSelectedCell()).toEqual({ row: 0, col: 0 });
+  });
+
+  it('scrolls to the restored active cell when switching sheets', () => {
+    render(<App />);
+
+    // Add a second sheet
+    fireEvent.click(screen.getByTitle('Add a new sheet'));
+
+    // Switch to Sheet2 first so Sheet1's default A1 is saved
+    fireEvent.click(screen.getByText('Sheet2'));
+
+    // Switch back to Sheet1
+    fireEvent.click(screen.getByText('Sheet1'));
+
+    // Select row 4, col 3 on Sheet1 (a cell far from origin)
+    selectCell(4, 3);
+    expect(getSelectedCell()).toEqual({ row: 4, col: 3 });
+
+    // Switch to Sheet2
+    fireEvent.click(screen.getByText('Sheet2'));
+
+    // Clear scroll spies created during the Sheet2 render
+    rowScrollSpies = [];
+    colScrollSpies = [];
+
+    // Switch back to Sheet1 — should scroll to row 4, col 3
+    fireEvent.click(screen.getByText('Sheet1'));
+
+    // The grid should have scrolled to make the restored cell visible
+    expect(anyRowScrollToIndex(4)).toBe(true);
+    expect(anyColScrollToIndex(3)).toBe(true);
   });
 });

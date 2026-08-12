@@ -143,6 +143,8 @@ export interface GridHandle {
   focusCell: (row: number, col: number) => void;
   getSelection: () => Selection | null;
   acceptPointSelection: () => void;
+  /** Scroll the viewport to make the given cell visible. */
+  scrollToCell: (row: number, col: number) => void;
 }
 
 /**
@@ -167,10 +169,17 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
   // (handleCellSelect is defined later in the component)
   const handleCellSelectRef = useRef<(row: number, col: number) => void>(() => {});
 
+  // Refs to store virtualizers for use in useImperativeHandle (scrollToCell)
+  const rowVirtualizerRef = useRef<{ scrollToIndex: (index: number, opts?: { align?: 'auto' | 'start' | 'center' | 'end' }) => void }>({ scrollToIndex: () => {} });
+  const columnVirtualizerRef = useRef<{ scrollToIndex: (index: number, opts?: { align?: 'auto' | 'start' | 'center' | 'end' }) => void }>({ scrollToIndex: () => {} });
+
+  // Track the previous sheet id so we can scroll to the active cell on sheet change
+  const prevSheetIdRef = useRef<string | null>(null);
+
   // Callback ref for accepting point selection (simulates Enter key)
   const acceptPointSelectionRef = useRef<() => void>(() => {});
 
-  // Expose focus(), focusCell(), getSelection(), and acceptPointSelection() to parent
+  // Expose focus(), focusCell(), getSelection(), acceptPointSelection(), and scrollToCell() to parent
   useImperativeHandle(ref, () => ({
     focus: () => {
       parentRef.current?.focus();
@@ -182,6 +191,12 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
     },
     getSelection: () => selectionRef.current,
     acceptPointSelection: () => acceptPointSelectionRef.current(),
+    scrollToCell: (row: number, col: number) => {
+      // Scroll the viewport to make the given cell visible.
+      // 'auto' align scrolls the minimal distance to bring the cell into view.
+      rowVirtualizerRef.current.scrollToIndex(row, { align: 'auto' });
+      columnVirtualizerRef.current.scrollToIndex(col, { align: 'auto' });
+    },
   }), [parentRef]);
 
   // Define the accept point selection logic (shared between Enter key and touch button)
@@ -327,6 +342,23 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
     }
   }, [selectedCell, isPointMode]);
 
+  // Scroll to the active cell when the sheet changes.
+  // When switching sheets, the parent restores the saved active cell for the new
+  // sheet, but the Grid viewport may be at a different scroll position (e.g. top-left).
+  // This effect detects a sheet change and scrolls the virtualizers so the active
+  // cell is visible. Using prevSheetIdRef avoids scrolling on the initial render.
+  useEffect(() => {
+    const sheetId = sheet.id;
+    if (prevSheetIdRef.current !== null && prevSheetIdRef.current !== sheetId) {
+      // Sheet changed — scroll the (already-updated) virtualizers to the active cell
+      if (selectedCell) {
+        rowVirtualizerRef.current.scrollToIndex(selectedCell.row, { align: 'auto' });
+        columnVirtualizerRef.current.scrollToIndex(selectedCell.col, { align: 'auto' });
+      }
+    }
+    prevSheetIdRef.current = sheetId;
+  }, [sheet.id, selectedCell]);
+
   const { defaultRowHeight, defaultColWidth, columnWidths, rowHeights, rowCount, columnCount, cells, frozenColumns, frozenRows } = sheet;
 
   // ─── Freeze Pane Helpers ──────────────────────────────────────────
@@ -412,6 +444,10 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
     estimateSize: (index) => columnWidths[index] ?? defaultColWidth,
     overscan: 3,
   });
+
+  // Store virtualizers in refs for use by the imperative handle (scrollToCell)
+  rowVirtualizerRef.current = rowVirtualizer;
+  columnVirtualizerRef.current = columnVirtualizer;
 
   const virtualRows = rowVirtualizer.getVirtualItems();
   const virtualColumns = columnVirtualizer.getVirtualItems();

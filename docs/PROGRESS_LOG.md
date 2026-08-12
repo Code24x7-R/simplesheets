@@ -5,11 +5,11 @@
 ---
 
 ### 2026-08-13 [BUGFIX] B-031 — Active cell position not preserved when switching sheets
-- **What**: Selecting B17 on Sheet1, switching to Sheet2, moving to A3, then switching back to Sheet1 showed A3 active instead of B17. The active cell position bled across sheets.
-- **Root cause**: `activeCell` was a single global `useState` in `App.tsx`; on sheet switch `setActiveCell(null)` was called. Grid was not remounted (no `key` prop) so its internal selection persisted. Grid's sync effect only fires when `selectedCell` is truthy, so the stale selection bled through.
-- **Fix**: Per-sheet active cell tracking via `Map<sheetId, {row,col}>` ref; sync effect persists on change; all sheet-switch handlers save outgoing + restore incoming position (default A1) via `restoreActiveCellForSheet`; range selection cleared on switch.
-- **Files**: `App.tsx`, `App.sheetActiveCell.test.tsx`
-- **Tests**: +4 new tests (2855 total)
+- **What**: Selecting B17 on Sheet1, switching to Sheet2, moving to A3, then switching back to Sheet1 showed A3 active instead of B17. The active cell position bled across sheets. Also, switching to a sheet whose saved cell was far from origin (e.g. B220) left the viewport at top-left — the restored cell wasn't visible.
+- **Root cause**: `activeCell` was a single global `useState` in `App.tsx`; on sheet switch `setActiveCell(null)` was called. Grid was not remounted (no `key` prop) so its internal selection persisted. Grid's sync effect only fires when `selectedCell` is truthy, so the stale selection bled through. The virtualizer scroll position was never adjusted on sheet change.
+- **Fix**: Per-sheet active cell tracking via `Map<sheetId, {row,col}>` ref; sync effect persists on change; all sheet-switch handlers save outgoing + restore incoming position (default A1) via `restoreActiveCellForSheet`; range selection cleared on switch. Added a `useEffect` in `Grid` that scrolls the virtualizers to `selectedCell` on `sheet.id` change so the restored cell is visible; exposed `scrollToCell` on `GridHandle`.
+- **Files**: `App.tsx`, `Grid.tsx`, `App.sheetActiveCell.test.tsx`
+- **Tests**: +5 new tests (2856 total)
 
 ### 2026-08-11 [FEATURE] Phase 33 — Formula Error Prevention Suite
 - **What**: Implemented 4 high-priority formula error preventions from the top-10 error audit:

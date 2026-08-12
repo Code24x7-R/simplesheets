@@ -227,6 +227,8 @@ function WorkbookView() {
     const saved = sheetActiveCellsRef.current.get(sheetId);
     setActiveCell(saved ?? { row: 0, col: 0 });
     setGridSelection(null);
+    // Scrolling to the restored cell is handled by a useEffect in Grid
+    // that fires when the sheet prop changes (uses the new sheet's virtualizer)
   }, []);
 
   // Paste Special options
