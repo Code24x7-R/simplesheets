@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
-import { HelpCircle } from 'lucide-react';
+import { HelpCircle, Copy, Check } from 'lucide-react';
+import { useState, useCallback, useEffect } from 'react';
 import packageJson from '../../package.json';
 
 interface AboutModalProps {
@@ -215,6 +216,37 @@ function renderInline(text: string): React.ReactNode {
  * Triggered from the Help → About SimpleSheets menu.
  */
 export function AboutModal({ isOpen, onClose }: AboutModalProps) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyVersionInfo = useCallback(async () => {
+    const build = getBuildInfo();
+    const text = [
+      `Version: ${APP_VERSION}`,
+      `Build: ${build.raw || build.date}${build.time ? ` ${build.time}` : ''}`,
+      `Commit: ${build.commit}`,
+    ].join('\n');
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      // Fallback for older browsers or non-secure contexts
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+    }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }, []);
+
+  // Reset copied state when modal opens so the icon is fresh each time
+  useEffect(() => {
+    if (isOpen) setCopied(false);
+  }, [isOpen]);
+
   if (!isOpen) return null;
   const build = getBuildInfo();
 
@@ -230,6 +262,14 @@ export function AboutModal({ isOpen, onClose }: AboutModalProps) {
             <h2 className="text-lg font-bold">About SimpleSheets</h2>
             <span className="text-xs font-mono text-gray-400 bg-gray-100 px-2 py-0.5 rounded">v{APP_VERSION}</span>
             <span className="text-xs text-gray-400" title={`${build.raw} (${build.commit})`}>build {build.date}{build.time ? ` ${build.time}` : ''} ({build.commit})</span>
+            <button
+              onClick={handleCopyVersionInfo}
+              className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded p-1 transition-colors"
+              aria-label="Copy version info"
+              title="Copy version info"
+            >
+              {copied ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5" />}
+            </button>
           </div>
           <button
             onClick={onClose}

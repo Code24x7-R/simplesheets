@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { AboutModal } from './AboutModal';
 
 describe('AboutModal', () => {
@@ -107,5 +107,80 @@ describe('AboutModal', () => {
     // Clean up
     delete (global as Record<string, unknown>)['__BUILD_TIMESTAMP__'];
     delete (global as Record<string, unknown>)['__GIT_COMMIT_HASH__'];
+  });
+
+  it('renders a copy button next to version info', () => {
+    render(<AboutModal isOpen={true} onClose={jest.fn()} />);
+    expect(screen.getByLabelText('Copy version info')).toBeInTheDocument();
+  });
+
+  it('copies labeled version info to clipboard when copy button is clicked', async () => {
+    (global as Record<string, unknown>)['__BUILD_TIMESTAMP__'] = '2024-03-01T00:00:00.000Z';
+    (global as Record<string, unknown>)['__GIT_COMMIT_HASH__'] = 'abc1234';
+    (navigator.clipboard.writeText as jest.Mock).mockClear();
+
+    render(<AboutModal isOpen={true} onClose={jest.fn()} />);
+
+    const copyBtn = screen.getByLabelText('Copy version info');
+    fireEvent.click(copyBtn);
+
+    // Wait for the async clipboard write to resolve
+    await new Promise((r) => setTimeout(r, 0));
+
+    const writeMock = (navigator.clipboard.writeText as jest.Mock);
+    expect(writeMock).toHaveBeenCalled();
+    const lastCall = writeMock.mock.calls[writeMock.mock.calls.length - 1];
+    const copiedText = lastCall[0] as string;
+    expect(copiedText).toContain('Version: 0.1.0');
+    expect(copiedText).toContain('Build:');
+    expect(copiedText).toContain('2024-03-01');
+    expect(copiedText).toContain('Commit: abc1234');
+
+    // Clean up
+    delete (global as Record<string, unknown>)['__BUILD_TIMESTAMP__'];
+    delete (global as Record<string, unknown>)['__GIT_COMMIT_HASH__'];
+  });
+
+  it('copies version info with dev fallback when build constants are not set', async () => {
+    (navigator.clipboard.writeText as jest.Mock).mockClear();
+
+    render(<AboutModal isOpen={true} onClose={jest.fn()} />);
+
+    const copyBtn = screen.getByLabelText('Copy version info');
+    fireEvent.click(copyBtn);
+
+    await new Promise((r) => setTimeout(r, 0));
+
+    const writeMock = (navigator.clipboard.writeText as jest.Mock);
+    expect(writeMock).toHaveBeenCalled();
+    const lastCall = writeMock.mock.calls[writeMock.mock.calls.length - 1];
+    const copiedText = lastCall[0] as string;
+    expect(copiedText).toContain('Version: 0.1.0');
+    expect(copiedText).toContain('Build: dev');
+    expect(copiedText).toContain('Commit: unknown');
+  });
+
+  it('shows a check icon after copying and reverts to copy icon after timeout', async () => {
+    jest.useFakeTimers();
+    render(<AboutModal isOpen={true} onClose={jest.fn()} />);
+
+    const copyBtn = screen.getByLabelText('Copy version info');
+
+    await act(async () => {
+      fireEvent.click(copyBtn);
+    });
+
+    // After click, the check icon should be visible
+    expect(copyBtn.querySelector('svg')).toHaveClass('text-green-600');
+
+    // Advance timers past the 2s timeout
+    await act(async () => {
+      jest.advanceTimersByTime(2001);
+    });
+
+    // Copy icon should be back (no green class)
+    expect(copyBtn.querySelector('svg')).not.toHaveClass('text-green-600');
+
+    jest.useRealTimers();
   });
 });

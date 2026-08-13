@@ -764,3 +764,9 @@
 - Added Phase 18 (Sort & Filter) to completed phases list
 - Updated coverage by file table with all 56 source files
 - Phase 8 (Final Verification) updated with current gap analysis
+
+### 2026-08-13 [FEATURE] Version info copy button in About modal
+- **What**: Added a copy icon next to version/build/commit info in the Help → About modal. Copies a labeled summary (Version, Build, Commit) to clipboard to streamline bug reporting.
+- **Implementation**: `Copy`/`Check` icons from lucide-react; `navigator.clipboard.writeText` with textarea fallback; visual feedback (green check) for 2s after copy; state resets on modal reopen.
+- **Files**: `AboutModal.tsx`, `AboutModal.test.tsx`
+- **Tests**: +4 new tests (2860 total)
