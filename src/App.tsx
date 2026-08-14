@@ -59,7 +59,7 @@ import { useChartSettings } from './hooks/useChartSettings';
 import { SheetLinkProvider } from './components/SheetLink';
 import { ProjectView } from './extensions/project-wbs/ProjectView';
 import { getTemplateById } from './extensions/project-wbs/templates';
-import { createProjectSheet, getDefaultColumnMapping, sheetToProject, projectModelToProject } from './extensions/project-wbs/sheetToProject';
+import { createProjectSheet, getDefaultColumnMapping, sheetToProject, projectModelToProject, projectModelToSheetCells } from './extensions/project-wbs/sheetToProject';
 import type { Project } from './extensions/types';
 import type { ProjectModel, ColumnMapping } from './types';
 
@@ -1768,6 +1768,20 @@ function WorkbookView() {
     }
   }, [filterState, workbook]);
 
+  // ─── Extension Helpers ─────────────────────────────────────────
+
+  /**
+   * Get the column mapping for the current project from workbook extensions.
+   */
+  function getProjectColumnMapping(): ColumnMapping | null {
+    const extData = workbook.extensions?.['project-wbs'];
+    if (extData?.data && typeof extData.data === 'object') {
+      const data = extData.data as { columnMapping?: ColumnMapping };
+      return data.columnMapping ?? null;
+    }
+    return null;
+  }
+
   // ─── Extension Handlers ─────────────────────────────────────────
 
   const handleProjectNew = useCallback((templateId: string) => {
@@ -1815,9 +1829,40 @@ function WorkbookView() {
         },
       };
 
-      // Push a history entry with the extension data attached
+      // Determine which sheet to sync data back to
+      const targetSheet = sheetId
+        ? workbook.sheets.find((s) => s.id === sheetId)
+        : sheet;
+      const targetSheetIndex = sheetId
+        ? workbook.sheets.findIndex((s) => s.id === sheetId)
+        : workbook.activeSheetIndex;
+
+      // If we have a mapping and a target sheet, sync project data back to sheet cells
+      let updatedSheets = workbook.sheets;
+      if (mapping && targetSheet && targetSheetIndex >= 0) {
+        const newCellValues = projectModelToSheetCells(model, mapping);
+        const newCells: Record<string, Cell> = {};
+        for (const [key, value] of Object.entries(newCellValues)) {
+          newCells[key] = { rawValue: value, computedValue: value };
+        }
+        const mergedCells = { ...targetSheet.cells, ...newCells };
+        const updatedSheet: typeof targetSheet = {
+          ...targetSheet,
+          cells: mergedCells,
+          rowCount: Math.max(
+            targetSheet.rowCount,
+            model.tasks.length + (mapping.headerRow ?? 0) + 2,
+          ),
+        };
+        updatedSheets = workbook.sheets.map((s, idx) =>
+          idx === targetSheetIndex ? updatedSheet : s,
+        );
+      }
+
+      // Push a history entry with the extension data and updated sheet
       const updatedWb: typeof workbook = {
         ...workbook,
+        sheets: updatedSheets,
         extensions: {
           ...workbook.extensions,
           'project-wbs': extensionData,
@@ -1826,7 +1871,7 @@ function WorkbookView() {
       };
       pushHistory(updatedWb, 'Update project plan');
     },
-    [workbook, pushHistory],
+    [workbook, pushHistory, sheet],
   );
 
   // ─── Chart Handlers ──────────────────────────────────────────────────
@@ -2613,6 +2658,7 @@ function WorkbookView() {
           <ProjectView
             project={currentProject}
             activeSheet={sheet}
+            columnMapping={getProjectColumnMapping()}
             onSaveProject={handleSaveProjectData}
             onClose={() => setShowProjectView(false)}
           />

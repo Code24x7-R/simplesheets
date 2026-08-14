@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
-import { detectColumnMapping, sheetToProject, projectModelToProject, createProjectSheet, getDefaultColumnMapping, PROJECT_SHEET_HEADERS } from './sheetToProject';
-import type { Sheet, ColumnMapping } from '../../types';
+import { detectColumnMapping, sheetToProject, projectModelToProject, projectModelToSheetCells, createProjectSheet, getDefaultColumnMapping, PROJECT_SHEET_HEADERS } from './sheetToProject';
+import type { Sheet, ColumnMapping, ProjectModel } from '../../types';
 
 function makeCell(row: number, col: number, value: string) {
   return { [`${row}:${col}`]: { rawValue: value, computedValue: value } };
@@ -396,6 +396,133 @@ describe('sheetToProject', () => {
       expect(PROJECT_SHEET_HEADERS[mapping.taskCol]).toBe('Task');
       expect(PROJECT_SHEET_HEADERS[mapping.startDateCol]).toBe('Start Date');
       expect(PROJECT_SHEET_HEADERS[mapping.endDateCol]).toBe('End Date');
+    });
+  });
+
+  describe('projectModelToSheetCells', () => {
+    const mapping: ColumnMapping = {
+      taskCol: 0,
+      startDateCol: 1,
+      endDateCol: 2,
+      durationCol: 3,
+      parentCol: 4,
+      dependencyCol: 5,
+      progressCol: 6,
+      resourceCol: 7,
+      milestoneCol: 8,
+      colorCol: 9,
+      notesCol: 10,
+      headerRow: 0,
+    };
+
+    it('converts project model back to sheet cells', () => {
+      const model: ProjectModel = {
+        id: 'proj-1',
+        name: 'Test Project',
+        description: 'Test',
+        startDate: '2025-01-01',
+        endDate: '2025-01-31',
+        tasks: [
+          { id: 't1', name: 'Task 1', startDate: '2025-01-01', endDate: '2025-01-05', duration: 5, parentId: null, dependencies: [], progress: 50, resourceId: null, isMilestone: false, color: '#3B82F6', notes: 'First task' },
+          { id: 't2', name: 'Task 2', startDate: '2025-01-06', endDate: '2025-01-10', duration: 5, parentId: null, dependencies: ['t1'], progress: 0, resourceId: null, isMilestone: true, color: '#EF4444', notes: '' },
+        ],
+        risks: [],
+      };
+
+      const cells = projectModelToSheetCells(model, mapping);
+      expect(cells['0:0']).toBe('Task');
+      expect(cells['1:0']).toBe('Task 1');
+      expect(cells['1:1']).toBe('2025-01-01');
+      expect(cells['1:6']).toBe('50');
+      expect(cells['2:0']).toBe('Task 2');
+    });
+
+    it('converts dependencies to row numbers', () => {
+      const model: ProjectModel = {
+        id: 'proj-1',
+        name: 'Test',
+        description: '',
+        startDate: '2025-01-01',
+        endDate: '2025-01-31',
+        tasks: [
+          { id: 't1', name: 'A', startDate: '2025-01-01', endDate: '2025-01-05', duration: 5, parentId: null, dependencies: [], progress: 0, resourceId: null, isMilestone: false, color: '#3B82F6', notes: '' },
+          { id: 't2', name: 'B', startDate: '2025-01-06', endDate: '2025-01-10', duration: 5, parentId: null, dependencies: ['t1'], progress: 0, resourceId: null, isMilestone: false, color: '#3B82F6', notes: '' },
+        ],
+        risks: [],
+      };
+
+      const cells = projectModelToSheetCells(model, mapping);
+      expect(cells['2:5']).toBe('1'); // Task 2 depends on task at index 0 -> row 1
+    });
+
+    it('converts parent IDs to names', () => {
+      const model: ProjectModel = {
+        id: 'proj-1',
+        name: 'Test',
+        description: '',
+        startDate: '2025-01-01',
+        endDate: '2025-01-31',
+        tasks: [
+          { id: 't1', name: 'Parent', startDate: '2025-01-01', endDate: '2025-01-31', duration: 30, parentId: null, dependencies: [], progress: 0, resourceId: null, isMilestone: false, color: '#3B82F6', notes: '' },
+          { id: 't2', name: 'Child', startDate: '2025-01-01', endDate: '2025-01-05', duration: 5, parentId: 't1', dependencies: [], progress: 0, resourceId: null, isMilestone: false, color: '#3B82F6', notes: '' },
+        ],
+        risks: [],
+      };
+
+      const cells = projectModelToSheetCells(model, mapping);
+      expect(cells['2:4']).toBe('Parent'); // Parent name
+    });
+
+    it('skips columns that are not mapped', () => {
+      const partialMapping: ColumnMapping = {
+        taskCol: 0,
+        startDateCol: 1,
+        endDateCol: 2,
+        durationCol: null,
+        parentCol: null,
+        dependencyCol: null,
+        progressCol: null,
+        resourceCol: null,
+        milestoneCol: null,
+        colorCol: null,
+        notesCol: null,
+        headerRow: 0,
+      };
+
+      const model: ProjectModel = {
+        id: 'proj-1',
+        name: 'Test',
+        description: '',
+        startDate: '2025-01-01',
+        endDate: '2025-01-31',
+        tasks: [
+          { id: 't1', name: 'Task 1', startDate: '2025-01-01', endDate: '2025-01-05', duration: 5, parentId: null, dependencies: [], progress: 50, resourceId: null, isMilestone: false, color: '#3B82F6', notes: 'Note' },
+        ],
+        risks: [],
+      };
+
+      const cells = projectModelToSheetCells(model, partialMapping);
+      expect(cells['1:0']).toBe('Task 1');
+      expect(cells['1:1']).toBe('2025-01-01');
+      expect(cells['1:6']).toBeUndefined(); // Progress not mapped
+      expect(cells['1:10']).toBeUndefined(); // Notes not mapped
+    });
+
+    it('handles milestone flag', () => {
+      const model: ProjectModel = {
+        id: 'proj-1',
+        name: 'Test',
+        description: '',
+        startDate: '2025-01-01',
+        endDate: '2025-01-31',
+        tasks: [
+          { id: 't1', name: 'Go Live', startDate: '2025-01-10', endDate: '2025-01-10', duration: 1, parentId: null, dependencies: [], progress: 0, resourceId: null, isMilestone: true, color: '#3B82F6', notes: '' },
+        ],
+        risks: [],
+      };
+
+      const cells = projectModelToSheetCells(model, mapping);
+      expect(cells['1:8']).toBe('yes');
     });
   });
 });

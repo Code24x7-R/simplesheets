@@ -408,6 +408,81 @@ export function projectModelToProject(model: ProjectModel): Project {
   };
 }
 
+// ─── Project Model to Sheet Cells ───────────────────────────────────────────
+
+/**
+ * Convert a ProjectModel back to sheet cell data using a ColumnMapping.
+ * Returns a record of cell keys to cell values that can be applied to a sheet.
+ * This enables Project → Sheet sync.
+ */
+export function projectModelToSheetCells(
+  model: ProjectModel,
+  mapping: ColumnMapping,
+): Record<string, string> {
+  const cells: Record<string, string> = {};
+  const headerRow = mapping.headerRow ?? 0;
+
+  // Write headers (if not already present)
+  const headers = ['Task', 'Start Date', 'End Date', 'Duration', 'Parent', 'Dependency', 'Progress', 'Resource', 'Milestone', 'Color', 'Notes'];
+  for (let col = 0; col < headers.length; col++) {
+    const key = `${headerRow}:${col}`;
+    if (!cells[key]) {
+      cells[key] = headers[col];
+    }
+  }
+
+  // Write task data rows
+  for (let i = 0; i < model.tasks.length; i++) {
+    const task = model.tasks[i];
+    const row = headerRow + 1 + i;
+
+    if (mapping.taskCol >= 0) {
+      cells[`${row}:${mapping.taskCol}`] = task.name;
+    }
+    if (mapping.startDateCol >= 0) {
+      cells[`${row}:${mapping.startDateCol}`] = task.startDate;
+    }
+    if (mapping.endDateCol >= 0) {
+      cells[`${row}:${mapping.endDateCol}`] = task.endDate;
+    }
+    if (mapping.durationCol !== null && mapping.durationCol >= 0) {
+      cells[`${row}:${mapping.durationCol}`] = String(task.duration);
+    }
+    if (mapping.parentCol !== null && mapping.parentCol >= 0) {
+      // Convert parentId to parent name for readability
+      const parentTask = model.tasks.find((t) => t.id === task.parentId);
+      cells[`${row}:${mapping.parentCol}`] = parentTask?.name ?? '';
+    }
+    if (mapping.dependencyCol !== null && mapping.dependencyCol >= 0) {
+      // Convert dependency IDs to row numbers (1-based)
+      const depRows = task.dependencies
+        .map((depId) => {
+          const idx = model.tasks.findIndex((t) => t.id === depId);
+          return idx >= 0 ? String(idx + 1) : '';
+        })
+        .filter(Boolean);
+      cells[`${row}:${mapping.dependencyCol}`] = depRows.join(', ');
+    }
+    if (mapping.progressCol !== null && mapping.progressCol >= 0) {
+      cells[`${row}:${mapping.progressCol}`] = String(task.progress);
+    }
+    if (mapping.resourceCol !== null && mapping.resourceCol >= 0) {
+      cells[`${row}:${mapping.resourceCol}`] = task.resourceId ?? '';
+    }
+    if (mapping.milestoneCol !== null && mapping.milestoneCol >= 0) {
+      cells[`${row}:${mapping.milestoneCol}`] = task.isMilestone ? 'yes' : 'no';
+    }
+    if (mapping.colorCol !== null && mapping.colorCol >= 0) {
+      cells[`${row}:${mapping.colorCol}`] = task.color;
+    }
+    if (mapping.notesCol !== null && mapping.notesCol >= 0) {
+      cells[`${row}:${mapping.notesCol}`] = task.notes;
+    }
+  }
+
+  return cells;
+}
+
 // ─── Utility Functions ──────────────────────────────────────────────────────
 
 function getCellStringValue(sheet: Sheet, row: number, col: number): string {

@@ -27,11 +27,12 @@ import type { Sheet, ColumnMapping, ProjectModel } from '../../types';
 interface ProjectViewProps {
   project: Project;
   activeSheet: Sheet | null;
+  columnMapping: ColumnMapping | null;
   onSaveProject: (model: ProjectModel, mapping: ColumnMapping | null, sheetId: string | null) => void;
   onClose: () => void;
 }
 
-export function ProjectView({ project: initialProject, activeSheet, onSaveProject, onClose }: ProjectViewProps) {
+export function ProjectView({ project: initialProject, activeSheet, columnMapping, onSaveProject, onClose }: ProjectViewProps) {
   const [project, setProject] = useState(initialProject);
   const [viewMode, setViewMode] = useState<ViewMode>('gantt');
   const [zoom, setZoom] = useState<'day' | 'week' | 'month'>('week');
@@ -72,13 +73,17 @@ export function ProjectView({ project: initialProject, activeSheet, onSaveProjec
 
   function handleTaskSave(task: WBSTask) {
     setProject((prev) => {
+      let next: Project;
       if (taskModal.task) {
         // Edit existing
-        return { ...prev, wbs: updateTask(prev.wbs, taskModal.task.id, () => task) };
+        next = { ...prev, wbs: updateTask(prev.wbs, taskModal.task.id, () => task) };
       } else {
         // Add new
-        return { ...prev, wbs: addTask(prev.wbs, taskModal.parentId, task) };
+        next = { ...prev, wbs: addTask(prev.wbs, taskModal.parentId, task) };
       }
+      // Sync changes back to sheet
+      syncProjectToSheet(next);
+      return next;
     });
     setTaskModal({ open: false, task: null, parentId: null, isChild: false });
   }
@@ -93,7 +98,11 @@ export function ProjectView({ project: initialProject, activeSheet, onSaveProjec
       }
     }
 
-    setProject((prev) => ({ ...prev, wbs: removeTask(prev.wbs, taskId) }));
+    setProject((prev) => {
+      const next = { ...prev, wbs: removeTask(prev.wbs, taskId) };
+      syncProjectToSheet(next);
+      return next;
+    });
     if (selectedTaskId === taskId) setSelectedTaskId(null);
   }
 
@@ -106,6 +115,54 @@ export function ProjectView({ project: initialProject, activeSheet, onSaveProjec
 
   function handleToggleCollapse(taskId: string) {
     setProject((prev) => ({ ...prev, wbs: toggleCollapse(prev.wbs, taskId) }));
+  }
+
+  /**
+   * Sync project data back to the source sheet.
+   * Converts the project model to sheet cells and calls onSaveProject.
+   */
+  const syncProjectToSheet = useCallback((projectState: Project) => {
+    const model = projectToModel(projectState);
+    onSaveProject(model, columnMapping, activeSheet?.id ?? null);
+  }, [onSaveProject, columnMapping, activeSheet]);
+
+  /**
+   * Convert a runtime Project to a serializable ProjectModel.
+   */
+  function projectToModel(projectState: Project): ProjectModel {
+    const allTasks = getAllTasks(projectState.wbs);
+    return {
+      id: projectState.id,
+      name: projectState.name,
+      description: projectState.description,
+      startDate: projectState.startDate,
+      endDate: projectState.endDate,
+      tasks: allTasks.map((t) => ({
+        id: t.id,
+        name: t.name,
+        startDate: t.startDate,
+        endDate: t.endDate,
+        duration: t.duration,
+        parentId: t.parentId,
+        dependencies: t.dependencies.map((d) => d.predecessorId),
+        progress: t.progress,
+        resourceId: t.responsibleResourceId,
+        isMilestone: t.isMilestone,
+        color: t.color,
+        notes: t.description,
+      })),
+      risks: projectState.risks.map((r) => ({
+        id: r.id,
+        title: r.title,
+        category: r.category,
+        probability: r.probability,
+        impact: r.impact,
+        status: r.status,
+        ownerId: r.ownerId,
+        mitigationPlan: r.mitigationPlan,
+        notes: r.description,
+      })),
+    };
   }
 
   // ─── Risk CRUD ────────────────────────────────────────────────────────
@@ -123,31 +180,42 @@ export function ProjectView({ project: initialProject, activeSheet, onSaveProjec
 
   function handleRiskSave(risk: Risk) {
     setProject((prev) => {
+      let next: Project;
       if (riskModal.risk) {
         // Edit existing - pass the full risk object as changes
-        return updateRisk(prev, riskModal.risk.id, risk);
+        next = updateRisk(prev, riskModal.risk.id, risk);
       } else {
         // Add new
         const newRisk = { ...risk, projectId: prev.id };
-        return addRisk(prev, newRisk);
+        next = addRisk(prev, newRisk);
       }
+      syncProjectToSheet(next);
+      return next;
     });
     setRiskModal({ open: false, risk: null });
   }
 
   function handleRiskDelete(riskId: string) {
-    setProject((prev) => removeRisk(prev, riskId));
+    setProject((prev) => {
+      const next = removeRisk(prev, riskId);
+      syncProjectToSheet(next);
+      return next;
+    });
     if (selectedRiskId === riskId) setSelectedRiskId(null);
   }
 
   const handleRiskClose = useCallback((riskId: string) => {
-    setProject((prev) => ({
-      ...prev,
-      risks: prev.risks.map((r) =>
-        r.id === riskId ? { ...r, status: 'closed' as const } : r,
-      ),
-    }));
-  }, []);
+    setProject((prev) => {
+      const next = {
+        ...prev,
+        risks: prev.risks.map((r) =>
+          r.id === riskId ? { ...r, status: 'closed' as const } : r,
+        ),
+      };
+      syncProjectToSheet(next);
+      return next;
+    });
+  }, [syncProjectToSheet]);
 
   // ─── Sheet-to-Project Conversion ─────────────────────────────────────
 
