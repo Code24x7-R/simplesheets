@@ -6,11 +6,13 @@ import type { Workbook } from '../types';
 
 interface SheetTabsProps {
   workbook: Workbook;
+  showProjectView: boolean;
   onSwitchSheet: (index: number) => void;
   onAddSheet: () => void;
   onRenameSheet: (index: number, newName: string) => void;
   onCopySheet: (index: number) => void;
   onDeleteSheet: (index: number) => void;
+  onShowProjectView: () => void;
 }
 
 /**
@@ -19,11 +21,13 @@ interface SheetTabsProps {
  */
 export function SheetTabs({
   workbook,
+  showProjectView,
   onSwitchSheet,
   onAddSheet,
   onRenameSheet,
   onCopySheet,
   onDeleteSheet,
+  onShowProjectView,
 }: SheetTabsProps) {
   const [renamingIndex, setRenamingIndex] = useState<number | null>(null);
   const [renameValue, setRenameValue] = useState('');
@@ -208,6 +212,19 @@ export function SheetTabs({
         title="Add a new sheet"
       >
         +
+      </button>
+
+      {/* Project View Tab */}
+      <button
+        className={`ml-4 px-3 py-1 text-sm rounded-t border border-b-0 whitespace-nowrap transition-colors ${
+          showProjectView
+            ? 'bg-white border-gray-300 font-medium text-gray-900 -mb-px'
+            : 'bg-purple-50 border-transparent text-purple-600 hover:bg-purple-100 hover:text-purple-800'
+        }`}
+        onClick={onShowProjectView}
+        title="View project plan (Gantt, WBS, Table)"
+      >
+        📊 Project
       </button>
     </div>
   );

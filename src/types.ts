@@ -132,6 +132,117 @@ export interface Workbook {
 
   /** Timestamp of last modification (epoch ms). */
   lastModified: number;
+
+  /** Extension data persisted with the workbook. Keyed by extension ID. */
+  extensions?: Record<string, ExtensionData>;
+}
+
+/**
+ * Base interface for all extension data stored in a workbook.
+ * Extensions store their serialized state here for persistence.
+ */
+export interface ExtensionData {
+  /** Extension identifier (e.g., 'project-wbs'). */
+  extensionId: string;
+  /** Data schema version for forward compatibility. */
+  schemaVersion: string;
+  /** Extension-specific serialized data. */
+  data: unknown;
+}
+
+/**
+ * Data stored by the Project/WBS extension.
+ * Holds the project model and sheet-to-project mapping configuration.
+ */
+export interface ProjectExtensionData {
+  extensionId: 'project-wbs';
+  schemaVersion: '1.0.0';
+  data: {
+    /** The project model (tasks, risks, resources). */
+    project: ProjectModel | null;
+    /** Column mapping from sheet columns to project fields. */
+    columnMapping: ColumnMapping | null;
+    /** ID of the sheet that is the source of project data. */
+    sourceSheetId: string | null;
+  };
+}
+
+/**
+ * Serializable subset of the Project model for persistence.
+ * Mirrors the Project type but with simpler structure for JSON.
+ */
+export interface ProjectModel {
+  id: string;
+  name: string;
+  description: string;
+  startDate: string;
+  endDate: string;
+  tasks: TaskRow[];
+  risks: RiskRow[];
+}
+
+/**
+ * Serializable task row (flat structure from sheet data).
+ */
+export interface TaskRow {
+  id: string;
+  name: string;
+  startDate: string;
+  endDate: string;
+  duration: number;
+  parentId: string | null;
+  dependencies: string[]; // Predecessor task IDs
+  progress: number;
+  resourceId: string | null;
+  isMilestone: boolean;
+  color: string;
+  notes: string;
+}
+
+/**
+ * Serializable risk row.
+ */
+export interface RiskRow {
+  id: string;
+  title: string;
+  category: string;
+  probability: number;
+  impact: number;
+  status: string;
+  ownerId: string | null;
+  mitigationPlan: string;
+  notes: string;
+}
+
+/**
+ * Maps spreadsheet columns to project model fields.
+ * Used by the sheet-to-project converter.
+ */
+export interface ColumnMapping {
+  /** Column index for task name/description. */
+  taskCol: number;
+  /** Column index for start date. */
+  startDateCol: number;
+  /** Column index for end date. */
+  endDateCol: number;
+  /** Column index for duration (alternative to end date). */
+  durationCol: number | null;
+  /** Column index for parent task reference. */
+  parentCol: number | null;
+  /** Column index for dependency reference. */
+  dependencyCol: number | null;
+  /** Column index for progress (0-100). */
+  progressCol: number | null;
+  /** Column index for resource assignment. */
+  resourceCol: number | null;
+  /** Column index for milestone flag. */
+  milestoneCol: number | null;
+  /** Column index for task color. */
+  colorCol: number | null;
+  /** Column index for notes/description. */
+  notesCol: number | null;
+  /** Row index of the header row (null = auto-detect). */
+  headerRow: number | null;
 }
 
 /**

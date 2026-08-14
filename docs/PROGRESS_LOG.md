@@ -4,6 +4,17 @@
 
 ---
 
+### 2026-08-14 [FEATURE] Phase 34-36 — Extensions Architecture & Sheet-to-Project Converter
+- **What**: Built complete Extensions system with tab-based Project View. User can convert any spreadsheet into a project plan (Gantt/WBS/Risk views) while retaining full sheet editing capability.
+- **Phase 34 — Extensions Architecture**: WBS tree data model, working calendar, dependency resolution (FS/SS/FF/SF), critical path method, roll-up calculations, risk scoring (1-25 scale), pure-SVG Gantt renderer, risk register/matrix, ExtensionRegistry singleton.
+- **Phase 35 — Sheet-to-Project Converter**: `sheetToProject.ts` auto-detects columns from header keywords, builds WBS tree from flat rows, resolves parent-child and dependency references, persists via `workbook.extensions` JSON schema.
+- **Phase 36 — Tab-Based Project View**: "📊 Project" tab added to tab bar alongside sheet tabs. Project view is now a peer of sheet view, not a replacement. Auto-reconverts sheet data on tab switch to pick up edits. "New Project Sheet" action creates pre-formatted sheet with headers and sample data.
+- **Files**: `src/extensions/` (17 new source files), `src/types.ts` (ExtensionData, ProjectModel, ColumnMapping), `src/services/jsonService.ts` (extension validation), `src/components/SheetTabs.tsx` (Project tab), `src/components/MenuBar.tsx` (Extensions menu), `src/App.tsx` (handleProjectNewSheet, view switching)
+- **Tests**: +142 new tests (3193 total)
+- **Results**: 3193 tests passing (134 suites), lint clean, type-check clean, build clean
+
+---
+
 ### 2026-08-13 [BUGFIX] B-031 — Active cell position not preserved when switching sheets
 - **What**: Selecting B17 on Sheet1, switching to Sheet2, moving to A3, then switching back to Sheet1 showed A3 active instead of B17. The active cell position bled across sheets. Also, switching to a sheet whose saved cell was far from origin (e.g. B220) left the viewport at top-left — the restored cell wasn't visible.
 - **Root cause**: `activeCell` was a single global `useState` in `App.tsx`; on sheet switch `setActiveCell(null)` was called. Grid was not remounted (no `key` prop) so its internal selection persisted. Grid's sync effect only fires when `selectedCell` is truthy, so the stale selection bled through. The virtualizer scroll position was never adjusted on sheet change.

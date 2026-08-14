@@ -1,0 +1,420 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Richard Robertson
+import {
+  findTask,
+  findTaskById,
+  findParent,
+  getAncestors,
+  getDescendants,
+  findPath,
+  flattenToRows,
+  getAllTasks,
+  addTask,
+  removeTask,
+  updateTask,
+  moveTask,
+  toggleCollapsed,
+  toggleCollapse,
+  expandAll,
+  collapseAll,
+  detectCycles,
+  validateTree,
+  countTasks,
+  getTreeDepth,
+} from './treeOps';
+import type { WBSTask } from '../types';
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
+function task(id: string, parentId: string | null = null, level = 0, children: WBSTask[] = []): WBSTask {
+  return {
+    id,
+    name: `Task ${id}`,
+    description: '',
+    level,
+    parentId,
+    children,
+    startDate: '2026-01-01',
+    endDate: '2026-01-10',
+    duration: 5,
+    progress: 0,
+    effort: 0,
+    effortUnit: 'hours',
+    cost: 0,
+    costCurrency: 'USD',
+    responsibleResourceId: null,
+    dependencies: [],
+    isMilestone: false,
+    isSummary: children.length > 0,
+    collapsed: false,
+    color: '#3B82EF',
+    riskIds: [],
+    customFields: {},
+  };
+}
+
+/** Build a sample tree:
+ *  A
+ *  ├── B
+ *  │   ├── D
+ *  │   └── E
+ *  └── C
+ *      └── F
+ */
+function buildSampleTree(): WBSTask[] {
+  const D = task('D', 'B', 2);
+  const E = task('E', 'B', 2);
+  const B = task('B', 'A', 1, [D, E]);
+  const F = task('F', 'C', 2);
+  const C = task('C', 'A', 1, [F]);
+  const A = task('A', null, 0, [B, C]);
+  return [A];
+}
+
+// ─── Tests ───────────────────────────────────────────────────────────────────
+
+describe('treeOps', () => {
+  describe('findTask', () => {
+    it('finds a root-level task', () => {
+      const tree = buildSampleTree();
+      const found = findTask(tree, 'A');
+      expect(found).not.toBeNull();
+      expect(found!.id).toBe('A');
+    });
+
+    it('finds a deeply nested task', () => {
+      const tree = buildSampleTree();
+      const found = findTask(tree, 'F');
+      expect(found).not.toBeNull();
+      expect(found!.id).toBe('F');
+    });
+
+    it('returns null for non-existent ID', () => {
+      const tree = buildSampleTree();
+      expect(findTask(tree, 'Z')).toBeNull();
+    });
+  });
+
+  describe('findParent', () => {
+    it('finds parent of a nested task', () => {
+      const tree = buildSampleTree();
+      const parent = findParent(tree, 'D');
+      expect(parent).not.toBeNull();
+      expect(parent!.id).toBe('B');
+    });
+
+    it('returns null for root-level task', () => {
+      const tree = buildSampleTree();
+      expect(findParent(tree, 'A')).toBeNull();
+    });
+  });
+
+  describe('getAncestors', () => {
+    it('returns ancestors from root to parent', () => {
+      const tree = buildSampleTree();
+      const ancestors = getAncestors(tree, 'D');
+      expect(ancestors.map((a) => a.id)).toEqual(['A', 'B']);
+    });
+
+    it('returns empty array for root task', () => {
+      const tree = buildSampleTree();
+      expect(getAncestors(tree, 'A')).toEqual([]);
+    });
+  });
+
+  describe('getDescendants', () => {
+    it('returns all descendants', () => {
+      const tree = buildSampleTree();
+      const a = findTask(tree, 'A')!;
+      const descendants = getDescendants(a);
+      expect(descendants.map((d) => d.id).sort()).toEqual(['B', 'C', 'D', 'E', 'F']);
+    });
+
+    it('returns empty for leaf task', () => {
+      const tree = buildSampleTree();
+      const d = findTask(tree, 'D')!;
+      expect(getDescendants(d)).toEqual([]);
+    });
+  });
+
+  describe('findPath', () => {
+    it('returns path from root to task', () => {
+      const tree = buildSampleTree();
+      const path = findPath(tree, 'E');
+      expect(path.map((p) => p.id)).toEqual(['A', 'B', 'E']);
+    });
+
+    it('returns empty for non-existent task', () => {
+      const tree = buildSampleTree();
+      expect(findPath(tree, 'Z')).toEqual([]);
+    });
+  });
+
+  describe('flattenToRows', () => {
+    it('flattens DFS order', () => {
+      const tree = buildSampleTree();
+      const flat = flattenToRows(tree);
+      expect(flat.map((t) => t.id)).toEqual(['A', 'B', 'D', 'E', 'C', 'F']);
+    });
+
+    it('skips children of collapsed tasks', () => {
+      const tree = buildSampleTree();
+      const collapsed = toggleCollapsed(tree, 'A');
+      const flat = flattenToRows(collapsed);
+      expect(flat.map((t) => t.id)).toEqual(['A']);
+    });
+  });
+
+  describe('addTask', () => {
+    it('adds a root-level task', () => {
+      const tree = buildSampleTree();
+      const newTask = task('G', null);
+      const result = addTask(tree, null, newTask);
+      expect(result).toHaveLength(2);
+      expect(result[1].id).toBe('G');
+      expect(result[1].level).toBe(0);
+    });
+
+    it('adds a child under a parent', () => {
+      const tree = buildSampleTree();
+      const newTask = task('G', 'B');
+      const result = addTask(tree, 'B', newTask);
+      const b = findTask(result, 'B')!;
+      expect(b.children).toHaveLength(3);
+      expect(b.children[2].id).toBe('G');
+      expect(b.children[2].level).toBe(2);
+      expect(b.isSummary).toBe(true);
+    });
+
+    it('does not mutate original tree', () => {
+      const tree = buildSampleTree();
+      const newTask = task('G', 'B');
+      addTask(tree, 'B', newTask);
+      const b = findTask(tree, 'B')!;
+      expect(b.children).toHaveLength(2);
+    });
+  });
+
+  describe('removeTask', () => {
+    it('removes a leaf task', () => {
+      const tree = buildSampleTree();
+      const result = removeTask(tree, 'D');
+      const b = findTask(result, 'B')!;
+      expect(b.children.map((c) => c.id)).toEqual(['E']);
+    });
+
+    it('removes a task and all descendants', () => {
+      const tree = buildSampleTree();
+      const result = removeTask(tree, 'B');
+      const a = findTask(result, 'A')!;
+      expect(a.children.map((c) => c.id)).toEqual(['C']);
+      expect(findTask(result, 'D')).toBeNull();
+      expect(findTask(result, 'E')).toBeNull();
+    });
+
+    it('removes root task', () => {
+      const tree = buildSampleTree();
+      const result = removeTask(tree, 'A');
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('moveTask', () => {
+    it('moves a task to root level', () => {
+      const tree = buildSampleTree();
+      const result = moveTask(tree, 'D', null, 1);
+      expect(result).toHaveLength(2);
+      expect(result[1].id).toBe('D');
+      expect(result[1].level).toBe(0);
+    });
+
+    it('moves a task under a different parent', () => {
+      const tree = buildSampleTree();
+      const result = moveTask(tree, 'D', 'C', 0);
+      const c = findTask(result, 'C')!;
+      expect(c.children.map((ch) => ch.id)).toContain('D');
+      expect(findTask(result, 'D')!.level).toBe(2);
+    });
+
+    it('prevents moving a task under itself', () => {
+      const tree = buildSampleTree();
+      const result = moveTask(tree, 'A', 'A', 0);
+      expect(result).toEqual(tree);
+    });
+
+    it('prevents moving a task under its own descendant', () => {
+      const tree = buildSampleTree();
+      const result = moveTask(tree, 'A', 'D', 0);
+      expect(result).toEqual(tree);
+    });
+  });
+
+  describe('toggleCollapsed', () => {
+    it('toggles collapsed state', () => {
+      const tree = buildSampleTree();
+      const collapsed = toggleCollapsed(tree, 'A');
+      expect(findTask(collapsed, 'A')!.collapsed).toBe(true);
+      const expanded = toggleCollapsed(collapsed, 'A');
+      expect(findTask(expanded, 'A')!.collapsed).toBe(false);
+    });
+  });
+
+  describe('toggleCollapse (alias)', () => {
+    it('behaves the same as toggleCollapsed', () => {
+      const tree = buildSampleTree();
+      const collapsed = toggleCollapse(tree, 'A');
+      expect(findTask(collapsed, 'A')!.collapsed).toBe(true);
+    });
+  });
+
+  describe('findTaskById (alias)', () => {
+    it('behaves the same as findTask', () => {
+      const tree = buildSampleTree();
+      expect(findTaskById(tree, 'A')).toEqual(findTask(tree, 'A'));
+      expect(findTaskById(tree, 'nonexistent')).toBeNull();
+    });
+  });
+
+  describe('getAllTasks', () => {
+    it('returns all tasks in flat array', () => {
+      const tree = buildSampleTree();
+      const all = getAllTasks(tree);
+      expect(all).toHaveLength(6);
+      const ids = all.map((t) => t.id);
+      expect(ids).toContain('A');
+      expect(ids).toContain('B');
+      expect(ids).toContain('C');
+      expect(ids).toContain('D');
+      expect(ids).toContain('E');
+      expect(ids).toContain('F');
+    });
+
+    it('returns empty array for empty tree', () => {
+      expect(getAllTasks([])).toEqual([]);
+    });
+
+    it('returns tasks in depth-first order', () => {
+      const tree = buildSampleTree();
+      const all = getAllTasks(tree);
+      // A is root, B is first child, D is first grandchild
+      expect(all[0].id).toBe('A');
+      expect(all[1].id).toBe('B');
+      expect(all[2].id).toBe('D');
+    });
+  });
+
+  describe('updateTask', () => {
+    it('updates a task by ID', () => {
+      const tree = buildSampleTree();
+      const updated = updateTask(tree, 'B', (t) => ({ ...t, name: 'Updated B' }));
+      expect(findTask(updated, 'B')!.name).toBe('Updated B');
+      // Original tree is unchanged
+      expect(findTask(tree, 'B')!.name).toBe('Task B');
+    });
+
+    it('updates nested task', () => {
+      const tree = buildSampleTree();
+      const updated = updateTask(tree, 'D', (t) => ({ ...t, progress: 75 }));
+      expect(findTask(updated, 'D')!.progress).toBe(75);
+    });
+
+    it('returns same tree reference when ID not found', () => {
+      const tree = buildSampleTree();
+      const updated = updateTask(tree, 'nonexistent', (t) => ({ ...t, name: 'X' }));
+      expect(updated).toBe(tree);
+    });
+
+    it('updates only the matching task', () => {
+      const tree = buildSampleTree();
+      const originalB = findTask(tree, 'B');
+      const updated = updateTask(tree, 'A', (t) => ({ ...t, name: 'New A' }));
+      // B should be the same object reference (not modified)
+      expect(findTask(updated, 'B')).toBe(originalB);
+    });
+
+    it('updates parent isSummary when children change', () => {
+      const tree = buildSampleTree();
+      // Remove all children from A by updating B to have no children
+      const updated = updateTask(tree, 'B', (t) => ({ ...t, children: [] }));
+      // A should still be a summary (has child C)
+      expect(findTask(updated, 'A')!.isSummary).toBe(true);
+    });
+  });
+
+  describe('expandAll / collapseAll', () => {
+    it('expands all tasks', () => {
+      const tree = collapseAll(buildSampleTree());
+      const expanded = expandAll(tree);
+      const flat = flattenToRows(expanded);
+      expect(flat).toHaveLength(6);
+    });
+
+    it('collapses all summary tasks', () => {
+      const tree = buildSampleTree();
+      const collapsed = collapseAll(tree);
+      expect(findTask(collapsed, 'A')!.collapsed).toBe(true);
+      expect(findTask(collapsed, 'B')!.collapsed).toBe(true);
+      expect(findTask(collapsed, 'D')!.collapsed).toBe(false); // leaf
+    });
+  });
+
+  describe('detectCycles', () => {
+    it('returns empty for valid tree', () => {
+      const tree = buildSampleTree();
+      expect(detectCycles(tree)).toEqual([]);
+    });
+  });
+
+  describe('validateTree', () => {
+    it('returns empty for valid tree', () => {
+      const tree = buildSampleTree();
+      expect(validateTree(tree)).toEqual([]);
+    });
+
+    it('detects duplicate IDs', () => {
+      const tree = buildSampleTree();
+      // Manually create duplicate by adding same ID at root
+      const duplicate = task('A', null);
+      const badTree = [...tree, duplicate];
+      const errors = validateTree(badTree);
+      expect(errors.some((e) => e.includes('Duplicate'))).toBe(true);
+    });
+
+    it('detects level inconsistency', () => {
+      const tree = buildSampleTree();
+      // Manually corrupt D's level to create inconsistency
+      const a = findTask(tree, 'A')!;
+      const b = a.children.find((c) => c.id === 'B')!;
+      const badTask = { ...b.children.find((c) => c.id === 'D')!, level: 99 };
+      const badB = { ...b, children: b.children.map((c) => (c.id === 'D' ? badTask : c)) };
+      const badTree = tree.map((t) => (t.id === 'A' ? { ...t, children: t.children.map((c) => (c.id === 'B' ? badB : c)) } : t));
+      const errors = validateTree(badTree);
+      expect(errors.some((e) => e.includes('level'))).toBe(true);
+    });
+  });
+
+  describe('countTasks', () => {
+    it('counts all tasks', () => {
+      expect(countTasks(buildSampleTree())).toBe(6);
+    });
+
+    it('returns 0 for empty tree', () => {
+      expect(countTasks([])).toBe(0);
+    });
+  });
+
+  describe('getTreeDepth', () => {
+    it('returns max depth', () => {
+      expect(getTreeDepth(buildSampleTree())).toBe(3); // A → B → D
+    });
+
+    it('returns 0 for empty tree', () => {
+      expect(getTreeDepth([])).toBe(0);
+    });
+
+    it('returns 1 for flat tree', () => {
+      const flat = [task('X'), task('Y')];
+      expect(getTreeDepth(flat)).toBe(1);
+    });
+  });
+});

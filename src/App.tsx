@@ -57,6 +57,11 @@ import type { ChartConfig } from './types';
 import { createDemoWorkbook } from './utils/demoWorkbook';
 import { useChartSettings } from './hooks/useChartSettings';
 import { SheetLinkProvider } from './components/SheetLink';
+import { ProjectView } from './extensions/project-wbs/ProjectView';
+import { getTemplateById } from './extensions/project-wbs/templates';
+import { createProjectSheet, getDefaultColumnMapping, sheetToProject, projectModelToProject } from './extensions/project-wbs/sheetToProject';
+import type { Project } from './extensions/types';
+import type { ProjectModel, ColumnMapping } from './types';
 
 // ─── Empty Workbook ──────────────────────────────────────────────────────────
 
@@ -108,6 +113,8 @@ export default function App() {
 
 function WorkbookView() {
   const { workbook, canUndo, canRedo, pushHistory, undo, redo, resetHistory } = useHistory();
+
+  // Ref to hold pending extension data (set by ProjectView save, applied to next workbook push)
   const { frozenColumns, frozenRows, freeze, unfreeze } = useFreeze();
   const [activeCell, setActiveCell] = useState<{ row: number; col: number } | null>({ row: 0, col: 0 });
   // Tracks the full selection from Grid (including range selections via shift+click).
@@ -256,6 +263,10 @@ function WorkbookView() {
   // Ref to always capture current gridSelection for pushHistory calls
   const gridSelectionRef = useRef<Selection | null>(null);
   gridSelectionRef.current = gridSelection;
+
+  // Project / WBS extension state
+  const [showProjectView, setShowProjectView] = useState(false);
+  const [currentProject, setCurrentProject] = useState<Project | null>(null);
 
   // Chart state
   const [showChartDialog, setShowChartDialog] = useState(false);
@@ -1757,6 +1768,67 @@ function WorkbookView() {
     }
   }, [filterState, workbook]);
 
+  // ─── Extension Handlers ─────────────────────────────────────────
+
+  const handleProjectNew = useCallback((templateId: string) => {
+    const template = getTemplateById(templateId);
+    if (template) {
+      const project = template.create();
+      setCurrentProject(project);
+      setShowProjectView(true);
+    }
+  }, []);
+
+  const handleProjectNewSheet = useCallback(() => {
+    // Create a new project sheet with headers and sample data
+    const newSheet = createProjectSheet('Project Plan');
+
+    // Add sheet to workbook and switch to it
+    const updatedSheets = [...workbook.sheets, newSheet];
+    const updatedWb = {
+      ...workbook,
+      sheets: updatedSheets,
+      activeSheetIndex: updatedSheets.length - 1,
+      lastModified: Date.now(),
+    };
+    pushHistory(updatedWb, 'Add project sheet', filterStateRef.current, gridSelectionRef.current);
+
+    // Auto-convert the new sheet to a project and open the view
+    const mapping = getDefaultColumnMapping();
+    const model = sheetToProject(newSheet, mapping, newSheet.name);
+    const project = projectModelToProject(model);
+
+    setCurrentProject(project);
+    setShowProjectView(true);
+  }, [workbook, pushHistory]);
+
+  const handleSaveProjectData = useCallback(
+    (model: ProjectModel, mapping: ColumnMapping | null, sheetId: string | null) => {
+      // Build the extension data to persist
+      const extensionData = {
+        extensionId: 'project-wbs',
+        schemaVersion: '1.0.0',
+        data: {
+          project: model,
+          columnMapping: mapping,
+          sourceSheetId: sheetId,
+        },
+      };
+
+      // Push a history entry with the extension data attached
+      const updatedWb: typeof workbook = {
+        ...workbook,
+        extensions: {
+          ...workbook.extensions,
+          'project-wbs': extensionData,
+        },
+        lastModified: Date.now(),
+      };
+      pushHistory(updatedWb, 'Update project plan');
+    },
+    [workbook, pushHistory],
+  );
+
   // ─── Chart Handlers ──────────────────────────────────────────────────
 
   const handleInsertChart = useCallback(() => {
@@ -2422,6 +2494,8 @@ function WorkbookView() {
           onShortcuts={handleShortcuts}
           onSimpleDocs={handleSimpleDocs}
           onSearchReplace={handleSearchReplace}
+          onProjectNew={handleProjectNew}
+          onProjectNewSheet={handleProjectNewSheet}
           onAfterMenuAction={() => gridRef.current?.focus()}
         />
         <span className="text-sm text-gray-500">{workbook.title}</span>
@@ -2505,17 +2579,47 @@ function WorkbookView() {
         </div>
       )}
 
-      {/* Sheet Tabs */}
+      {/* Sheet Tabs + Project Tab */}
       <SheetTabs
         workbook={workbook}
-        onSwitchSheet={handleSwitchSheet}
+        showProjectView={showProjectView}
+        onSwitchSheet={(idx) => {
+          handleSwitchSheet(idx);
+          // Switching to a sheet tab exits project view
+          if (showProjectView) setShowProjectView(false);
+        }}
         onAddSheet={handleAddSheet}
         onRenameSheet={handleRenameSheet}
         onCopySheet={handleCopySheet}
         onDeleteSheet={handleDeleteSheet}
+        onShowProjectView={() => {
+          // Re-convert sheet to project to pick up any edits made in sheet view
+          const extData = workbook.extensions?.['project-wbs'];
+          if (sheet && extData && extData.extensionId === 'project-wbs') {
+            const data = extData.data as { columnMapping?: ColumnMapping; sourceSheetId?: string };
+            if (data.columnMapping && data.sourceSheetId === sheet.id) {
+              const model = sheetToProject(sheet, data.columnMapping, sheet.name);
+              const project = projectModelToProject(model);
+              setCurrentProject(project);
+            }
+          }
+          setShowProjectView(true);
+        }}
       />
 
-      {/* Grid */}
+      {/* Project View (shown when Project tab is active) */}
+      {showProjectView && currentProject && (
+        <div className="flex-1 overflow-hidden">
+          <ProjectView
+            project={currentProject}
+            activeSheet={sheet}
+            onSaveProject={handleSaveProjectData}
+            onClose={() => setShowProjectView(false)}
+          />
+        </div>
+      )}
+      {/* Grid — shown when Project tab is not active */}
+      {!showProjectView && (
       <div className="flex-1 overflow-hidden">
         <Grid
           ref={gridRef}
@@ -2568,6 +2672,7 @@ function WorkbookView() {
           selectedChartId={selectedChartId}
         />
       </div>
+      )}
 
       {/* Status Bar */}
       <footer className="flex items-center justify-between px-4 py-1 border-t border-gray-200 bg-gray-50 text-xs text-gray-500">

@@ -96,7 +96,8 @@ function isValidWorkbook(obj: unknown): obj is Workbook {
     Array.isArray(wb.sheets) &&
     typeof wb.activeSheetIndex === 'number' &&
     wb.sheets.length > 0 &&
-    isValidSheet(wb.sheets[0])
+    isValidSheet(wb.sheets[0]) &&
+    hasValidExtensions(wb)
   );
 }
 
@@ -114,4 +115,20 @@ function isValidSheet(obj: unknown): boolean {
     typeof sheet.columnCount === 'number' &&
     typeof sheet.rowCount === 'number'
   );
+}
+
+/**
+ * Check if the workbook has valid extension data.
+ */
+function hasValidExtensions(obj: Record<string, unknown>): boolean {
+  if (!obj.extensions) return true; // extensions are optional
+  if (typeof obj.extensions !== 'object' || obj.extensions === null) return false;
+  // Each extension data entry should have extensionId and schemaVersion
+  for (const ext of Object.values(obj.extensions)) {
+    if (typeof ext !== 'object' || ext === null) return false;
+    const extData = ext as Record<string, unknown>;
+    if (typeof extData.extensionId !== 'string') return false;
+    if (typeof extData.schemaVersion !== 'string') return false;
+  }
+  return true;
 }

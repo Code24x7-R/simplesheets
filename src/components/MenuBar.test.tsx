@@ -69,6 +69,7 @@ describe('MenuBar', () => {
     onSimpleDocs: jest.fn(),
     onSearchReplace: jest.fn(),
     onPasteSpecial: jest.fn(),
+    onProjectNew: jest.fn(),
   };
 
   beforeEach(() => {
@@ -82,6 +83,7 @@ describe('MenuBar', () => {
     expect(screen.getByText('View')).toBeTruthy();
     expect(screen.getByText('Insert')).toBeTruthy();
     expect(screen.getByText('Format')).toBeTruthy();
+    expect(screen.getByText('Extensions')).toBeTruthy();
     expect(screen.getByText('Help')).toBeTruthy();
   });
 
@@ -426,5 +428,21 @@ describe('MenuBar', () => {
     expect(link).toBeTruthy();
     fireEvent.click(link);
     expect(onSimpleDocs).toHaveBeenCalledTimes(1);
+  });
+
+  it('Extensions menu shows Project / WBS submenu', () => {
+    const onProjectNew = jest.fn();
+    render(<MenuBar {...defaultProps} onProjectNew={onProjectNew} />);
+    fireEvent.click(screen.getByText('Extensions'));
+    expect(screen.getByText('Project / WBS')).toBeTruthy();
+  });
+
+  it('Extensions menu triggers onProjectNew with correct template ID', () => {
+    const onProjectNew = jest.fn();
+    render(<MenuBar {...defaultProps} onProjectNew={onProjectNew} />);
+    fireEvent.click(screen.getByText('Extensions'));
+    fireEvent.click(screen.getByText('Project / WBS'));
+    fireEvent.click(screen.getByText('Simple WBS'));
+    expect(onProjectNew).toHaveBeenCalledWith('simple-wbs');
   });
 });

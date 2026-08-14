@@ -51,6 +51,7 @@ import {
   X,
   Keyboard,
   Info,
+  FolderKanban,
 } from 'lucide-react';
 import {
   BorderAll,
@@ -133,6 +134,10 @@ interface MenuBarProps {
   onToggleFilter: () => void;
   onClearAllFilters: () => void;
   isFilterActive: boolean;
+  // Extensions
+  onProjectNew?: (templateId: string) => void;
+  onProjectNewSheet?: () => void;
+  onProjectOpen?: () => void;
   // Help
   onAbout: () => void;
   onShortcuts: () => void;
@@ -223,6 +228,11 @@ export function MenuBar(props: MenuBarProps) {
         'data-sort-dialog-desc': () => props.onOpenSortDialog('desc'),
         'data-toggle-filter': props.onToggleFilter,
         'data-clear-filter': props.onClearAllFilters,
+        // Extensions
+        'ext-project-simple': () => props.onProjectNew?.('simple-wbs'),
+        'ext-project-website': () => props.onProjectNew?.('website'),
+        'ext-project-software': () => props.onProjectNew?.('software'),
+        'ext-project-new-sheet': () => props.onProjectNewSheet?.(),
         // Help
         'help-about': props.onAbout,
         'help-shortcuts': props.onShortcuts,
@@ -398,6 +408,21 @@ export function MenuBar(props: MenuBarProps) {
     { id: 'data-clear-filter', label: 'Clear All Filters', icon: X },
   ];
 
+  const extensionsItems: MenuItem[] = [
+    {
+      id: 'ext-project',
+      label: 'Project / WBS',
+      icon: FolderKanban,
+      submenu: [
+        { id: 'ext-project-new-sheet', label: 'New Project Sheet', icon: FolderKanban },
+        { id: 'sep-ext-1', label: '', separator: true },
+        { id: 'ext-project-simple', label: 'Simple WBS', icon: FolderKanban },
+        { id: 'ext-project-website', label: 'Website Project', icon: FolderKanban },
+        { id: 'ext-project-software', label: 'Software Development', icon: FolderKanban },
+      ],
+    },
+  ];
+
   return (
     <div className="menu-bar">
       <DropdownMenu label="File" items={fileItems} onSelect={handleSelect} />
@@ -406,6 +431,7 @@ export function MenuBar(props: MenuBarProps) {
       <DropdownMenu label="Insert" items={insertItems} onSelect={handleSelect} />
       <DropdownMenu label="Format" items={formatItems} onSelect={handleSelect} />
       <DropdownMenu label="Data" items={dataItems} onSelect={handleSelect} />
+      <DropdownMenu label="Extensions" items={extensionsItems} onSelect={handleSelect} />
       <DropdownMenu label="Help" items={helpItems} onSelect={handleSelect} />
     </div>
   );

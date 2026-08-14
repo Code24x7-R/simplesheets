@@ -27,11 +27,13 @@ function createTestWorkbook(sheetNames: string[]): Workbook {
 }
 
 const mockCallbacks = {
+  showProjectView: false,
   onSwitchSheet: jest.fn(),
   onAddSheet: jest.fn(),
   onRenameSheet: jest.fn(),
   onCopySheet: jest.fn(),
   onDeleteSheet: jest.fn(),
+  onShowProjectView: jest.fn(),
 };
 
 describe('SheetTabs', () => {
@@ -206,6 +208,36 @@ describe('SheetTabs', () => {
       // Click outside - should close menu
       fireEvent.mouseDown(document.body);
       expect(screen.queryByText('Rename')).toBeNull();
+    });
+
+    describe('Project tab', () => {
+      it('renders Project tab', () => {
+        const wb = createTestWorkbook(['Sheet1']);
+        render(<SheetTabs workbook={wb} {...mockCallbacks} />);
+        expect(screen.getByText('📊 Project')).toBeTruthy();
+      });
+
+      it('calls onShowProjectView when Project tab is clicked', () => {
+        const wb = createTestWorkbook(['Sheet1']);
+        render(<SheetTabs workbook={wb} {...mockCallbacks} />);
+        fireEvent.click(screen.getByText('📊 Project'));
+        expect(mockCallbacks.onShowProjectView).toHaveBeenCalledTimes(1);
+      });
+
+      it('highlights Project tab when showProjectView is true', () => {
+        const wb = createTestWorkbook(['Sheet1']);
+        render(<SheetTabs workbook={wb} {...mockCallbacks} showProjectView={true} />);
+        const projectTab = screen.getByText('📊 Project');
+        expect(projectTab.className).toContain('bg-white');
+        expect(projectTab.className).toContain('font-medium');
+      });
+
+      it('does not highlight Project tab when showProjectView is false', () => {
+        const wb = createTestWorkbook(['Sheet1']);
+        render(<SheetTabs workbook={wb} {...mockCallbacks} showProjectView={false} />);
+        const projectTab = screen.getByText('📊 Project');
+        expect(projectTab.className).toContain('bg-purple-50');
+      });
     });
   });
 });

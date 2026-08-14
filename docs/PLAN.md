@@ -1965,3 +1965,581 @@ F4 reference cycling is implemented in `useCellEditing.ts` (`findRefAtCaret` + `
 | `filterState.hiddenRows` | Phase 18 (Sort & Filter) |
 | `useCellEditing` F4 cycling | Phase 2g |
 | Wizard schema/compiler | Phase 10, 25 |
+
+---
+
+## Phase 34: Extensions Architecture — Project/WBS & Gantt — PLANNED 📋
+
+**Goal**: Build an extensions architecture for SimpleSheets, with the first extension delivering a full Project/Work Breakdown Structure (WBS) data model and Gantt chart renderer. Make it immediately useful through pre-built templates targeting common project types.
+
+### Design Principles
+
+1. **"Simple" positioning** — Keep the first version deliberately narrow. Feature scope:
+   - WBS hierarchy (tree structure, NOT a numbered column like `1.2.3`)
+   - Start/end dates
+   - Task dependencies (FS, SS, FF, SF)
+   - Progress tracking (% complete)
+   - Resource assignment
+   - Cost allocation
+   - Effort estimation (hours/story points)
+   - Risk management (identification, assessment, mitigation, tracking)
+   - Gantt chart rendering
+
+2. **Hierarchy is a first-class citizen** — The WBS must model parent-child relationships as a real tree data structure, not a flat list with a "Level" column. This enables:
+   - Roll-up of dates, costs, effort, and progress to parent summary tasks
+   - Collapse/expand in the Gantt view
+   - Automatic indentation and summary bar rendering
+
+3. **Template-driven onboarding** — Users should be able to start from a pre-built template rather than an empty WBS. All templates use the same underlying data model.
+
+4. **Extension architecture** — Design a clean extension interface from the start so future extensions (e.g., Kanban, Mind Map, PERT) can be added without modifying core.
+
+### Data Model
+
+#### Core Entities
+
+```
+Project
+├── id: string
+├── name: string
+├── description: string
+├── startDate: Date
+├── endDate: Date
+├── calendar: WorkingCalendar (working days, holidays)
+├── resources: Resource[]
+├── risks: Risk[]
+└── wbs: WBSTask[] (root-level tasks)
+
+WBSTask (tree node)
+├── id: string
+├── name: string
+├── description: string
+├── level: number (derived from tree depth)
+├── parentId: string | null
+├── children: WBSTask[]
+├── startDate: Date
+├── endDate: Date
+├── duration: number (working days)
+├── progress: number (0-100 %)
+├── effort: number (estimated hours or story points)
+├── effortUnit: 'hours' | 'storyPoints' | 'days'
+├── cost: number (allocated cost)
+├── costCurrency: string
+├── responsibleResourceId: string | null
+├── dependencies: TaskDependency[]
+├── isMilestone: boolean
+├── isSummary: boolean (true if has children)
+├── collapsed: boolean (UI state)
+├── color: string (for Gantt bar)
+├── riskIds: string[] (risks linked to this task)
+└── customFields: Record<string, unknown>
+
+TaskDependency
+├── predecessorId: string
+├── type: 'FS' | 'SS' | 'FF' | 'SF'
+├── lag: number (working days, can be negative)
+
+Resource
+├── id: string
+├── name: string
+├── role: string
+├── costRate: number (per hour or per day)
+├── costCurrency: string
+├── availability: number (0-100 %, for overallocation detection)
+└── color: string
+
+WorkingCalendar
+├── workingDays: Set<number> (0=Sun ... 6=Sat)
+├── holidays: Set<string> (ISO date strings)
+└── hoursPerDay: number (default 8)
+
+Risk
+├── id: string
+├── projectId: string
+├── taskId: string | null (linked task, or project-level if null)
+├── title: string
+├── description: string
+├── category: 'technical' | 'schedule' | 'cost' | 'resource' | 'external' | 'quality' | 'scope' | 'other'
+├── probability: number (1-5 scale)
+├── impact: number (1-5 scale)
+├── riskScore: number (probability × impact, 1-25, derived)
+├── status: 'identified' | 'assessing' | 'mitigating' | 'monitoring' | 'occurred' | 'closed'
+├── mitigationPlan: string
+├── contingencyPlan: string
+├── mitigationCost: number
+├── ownerId: string | null (resource responsible)
+├── identifiedDate: string (ISO date)
+├── reviewDate: string (ISO date)
+├── triggerCondition: string (what would cause this risk to occur)
+├── residualProbability: number (1-5, after mitigation)
+├── residualImpact: number (1-5, after mitigation)
+├── residualRiskScore: number (derived)
+├── customFields: Record<string, unknown>
+```
+
+#### Tree Operations
+
+| Operation | Description |
+|-----------|-------------|
+| `addTask(parentId, task)` | Add child task under parent |
+| `removeTask(id)` | Remove task and all descendants |
+| `moveTask(id, newParentId, index)` | Reparent and reorder |
+| `getAncestors(id)` | Path from root to task |
+| `getDescendants(id)` | All tasks below (flat list) |
+| `rollUpDates(id)` | Compute parent dates from children |
+| `rollUpProgress(id)` | Weighted average progress from children |
+| `rollUpCost(id)` | Sum of descendant costs |
+| `rollUpEffort(id)` | Sum of descendant effort |
+| `flattenToRows()` | For spreadsheet-style display |
+| `validateTree()` | Detect cycles, orphans |
+| `addRisk(risk)` | Add risk to project |
+| `updateRisk(id, changes)` | Modify risk properties |
+| `closeRisk(id)` | Mark risk as closed |
+| `getRisksForTask(taskId)` | Get all risks linked to a task |
+| `getRiskMatrix()` | Generate probability × impact matrix |
+| `getTopRisks(n)` | Top N risks by score |
+| `rollUpRiskScore()` | Aggregate risk exposure for project |
+
+### Gantt Renderer
+
+#### Phase 34a: Gantt Rendering Engine
+
+- [ ] Pure SVG/Canvas Gantt chart (no external library)
+- [ ] Timeline header with day/week/month zoom levels
+- [ ] Task bars positioned by date, indented by WBS level
+- [ ] Summary tasks shown as bars with child extent (no individual children rendered when collapsed)
+- [ ] Milestone markers (diamond shape)
+- [ ] Dependency lines (arrows between bars)
+- [ ] Progress overlay (filled portion of bar)
+- [ ] Today marker (vertical red line)
+- [ ] Critical path highlighting (tasks with zero total float)
+- [ ] Collapse/expand toggle on summary tasks
+- [ ] Horizontal scrolling for long timelines
+- [ ] Tooltip on hover (name, dates, progress, resources)
+- [ ] Risk indicator on tasks with linked risks (warning icon/color coded by risk score)
+- [ ] Risk heatmap overlay toggle (tasks colored by aggregated risk score)
+
+#### Phase 34b: Interactive Gantt Editing
+
+- [ ] Drag bar to change start date
+- [ ] Resize bar to change duration
+- [ ] Drag milestone to change date
+- [ ] Create dependency by dragging from one bar to another
+- [ ] Edit task properties in side panel or inline
+- [ ] Keyboard navigation (arrows, Enter, Delete)
+- [ ] Undo/redo support
+
+### Extensions Architecture
+
+#### Extension Interface
+
+```typescript
+interface SheetExtension {
+  id: string;           // Unique identifier (e.g., 'project-wbs')
+  name: string;         // Display name
+  description: string;
+  version: string;
+  icon: ComponentType;  // Lucide icon component
+  category: 'project' | 'analysis' | 'visualization' | 'integration';
+  
+  // Lifecycle
+  initialize(context: ExtensionContext): void | Promise<void>;
+  destroy(): void;
+  
+  // Data model
+  getTaskModels(): ExtensionTaskModel[];
+  
+  // Views
+  getViews(): ExtensionView[];
+  
+  // Templates
+  getTemplates(): ExtensionTemplate[];
+}
+
+interface ExtensionView {
+  id: string;
+  name: string;
+  icon: ComponentType;
+  component: ComponentType<{ data: unknown; context: ViewContext }>;
+  position: 'panel' | 'overlay' | 'tab' | 'fullscreen';
+}
+
+interface ExtensionTemplate {
+  id: string;
+  name: string;
+  description: string;
+  category: string;       // 'website', 'software', 'renovation', etc.
+  thumbnail?: string;     // Preview image/SVG
+  data: unknown;          // Pre-populated task model data
+}
+```
+
+#### Extension Registry
+
+- [ ] `ExtensionRegistry` singleton managing loaded extensions
+- [ ] Register/unregister extensions at runtime
+- [ ] Isolation: extensions cannot corrupt each other's state
+- [ ] Lazy loading: extensions loaded on demand
+- [ ] Settings per extension (stored in localStorage)
+
+### Templates
+
+All templates use the standard WBS data model. Each template provides a pre-populated task tree with realistic durations, dependencies, and resource assignments.
+
+#### Phase 34c: Template Library
+
+| # | Template | Category | Description |
+|---|----------|----------|-------------|
+| 1 | Website Project | Web/Dev | Design → Develop → Test → Launch a website |
+| 2 | Software Development | Software | Full SDLC with requirements, design, coding, QA, deploy |
+| 3 | Home Renovation | Construction | Planning → Permits → Demolition → Build → Finishing |
+| 4 | Event Planning | Events | Venue → Catering → Marketing → Logistics → Day-of |
+| 5 | Marketing Campaign | Marketing | Research → Strategy → Content → Distribution → Analysis |
+| 6 | Business Project | Business | Feasibility → Planning → Execution → Review |
+| 7 | Product Launch | Business | Development → Marketing prep → Launch → Post-launch |
+| 8 | IT Migration | IT | Audit → Planning → Migration → Validation → Cutover |
+| 9 | Agile/Sprint Planning | Software | Backlog → Sprint planning → Sprints → Review → Retro |
+| 10 | Simple WBS | Generic | Customisable starter with a few example tasks |
+| 11 | Construction Project | Construction | Pre-construction → Foundation → Structure → MEP → Finishing |
+| 12 | Mining Consulting | Mining | Scoping → Site assessment → Analysis → Report → Presentation |
+
+Each template includes:
+- Pre-built WBS hierarchy (8-20 tasks, 2-4 levels deep)
+- Realistic durations and dependencies
+- Suggested resource roles
+- Milestone markers for key deliverables
+- Estimated effort and cost allocation
+
+### Integration Points
+
+#### Phase 34d: SimpleSheets Integration
+
+- [ ] **New menu**: Extensions → Project/WBS → New from Template / Open Gantt
+- [ ] **Extension toggle**: Enable/disable extensions globally
+- [ ] **Data storage**: WBS data stored alongside workbook (extensionData field)
+- [ ] **Export**: Gantt chart exportable to PNG/SVG/PDF
+- [ ] **Import**: Template picker on first use
+- [ ] **Context sharing**: Extension can read sheet data (e.g., resource costs from a sheet)
+
+### Stages & Subtasks
+
+#### Stage 34.1: Core Data Model & Tree Operations
+- [ ] Define TypeScript interfaces (Project, WBSTask, TaskDependency, Resource, WorkingCalendar, Risk)
+- [ ] Implement tree CRUD operations (add, remove, move, reparent)
+- [ ] Implement roll-up logic (dates, progress, cost, effort)
+- [ ] Implement dependency resolution (topological sort, cycle detection)
+- [ ] Implement risk CRUD operations (add, update, close, link to tasks)
+- [ ] Implement risk scoring (probability × impact, residual scoring)
+- [ ] Implement risk matrix generation and top-risk queries
+- [ ] Unit tests for all tree operations (40+ tests)
+- [ ] Unit tests for risk operations (15+ tests)
+
+#### Stage 34.2: Risk Management
+- [ ] Build Risk Register view (table/list of all risks with scoring)
+- [ ] Build Risk Matrix view (5×5 probability/impact grid with plotted risks)
+- [ ] Risk CRUD UI (create, edit, close risks)
+- [ ] Link risks to tasks (from task editor and from risk editor)
+- [ ] Risk detail panel (mitigation plan, contingency plan, owner, review date)
+- [ ] Risk status workflow (identified → assessing → mitigating → monitoring → occurred/closed)
+- [ ] Risk indicators on Gantt bars (warning icon color-coded by score)
+- [ ] Risk heatmap overlay toggle (tasks colored by aggregated risk score)
+- [ ] Filter/sort risks by score, status, category, owner
+- [ ] Unit tests for risk scoring, matrix generation, status transitions (20+ tests)
+
+#### Stage 34.3: Gantt Rendering Engine
+- [ ] Build SVG-based Gantt component with zoom (day/week/month)
+- [ ] Render task bars, summary bars, milestones
+- [ ] Render dependency arrows
+- [ ] Today marker and critical path
+- [ ] Collapse/expand interactivity
+- [ ] Risk indicator rendering on task bars
+- [ ] Unit tests for date-to-pixel mapping, bar positioning
+
+#### Stage 34.4: Interactive Editing
+- [ ] Drag-to-move and resize task bars
+- [ ] Dependency creation via drag
+- [ ] Side panel for task property editing
+- [ ] Keyboard shortcuts
+- [ ] Undo/redo
+- [ ] Risk creation from task context menu
+
+#### Stage 34.5: Extension Architecture
+- [ ] Define Extension interface and ExtensionContext
+- [ ] Build ExtensionRegistry with lazy loading
+- [ ] Create extension registration in App.tsx
+- [ ] Isolation layer (state, errors)
+
+#### Stage 34.6: Templates
+- [ ] Build all 12 templates with realistic data including pre-populated risks
+- [ ] Template picker UI (grid with thumbnails)
+- [ ] Template preview before applying
+- [ ] "Customise after apply" flow
+
+#### Stage 34.7: Integration & Polish
+- [ ] Menu integration
+- [ ] Export Gantt to PNG/SVG/PDF
+- [ ] Export Risk Register to PDF
+- [ ] Persistence (save/load with workbook)
+- [ ] Documentation and README update
+- [ ] Full verification pass
+
+### Files Expected
+
+| File | Action |
+|------|--------|
+| `src/extensions/types.ts` | Core extension interfaces |
+| `src/extensions/ExtensionRegistry.ts` | Registry singleton |
+| `src/extensions/project-wbs/model.ts` | WBS data model |
+| `src/extensions/project-wbs/treeOps.ts` | Tree operations |
+| `src/extensions/project-wbs/dependencies.ts` | Dependency resolution |
+| `src/extensions/project-wbs/rollups.ts` | Roll-up calculations |
+| `src/extensions/project-wbs/risks.ts` | Risk CRUD, scoring, matrix |
+| `src/extensions/project-wbs/GanttChart.tsx` | SVG Gantt renderer |
+| `src/extensions/project-wbs/GanttChart.test.tsx` | Gantt tests |
+| `src/extensions/project-wbs/TaskEditor.tsx` | Side panel editor |
+| `src/extensions/project-wbs/RiskRegister.tsx` | Risk register view |
+| `src/extensions/project-wbs/RiskMatrix.tsx` | Risk matrix visualization |
+| `src/extensions/project-wbs/RiskEditor.tsx` | Risk create/edit form |
+| `src/extensions/project-wbs/templates/index.ts` | All 12 templates |
+| `src/extensions/project-wbs/templates/*.ts` | Individual template data |
+| `src/extensions/project-wbs/TemplatePicker.tsx` | Template picker UI |
+| `src/components/ExtensionsMenu.tsx` | Extensions menu component |
+| `src/App.tsx` | Wire extensions system |
+
+### Dependencies
+
+| Dependency | Phase |
+|------------|-------|
+| `types.ts` (existing) | Phase 1 |
+| `formulaEngine.ts` (date functions) | Phase 7 |
+| `HistoryContext` (undo/redo) | Phase 1i |
+| `pdfExport.ts` (export) | Phase 6 |
+| `lucide-react` (icons) | Phase 32 |
+
+### Success Criteria
+
+- [ ] Can create a project from any of 12 templates in < 30 seconds
+- [ ] WBS tree supports unlimited depth with correct roll-ups
+- [ ] Gantt renders correctly with dependencies and critical path
+- [ ] Drag-to-edit works for dates, durations, dependencies
+- [ ] Risk register shows all risks with probability × impact scoring
+- [ ] Risk matrix visualizes risks on 5×5 grid with color-coded severity
+- [ ] Risks can be linked to tasks and displayed as indicators on Gantt bars
+- [ ] Risk heatmap overlay colors tasks by aggregated risk score
+- [ ] Mitigation and contingency plans trackable per risk with review dates
+- [ ] Extensions architecture supports adding new extensions without core changes
+- [ ] All existing tests still pass (2851+)
+- [ ] New tests: 120+ for WBS operations, risk management, Gantt rendering, templates
+- [ ] Lint clean, type-check clean, build clean
+
+---
+
+## Phase 35: Sheet-to-Project Converter — IN PROGRESS 🔄
+
+**Goal**: Allow users to convert any SimpleSheets spreadsheet into a project plan. The sheet becomes the source of truth — edit data in the sheet, see it reflected in Gantt/WBS views. This is the foundation for all future extensions: **adapt sheets as a source**.
+
+### Design Principles
+
+1. **Sheet as Source** — Users enter project data in a familiar spreadsheet format. SimpleSheets detects columns and converts to a project model.
+2. **Auto-detection** — Column headers are auto-mapped to project fields using keyword matching. Users can confirm or adjust.
+3. **Bidirectional Sync** — Edit in the sheet and see changes in Gantt/WBS. Edit in Gantt/WBS and save back to the workbook.
+4. **JSON Schema for Persistence** — Extension data is stored in the workbook's `extensions` field, following a defined schema for forward compatibility.
+5. **Templates as Growth** — Templates become a starting point that users then customize in the sheet, rather than the final product.
+
+### Architecture
+
+#### Data Flow
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        SimpleSheets Workbook                     │
+│                                                                   │
+│  ┌──────────────┐    ┌──────────────────┐    ┌────────────────┐  │
+│  │  Sheet Data   │───▶│  Column Mapping   │───▶│ Project Model  │  │
+│  │  (cells)      │    │  (auto-detect +   │    │ (tasks, risks, │  │
+│  │               │    │   user confirm)   │    │  resources)    │  │
+│  └──────────────┘    └──────────────────┘    └───────┬────────┘  │
+│                                                      │           │
+│                                                      ▼           │
+│                     ┌─────────────────────────────────────────┐  │
+│                     │           Extension Data                 │  │
+│                     │   (persisted in workbook.extensions)    │  │
+│                     └─────────────────────────────────────────┘  │
+│                                                      │           │
+│                           ┌──────────────────────────┼────────┐  │
+│                           │                          │        │  │
+│                           ▼                          ▼        ▼  │
+│                     ┌───────────┐  ┌──────────┐  ┌───────────┐  │
+│                     │   Table    │  │   WBS    │  │   Gantt   │  │
+│                     │  (sheet)   │  │  (tree)  │  │ (timeline)│  │
+│                     └───────────┘  └──────────┘  └───────────┘  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+#### Extension Data Schema
+
+```typescript
+interface ExtensionData {
+  extensionId: string;       // e.g., 'project-wbs'
+  schemaVersion: string;     // '1.0.0' for forward compatibility
+  data: unknown;             // Extension-specific data
+}
+
+interface ProjectExtensionData {
+  extensionId: 'project-wbs';
+  schemaVersion: '1.0.0';
+  data: {
+    project: ProjectModel | null;
+    columnMapping: ColumnMapping | null;
+    sourceSheetId: string | null;
+  };
+}
+
+interface Workbook {
+  // ... existing fields ...
+  extensions?: Record<string, ExtensionData>;
+}
+```
+
+#### Column Mapping
+
+Auto-detected from header row using keyword matching:
+
+| Field        | Keywords                                    |
+|--------------|---------------------------------------------|
+| Task Name    | task, name, title, activity, wbs, description |
+| Start Date   | start, begin, commence, from                |
+| End Date     | end, finish, due, complete, to, deadline    |
+| Duration     | duration, days, effort, work                |
+| Parent       | parent, wbs parent, parent id, summary      |
+| Dependency   | dependency, depends, predecessor, pred, link|
+| Progress     | progress, %, complete, done, percent, status|
+| Resource     | resource, assigned, owner, who, team, person|
+| Milestone    | milestone, mstone, marker                   |
+| Color        | color, colour                               |
+| Notes        | notes, comment, note, remarks               |
+
+### Implementation Stages
+
+#### Stage 35.1: Data Model & Schema — COMPLETE ✅
+- [x] Add `extensions` field to `Workbook` type
+- [x] Define `ExtensionData`, `ProjectExtensionData` interfaces
+- [x] Define `ColumnMapping` interface
+- [x] Add `ProjectModel`, `TaskRow`, `RiskRow` serializable types
+- [x] Update `jsonService.ts` to validate extension data
+
+#### Stage 35.2: Sheet-to-Project Converter — COMPLETE ✅
+- [x] Create `sheetToProject.ts` with auto-detection and conversion
+- [x] Keyword-based column header matching
+- [x] Parent-child hierarchy construction from flat rows
+- [x] Dependency resolution by row number or task ID
+- [x] Date parsing (ISO, locale formats)
+- [x] Progress parsing (with % sign handling)
+- [x] Color parsing (hex + named colors)
+- [x] Create `projectModelToProject.ts` to convert serialized model to runtime Project
+- [x] 13 unit tests for converter
+
+#### Stage 35.3: Column Mapping Dialog — COMPLETE ✅
+- [x] Create `ColumnMappingDialog.tsx` for user confirmation/adjustment
+- [x] Auto-detect and display mapped columns
+- [x] Dropdown selectors for each field
+- [x] Header row index selector
+- [x] Validation (require task + at least one date column)
+
+#### Stage 35.4: Project View Integration — COMPLETE ✅
+- [x] Add `activeSheet` and `onSaveProject` props to `ProjectView`
+- [x] Add "Convert Sheet" button to toolbar
+- [x] Wire up column mapping dialog flow
+- [x] Add "Save" button to persist project data to workbook
+- [x] Update `App.tsx` to pass sheet and handle save
+
+#### Stage 35.5: File I/O Integration — COMPLETE ✅
+- [x] Extension data persists via `workbook.extensions`
+- [x] Saved through `pushHistory` for undo/redo support
+- [x] JSON export/import includes extensions field
+- [x] Validation ensures extension data integrity
+
+### Files Created
+
+| File | Purpose |
+|------|--------|
+| `src/extensions/project-wbs/sheetToProject.ts` | Sheet-to-project conversion logic |
+| `src/extensions/project-wbs/ColumnMappingDialog.tsx` | Column mapping confirmation UI |
+| `src/extensions/project-wbs/sheetToProject.test.ts` | 13 converter tests |
+
+### Files Modified
+
+| File | Changes |
+|------|--------|
+| `src/types.ts` | Added `ExtensionData`, `ProjectExtensionData`, `ColumnMapping`, `ProjectModel`, `TaskRow`, `RiskRow`, `extensions` field on Workbook |
+| `src/services/jsonService.ts` | Added `hasValidExtensions` validation |
+| `src/extensions/project-wbs/ProjectView.tsx` | Sheet-as-source workflow, save-to-workbook, convert sheet button |
+| `src/App.tsx` | `handleSaveProjectData` callback, passes activeSheet to ProjectView |
+
+### Results
+- **3193 tests** passing (134 suites)
+- Lint clean, type-check clean, build clean
+- **Key insight**: This pattern (sheet-as-source + column mapping + JSON schema persistence) is the template for ALL future extensions
+
+---
+
+## Phase 36: Tab-Based Project View — COMPLETE ✅
+
+**Goal**: Separate the Project View from the Sheet View so they coexist as peers. Users can edit data in either view and see changes reflected in the other.
+
+### Design Principles
+
+1. **Project Tab** — A new "📊 Project" tab appears alongside sheet tabs. Clicking it shows the project view (Gantt/WBS/Risk views).
+2. **Sheet Tabs Unchanged** — Existing sheet tabs work exactly as before. Users can edit cell data in the spreadsheet.
+3. **Bidirectional Sync** — Switching to the Project tab re-converts the current sheet (picking up edits). Editing in the project view saves back to the workbook.
+4. **New Project Sheet** — Extensions menu includes "New Project Sheet" which creates a pre-formatted sheet with headers and sample data.
+
+### Architecture
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│  [Sheet1] [Sheet2] [Project]  ← Tab bar                      │
+├──────────────────────────────────────────────────────────────┤
+│                                                              │
+│  Sheet View (Grid)          │  Project View (Gantt/WBS)     │
+│  - Edit cells directly       │  - Visual timeline             │
+│  - Standard spreadsheet UI   │  - Task editing via modals     │
+│  - Data saved to workbook    │  - Syncs from sheet on switch  │
+│                                                              │
+└──────────────────────────────────────────────────────────────┘
+```
+
+### Implementation
+
+#### Stage 36.1: Project Tab in Tab Bar — COMPLETE ✅
+- [x] Added "📊 Project" tab to `SheetTabs.tsx`
+- [x] Purple styling to distinguish from sheet tabs
+- [x] `showProjectView` prop controls active state
+- [x] `onShowProjectView` callback switches to project view
+- [x] 4 new tests for Project tab behavior
+
+#### Stage 36.2: View Switching in App.tsx — COMPLETE ✅
+- [x] Clicking Project tab sets `showProjectView = true`
+- [x] Clicking a sheet tab sets `showProjectView = false`
+- [x] Auto-reconvert sheet data when switching to Project tab (picks up sheet edits)
+- [x] ProjectView `onClose` returns to sheet view
+
+#### Stage 36.3: New Project Sheet Action — COMPLETE ✅
+- [x] `createProjectSheet()` function creates sheet with headers + sample data
+- [x] `getDefaultColumnMapping()` returns canonical column mapping
+- [x] `PROJECT_SHEET_HEADERS` constant for header names
+- [x] Extensions menu → "New Project Sheet" option
+- [x] Auto-converts and opens project view after creation
+- [x] 9 new tests for sheet creation
+
+### Files Modified
+
+| File | Changes |
+|------|--------|
+| `src/components/SheetTabs.tsx` | Added Project tab with purple styling |
+| `src/App.tsx` | Tab-based view switching, auto-sync |
+| `src/components/MenuBar.tsx` | Added `onProjectNewSheet` prop and menu item |
+
+### Results
+- **3193 tests** passing (134 suites)
+- Lint clean, type-check clean, build clean

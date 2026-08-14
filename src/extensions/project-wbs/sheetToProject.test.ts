@@ -1,0 +1,401 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Richard Robertson
+import { detectColumnMapping, sheetToProject, projectModelToProject, createProjectSheet, getDefaultColumnMapping, PROJECT_SHEET_HEADERS } from './sheetToProject';
+import type { Sheet, ColumnMapping } from '../../types';
+
+function makeCell(row: number, col: number, value: string) {
+  return { [`${row}:${col}`]: { rawValue: value, computedValue: value } };
+}
+
+function makeSheet(cells: Record<string, { rawValue: string; computedValue: string }>, colCount = 6, rowCount = 5): Sheet {
+  return {
+    id: 'sheet-1',
+    name: 'Project Plan',
+    cells,
+    defaultColWidth: 100,
+    defaultRowHeight: 24,
+    columnWidths: {},
+    rowHeights: {},
+    columnCount: colCount,
+    rowCount: rowCount,
+    frozenColumns: 0,
+    frozenRows: 0,
+  };
+}
+
+describe('sheetToProject', () => {
+  describe('detectColumnMapping', () => {
+    it('detects standard column headers', () => {
+      const sheet = makeSheet({
+        ...makeCell(0, 0, 'Task'),
+        ...makeCell(0, 1, 'Start Date'),
+        ...makeCell(0, 2, 'End Date'),
+        ...makeCell(0, 3, 'Progress'),
+        ...makeCell(1, 0, 'My Task'),
+        ...makeCell(1, 1, '2025-01-15'),
+      });
+
+      const mapping = detectColumnMapping(sheet);
+      expect(mapping).not.toBeNull();
+      expect(mapping!.taskCol).toBe(0);
+      expect(mapping!.startDateCol).toBe(1);
+      expect(mapping!.endDateCol).toBe(2);
+      expect(mapping!.progressCol).toBe(3);
+      expect(mapping!.headerRow).toBe(0);
+    });
+
+    it('detects alternate header names', () => {
+      const sheet = makeSheet({
+        ...makeCell(0, 0, 'Name'),
+        ...makeCell(0, 1, 'Start'),
+        ...makeCell(0, 2, 'Due'),
+      });
+
+      const mapping = detectColumnMapping(sheet);
+      expect(mapping).not.toBeNull();
+      expect(mapping!.taskCol).toBe(0);
+      expect(mapping!.startDateCol).toBe(1);
+      expect(mapping!.endDateCol).toBe(2);
+    });
+
+    it('returns null when no task column found', () => {
+      const sheet = makeSheet({
+        ...makeCell(0, 0, 'Foo'),
+        ...makeCell(0, 1, 'Bar'),
+      });
+
+      expect(detectColumnMapping(sheet)).toBeNull();
+    });
+
+    it('detects header row not at top', () => {
+      const sheet = makeSheet({
+        ...makeCell(0, 0, ''),
+        ...makeCell(1, 0, 'Task'),
+        ...makeCell(1, 1, 'Start'),
+        ...makeCell(1, 2, 'End'),
+      }, 3, 5);
+
+      const mapping = detectColumnMapping(sheet);
+      expect(mapping).not.toBeNull();
+      expect(mapping!.headerRow).toBe(1);
+    });
+  });
+
+  describe('sheetToProject', () => {
+    function makeBasicSheet(): Sheet {
+      return makeSheet({
+        ...makeCell(0, 0, 'Task'),
+        ...makeCell(0, 1, 'Start Date'),
+        ...makeCell(0, 2, 'End Date'),
+        ...makeCell(0, 3, 'Progress'),
+        ...makeCell(0, 4, 'Parent'),
+        ...makeCell(0, 5, 'Dependency'),
+        ...makeCell(1, 0, 'Planning Phase'),
+        ...makeCell(1, 1, '2025-01-01'),
+        ...makeCell(1, 2, '2025-01-15'),
+        ...makeCell(1, 3, '50'),
+        ...makeCell(2, 0, 'Research'),
+        ...makeCell(2, 1, '2025-01-01'),
+        ...makeCell(2, 2, '2025-01-05'),
+        ...makeCell(2, 3, '100'),
+        ...makeCell(2, 4, 'Planning Phase'),
+        ...makeCell(3, 0, 'Design'),
+        ...makeCell(3, 1, '2025-01-06'),
+        ...makeCell(3, 2, '2025-01-15'),
+        ...makeCell(3, 3, '0'),
+        ...makeCell(3, 4, 'Planning Phase'),
+        ...makeCell(3, 5, '2'),
+      }, 6, 5);
+    }
+
+    it('converts sheet data to project model', () => {
+      const sheet = makeBasicSheet();
+      const mapping: ColumnMapping = {
+        taskCol: 0,
+        startDateCol: 1,
+        endDateCol: 2,
+        durationCol: null,
+        parentCol: 4,
+        dependencyCol: 5,
+        progressCol: 3,
+        resourceCol: null,
+        milestoneCol: null,
+        colorCol: null,
+        notesCol: null,
+        headerRow: 0,
+      };
+
+      const project = sheetToProject(sheet, mapping);
+      expect(project.tasks).toHaveLength(3);
+      expect(project.tasks[0].name).toBe('Planning Phase');
+      expect(project.tasks[0].startDate).toBe('2025-01-01');
+      expect(project.tasks[0].endDate).toBe('2025-01-15');
+      expect(project.tasks[0].progress).toBe(50);
+    });
+
+    it('resolves parent references by name', () => {
+      const sheet = makeBasicSheet();
+      const mapping: ColumnMapping = {
+        taskCol: 0,
+        startDateCol: 1,
+        endDateCol: 2,
+        durationCol: null,
+        parentCol: 4,
+        dependencyCol: 5,
+        progressCol: 3,
+        resourceCol: null,
+        milestoneCol: null,
+        colorCol: null,
+        notesCol: null,
+        headerRow: 0,
+      };
+
+      const project = sheetToProject(sheet, mapping);
+      // Research and Design should have Planning Phase as parent
+      const research = project.tasks.find((t) => t.name === 'Research');
+      const planningPhase = project.tasks.find((t) => t.name === 'Planning Phase');
+      expect(research!.parentId).toBe(planningPhase!.id);
+    });
+
+    it('resolves dependency references by row number', () => {
+      const sheet = makeBasicSheet();
+      const mapping: ColumnMapping = {
+        taskCol: 0,
+        startDateCol: 1,
+        endDateCol: 2,
+        durationCol: null,
+        parentCol: 4,
+        dependencyCol: 5,
+        progressCol: 3,
+        resourceCol: null,
+        milestoneCol: null,
+        colorCol: null,
+        notesCol: null,
+        headerRow: 0,
+      };
+
+      const project = sheetToProject(sheet, mapping);
+      // Design row has dependency "2" which is Research (row 2 in sheet = index 1 in tasks)
+      const design = project.tasks.find((t) => t.name === 'Design');
+      expect(design!.dependencies.length).toBeGreaterThan(0);
+    });
+
+    it('skips empty rows', () => {
+      const sheet = makeSheet({
+        ...makeCell(0, 0, 'Task'),
+        ...makeCell(0, 1, 'Start'),
+        ...makeCell(0, 2, 'End'),
+        ...makeCell(1, 0, 'Task 1'),
+        ...makeCell(1, 1, '2025-01-01'),
+        ...makeCell(1, 2, '2025-01-05'),
+        ...makeCell(2, 0, ''), // Empty row
+        ...makeCell(3, 0, 'Task 2'),
+        ...makeCell(3, 1, '2025-01-06'),
+        ...makeCell(3, 2, '2025-01-10'),
+      }, 3, 5);
+
+      const mapping: ColumnMapping = {
+        taskCol: 0,
+        startDateCol: 1,
+        endDateCol: 2,
+        durationCol: null,
+        parentCol: null,
+        dependencyCol: null,
+        progressCol: null,
+        resourceCol: null,
+        milestoneCol: null,
+        colorCol: null,
+        notesCol: null,
+        headerRow: 0,
+      };
+
+      const project = sheetToProject(sheet, mapping);
+      expect(project.tasks).toHaveLength(2);
+    });
+
+    it('computes project date range', () => {
+      const sheet = makeBasicSheet();
+      const mapping: ColumnMapping = {
+        taskCol: 0,
+        startDateCol: 1,
+        endDateCol: 2,
+        durationCol: null,
+        parentCol: null,
+        dependencyCol: null,
+        progressCol: null,
+        resourceCol: null,
+        milestoneCol: null,
+        colorCol: null,
+        notesCol: null,
+        headerRow: 0,
+      };
+
+      const project = sheetToProject(sheet, mapping);
+      expect(project.startDate).toBe('2025-01-01');
+      expect(project.endDate).toBe('2025-01-15');
+    });
+
+    it('parses percentage progress values', () => {
+      const sheet = makeSheet({
+        ...makeCell(0, 0, 'Task'),
+        ...makeCell(0, 1, 'Progress'),
+        ...makeCell(1, 0, 'Task 1'),
+        ...makeCell(1, 1, '75%'),
+      }, 2, 3);
+
+      const mapping: ColumnMapping = {
+        taskCol: 0,
+        startDateCol: -1,
+        endDateCol: -1,
+        durationCol: null,
+        parentCol: null,
+        dependencyCol: null,
+        progressCol: 1,
+        resourceCol: null,
+        milestoneCol: null,
+        colorCol: null,
+        notesCol: null,
+        headerRow: 0,
+      };
+
+      const project = sheetToProject(sheet, mapping);
+      expect(project.tasks[0].progress).toBe(75);
+    });
+  });
+
+  describe('projectModelToProject', () => {
+    it('builds WBSTask tree from flat tasks', () => {
+      const model = {
+        id: 'proj-1',
+        name: 'Test Project',
+        description: 'Test',
+        startDate: '2025-01-01',
+        endDate: '2025-01-31',
+        tasks: [
+          { id: 't1', name: 'Phase 1', startDate: '2025-01-01', endDate: '2025-01-15', duration: 15, parentId: null, dependencies: [], progress: 0, resourceId: null, isMilestone: false, color: '#3B82F6', notes: '' },
+          { id: 't2', name: 'Task A', startDate: '2025-01-01', endDate: '2025-01-05', duration: 5, parentId: 't1', dependencies: [], progress: 0, resourceId: null, isMilestone: false, color: '#3B82F6', notes: '' },
+          { id: 't3', name: 'Task B', startDate: '2025-01-06', endDate: '2025-01-15', duration: 10, parentId: 't1', dependencies: ['t2'], progress: 0, resourceId: null, isMilestone: false, color: '#3B82F6', notes: '' },
+        ],
+        risks: [],
+      };
+
+      const project = projectModelToProject(model);
+      expect(project.wbs).toHaveLength(1); // Phase 1 is root
+      expect(project.wbs[0].children).toHaveLength(2); // Task A and Task B
+      expect(project.wbs[0].isSummary).toBe(true);
+      expect(project.wbs[0].children[0].name).toBe('Task A'); // First child
+      expect(project.wbs[0].children[1].dependencies[0].predecessorId).toBe('t2'); // Task B depends on Task A
+    });
+
+    it('sets task levels correctly', () => {
+      const model = {
+        id: 'proj-1',
+        name: 'Test',
+        description: '',
+        startDate: '2025-01-01',
+        endDate: '2025-01-31',
+        tasks: [
+          { id: 't1', name: 'Root', startDate: '2025-01-01', endDate: '2025-01-31', duration: 30, parentId: null, dependencies: [], progress: 0, resourceId: null, isMilestone: false, color: '#3B82F6', notes: '' },
+          { id: 't2', name: 'Child', startDate: '2025-01-01', endDate: '2025-01-15', duration: 15, parentId: 't1', dependencies: [], progress: 0, resourceId: null, isMilestone: false, color: '#3B82F6', notes: '' },
+        ],
+        risks: [],
+      };
+
+      const project = projectModelToProject(model);
+      expect(project.wbs[0].level).toBe(0);
+      expect(project.wbs[0].children[0].level).toBe(1);
+    });
+
+    it('converts risks', () => {
+      const model = {
+        id: 'proj-1',
+        name: 'Test',
+        description: '',
+        startDate: '2025-01-01',
+        endDate: '2025-01-31',
+        tasks: [],
+        risks: [
+          { id: 'r1', title: 'Server down', category: 'technical', probability: 4, impact: 5, status: 'identified', ownerId: null, mitigationPlan: 'Add redundancy', notes: '' },
+        ],
+      };
+
+      const project = projectModelToProject(model);
+      expect(project.risks).toHaveLength(1);
+      expect(project.risks[0].title).toBe('Server down');
+      expect(project.risks[0].probability).toBe(4);
+      expect(project.risks[0].impact).toBe(5);
+    });
+  });
+
+  describe('createProjectSheet', () => {
+    it('creates a sheet with headers', () => {
+      const sheet = createProjectSheet();
+      expect(sheet.name).toBe('Project Plan');
+      expect(sheet.columnCount).toBe(PROJECT_SHEET_HEADERS.length);
+      expect(sheet.cells['0:0']?.rawValue).toBe('Task');
+      expect(sheet.cells['0:1']?.rawValue).toBe('Start Date');
+      expect(sheet.cells['0:2']?.rawValue).toBe('End Date');
+    });
+
+    it('applies bold header styling', () => {
+      const sheet = createProjectSheet();
+      expect(sheet.cells['0:0']?.style?.fontWeight).toBe('bold');
+      expect(sheet.cells['0:0']?.style?.backgroundColor).toBe('#EFF6FF');
+    });
+
+    it('includes sample rows by default', () => {
+      const sheet = createProjectSheet();
+      expect(sheet.rowCount).toBeGreaterThan(1);
+      expect(sheet.cells['1:0']?.rawValue).toBe('Project Planning');
+    });
+
+    it('can exclude sample rows', () => {
+      const sheet = createProjectSheet('My Project', false);
+      expect(sheet.rowCount).toBe(2); // header + 1 blank
+      expect(sheet.cells['1:0']).toBeUndefined();
+    });
+
+    it('freezes header row and first column', () => {
+      const sheet = createProjectSheet();
+      expect(sheet.frozenRows).toBe(1);
+      expect(sheet.frozenColumns).toBe(1);
+    });
+
+    it('sets custom column widths', () => {
+      const sheet = createProjectSheet();
+      expect(sheet.columnWidths[0]).toBe(200);
+      expect(sheet.columnWidths[10]).toBe(180);
+    });
+
+    it('creates unique sheet IDs', () => {
+      const sheet1 = createProjectSheet();
+      const sheet2 = createProjectSheet();
+      expect(sheet1.id).not.toBe(sheet2.id);
+    });
+  });
+
+  describe('getDefaultColumnMapping', () => {
+    it('returns correct column indices', () => {
+      const mapping = getDefaultColumnMapping();
+      expect(mapping.taskCol).toBe(0);
+      expect(mapping.startDateCol).toBe(1);
+      expect(mapping.endDateCol).toBe(2);
+      expect(mapping.durationCol).toBe(3);
+      expect(mapping.parentCol).toBe(4);
+      expect(mapping.dependencyCol).toBe(5);
+      expect(mapping.progressCol).toBe(6);
+      expect(mapping.resourceCol).toBe(7);
+      expect(mapping.milestoneCol).toBe(8);
+      expect(mapping.colorCol).toBe(9);
+      expect(mapping.notesCol).toBe(10);
+      expect(mapping.headerRow).toBe(0);
+    });
+
+    it('mapping matches PROJECT_SHEET_HEADERS', () => {
+      const mapping = getDefaultColumnMapping();
+      expect(PROJECT_SHEET_HEADERS[mapping.taskCol]).toBe('Task');
+      expect(PROJECT_SHEET_HEADERS[mapping.startDateCol]).toBe('Start Date');
+      expect(PROJECT_SHEET_HEADERS[mapping.endDateCol]).toBe('End Date');
+    });
+  });
+});
