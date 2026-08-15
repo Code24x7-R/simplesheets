@@ -10,7 +10,7 @@
  * Views: Table (the sheet itself), WBS (tree), Gantt (timeline)
  */
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useRef } from 'react';
 import { GanttChart } from './GanttChart';
 import { RiskRegister } from './RiskRegister';
 import { RiskMatrix } from './RiskMatrix';
@@ -65,6 +65,9 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
   }>({ open: false, resource: null });
 
   const [resourceListOpen, setResourceListOpen] = useState(false);
+
+  // Gantt chart scroll ref for calendar navigation
+  const ganttContainerRef = useRef<HTMLDivElement>(null);
 
   // Derived values
   const riskSummary = useMemo(() => getRiskSummary(project), [project]);
@@ -132,6 +135,44 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
 
   function handleToggleCollapse(taskId: string) {
     setProject((prev) => ({ ...prev, wbs: toggleCollapse(prev.wbs, taskId) }));
+  }
+
+  // ─── Gantt Calendar Navigation ─────────────────────────────────────
+
+  /**
+   * Scroll the Gantt chart to show a specific date.
+   */
+  function scrollGanttToDate(date: string) {
+    if (!ganttContainerRef.current) return;
+    const start = new Date(project.startDate + 'T00:00:00');
+    const target = new Date(date + 'T00:00:00');
+    const daysDiff = Math.floor((target.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+    const dayWidth = zoom === 'day' ? 40 : zoom === 'week' ? 14 : 4;
+    const scrollX = Math.max(0, daysDiff * dayWidth - 160); // 160 = left margin
+    ganttContainerRef.current.scrollTo({ left: scrollX, behavior: 'smooth' });
+  }
+
+  /**
+   * Navigate Gantt view by period (prev/next month, week, etc.).
+   */
+  function navigateGantt(direction: 'prev' | 'next', period: 'month' | 'week') {
+    if (!ganttContainerRef.current) return;
+    const dayWidth = zoom === 'day' ? 40 : zoom === 'week' ? 14 : 4;
+    const periodDays = period === 'month' ? 30 : 7;
+    const scrollAmount = periodDays * dayWidth;
+    const currentScroll = ganttContainerRef.current.scrollLeft;
+    const newScroll = direction === 'prev'
+      ? Math.max(0, currentScroll - scrollAmount)
+      : currentScroll + scrollAmount;
+    ganttContainerRef.current.scrollTo({ left: newScroll, behavior: 'smooth' });
+  }
+
+  /**
+   * Jump Gantt view to today's date.
+   */
+  function jumpToToday() {
+    const today = new Date().toISOString().slice(0, 10);
+    scrollGanttToDate(today);
   }
 
   /**
@@ -393,20 +434,62 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
 
           {/* Zoom controls (only for Gantt) */}
           {viewMode === 'gantt' && (
-            <div className="flex rounded border border-gray-200 overflow-hidden ml-2">
-              {(['day', 'week', 'month'] as const).map((z) => (
+            <div className="flex items-center gap-1 ml-2">
+              {/* Calendar navigation */}
+              <div className="flex rounded border border-gray-200 overflow-hidden">
                 <button
-                  key={z}
-                  className={`px-2 py-1 text-xs ${
-                    zoom === z
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-white text-gray-700 hover:bg-gray-50'
-                  }`}
-                  onClick={() => setZoom(z)}
+                  className="px-2 py-1 text-xs bg-white text-gray-700 hover:bg-gray-50 border-r border-gray-200"
+                  onClick={() => navigateGantt('prev', 'month')}
+                  title="Previous month"
                 >
-                  {z.charAt(0).toUpperCase() + z.slice(1)}
+                  ◀◀
                 </button>
-              ))}
+                <button
+                  className="px-2 py-1 text-xs bg-white text-gray-700 hover:bg-gray-50 border-r border-gray-200"
+                  onClick={() => navigateGantt('prev', 'week')}
+                  title="Previous week"
+                >
+                  ◀
+                </button>
+                <button
+                  className="px-2 py-1 text-xs bg-blue-50 text-blue-700 hover:bg-blue-100 font-medium"
+                  onClick={jumpToToday}
+                  title="Jump to today"
+                >
+                  Today
+                </button>
+                <button
+                  className="px-2 py-1 text-xs bg-white text-gray-700 hover:bg-gray-50 border-l border-gray-200"
+                  onClick={() => navigateGantt('next', 'week')}
+                  title="Next week"
+                >
+                  ▶
+                </button>
+                <button
+                  className="px-2 py-1 text-xs bg-white text-gray-700 hover:bg-gray-50 border-l border-gray-200"
+                  onClick={() => navigateGantt('next', 'month')}
+                  title="Next month"
+                >
+                  ▶▶
+                </button>
+              </div>
+
+              {/* Zoom level */}
+              <div className="flex rounded border border-gray-200 overflow-hidden">
+                {(['day', 'week', 'month'] as const).map((z) => (
+                  <button
+                    key={z}
+                    className={`px-2 py-1 text-xs ${
+                      zoom === z
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-white text-gray-700 hover:bg-gray-50'
+                    }`}
+                    onClick={() => setZoom(z)}
+                  >
+                    {z.charAt(0).toUpperCase() + z.slice(1)}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
 
@@ -491,20 +574,22 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
         {/* Main content */}
         <div className="flex-1 overflow-auto p-4">
           {viewMode === 'gantt' && (
-            <GanttChart
-              project={project}
-              zoom={zoom}
-              selectedTaskId={selectedTaskId}
-              criticalPath={[]}
-              onTaskSelect={setSelectedTaskId}
-              onTaskDoubleClick={handleEditTask}
-              onTaskToggleCollapse={handleToggleCollapse}
-              showCriticalPath
-              showProgress
-              showRiskHeatmap={false}
-              showTodayMarker
-              showDependencies
-            />
+            <div ref={ganttContainerRef} className="flex-1 overflow-auto">
+              <GanttChart
+                project={project}
+                zoom={zoom}
+                selectedTaskId={selectedTaskId}
+                criticalPath={[]}
+                onTaskSelect={setSelectedTaskId}
+                onTaskDoubleClick={handleEditTask}
+                onTaskToggleCollapse={handleToggleCollapse}
+                showCriticalPath
+                showProgress
+                showRiskHeatmap={false}
+                showTodayMarker
+                showDependencies
+              />
+            </div>
           )}
           {viewMode === 'risk-register' && (
             <RiskRegister
