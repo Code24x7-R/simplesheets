@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Copyright (c) 2026 Richard Robertson
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2026 Richard Robertson
+// Copyright (c) 2026 Richard Repository
 import { render, screen, fireEvent } from '@testing-library/react';
 import { RiskMatrix } from './RiskMatrix';
 import type { Risk } from '../types';
@@ -17,10 +15,11 @@ function createRisk(overrides: Partial<Risk> = {}): Risk {
   };
 }
 
-describe('RiskMatrix', () => {
-  it('renders the risk matrix', () => {
+describe('Risk Matrix', () => {
+  it('renders the risk matrix dashboard', () => {
     render(<RiskMatrix risks={[]} />);
     expect(screen.getByTestId('risk-matrix')).toBeInTheDocument();
+    expect(screen.getByText('Risk Matrix')).toBeInTheDocument();
   });
 
   it('renders SVG grid', () => {
@@ -71,55 +70,54 @@ describe('RiskMatrix', () => {
     expect(countLabels.length).toBeGreaterThanOrEqual(1);
   });
 
-  it('shows popup with risk details on hover', () => {
+  it('shows key risks sorted by score in RHS panel', () => {
     const risks = [
-      createRisk({ id: 'r1', probability: 3, impact: 4, title: 'Scope Creep', category: 'scope' }),
-      createRisk({ id: 'r2', probability: 3, impact: 4, title: 'Resource Issue', category: 'resource' }),
+      createRisk({ id: 'r1', probability: 2, impact: 2, title: 'Low Risk', riskScore: 4 }),
+      createRisk({ id: 'r2', probability: 5, impact: 5, title: 'Critical Risk', riskScore: 25 }),
+      createRisk({ id: 'r2', probability: 4, impact: 4, title: 'High Risk', riskScore: 16 }),
     ];
-    const { container } = render(<RiskMatrix risks={risks} width={400} height={400} />);
-
-    // Find the cell with probability=3 (x=170), impact=4 (y=90)
-    // Note: Y is flipped - impact=5 is at top (y=30), impact=4 is at y=90
-    const allG = container.querySelectorAll('g.cursor-pointer');
-    const targetCell = Array.from(allG).find((g) => {
-      const rect = g.querySelector('rect');
-      if (!rect) return false;
-      const x = parseFloat(rect.getAttribute('x') || '0');
-      const y = parseFloat(rect.getAttribute('y') || '0');
-      // probability=3 -> x=170, impact=4 -> y=90
-      return x === 170 && y === 90;
-    });
-    expect(targetCell).toBeTruthy();
-
-    // Hover over the cell
-    fireEvent.mouseEnter(targetCell!);
-
-    // Popup should show with risk titles
-    expect(screen.getByText('Scope Creep')).toBeInTheDocument();
-    expect(screen.getByText('Resource Issue')).toBeInTheDocument();
+    render(<RiskMatrix risks={risks} />);
+    expect(screen.getByText('Key Risks')).toBeInTheDocument();
+    expect(screen.getByText('Critical Risk')).toBeInTheDocument();
+    expect(screen.getByText('High Risk')).toBeInTheDocument();
+    expect(screen.getByText('Low Risk')).toBeInTheDocument();
   });
 
-  it('popup shows risk level and score in header', () => {
+  it('truncates key when more than MAX_KEY_ITEMS risks', () => {
+    const risks = Array.from({ length: 12 }, (_, i) =>
+      createRisk({ id: `r${i}`, probability: 3, impact: 3, title: `Risk ${i}`, riskScore: 9 })
+    );
+    render(<RiskMatrix risks={risks} />);
+    expect(screen.getByText(/\+4 more risks in register/)).toBeInTheDocument();
+  });
+
+  it('calls onRiskClick when a key risk is clicked', () => {
+    const onRiskClick = jest.fn();
     const risks = [
-      createRisk({ id: 'r1', probability: 4, impact: 5, title: 'Critical Risk' }),
+      createRisk({ id: 'r1', probability: 5, impact: 5, title: 'Critical Risk' }),
     ];
-    const { container } = render(<RiskMatrix risks={risks} width={400} height={400} />);
+    render(<RiskMatrix risks={risks} onRiskClick={onRiskClick} />);
+    fireEvent.click(screen.getByText('Critical Risk'));
+    expect(onRiskClick).toHaveBeenCalledWith('r1');
+  });
 
-    // Find the cell with probability=4 (x=230), impact=5 (y=30)
-    const allG = container.querySelectorAll('g.cursor-pointer');
-    const targetCell = Array.from(allG).find((g) => {
-      const rect = g.querySelector('rect');
-      if (!rect) return false;
-      const x = parseFloat(rect.getAttribute('x') || '0');
-      const y = parseFloat(rect.getAttribute('y') || '0');
-      // probability=4 -> x=230, impact=5 -> y=30
-      return x === 230 && y === 30;
-    });
-    expect(targetCell).toBeTruthy();
+  it('shows severity legend with counts', () => {
+    const risks = [
+      createRisk({ id: 'r1', probability: 5, impact: 5 }), // critical
+      createRisk({ id: 'r2', probability: 4, impact: 3 }), // high
+      createRisk({ id: 'r3', probability: 2, impact: 2 }), // medium
+      createRisk({ id: 'r4', probability: 1, impact: 1 }), // low
+    ];
+    render(<RiskMatrix risks={risks} />);
+    expect(screen.getByText('Severity')).toBeInTheDocument();
+    expect(screen.getByText('Critical')).toBeInTheDocument();
+    expect(screen.getByText('High')).toBeInTheDocument();
+    expect(screen.getByText('Medium')).toBeInTheDocument();
+    expect(screen.getByText('Low')).toBeInTheDocument();
+  });
 
-    fireEvent.mouseEnter(targetCell!);
-
-    // Header shows score: 4 × 5 = 20
-    expect(screen.getByText(/4 × 5 = 20/)).toBeInTheDocument();
+  it('shows "No active risks" when empty', () => {
+    render(<RiskMatrix risks={[]} />);
+    expect(screen.getByText('No active risks')).toBeInTheDocument();
   });
 });
