@@ -26,6 +26,7 @@ import { AccountingDashboard } from './AccountingDashboard';
 import { DependencyDrawer } from './DependencyDrawer';
 import { EvmReport } from './EvmReport';
 import { MaterialDashboard } from './MaterialDashboard';
+import { MaterialEditorModal } from './MaterialEditorModal';
 import { sheetToProject, projectModelToProject } from './sheetToProject';
 import { addTask, removeTask, updateTask, toggleCollapse, findTaskById, getAllTasks, addResource, updateResource, removeResource } from './treeOps';
 import { addRisk, updateRisk, removeRisk, getRiskSummary } from './risks';
@@ -70,6 +71,11 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
   }>({ open: false, resource: null });
 
   const [resourceListOpen, setResourceListOpen] = useState(false);
+
+  const [materialModal, setMaterialModal] = useState<{
+    open: boolean;
+    material: import('../types').Material | null;
+  }>({ open: false, material: null });
 
   // Gantt chart scroll ref for calendar navigation
   const ganttContainerRef = useRef<HTMLDivElement>(null);
@@ -418,6 +424,43 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
     setShowCalendarConfig(false);
   }
 
+  // ─── Material CRUD ──────────────────────────────────────────────────
+
+  function handleAddMaterial() {
+    setMaterialModal({ open: true, material: null });
+  }
+
+  function handleEditMaterial(materialId: string) {
+    const material = project.materials?.find((m) => m.id === materialId);
+    if (material) {
+      setMaterialModal({ open: true, material });
+    }
+  }
+
+  function handleMaterialSave(material: import('../types').Material) {
+    setProject((prev) => {
+      const materials = prev.materials ?? [];
+      const existingIndex = materials.findIndex((m) => m.id === material.id);
+      if (existingIndex >= 0) {
+        // Update existing
+        const updated = [...materials];
+        updated[existingIndex] = material;
+        return { ...prev, materials: updated };
+      }
+      // Add new
+      return { ...prev, materials: [...materials, material] };
+    });
+    setMaterialModal({ open: false, material: null });
+  }
+
+  function handleMaterialDelete(materialId: string) {
+    setProject((prev) => ({
+      ...prev,
+      materials: (prev.materials ?? []).filter((m) => m.id !== materialId),
+    }));
+    setMaterialModal({ open: false, material: null });
+  }
+
   function handleSaveToSheet() {
     // Save current project state back to workbook
     const model: ProjectModel = {
@@ -717,8 +760,8 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
           {viewMode === 'materials' && (
             <MaterialDashboard
               project={project}
-              onAddMaterial={() => console.log('Add material - TODO')}
-              onEditMaterial={(id) => console.log('Edit material:', id, '- TODO')}
+              onAddMaterial={handleAddMaterial}
+              onEditMaterial={handleEditMaterial}
             />
           )}
         </div>
@@ -783,6 +826,16 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
           calendar={project.calendar}
           onClose={() => setShowCalendarConfig(false)}
           onSave={handleCalendarSave}
+        />
+      )}
+
+      {/* Material Editor Modal */}
+      {materialModal.open && (
+        <MaterialEditorModal
+          material={materialModal.material}
+          onClose={() => setMaterialModal({ open: false, material: null })}
+          onSave={handleMaterialSave}
+          onDelete={materialModal.material ? () => handleMaterialDelete(materialModal.material!.id) : undefined}
         />
       )}
     </div>
