@@ -21,11 +21,17 @@ import { formatDate } from './calendar';
 import { rollUpRiskExposure } from './rollups';
 import { getRiskLevel } from './risks';
 
-// ─── Helper: Get resource name for a task ─────────────────────────────────
-function getResourceName(task: WBSTask, project: Project): string | null {
+// ─── Helper: Get resource info for a task ───────────────────────────────
+interface ResourceInfo {
+  name: string;
+  color: string;
+}
+
+function getResourceInfo(task: WBSTask, project: Project): ResourceInfo | null {
   if (!task.responsibleResourceId) return null;
   const resource = project.resources.find((r) => r.id === task.responsibleResourceId);
-  return resource?.name ?? null;
+  if (!resource) return null;
+  return { name: resource.name, color: resource.color };
 }
 
 // ─── Constants ──────────────────────────────────────────────────────────────
@@ -182,10 +188,10 @@ export function GanttChart({
               <g key={task.id} onClick={() => onTaskSelect?.(task.id)} onDoubleClick={() => onTaskDoubleClick?.(task.id)} className="cursor-pointer">
                 {/* Tooltip with task info */}
                 {(() => {
-                  const resourceName = getResourceName(task, project);
+                  const resourceInfo = getResourceInfo(task, project);
                   const tooltipText = [
                     task.name,
-                    resourceName ? `Resource: ${resourceName}` : null,
+                    resourceInfo ? `Resource: ${resourceInfo.name}` : null,
                     `Progress: ${task.progress}%`,
                     `Dates: ${task.startDate} to ${task.endDate}`,
                   ]
@@ -251,27 +257,32 @@ export function GanttChart({
                   />
                 ))}
 
-                {/* Task bar */}
-                {task.isMilestone ? (
-                  <polygon
-                    points={`${MARGIN_LEFT + layout.x},${y + BAR_HEIGHT / 2} ${MARGIN_LEFT + layout.x + MILESTONE_SIZE},${y} ${MARGIN_LEFT + layout.x + MILESTONE_SIZE * 2},${y + BAR_HEIGHT / 2} ${MARGIN_LEFT + layout.x + MILESTONE_SIZE},${y + BAR_HEIGHT}`}
-                    fill={showRiskHeatmap && layout.riskLevel ? RISK_COLORS[layout.riskLevel] : task.color}
-                    stroke={isCritical ? '#DC2626' : 'none'}
-                    strokeWidth={isCritical ? 2 : 0}
-                  />
-                ) : (
-                  <rect
-                    x={MARGIN_LEFT + layout.x}
-                    y={y}
-                    width={Math.max(layout.width, 4)}
-                    height={BAR_HEIGHT}
-                    rx={3}
-                    fill={showRiskHeatmap && layout.riskLevel ? RISK_COLORS[layout.riskLevel] : task.color}
-                    opacity={task.isSummary ? 0.7 : 0.9}
-                    stroke={isCritical ? '#DC2626' : 'none'}
-                    strokeWidth={isCritical ? 2 : 0}
-                  />
-                )}
+                {/* Task bar - use resource color if assigned */}
+                {(() => {
+                  const resourceInfo = getResourceInfo(task, project);
+                  const barColor = resourceInfo ? resourceInfo.color : task.color;
+                  const fillColor = showRiskHeatmap && layout.riskLevel ? RISK_COLORS[layout.riskLevel] : barColor;
+                  return task.isMilestone ? (
+                    <polygon
+                      points={`${MARGIN_LEFT + layout.x},${y + BAR_HEIGHT / 2} ${MARGIN_LEFT + layout.x + MILESTONE_SIZE},${y} ${MARGIN_LEFT + layout.x + MILESTONE_SIZE * 2},${y + BAR_HEIGHT / 2} ${MARGIN_LEFT + layout.x + MILESTONE_SIZE},${y + BAR_HEIGHT}`}
+                      fill={fillColor}
+                      stroke={isCritical ? '#DC2626' : 'none'}
+                      strokeWidth={isCritical ? 2 : 0}
+                    />
+                  ) : (
+                    <rect
+                      x={MARGIN_LEFT + layout.x}
+                      y={y}
+                      width={Math.max(layout.width, 4)}
+                      height={BAR_HEIGHT}
+                      rx={3}
+                      fill={fillColor}
+                      opacity={task.isSummary ? 0.7 : 0.9}
+                      stroke={isCritical ? '#DC2626' : 'none'}
+                      strokeWidth={isCritical ? 2 : 0}
+                    />
+                  );
+                })()}
 
                 {/* Progress overlay */}
                 {showProgress && !task.isMilestone && task.progress > 0 && (

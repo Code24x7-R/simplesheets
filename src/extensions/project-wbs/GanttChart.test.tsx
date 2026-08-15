@@ -231,4 +231,16 @@ describe('GanttChart', () => {
     rerender(<GanttChart project={project} zoom="month" width={800} height={400} />);
     expect(document.querySelector('svg')).toBeInTheDocument();
   });
+
+  it('shows resource name in tooltip when task has assigned resource', () => {
+    const resource = { id: 'res-1', name: 'John Doe', role: 'Developer', costRate: 100, costCurrency: 'USD', availability: 100, color: '#3B82EF' };
+    const task = createTask({ responsibleResourceId: 'res-1' });
+    const project = createProject({ wbs: [task], resources: [resource] });
+    render(<GanttChart project={project} width={800} height={400} />);
+    // The title element should contain the resource name
+    const titleElements = document.querySelectorAll('title');
+    expect(titleElements.length).toBeGreaterThan(0);
+    const taskTitle = Array.from(titleElements).find((t) => t.textContent?.includes('Resource: John Doe'));
+    expect(taskTitle).toBeInTheDocument();
+  });
 });

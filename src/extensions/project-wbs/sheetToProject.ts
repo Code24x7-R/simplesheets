@@ -174,6 +174,23 @@ export function workbookToProject(
   const resourcesSheet = workbook.sheets.find((s) => s.name === RESOURCES_SHEET_NAME);
   const resources = resourcesSheet ? parseAllResources(resourcesSheet) : [];
 
+  // Build resource name-to-ID lookup map
+  const resourceNameToId = new Map<string, string>();
+  for (const r of resources) {
+    resourceNameToId.set(r.name.toLowerCase(), r.id);
+  }
+
+  // Resolve resource names in tasks to resource IDs
+  for (const task of tasks) {
+    if (task.resourceId) {
+      const matchedId = resourceNameToId.get(task.resourceId.toLowerCase());
+      if (matchedId) {
+        task.resourceId = matchedId;
+      }
+      // If no match found, keep the name as-is (might be a resource not in the list)
+    }
+  }
+
   return {
     id: `proj-${Date.now()}`,
     name: projectName ?? tasksSheetName ?? 'Project Plan',
@@ -411,6 +428,11 @@ function parseTaskRow(sheet: Sheet, row: number, mapping: ColumnMapping): TaskRo
     computedEndDate = endDate;
   }
 
+  // Parse resource assignment from resource column
+  const resourceName = mapping.resourceCol !== null
+    ? getCellStringValue(sheet, row, mapping.resourceCol)
+    : null;
+
   return {
     id: `task-${row}-${Date.now()}`,
     name,
@@ -420,7 +442,7 @@ function parseTaskRow(sheet: Sheet, row: number, mapping: ColumnMapping): TaskRo
     parentId: null, // Resolved later
     dependencies: [], // Resolved later
     progress,
-    resourceId: null,
+    resourceId: resourceName, // Will be resolved to resource ID after resources are parsed
     isMilestone: isMilestone || duration === 1,
     color,
     notes,
