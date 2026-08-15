@@ -1,0 +1,106 @@
+{
+  "id": "software",
+  "name": "Software Development",
+  "description": "Full software development lifecycle from requirements to deployment.",
+  "category": "Software",
+  "startDate": "2026-03-01",
+  "endDate": "2026-04-13",
+  "tasks": [
+    {
+      "id": "req",
+      "name": "Requirements",
+      "startDate": "2026-03-01",
+      "endDate": "2026-03-06",
+      "children": [
+        { "id": "req-1", "name": "Stakeholder analysis", "startDate": "2026-03-01", "endDate": "2026-03-02" },
+        { "id": "req-2", "name": "User stories", "startDate": "2026-03-03", "endDate": "2026-03-05" },
+        { "id": "req-3", "name": "Requirements sign-off", "startDate": "2026-03-06", "endDate": "2026-03-06", "isMilestone": true }
+      ]
+    },
+    {
+      "id": "design-sdlc",
+      "name": "Design",
+      "startDate": "2026-03-07",
+      "endDate": "2026-03-12",
+      "children": [
+        { "id": "des-1", "name": "System architecture", "startDate": "2026-03-07", "endDate": "2026-03-09" },
+        { "id": "des-2", "name": "UI/UX design", "startDate": "2026-03-07", "endDate": "2026-03-10" },
+        { "id": "des-3", "name": "Database design", "startDate": "2026-03-10", "endDate": "2026-03-11" },
+        { "id": "des-4", "name": "Design review", "startDate": "2026-03-12", "endDate": "2026-03-12", "isMilestone": true }
+      ]
+    },
+    {
+      "id": "coding",
+      "name": "Development",
+      "startDate": "2026-03-13",
+      "endDate": "2026-03-27",
+      "children": [
+        { "id": "code-1", "name": "Sprint 1: Core features", "startDate": "2026-03-13", "endDate": "2026-03-17" },
+        { "id": "code-2", "name": "Sprint 2: API layer", "startDate": "2026-03-18", "endDate": "2026-03-22" },
+        { "id": "code-3", "name": "Sprint 3: UI polish", "startDate": "2026-03-23", "endDate": "2026-03-27" }
+      ]
+    },
+    {
+      "id": "qa-sdlc",
+      "name": "QA & Testing",
+      "startDate": "2026-04-03",
+      "endDate": "2026-04-09",
+      "children": [
+        { "id": "qa-1", "name": "Unit testing", "startDate": "2026-04-03", "endDate": "2026-04-05" },
+        { "id": "qa-2", "name": "Integration testing", "startDate": "2026-04-06", "endDate": "2026-04-07" },
+        { "id": "qa-3", "name": "UAT", "startDate": "2026-04-08", "endDate": "2026-04-09" }
+      ]
+    },
+    {
+      "id": "deploy",
+      "name": "Deployment",
+      "startDate": "2026-04-10",
+      "endDate": "2026-04-13",
+      "children": [
+        { "id": "dep-1", "name": "Staging deployment", "startDate": "2026-04-10", "endDate": "2026-04-10" },
+        { "id": "dep-2", "name": "Production cutover", "startDate": "2026-04-11", "endDate": "2026-04-11" },
+        { "id": "dep-3", "name": "Post-launch monitoring", "startDate": "2026-04-12", "endDate": "2026-04-13" }
+      ]
+    },
+    {
+      "id": "milestone-release",
+      "name": "v1.0 Release",
+      "startDate": "2026-04-13",
+      "endDate": "2026-04-13",
+      "isMilestone": true
+    }
+  ],
+  "risks": [
+    {
+      "id": "r1",
+      "title": "Technical debt accumulation",
+      "category": "technical",
+      "probability": 4,
+      "impact": 3,
+      "mitigationPlan": "Regular code reviews and refactoring sprints"
+    },
+    {
+      "id": "r2",
+      "title": "Key developer leaves",
+      "category": "resource",
+      "probability": 2,
+      "impact": 5,
+      "mitigationPlan": "Cross-train team, maintain documentation"
+    },
+    {
+      "id": "r3",
+      "title": "Integration failures",
+      "category": "technical",
+      "probability": 3,
+      "impact": 4,
+      "mitigationPlan": "Continuous integration, early testing"
+    }
+  ],
+  "resources": [
+    { "id": "pm", "name": "Project Manager", "role": "PM", "costRate": 150, "color": "#3B82F6" },
+    { "id": "arch", "name": "Tech Lead", "role": "Architecture", "costRate": 170, "color": "#8B5CF6" },
+    { "id": "dev1", "name": "Senior Dev", "role": "Dev", "costRate": 150, "color": "#10B981" },
+    { "id": "dev2", "name": "Junior Dev", "role": "Dev", "costRate": 100, "color": "#06B6D4" },
+    { "id": "qa", "name": "QA Engineer", "role": "QA", "costRate": 110, "color": "#F59E0B" }
+  ]
+}

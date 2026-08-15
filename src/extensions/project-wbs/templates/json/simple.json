@@ -1,0 +1,131 @@
+{
+  "id": "simple-wbs",
+  "name": "Simple WBS",
+  "description": "A simple customizable WBS template with planning, execution, and closure phases.",
+  "category": "Generic",
+  "startDate": "2026-01-05",
+  "endDate": "2026-01-28",
+  "tasks": [
+    {
+      "id": "t1",
+      "name": "Planning",
+      "startDate": "2026-01-05",
+      "endDate": "2026-01-09",
+      "progress": 100,
+      "children": [
+        {
+          "id": "t1-1",
+          "name": "Requirements gathering",
+          "startDate": "2026-01-05",
+          "endDate": "2026-01-07",
+          "progress": 100
+        },
+        {
+          "id": "t1-2",
+          "name": "Project plan",
+          "startDate": "2026-01-08",
+          "endDate": "2026-01-09",
+          "progress": 100
+        }
+      ]
+    },
+    {
+      "id": "t2",
+      "name": "Execution",
+      "startDate": "2026-01-12",
+      "endDate": "2026-01-23",
+      "progress": 50,
+      "children": [
+        {
+          "id": "t2-1",
+          "name": "Design",
+          "startDate": "2026-01-12",
+          "endDate": "2026-01-15",
+          "progress": 75
+        },
+        {
+          "id": "t2-2",
+          "name": "Implementation",
+          "startDate": "2026-01-17",
+          "endDate": "2026-01-23",
+          "progress": 25
+        }
+      ]
+    },
+    {
+      "id": "t3",
+      "name": "Closure",
+      "startDate": "2026-01-24",
+      "endDate": "2026-01-28",
+      "progress": 0,
+      "children": [
+        {
+          "id": "t3-1",
+          "name": "Testing",
+          "startDate": "2026-01-24",
+          "endDate": "2026-01-26",
+          "progress": 0
+        },
+        {
+          "id": "t3-2",
+          "name": "Deployment",
+          "startDate": "2026-01-27",
+          "endDate": "2026-01-28",
+          "progress": 0
+        }
+      ]
+    },
+    {
+      "id": "t4",
+      "name": "Project Complete",
+      "startDate": "2026-01-28",
+      "endDate": "2026-01-28",
+      "isMilestone": true,
+      "progress": 0
+    }
+  ],
+  "risks": [
+    {
+      "id": "risk-1",
+      "title": "Scope creep",
+      "category": "scope",
+      "probability": 3,
+      "impact": 4,
+      "status": "identified",
+      "mitigationPlan": "Regular scope reviews",
+      "identifiedDate": "2026-01-05",
+      "reviewDate": "2026-02-01"
+    },
+    {
+      "id": "risk-2",
+      "title": "Resource unavailability",
+      "category": "resource",
+      "probability": 2,
+      "impact": 3,
+      "status": "identified",
+      "mitigationPlan": "Cross-train team members",
+      "identifiedDate": "2026-01-05",
+      "reviewDate": "2026-02-01"
+    }
+  ],
+  "resources": [
+    {
+      "id": "res-1",
+      "name": "Project Manager",
+      "role": "PM",
+      "costRate": 150,
+      "costCurrency": "USD",
+      "availability": 100,
+      "color": "#3B82F6"
+    },
+    {
+      "id": "res-2",
+      "name": "Developer",
+      "role": "Dev",
+      "costRate": 120,
+      "costCurrency": "USD",
+      "availability": 100,
+      "color": "#10B981"
+    }
+  ]
+}

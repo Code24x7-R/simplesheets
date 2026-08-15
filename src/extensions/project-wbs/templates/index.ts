@@ -4,9 +4,23 @@
  * Template Registry
  *
  * Exports all project templates for use in the template picker.
+ * Supports both JSON data files and TypeScript code templates.
  */
 
 import type { ExtensionTemplate } from '../../types';
+import type { TemplateDefinition } from './types';
+import { templateToProject } from './handler';
+import type { ProjectTemplateJSON } from './types';
+import simpleJSON from './json/simple.json';
+import websiteJSON from './json/website.json';
+import softwareJSON from './json/software.json';
+
+// Cast JSON imports to strongly-typed templates
+const simpleTemplate = simpleJSON as ProjectTemplateJSON;
+const websiteTemplate = websiteJSON as ProjectTemplateJSON;
+const softwareTemplate = softwareJSON as ProjectTemplateJSON;
+
+// Import existing TypeScript templates (can be migrated to JSON over time)
 import { createSimpleWBS } from './simple';
 import { createWebsiteProject } from './website';
 import { createSoftwareProject } from './software';
@@ -20,15 +34,37 @@ import { createAgileProject } from './agile';
 import { createConstructionProject } from './construction';
 import { createMiningConsultingProject } from './mining';
 
-export interface TemplateDefinition {
-  id: string;
-  name: string;
-  description: string;
-  category: string;
-  create: () => import('../../types').Project;
-}
+/**
+ * JSON-based templates (data-driven, easily maintainable)
+ */
+const JSON_TEMPLATES: TemplateDefinition[] = [
+  {
+    id: simpleTemplate.id,
+    name: simpleTemplate.name,
+    description: simpleTemplate.description,
+    category: simpleTemplate.category,
+    create: () => templateToProject(simpleTemplate),
+  },
+  {
+    id: websiteTemplate.id,
+    name: websiteTemplate.name,
+    description: websiteTemplate.description,
+    category: websiteTemplate.category,
+    create: () => templateToProject(websiteTemplate),
+  },
+  {
+    id: softwareTemplate.id,
+    name: softwareTemplate.name,
+    description: softwareTemplate.description,
+    category: softwareTemplate.category,
+    create: () => templateToProject(softwareTemplate),
+  },
+];
 
-export const TEMPLATES: TemplateDefinition[] = [
+/**
+ * TypeScript-based templates (code-driven, for complex logic)
+ */
+const CODE_TEMPLATES: TemplateDefinition[] = [
   {
     id: 'simple-wbs',
     name: 'Simple WBS',
@@ -114,6 +150,11 @@ export const TEMPLATES: TemplateDefinition[] = [
     create: createMiningConsultingProject,
   },
 ];
+
+/**
+ * Combined template registry (JSON templates first, then code templates)
+ */
+export const TEMPLATES: TemplateDefinition[] = [...JSON_TEMPLATES, ...CODE_TEMPLATES];
 
 export function getTemplateById(id: string): TemplateDefinition | undefined {
   return TEMPLATES.find((t) => t.id === id);
