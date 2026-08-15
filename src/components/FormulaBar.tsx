@@ -563,19 +563,20 @@ export const FormulaBar = forwardRef<FormulaBarHandle, FormulaBarProps>(function
 
   // Build error display
   // Only show actual errors (not incomplete) to avoid blocking sheet tabs while typing
+  // Positioned ABOVE the formula bar so it doesn't obstruct the sheet tabs below
   const displayableErrors = validation.errors.filter((e) => e.severity === 'error');
   const errorDisplay = useMemo(() => {
     if (isEditing && displayableErrors.length > 0) {
       const error = displayableErrors[0];
       return (
-        <div className="absolute left-0 right-0 -bottom-6 bg-red-50 border border-red-200 rounded px-2 py-0.5 text-xs text-red-600 z-10">
+        <div className="absolute left-0 right-0 -top-6 bg-red-50 border border-red-200 rounded px-2 py-0.5 text-xs text-red-600 z-10">
           {error.message}
         </div>
       );
     }
     if (isEditing && validation.isIncomplete) {
       return (
-        <div className="absolute left-0 right-0 -bottom-6 bg-yellow-50 border border-yellow-200 rounded px-2 py-0.5 text-xs text-yellow-600 z-10">
+        <div className="absolute left-0 right-0 -top-6 bg-yellow-50 border border-yellow-200 rounded px-2 py-0.5 text-xs text-yellow-600 z-10">
           Incomplete formula
         </div>
       );
