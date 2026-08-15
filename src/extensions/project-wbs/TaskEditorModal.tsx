@@ -264,7 +264,7 @@ export function TaskEditorModal({
                 <select
                   value={form.effortUnit}
                   onChange={(e) => updateField('effortUnit', e.target.value as EffortUnit)}
-                  className="border border-gray-300 rounded px-2 py-1 text-sm"
+                  className="border border-gray-300 rounded px-2 py-1 text-sm min-w-[80px]"
                 >
                   {EFFORT_UNITS.map((u) => (
                     <option key={u.value} value={u.value}>
@@ -276,7 +276,7 @@ export function TaskEditorModal({
               {errors.effort && <p className="text-red-500 text-xs mt-1">{errors.effort}</p>}
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Cost ({form.costCurrency})</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Cost</label>
               <input
                 type="number"
                 value={form.cost}
