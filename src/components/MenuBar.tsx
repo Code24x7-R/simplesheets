@@ -426,7 +426,8 @@ export function MenuBar(props: MenuBarProps) {
       icon: FolderKanban,
       submenu: [
         { id: 'ext-project-new-sheet', label: 'New Project Sheet', icon: FolderKanban },
-        { id: 'sep-ext-1', label: '', separator: true },
+        { id: 'sep-ext-new', label: '', separator: true },
+        { id: 'sep-ext-1', label: 'Templates', separator: true },
         { id: 'ext-project-simple', label: 'Simple WBS', icon: FolderKanban },
         { id: 'ext-project-website', label: 'Website Project', icon: FolderKanban },
         { id: 'ext-project-software', label: 'Software Development', icon: FolderKanban },
