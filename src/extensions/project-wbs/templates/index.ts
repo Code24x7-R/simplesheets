@@ -14,11 +14,13 @@ import type { ProjectTemplateJSON } from './types';
 import simpleJSON from './json/simple.json';
 import websiteJSON from './json/website.json';
 import softwareJSON from './json/software.json';
+import realestatePhotoJSON from './json/realestate-photo.json';
 
 // Cast JSON imports to strongly-typed templates
 const simpleTemplate = simpleJSON as ProjectTemplateJSON;
 const websiteTemplate = websiteJSON as ProjectTemplateJSON;
 const softwareTemplate = softwareJSON as ProjectTemplateJSON;
+const realestatePhotoTemplate = realestatePhotoJSON as ProjectTemplateJSON;
 
 // Import existing TypeScript templates (can be migrated to JSON over time)
 import { createSimpleWBS } from './simple';
@@ -58,6 +60,13 @@ const JSON_TEMPLATES: TemplateDefinition[] = [
     description: softwareTemplate.description,
     category: softwareTemplate.category,
     create: () => templateToProject(softwareTemplate),
+  },
+  {
+    id: realestatePhotoTemplate.id,
+    name: realestatePhotoTemplate.name,
+    description: realestatePhotoTemplate.description,
+    category: realestatePhotoTemplate.category,
+    create: () => templateToProject(realestatePhotoTemplate),
   },
 ];
 

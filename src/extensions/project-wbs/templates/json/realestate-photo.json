@@ -1,0 +1,352 @@
+{
+  "id": "realestate-photo",
+  "name": "Real Estate Photoshoot",
+  "description": "Professional real estate photography project from staging to final delivery, including photography, video, drone, 3D animation, and web delivery.",
+  "category": "Real Estate",
+  "startDate": "2026-05-01",
+  "endDate": "2026-05-15",
+  "calendar": {
+    "workingDays": [1, 2, 3, 4, 5],
+    "holidays": [],
+    "hoursPerDay": 8
+  },
+  "tasks": [
+    {
+      "id": "prep",
+      "name": "Pre-Production",
+      "startDate": "2026-05-01",
+      "endDate": "2026-05-02",
+      "children": [
+        {
+          "id": "prep-1",
+          "name": "Client consultation & briefing",
+          "startDate": "2026-05-01",
+          "endDate": "2026-05-01",
+          "description": "Discuss property details, shot list, and client expectations"
+        },
+        {
+          "id": "prep-2",
+          "name": "Property scouting & scheduling",
+          "startDate": "2026-05-01",
+          "endDate": "2026-05-02",
+          "description": "Visit property, plan shots, schedule shoot times"
+        },
+        {
+          "id": "prep-3",
+          "name": "Equipment preparation",
+          "startDate": "2026-05-02",
+          "endDate": "2026-05-02",
+          "description": "Check cameras, lenses, drones, lighting, batteries"
+        },
+        {
+          "id": "prep-4",
+          "name": "Staging coordination",
+          "startDate": "2026-05-02",
+          "endDate": "2026-05-02",
+          "description": "Coordinate with stager, finalize property presentation",
+          "resourceId": "stager"
+        }
+      ]
+    },
+    {
+      "id": "shoot",
+      "name": "Photography Day",
+      "startDate": "2026-05-03",
+      "endDate": "2026-05-04",
+      "children": [
+        {
+          "id": "shoot-1",
+          "name": "Exterior photography",
+          "startDate": "2026-05-03",
+          "endDate": "2026-05-03",
+          "description": "Front, back, sides, landscaping, architectural details"
+        },
+        {
+          "id": "shoot-2",
+          "name": "Interior photography",
+          "startDate": "2026-05-03",
+          "endDate": "2026-05-04",
+          "description": "All rooms, wide angles, detail shots, ambient lighting"
+        },
+        {
+          "id": "shoot-3",
+          "name": "Twilight photography",
+          "startDate": "2026-05-04",
+          "endDate": "2026-05-04",
+          "description": "Exterior twilight shots with interior lights on"
+        },
+        {
+          "id": "shoot-4",
+          "name": "Drone/aerial photography",
+          "startDate": "2026-05-04",
+          "endDate": "2026-05-04",
+          "description": "Aerial property shots, neighborhood context, roof condition",
+          "resourceId": "pilot"
+        },
+        {
+          "id": "shoot-5",
+          "name": "Video walkthrough",
+          "startDate": "2026-05-04",
+          "endDate": "2026-05-04",
+          "description": "Cinematic property walkthrough video"
+        }
+      ]
+    },
+    {
+      "id": "capture-extra",
+      "name": "Specialty Capture",
+      "startDate": "2026-05-05",
+      "endDate": "2026-05-06",
+      "children": [
+        {
+          "id": "cap-1",
+          "name": "Floor plan creation",
+          "startDate": "2026-05-05",
+          "endDate": "2026-05-05",
+          "description": "Measure and create 2D/3D floor plan",
+          "resourceId": "designer"
+        },
+        {
+          "id": "cap-2",
+          "name": "3D virtual tour capture",
+          "startDate": "2026-05-05",
+          "endDate": "2026-05-06",
+          "description": "Matterport or similar 3D scan of property"
+        },
+        {
+          "id": "cap-3",
+          "name": "Detail & feature shots",
+          "startDate": "2026-05-06",
+          "endDate": "2026-05-06",
+          "description": "Close-ups of finishes, appliances, fixtures"
+        }
+      ]
+    },
+    {
+      "id": "edit",
+      "name": "Post-Production",
+      "startDate": "2026-05-07",
+      "endDate": "2026-05-10",
+      "children": [
+        {
+          "id": "edit-1",
+          "name": "Photo culling & selection",
+          "startDate": "2026-05-07",
+          "endDate": "2026-05-07",
+          "description": "Select best shots from all captures"
+        },
+        {
+          "id": "edit-2",
+          "name": "Photo editing & retouching",
+          "startDate": "2026-05-07",
+          "endDate": "2026-05-09",
+          "description": "Color correction, HDR blending, sky replacement, staging cleanup"
+        },
+        {
+          "id": "edit-3",
+          "name": "Video editing",
+          "startDate": "2026-05-08",
+          "endDate": "2026-05-09",
+          "description": "Color grading, transitions, music, titles"
+        },
+        {
+          "id": "edit-4",
+          "name": "3D animation & virtual tour",
+          "startDate": "2026-05-09",
+          "endDate": "2026-05-10",
+          "description": "Process 3D scan, create virtual tour, add hotspots",
+          "resourceId": "designer"
+        },
+        {
+          "id": "edit-5",
+          "name": "Drone photo/video editing",
+          "startDate": "2026-05-10",
+          "endDate": "2026-05-10",
+          "description": "Stabilize, color grade aerial footage"
+        }
+      ]
+    },
+    {
+      "id": "review",
+      "name": "Client Review",
+      "startDate": "2026-05-11",
+      "endDate": "2026-05-12",
+      "children": [
+        {
+          "id": "rev-1",
+          "name": "Proof gallery creation",
+          "startDate": "2026-05-11",
+          "endDate": "2026-05-11",
+          "description": "Create online proof gallery for client review"
+        },
+        {
+          "id": "rev-2",
+          "name": "Client review period",
+          "startDate": "2026-05-11",
+          "endDate": "2026-05-12",
+          "description": "Client reviews and requests edits"
+        },
+        {
+          "id": "rev-3",
+          "name": "Revision & adjustments",
+          "startDate": "2026-05-12",
+          "endDate": "2026-05-12",
+          "description": "Make client-requested edits"
+        }
+      ]
+    },
+    {
+      "id": "deliver",
+      "name": "Delivery & DTP",
+      "startDate": "2026-05-13",
+      "endDate": "2026-05-15",
+      "children": [
+        {
+          "id": "del-1",
+          "name": "Final image export",
+          "startDate": "2026-05-13",
+          "endDate": "2026-05-13",
+          "description": "Export high-res and web-ready images"
+        },
+        {
+          "id": "del-2",
+          "name": "DTP & marketing materials",
+          "startDate": "2026-05-13",
+          "endDate": "2026-05-14",
+          "description": "Create flyers, brochures, social media assets",
+          "resourceId": "designer"
+        },
+        {
+          "id": "del-3",
+          "name": "Web & portal upload",
+          "startDate": "2026-05-14",
+          "endDate": "2026-05-14",
+          "description": "Upload to MLS, Realtor portals, client website"
+        },
+        {
+          "id": "del-4",
+          "name": "Client delivery",
+          "startDate": "2026-05-15",
+          "endDate": "2026-05-15",
+          "description": "Deliver final files, archive project"
+        },
+        {
+          "id": "del-5",
+          "name": "Project complete",
+          "startDate": "2026-05-15",
+          "endDate": "2026-05-15",
+          "isMilestone": true
+        }
+      ]
+    }
+  ],
+  "risks": [
+    {
+      "id": "r1",
+      "title": "Weather cancellation",
+      "category": "external",
+      "probability": 4,
+      "impact": 4,
+      "status": "identified",
+      "mitigationPlan": "Schedule backup shoot day, monitor weather forecasts",
+      "notes": "Outdoor shoots and drone flights weather-dependent"
+    },
+    {
+      "id": "r2",
+      "title": "Drone flight restrictions",
+      "category": "external",
+      "probability": 3,
+      "impact": 3,
+      "status": "identified",
+      "mitigationPlan": "Check airspace restrictions, obtain LAANC authorization",
+      "notes": "Verify no-fly zones and altitude limits near property"
+    },
+    {
+      "id": "r3",
+      "title": "Equipment failure",
+      "category": "technical",
+      "probability": 2,
+      "impact": 5,
+      "status": "mitigating",
+      "mitigationPlan": "Carry backup camera, batteries, memory cards",
+      "notes": "Always have redundant critical equipment"
+    },
+    {
+      "id": "r4",
+      "title": "Property not ready",
+      "category": "schedule",
+      "probability": 3,
+      "impact": 4,
+      "status": "identified",
+      "mitigationPlan": "Confirm staging completion day before, have stager contact",
+      "notes": "Sellers may not complete prep work on time"
+    },
+    {
+      "id": "r5",
+      "title": "Client scope creep",
+      "category": "scope",
+      "probability": 4,
+      "impact": 3,
+      "status": "identified",
+      "mitigationPlan": "Clear contract with defined deliverables, charge for extras",
+      "notes": "Clients often request additional shots or edits"
+    },
+    {
+      "id": "r6",
+      "title": "Editing backlog",
+      "category": "schedule",
+      "probability": 3,
+      "impact": 3,
+      "status": "monitoring",
+      "mitigationPlan": "Batch similar projects, use editing presets",
+      "notes": "High season can create editing bottlenecks"
+    }
+  ],
+  "resources": [
+    {
+      "id": "photog",
+      "name": "Lead Photographer",
+      "role": "Photography",
+      "costRate": 200,
+      "costCurrency": "USD",
+      "availability": 100,
+      "color": "#3B82F6"
+    },
+    {
+      "id": "pilot",
+      "name": "Drone Pilot",
+      "role": "Aerial",
+      "costRate": 150,
+      "costCurrency": "USD",
+      "availability": 50,
+      "color": "#06B6D4"
+    },
+    {
+      "id": "stager",
+      "name": "Home Stager",
+      "role": "Staging",
+      "costRate": 100,
+      "costCurrency": "USD",
+      "availability": 50,
+      "color": "#F59E0B"
+    },
+    {
+      "id": "designer",
+      "name": "DTP / 3D Designer",
+      "role": "Design",
+      "costRate": 120,
+      "costCurrency": "USD",
+      "availability": 75,
+      "color": "#8B5CF6"
+    },
+    {
+      "id": "asst",
+      "name": "Photo Assistant",
+      "role": "Assistant",
+      "costRate": 60,
+      "costCurrency": "USD",
+      "availability": 100,
+      "color": "#10B981"
+    }
+  ]
+}

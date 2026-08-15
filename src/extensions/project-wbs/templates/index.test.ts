@@ -13,6 +13,9 @@ import { createITMigrationProject } from './it-migration';
 import { createAgileProject } from './agile';
 import { createConstructionProject } from './construction';
 import { createMiningConsultingProject } from './mining';
+import { templateToProject } from './handler';
+import realestatePhotoJSON from './json/realestate-photo.json';
+import type { ProjectTemplateJSON } from './types';
 import { validateTree } from '../treeOps';
 import { detectDependencyCycles } from '../dependencies';
 import { flattenTasks } from '../dependencies';
@@ -271,6 +274,51 @@ describe('Templates', () => {
     it('has multiple phases', () => {
       const flat = flattenTasks(project.wbs);
       expect(flat.length).toBeGreaterThan(8);
+    });
+  });
+
+  describe('Real Estate Photoshoot template', () => {
+    const project = templateToProject(realestatePhotoJSON as ProjectTemplateJSON);
+
+    it('has a valid WBS tree', () => {
+      const errors = validateTree(project.wbs);
+      expect(errors).toEqual([]);
+    });
+
+    it('has no dependency cycles', () => {
+      const flat = flattenTasks(project.wbs);
+      expect(detectDependencyCycles(flat)).toEqual([]);
+    });
+
+    it('has multiple phases', () => {
+      const flat = flattenTasks(project.wbs);
+      expect(flat.length).toBeGreaterThan(15);
+    });
+
+    it('has risks', () => {
+      expect(project.risks.length).toBeGreaterThanOrEqual(5);
+    });
+
+    it('has resources', () => {
+      expect(project.resources.length).toBeGreaterThanOrEqual(4);
+    });
+
+    it('has categorized risks', () => {
+      const categories = new Set(project.risks.map((r) => r.category));
+      expect(categories.size).toBeGreaterThanOrEqual(3);
+    });
+  });
+
+  describe('JSON template registry', () => {
+    it('includes realestate-photo template', () => {
+      const tmpl = getTemplateById('realestate-photo');
+      expect(tmpl).toBeDefined();
+      expect(tmpl!.name).toBe('Real Estate Photoshoot');
+    });
+
+    it('has Real Estate category', () => {
+      const categories = getAllCategories();
+      expect(categories).toContain('Real Estate');
     });
   });
 });
