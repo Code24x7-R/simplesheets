@@ -1422,3 +1422,30 @@ export function createResourcesSheet(): Sheet {
     frozenRows: 1,
   };
 }
+
+/**
+ * Create a blank tasks sheet with headers (multi-sheet format).
+ */
+export function createBlankTasksSheet(): Sheet {
+  const cells: Record<string, Cell> = {};
+  for (let col = 0; col < PROJECT_SHEET_HEADERS.length; col++) {
+    cells[`0:${col}`] = {
+      rawValue: PROJECT_SHEET_HEADERS[col],
+      computedValue: PROJECT_SHEET_HEADERS[col],
+      style: { fontWeight: 'bold', backgroundColor: '#EFF6FF', color: '#1E40AF' },
+    };
+  }
+  return {
+    id: `sheet-tasks-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    name: TASKS_SHEET_NAME,
+    cells,
+    defaultColWidth: 120,
+    defaultRowHeight: 24,
+    columnWidths: { 0: 180, 10: 200 },
+    rowHeights: {},
+    columnCount: PROJECT_SHEET_HEADERS.length,
+    rowCount: 10,
+    frozenColumns: 0,
+    frozenRows: 1,
+  };
+}

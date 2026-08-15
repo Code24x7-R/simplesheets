@@ -662,7 +662,7 @@ describe('sheetToProject', () => {
       };
 
       const cells = projectModelToSheetCells(model, mapping);
-      // Legacy format stacks sheets: Tasks(0-3), sep(4), Risks(5-7), sep(8), Resources(9+)
+      // Multi-sheet format flattened: Tasks(0-3), sep(4), Risks(5-8), sep(9), Resources(10+)
       expect(cells['5:0']).toBe('Risk');
       expect(cells['6:0']).toBe('Scope creep');
       expect(cells['6:1']).toBe('scope');
@@ -685,7 +685,7 @@ describe('sheetToProject', () => {
       };
 
       const cells = projectModelToSheetCells(model, mapping);
-      // Legacy format stacks sheets: Tasks(0-3), sep(4), Risks(5-7), sep(8), Resources(9+)
+      // Multi-sheet format flattened: Tasks(0-4), Risks(5-8), Resources(9+)
       expect(cells['9:0']).toBe('Resource');
       expect(cells['10:0']).toBe('Alice');
       expect(cells['10:1']).toBe('Dev');

@@ -58,7 +58,7 @@ import { createDemoWorkbook } from './utils/demoWorkbook';
 import { useChartSettings } from './hooks/useChartSettings';
 import { SheetLinkProvider } from './components/SheetLink';
 import { ProjectView } from './extensions/project-wbs/ProjectView';
-import { createProjectSheet, createWorkbookFromTemplate, createRisksSheet, createResourcesSheet, workbookToProject, projectModelToProject, projectModelToWorkbook } from './extensions/project-wbs/sheetToProject';
+import { createBlankTasksSheet, createWorkbookFromTemplate, createRisksSheet, createResourcesSheet, workbookToProject, projectModelToProject, projectModelToWorkbook } from './extensions/project-wbs/sheetToProject';
 import { TASKS_SHEET_NAME, RISKS_SHEET_NAME, RESOURCES_SHEET_NAME } from './extensions/project-wbs/sheetToProject';
 import type { Project } from './extensions/types';
 import type { ProjectModel, ColumnMapping } from './types';
@@ -1823,7 +1823,7 @@ function WorkbookView() {
 
   const handleProjectNewSheet = useCallback(() => {
     // Create a blank project workbook with 3 sheets (tasks, risks, resources)
-    const tasksSheet = createProjectSheet('Project Plan', false);
+    const tasksSheet = createBlankTasksSheet();
     const risksSheet = createRisksSheet();
     const resourcesSheet = createResourcesSheet();
 
