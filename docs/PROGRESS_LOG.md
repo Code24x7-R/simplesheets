@@ -1,6 +1,8 @@
 ## Progress Log
 
 > **Convention:** All entries are tagged by track: `[FEATURE]` for new features/refactoring (planned in `PLAN.md`), `[BUGFIX]` for bug fixes (tracked in `BUGFIX.md`). Entries without a tag predate this convention.
+>
+> **See also:** [PLAN.md](./PLAN.md) (current work), [HISTORY.md](./HISTORY.md) (detailed phase records), [CHANGELOG.md](./CHANGELOG.md) (concise history), [EXTENSIONS_ARCHITECTURE.md](./EXTENSIONS_ARCHITECTURE.md) (extension docs).
 
 ---
 
