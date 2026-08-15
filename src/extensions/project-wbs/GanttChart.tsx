@@ -231,18 +231,37 @@ export function GanttChart({
                   </g>
                 )}
 
+                {/* Status icon */}
+                <text
+                  x={2}
+                  y={MARGIN_TOP + index * ROW_HEIGHT + ROW_HEIGHT / 2 + 4}
+                  fontSize={10}
+                  fill={task.status === 'done' ? '#22C55E' :
+                        task.status === 'in_progress' ? '#3B82F6' :
+                        task.status === 'waiting' ? '#F59E0B' :
+                        task.status === 'on_hold' ? '#EF4444' :
+                        task.status === 'ready' ? '#8B5CF6' : '#9CA3AF'}
+                >
+                  {task.status === 'done' ? '✓' :
+                   task.status === 'in_progress' ? '►' :
+                   task.status === 'waiting' ? '⏳' :
+                   task.status === 'on_hold' ? '⏸' :
+                   task.status === 'ready' ? '●' : '○'}
+                </text>
+
                 {/* Task name */}
                 <text
-                  x={8}
+                  x={14}
                   y={MARGIN_TOP + index * ROW_HEIGHT + ROW_HEIGHT / 2 + 4}
                   fontSize={12}
-                  fill={isSelected ? '#2563eb' : '#374151'}
+                  fill={isSelected ? '#2563eb' : task.status === 'done' ? '#9CA3AF' : '#374151'}
                   fontWeight={isSelected ? 'bold' : 'normal'}
+                  textDecoration={task.status === 'done' ? 'line-through' : 'none'}
                 >
                   {task.level > 0 && (
-                    <tspan dx={task.level * 12}> </tspan>
+                    <tspan dx={task.level * 10}> </tspan>
                   )}
-                  {task.name.length > 18 ? task.name.slice(0, 18) + '...' : task.name}
+                  {task.name.length > 16 ? task.name.slice(0, 16) + '...' : task.name}
                 </text>
 
                 {/* Weekend shading */}
@@ -305,6 +324,28 @@ export function GanttChart({
                     fill="#F97316"
                   >
                     ⚠
+                  </text>
+                )}
+
+                {/* Status indicator (waiting/blocked tasks) */}
+                {task.status === 'waiting' && (
+                  <text
+                    x={MARGIN_LEFT + layout.x + 2}
+                    y={y + BAR_HEIGHT / 2 + 4}
+                    fontSize={10}
+                    fill="#F59E0B"
+                  >
+                    ⏳
+                  </text>
+                )}
+                {task.status === 'on_hold' && (
+                  <text
+                    x={MARGIN_LEFT + layout.x + 2}
+                    y={y + BAR_HEIGHT / 2 + 4}
+                    fontSize={10}
+                    fill="#EF4444"
+                  >
+                    ⏸
                   </text>
                 )}
 

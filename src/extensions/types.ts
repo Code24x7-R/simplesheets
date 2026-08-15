@@ -139,6 +139,17 @@ export type EffortUnit = 'hours' | 'storyPoints' | 'days';
  * A single task in the Work Breakdown Structure.
  * Tasks form a tree via parentId/children relationships.
  */
+export type TaskStatus = 'not_started' | 'waiting' | 'ready' | 'in_progress' | 'done' | 'on_hold';
+
+export interface ApprovalGate {
+  taskId: string;
+  gateType: 'approval' | 'review' | 'sign_off' | 'external';
+  approved: boolean;
+  approvedBy: string | null;
+  approvedDate: string | null;
+  notes: string;
+}
+
 export interface WBSTask {
   id: string;
   name: string;
@@ -156,6 +167,10 @@ export interface WBSTask {
   costCurrency: string;
   responsibleResourceId: string | null;
   dependencies: TaskDependency[];
+  status?: TaskStatus;      // Current task state (optional for backward compat)
+  approvalGates?: ApprovalGate[]; // Approval requirements
+  float?: number;           // Total float (slack) in days
+  isCritical?: boolean;     // Part of critical path
   isMilestone: boolean;
   isSummary: boolean;       // True if has children
   collapsed: boolean;       // UI state

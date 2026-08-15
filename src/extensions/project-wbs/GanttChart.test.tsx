@@ -95,10 +95,10 @@ describe('GanttChart', () => {
   it('truncates long task names', () => {
     const project = createProject({ wbs: [createTask({ name: 'A very long task name that exceeds limits' })] });
     const { container } = render(<GanttChart project={project} width={800} height={400} />);
-    // Text is truncated to 18 chars + '...' — check all text elements
+    // Text is truncated to 16 chars + '...' to make room for status icon
     const texts = container.querySelectorAll('text');
     const allText = Array.from(texts).map((t) => t.textContent).join(' ');
-    expect(allText).toContain('A very long task n...');
+    expect(allText).toContain('A very long task...');
   });
 
   it('renders multiple tasks', () => {
