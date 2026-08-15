@@ -170,6 +170,7 @@ export interface ProjectExtensionData {
 /**
  * Serializable subset of the Project model for persistence.
  * Mirrors the Project type but with simpler structure for JSON.
+ * This is the normalized schema — all project data is stored here.
  */
 export interface ProjectModel {
   id: string;
@@ -179,6 +180,20 @@ export interface ProjectModel {
   endDate: string;
   tasks: TaskRow[];
   risks: RiskRow[];
+  resources: ResourceRow[];
+}
+
+/**
+ * Serializable resource row.
+ */
+export interface ResourceRow {
+  id: string;
+  name: string;
+  role: string;
+  costRate: number;
+  costCurrency: string;
+  availability: number;
+  color: string;
 }
 
 /**

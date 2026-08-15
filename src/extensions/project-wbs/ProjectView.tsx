@@ -168,6 +168,15 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
         mitigationPlan: r.mitigationPlan,
         notes: r.description,
       })),
+      resources: projectState.resources.map((r) => ({
+        id: r.id,
+        name: r.name,
+        role: r.role,
+        costRate: r.costRate,
+        costCurrency: r.costCurrency,
+        availability: r.availability,
+        color: r.color,
+      })),
     };
   }
 
@@ -312,6 +321,15 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
         ownerId: r.ownerId,
         mitigationPlan: r.mitigationPlan,
         notes: r.description,
+      })),
+      resources: project.resources.map((r) => ({
+        id: r.id,
+        name: r.name,
+        role: r.role,
+        costRate: r.costRate,
+        costCurrency: r.costCurrency,
+        availability: r.availability,
+        color: r.color,
       })),
     };
 

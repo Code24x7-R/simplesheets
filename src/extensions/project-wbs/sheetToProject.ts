@@ -11,8 +11,8 @@
  * - Progress and date parsing
  */
 
-import type { Sheet, ColumnMapping, ProjectModel, TaskRow, Cell } from '../../types';
-import type { Project, WBSTask } from '../types';
+import type { Sheet, ColumnMapping, ProjectModel, TaskRow, RiskRow, ResourceRow, Cell } from '../../types';
+import type { Project, WBSTask, Resource } from '../types';
 
 // ─── Column Auto-Detection ──────────────────────────────────────────────────
 
@@ -146,6 +146,10 @@ export function sheetToProject(sheet: Sheet, mapping: ColumnMapping, projectName
   const projectStart = dates.length > 0 ? dates.reduce((a, b) => (a < b ? a : b)) : new Date().toISOString().slice(0, 10);
   const projectEnd = dates.length > 0 ? dates.reduce((a, b) => (a > b ? a : b)) : new Date().toISOString().slice(0, 10);
 
+  // Parse risks and resources from dedicated sections
+  const risks = parseRiskSection(sheet, headerRow, tasks.length);
+  const resources = parseResourceSection(sheet, headerRow, tasks.length, risks.length);
+
   return {
     id: `proj-${Date.now()}`,
     name: projectName ?? sheet.name ?? 'Project Plan',
@@ -153,7 +157,122 @@ export function sheetToProject(sheet: Sheet, mapping: ColumnMapping, projectName
     startDate: projectStart,
     endDate: projectEnd,
     tasks,
-    risks: [], // Risks come from separate sheet or manual entry
+    risks,
+    resources,
+  };
+}
+
+/**
+ * Find the risk section header row by searching for "Risk" header.
+ * Returns the header row index or null if not found.
+ */
+function findRiskSectionHeader(sheet: Sheet, startRow: number): number | null {
+  for (let row = startRow; row < Math.min(startRow + 50, sheet.rowCount); row++) {
+    const cell = sheet.cells[`${row}:0`];
+    if (cell) {
+      const value = (cell.rawValue ?? '').toString().trim().toLowerCase();
+      if (value === 'risk' || value === 'risks' || value === 'title') {
+        return row;
+      }
+    }
+  }
+  return null;
+}
+
+/**
+ * Find the resource section header row by searching for "Resource" header.
+ * Returns the header row index or null if not found.
+ */
+function findResourceSectionHeader(sheet: Sheet, startRow: number): number | null {
+  for (let row = startRow; row < Math.min(startRow + 80, sheet.rowCount); row++) {
+    const cell = sheet.cells[`${row}:0`];
+    if (cell) {
+      const value = (cell.rawValue ?? '').toString().trim().toLowerCase();
+      if (value === 'resource' || value === 'resources' || value === 'name') {
+        return row;
+      }
+    }
+  }
+  return null;
+}
+
+/**
+ * Parse risk rows from the sheet's risk section.
+ */
+function parseRiskSection(sheet: Sheet, headerRow: number, taskCount: number): RiskRow[] {
+  const risks: RiskRow[] = [];
+  const sectionStart = headerRow + 1 + taskCount + 1; // After tasks + separator
+  const riskHeaderRow = findRiskSectionHeader(sheet, sectionStart);
+  if (riskHeaderRow === null) return risks;
+
+  for (let row = riskHeaderRow + 1; row < sheet.rowCount; row++) {
+    const risk = parseRiskRow(sheet, row);
+    if (risk) {
+      risks.push(risk);
+    } else {
+      // Stop at first empty row (end of section)
+      break;
+    }
+  }
+  return risks;
+}
+
+/**
+ * Parse a single risk row.
+ */
+function parseRiskRow(sheet: Sheet, row: number): RiskRow | null {
+  const title = getCellStringValue(sheet, row, 0);
+  if (!title) return null;
+
+  return {
+    id: `risk-${row}-${Date.now()}`,
+    title,
+    category: getCellStringValue(sheet, row, 1) || 'other',
+    probability: parseInt(getCellStringValue(sheet, row, 2)) || 1,
+    impact: parseInt(getCellStringValue(sheet, row, 3)) || 1,
+    status: getCellStringValue(sheet, row, 4) || 'identified',
+    ownerId: getCellStringValue(sheet, row, 5) || null,
+    mitigationPlan: getCellStringValue(sheet, row, 6),
+    notes: getCellStringValue(sheet, row, 7),
+  };
+}
+
+/**
+ * Parse resource rows from the sheet's resource section.
+ */
+function parseResourceSection(sheet: Sheet, headerRow: number, taskCount: number, riskCount: number): ResourceRow[] {
+  const resources: ResourceRow[] = [];
+  const sectionStart = headerRow + 1 + taskCount + 1 + 1 + riskCount + 1; // After tasks + separator + risks + separator
+  const resourceHeaderRow = findResourceSectionHeader(sheet, sectionStart);
+  if (resourceHeaderRow === null) return resources;
+
+  for (let row = resourceHeaderRow + 1; row < sheet.rowCount; row++) {
+    const resource = parseResourceRow(sheet, row);
+    if (resource) {
+      resources.push(resource);
+    } else {
+      // Stop at first empty row (end of section)
+      break;
+    }
+  }
+  return resources;
+}
+
+/**
+ * Parse a single resource row.
+ */
+function parseResourceRow(sheet: Sheet, row: number): ResourceRow | null {
+  const name = getCellStringValue(sheet, row, 0);
+  if (!name) return null;
+
+  return {
+    id: `r-${row}-${Date.now()}`,
+    name,
+    role: getCellStringValue(sheet, row, 1),
+    costRate: parseFloat(getCellStringValue(sheet, row, 2)) || 0,
+    costCurrency: getCellStringValue(sheet, row, 3) || 'USD',
+    availability: parseInt(getCellStringValue(sheet, row, 4)) || 100,
+    color: getCellStringValue(sheet, row, 5) || '#3B82F6',
   };
 }
 
@@ -391,6 +510,9 @@ export function projectModelToProject(model: ProjectModel): Project {
     customFields: {},
   }));
 
+  // Convert resource rows to runtime resources
+  const resources: Resource[] = model.resources.map((r) => rowToResource(r));
+
   return {
     id: model.id,
     name: model.name,
@@ -402,7 +524,7 @@ export function projectModelToProject(model: ProjectModel): Project {
       holidays: new Set(),
       hoursPerDay: 8,
     },
-    resources: [],
+    resources,
     risks,
     wbs: roots,
   };
@@ -422,13 +544,12 @@ export function projectModelToSheetCells(
   const cells: Record<string, string> = {};
   const headerRow = mapping.headerRow ?? 0;
 
-  // Write headers (if not already present)
+  // ─── Task Section ──────────────────────────────────────────────────
+
+  // Write task headers
   const headers = ['Task', 'Start Date', 'End Date', 'Duration', 'Parent', 'Dependency', 'Progress', 'Resource', 'Milestone', 'Color', 'Notes'];
   for (let col = 0; col < headers.length; col++) {
-    const key = `${headerRow}:${col}`;
-    if (!cells[key]) {
-      cells[key] = headers[col];
-    }
+    cells[`${headerRow}:${col}`] = headers[col];
   }
 
   // Write task data rows
@@ -480,7 +601,133 @@ export function projectModelToSheetCells(
     }
   }
 
+  // ─── Risk Section ──────────────────────────────────────────────────
+
+  // Risk section starts after task data + 1 blank row separator
+  const taskEndRow = headerRow + 1 + model.tasks.length;
+  const riskHeaderRow = taskEndRow + 1;
+
+  // Risk headers (columns: Title, Category, Probability, Impact, Status, Owner, Mitigation, Notes)
+  const riskHeaders = ['Risk', 'Category', 'Probability', 'Impact', 'Status', 'Owner', 'Mitigation Plan', 'Notes'];
+  for (let col = 0; col < riskHeaders.length; col++) {
+    cells[`${riskHeaderRow}:${col}`] = riskHeaders[col];
+  }
+
+  // Write risk data rows
+  for (let i = 0; i < model.risks.length; i++) {
+    const risk = model.risks[i];
+    const row = riskHeaderRow + 1 + i;
+    cells[`${row}:0`] = risk.title;
+    cells[`${row}:1`] = risk.category;
+    cells[`${row}:2`] = String(risk.probability);
+    cells[`${row}:3`] = String(risk.impact);
+    cells[`${row}:4`] = risk.status;
+    cells[`${row}:5`] = risk.ownerId ?? '';
+    cells[`${row}:6`] = risk.mitigationPlan;
+    cells[`${row}:7`] = risk.notes;
+  }
+
+  // ─── Resource Section ───────────────────────────────────────────────
+
+  // Resource section starts after risk data + 1 blank row separator
+  const riskEndRow = riskHeaderRow + 1 + model.risks.length;
+  const resourceHeaderRow = riskEndRow + 1;
+
+  // Resource headers (columns: Name, Role, Cost Rate, Currency, Availability, Color)
+  const resourceHeaders = ['Resource', 'Role', 'Cost Rate', 'Currency', 'Availability %', 'Color'];
+  for (let col = 0; col < resourceHeaders.length; col++) {
+    cells[`${resourceHeaderRow}:${col}`] = resourceHeaders[col];
+  }
+
+  // Write resource data rows
+  for (let i = 0; i < model.resources.length; i++) {
+    const resource = model.resources[i];
+    const row = resourceHeaderRow + 1 + i;
+    cells[`${row}:0`] = resource.name;
+    cells[`${row}:1`] = resource.role;
+    cells[`${row}:2`] = String(resource.costRate);
+    cells[`${row}:3`] = resource.costCurrency;
+    cells[`${row}:4`] = String(resource.availability);
+    cells[`${row}:5`] = resource.color;
+  }
+
   return cells;
+}
+
+/**
+ * Convert runtime Resource to serializable ResourceRow.
+ */
+export function resourceToRow(resource: Resource): ResourceRow {
+  return {
+    id: resource.id,
+    name: resource.name,
+    role: resource.role,
+    costRate: resource.costRate,
+    costCurrency: resource.costCurrency,
+    availability: resource.availability,
+    color: resource.color,
+  };
+}
+
+/**
+ * Convert ResourceRow to runtime Resource.
+ */
+export function rowToResource(row: ResourceRow): Resource {
+  return {
+    id: row.id,
+    name: row.name,
+    role: row.role,
+    costRate: row.costRate,
+    costCurrency: row.costCurrency,
+    availability: row.availability,
+    color: row.color,
+  };
+}
+
+/**
+ * Convert RiskRow to runtime Risk.
+ */
+export function rowToRisk(row: RiskRow) {
+  return {
+    id: row.id,
+    projectId: '',
+    taskId: null,
+    title: row.title,
+    description: row.notes,
+    category: row.category as import('../types').RiskCategory,
+    probability: row.probability,
+    impact: row.impact,
+    riskScore: row.probability * row.impact,
+    status: row.status as import('../types').RiskStatus,
+    mitigationPlan: row.mitigationPlan,
+    contingencyPlan: '',
+    mitigationCost: 0,
+    ownerId: row.ownerId,
+    identifiedDate: '',
+    reviewDate: '',
+    triggerCondition: '',
+    residualProbability: Math.max(1, row.probability - 1),
+    residualImpact: Math.max(1, row.impact - 1),
+    residualRiskScore: Math.max(1, (row.probability - 1) * (row.impact - 1)),
+    customFields: {},
+  };
+}
+
+/**
+ * Convert runtime Risk to serializable RiskRow.
+ */
+export function riskToRow(risk: import('../types').Risk): RiskRow {
+  return {
+    id: risk.id,
+    title: risk.title,
+    category: risk.category,
+    probability: risk.probability,
+    impact: risk.impact,
+    status: risk.status,
+    ownerId: risk.ownerId,
+    mitigationPlan: risk.mitigationPlan,
+    notes: risk.description,
+  };
 }
 
 // ─── Utility Functions ──────────────────────────────────────────────────────
@@ -582,6 +829,24 @@ const SAMPLE_ROWS: string[][] = [
 ];
 
 /**
+ * Sample risk rows for the project sheet.
+ */
+const SAMPLE_RISKS: string[][] = [
+  ['Scope creep', 'scope', '3', '4', 'identified', '', 'Regular scope reviews', 'Monitor requirements'],
+  ['Resource unavailability', 'resource', '2', '3', 'identified', '', 'Cross-train team members', 'Key person dependency'],
+  ['Technical debt', 'technical', '3', '2', 'monitoring', '', 'Code reviews', 'May slow development'],
+];
+
+/**
+ * Sample resource rows for the project sheet.
+ */
+const SAMPLE_RESOURCES: string[][] = [
+  ['Alice Smith', 'Project Manager', '150', 'USD', '100', '#3B82F6'],
+  ['Bob Jones', 'Developer', '120', 'USD', '100', '#10B981'],
+  ['Carol White', 'Designer', '110', 'USD', '50', '#F59E0B'],
+];
+
+/**
  * Creates a new Sheet pre-populated with project column headers and sample data.
  * The returned sheet can be added to a workbook.
  *
@@ -591,10 +856,16 @@ const SAMPLE_ROWS: string[][] = [
  */
 export function createProjectSheet(sheetName = 'Project Plan', includeSamples = true): Sheet {
   const colCount = PROJECT_SHEET_HEADERS.length;
-  const rowCount = includeSamples ? 1 + SAMPLE_ROWS.length + 5 : 2; // header + samples + blank rows
+  const taskRowCount = includeSamples ? SAMPLE_ROWS.length : 0;
+  const riskRowCount = includeSamples ? SAMPLE_RISKS.length : 0;
+  const resourceRowCount = includeSamples ? SAMPLE_RESOURCES.length : 0;
+  // header + tasks + separator + risk header + risks + separator + resource header + resources + blank
+  const rowCount = 1 + taskRowCount + 1 + 1 + riskRowCount + 1 + 1 + resourceRowCount + 5;
   const cells: Record<string, Cell> = {};
 
-  // Header row
+  // ─── Task Section ──────────────────────────────────────────────────
+
+  // Task header row (row 0)
   for (let col = 0; col < colCount; col++) {
     cells[`0:${col}`] = {
       rawValue: PROJECT_SHEET_HEADERS[col],
@@ -607,11 +878,83 @@ export function createProjectSheet(sheetName = 'Project Plan', includeSamples = 
     };
   }
 
-  // Sample data rows
+  // Task data rows
   if (includeSamples) {
     for (let i = 0; i < SAMPLE_ROWS.length; i++) {
       const row = i + 1;
       const rowData = SAMPLE_ROWS[i];
+      for (let col = 0; col < rowData.length; col++) {
+        const value = rowData[col] ?? '';
+        if (value) {
+          cells[`${row}:${col}`] = {
+            rawValue: value,
+            computedValue: value,
+          };
+        }
+      }
+    }
+  }
+
+  // ─── Risk Section ──────────────────────────────────────────────────
+
+  const taskEndRow = 1 + taskRowCount;
+  const riskHeaderRow = taskEndRow + 1; // +1 for separator
+
+  // Risk headers
+  const riskHeaders = ['Risk', 'Category', 'Probability', 'Impact', 'Status', 'Owner', 'Mitigation Plan', 'Notes'];
+  for (let col = 0; col < riskHeaders.length; col++) {
+    cells[`${riskHeaderRow}:${col}`] = {
+      rawValue: riskHeaders[col],
+      computedValue: riskHeaders[col],
+      style: {
+        fontWeight: 'bold',
+        backgroundColor: '#FEF3C7',
+        color: '#92400E',
+      },
+    };
+  }
+
+  // Risk data rows
+  if (includeSamples) {
+    for (let i = 0; i < SAMPLE_RISKS.length; i++) {
+      const row = riskHeaderRow + 1 + i;
+      const rowData = SAMPLE_RISKS[i];
+      for (let col = 0; col < rowData.length; col++) {
+        const value = rowData[col] ?? '';
+        if (value) {
+          cells[`${row}:${col}`] = {
+            rawValue: value,
+            computedValue: value,
+          };
+        }
+      }
+    }
+  }
+
+  // ─── Resource Section ───────────────────────────────────────────────
+
+  const riskEndRow = riskHeaderRow + 1 + riskRowCount;
+  const resourceHeaderRow = riskEndRow + 1; // +1 for separator
+
+  // Resource headers
+  const resourceHeaders = ['Resource', 'Role', 'Cost Rate', 'Currency', 'Availability %', 'Color'];
+  for (let col = 0; col < resourceHeaders.length; col++) {
+    cells[`${resourceHeaderRow}:${col}`] = {
+      rawValue: resourceHeaders[col],
+      computedValue: resourceHeaders[col],
+      style: {
+        fontWeight: 'bold',
+        backgroundColor: '#ECFDF5',
+        color: '#065F46',
+      },
+    };
+  }
+
+  // Resource data rows
+  if (includeSamples) {
+    for (let i = 0; i < SAMPLE_RESOURCES.length; i++) {
+      const row = resourceHeaderRow + 1 + i;
+      const rowData = SAMPLE_RESOURCES[i];
       for (let col = 0; col < rowData.length; col++) {
         const value = rowData[col] ?? '';
         if (value) {

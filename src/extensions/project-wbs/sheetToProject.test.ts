@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
-import { detectColumnMapping, sheetToProject, projectModelToProject, projectModelToSheetCells, createProjectSheet, getDefaultColumnMapping, PROJECT_SHEET_HEADERS } from './sheetToProject';
+import { detectColumnMapping, sheetToProject, projectModelToProject, projectModelToSheetCells, createProjectSheet, getDefaultColumnMapping, PROJECT_SHEET_HEADERS, resourceToRow, rowToResource, riskToRow, rowToRisk } from './sheetToProject';
+import type { Resource, Risk } from '../types';
 import type { Sheet, ColumnMapping, ProjectModel } from '../../types';
 
 function makeCell(row: number, col: number, value: string) {
@@ -277,6 +278,7 @@ describe('sheetToProject', () => {
           { id: 't3', name: 'Task B', startDate: '2025-01-06', endDate: '2025-01-15', duration: 10, parentId: 't1', dependencies: ['t2'], progress: 0, resourceId: null, isMilestone: false, color: '#3B82F6', notes: '' },
         ],
         risks: [],
+      resources: [],
       };
 
       const project = projectModelToProject(model);
@@ -299,6 +301,7 @@ describe('sheetToProject', () => {
           { id: 't2', name: 'Child', startDate: '2025-01-01', endDate: '2025-01-15', duration: 15, parentId: 't1', dependencies: [], progress: 0, resourceId: null, isMilestone: false, color: '#3B82F6', notes: '' },
         ],
         risks: [],
+      resources: [],
       };
 
       const project = projectModelToProject(model);
@@ -317,6 +320,7 @@ describe('sheetToProject', () => {
         risks: [
           { id: 'r1', title: 'Server down', category: 'technical', probability: 4, impact: 5, status: 'identified', ownerId: null, mitigationPlan: 'Add redundancy', notes: '' },
         ],
+        resources: [],
       };
 
       const project = projectModelToProject(model);
@@ -351,7 +355,8 @@ describe('sheetToProject', () => {
 
     it('can exclude sample rows', () => {
       const sheet = createProjectSheet('My Project', false);
-      expect(sheet.rowCount).toBe(2); // header + 1 blank
+      // header + separator + risk header + separator + resource header + blank
+      expect(sheet.rowCount).toBe(10);
       expect(sheet.cells['1:0']).toBeUndefined();
     });
 
@@ -427,6 +432,7 @@ describe('sheetToProject', () => {
           { id: 't2', name: 'Task 2', startDate: '2025-01-06', endDate: '2025-01-10', duration: 5, parentId: null, dependencies: ['t1'], progress: 0, resourceId: null, isMilestone: true, color: '#EF4444', notes: '' },
         ],
         risks: [],
+      resources: [],
       };
 
       const cells = projectModelToSheetCells(model, mapping);
@@ -449,6 +455,7 @@ describe('sheetToProject', () => {
           { id: 't2', name: 'B', startDate: '2025-01-06', endDate: '2025-01-10', duration: 5, parentId: null, dependencies: ['t1'], progress: 0, resourceId: null, isMilestone: false, color: '#3B82F6', notes: '' },
         ],
         risks: [],
+      resources: [],
       };
 
       const cells = projectModelToSheetCells(model, mapping);
@@ -467,6 +474,7 @@ describe('sheetToProject', () => {
           { id: 't2', name: 'Child', startDate: '2025-01-01', endDate: '2025-01-05', duration: 5, parentId: 't1', dependencies: [], progress: 0, resourceId: null, isMilestone: false, color: '#3B82F6', notes: '' },
         ],
         risks: [],
+      resources: [],
       };
 
       const cells = projectModelToSheetCells(model, mapping);
@@ -499,6 +507,7 @@ describe('sheetToProject', () => {
           { id: 't1', name: 'Task 1', startDate: '2025-01-01', endDate: '2025-01-05', duration: 5, parentId: null, dependencies: [], progress: 50, resourceId: null, isMilestone: false, color: '#3B82F6', notes: 'Note' },
         ],
         risks: [],
+      resources: [],
       };
 
       const cells = projectModelToSheetCells(model, partialMapping);
@@ -519,10 +528,167 @@ describe('sheetToProject', () => {
           { id: 't1', name: 'Go Live', startDate: '2025-01-10', endDate: '2025-01-10', duration: 1, parentId: null, dependencies: [], progress: 0, resourceId: null, isMilestone: true, color: '#3B82F6', notes: '' },
         ],
         risks: [],
+      resources: [],
       };
 
       const cells = projectModelToSheetCells(model, mapping);
       expect(cells['1:8']).toBe('yes');
+    });
+  });
+
+  describe('resourceToRow', () => {
+    it('converts runtime Resource to serializable ResourceRow', () => {
+      const resource: Resource = {
+        id: 'r1',
+        name: 'Alice',
+        role: 'Dev',
+        costRate: 100,
+        costCurrency: 'USD',
+        availability: 100,
+        color: '#3B82F6',
+      };
+      const row = resourceToRow(resource);
+      expect(row.id).toBe('r1');
+      expect(row.name).toBe('Alice');
+      expect(row.role).toBe('Dev');
+      expect(row.costRate).toBe(100);
+    });
+  });
+
+  describe('rowToResource', () => {
+    it('converts ResourceRow to runtime Resource', () => {
+      const row = {
+        id: 'r1',
+        name: 'Alice',
+        role: 'Dev',
+        costRate: 100,
+        costCurrency: 'USD',
+        availability: 100,
+        color: '#3B82F6',
+      };
+      const resource = rowToResource(row);
+      expect(resource.id).toBe('r1');
+      expect(resource.name).toBe('Alice');
+      expect(resource.costRate).toBe(100);
+    });
+  });
+
+  describe('riskToRow', () => {
+    it('converts runtime Risk to serializable RiskRow', () => {
+      const risk: Risk = {
+        id: 'risk-1',
+        projectId: 'proj-1',
+        taskId: null,
+        title: 'Scope creep',
+        description: 'Requirements may expand',
+        category: 'scope',
+        probability: 3,
+        impact: 4,
+        riskScore: 12,
+        status: 'identified',
+        mitigationPlan: 'Regular reviews',
+        contingencyPlan: '',
+        mitigationCost: 0,
+        ownerId: null,
+        identifiedDate: '2025-01-01',
+        reviewDate: '',
+        triggerCondition: '',
+        residualProbability: 2,
+        residualImpact: 3,
+        residualRiskScore: 6,
+        customFields: {},
+      };
+      const row = riskToRow(risk);
+      expect(row.id).toBe('risk-1');
+      expect(row.title).toBe('Scope creep');
+      expect(row.category).toBe('scope');
+      expect(row.probability).toBe(3);
+      expect(row.notes).toBe('Requirements may expand');
+    });
+  });
+
+  describe('rowToRisk', () => {
+    it('converts RiskRow to runtime Risk', () => {
+      const row = {
+        id: 'risk-1',
+        title: 'Scope creep',
+        category: 'scope',
+        probability: 3,
+        impact: 4,
+        status: 'identified',
+        ownerId: null,
+        mitigationPlan: 'Regular reviews',
+        notes: 'Requirements may expand',
+      };
+      const risk = rowToRisk(row);
+      expect(risk.id).toBe('risk-1');
+      expect(risk.title).toBe('Scope creep');
+      expect(risk.probability).toBe(3);
+      expect(risk.impact).toBe(4);
+      expect(risk.riskScore).toBe(12);
+    });
+  });
+
+  describe('projectModelToSheetCells with risks and resources', () => {
+    const mapping = {
+      taskCol: 0,
+      startDateCol: 1,
+      endDateCol: 2,
+      durationCol: 3,
+      parentCol: 4,
+      dependencyCol: 5,
+      progressCol: 6,
+      resourceCol: 7,
+      milestoneCol: 8,
+      colorCol: 9,
+      notesCol: 10,
+      headerRow: 0,
+    };
+
+    it('writes risk section after tasks', () => {
+      const model: ProjectModel = {
+        id: 'proj-1',
+        name: 'Test',
+        description: '',
+        startDate: '2025-01-01',
+        endDate: '2025-01-31',
+        tasks: [
+          { id: 't1', name: 'Task 1', startDate: '2025-01-01', endDate: '2025-01-05', duration: 5, parentId: null, dependencies: [], progress: 0, resourceId: null, isMilestone: false, color: '#3B82F6', notes: '' },
+        ],
+        risks: [
+          { id: 'r1', title: 'Scope creep', category: 'scope', probability: 3, impact: 4, status: 'identified', ownerId: null, mitigationPlan: 'Reviews', notes: '' },
+        ],
+        resources: [],
+      };
+
+      const cells = projectModelToSheetCells(model, mapping);
+      // Risk header at row 3 (after task header + 1 task + separator)
+      expect(cells['3:0']).toBe('Risk');
+      expect(cells['4:0']).toBe('Scope creep');
+      expect(cells['4:1']).toBe('scope');
+    });
+
+    it('writes resource section after risks', () => {
+      const model: ProjectModel = {
+        id: 'proj-1',
+        name: 'Test',
+        description: '',
+        startDate: '2025-01-01',
+        endDate: '2025-01-31',
+        tasks: [
+          { id: 't1', name: 'Task 1', startDate: '2025-01-01', endDate: '2025-01-05', duration: 5, parentId: null, dependencies: [], progress: 0, resourceId: null, isMilestone: false, color: '#3B82F6', notes: '' },
+        ],
+        risks: [],
+        resources: [
+          { id: 'r1', name: 'Alice', role: 'Dev', costRate: 100, costCurrency: 'USD', availability: 100, color: '#3B82F6' },
+        ],
+      };
+
+      const cells = projectModelToSheetCells(model, mapping);
+      // Resource header at row 5 (after task header + 1 task + separator + risk header + separator)
+      expect(cells['5:0']).toBe('Resource');
+      expect(cells['6:0']).toBe('Alice');
+      expect(cells['6:1']).toBe('Dev');
     });
   });
 });

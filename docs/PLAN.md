@@ -2610,3 +2610,105 @@ All features are already supported by the existing data model:
 ### Results
 - **3227 tests** passing (135 suites)
 - Lint clean, type-check clean, build clean
+
+---
+
+## Phase 38: Normalized Schema & Complete Sync — COMPLETE ✅
+
+**Goal**: Ensure the WBS/Project extension has a normalized schema where all data elements are persisted and synced between the project sheet and project view.
+
+### Data Model (Normalized)
+
+```
+ProjectModel (serializable, persisted in workbook.extensions)
+├── id: string
+├── name: string
+├── description: string
+├── startDate: string
+├── endDate: string
+├── tasks: TaskRow[] (flat with parentId for hierarchy)
+├── risks: RiskRow[]
+└── resources: ResourceRow[]  ← ADDED
+
+ResourceRow
+├── id: string
+├── name: string
+├── role: string
+├── costRate: number
+├── costCurrency: string
+├── availability: number
+└── color: string
+```
+
+### Sheet Layout
+
+The project sheet contains three sections:
+
+| Section | Rows | Description |
+|---------|------|-------------|
+| Tasks | 0 to N | Header + task data rows |
+| Risks | N+1 to M | Header + risk data rows |
+| Resources | M+1 to K | Header + resource data rows |
+
+### Sync Flow
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        Workbook                                  │
+│                                                                   │
+│  ┌─────────────────┐    ┌────────────────────────────────────┐  │
+│  │  Project Sheet   │    │  Extensions                         │  │
+│  │  ┌─────────────┐│    │  ┌──────────────────────────────┐  │  │
+│  │  │ Tasks       ││◄──▶│  │ ProjectModel                  │  │  │
+│  │  │ (rows)      ││    │  │  - tasks: TaskRow[]           │  │  │
+│  │  ├─────────────┤│    │  │  - risks: RiskRow[]           │  │  │
+│  │  │ Risks       ││    │  │  - resources: ResourceRow[]   │  │  │
+│  │  │ (rows)      ││    │  └──────────────────────────────┘  │  │
+│  │  ├─────────────┤│    └────────────────────────────────────┘  │
+│  │  │ Resources   ││                                            │
+│  │  │ (rows)      ││                                            │
+│  │  └─────────────┘│                                            │
+│  └─────────────────┘                                            │
+└─────────────────────────────────────────────────────────────────┘
+         ▲    ▲
+         │    │
+    Convert    Save
+     Sheet      │
+         │    │
+         ▼    ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                      Project View                                 │
+│  ┌─────────┐  ┌─────────┐  ┌──────────┐  ┌─────────────────┐  │
+│  │  Gantt   │  │  WBS    │  │  Risk    │  │  Resource       │  │
+│  │  Chart   │  │  Tree   │  │  Register│  │  Management     │  │
+│  └─────────┘  └─────────┘  └──────────┘  └─────────────────┘  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Changes Made
+
+#### 1. Normalized Schema (types.ts)
+- Added `ResourceRow` interface to `types.ts`
+- Added `resources: ResourceRow[]` to `ProjectModel`
+
+#### 2. Conversion Functions (sheetToProject.ts)
+- Added `resourceToRow()` and `rowToResource()`
+- Added `riskToRow()` and `rowToRisk()`
+- Updated `projectModelToSheetCells()` to write risks and resources sections
+- Updated `sheetToProject()` to parse risks and resources from sheet
+- Updated `createProjectSheet()` to include sample risks and resources
+- Updated `projectModelToProject()` to convert `resources` from model to runtime
+
+#### 3. Project View (ProjectView.tsx)
+- Updated `projectToModel()` to include resources when saving
+- Updated `handleSaveToSheet()` to include resources
+
+#### 4. Sync (App.tsx)
+- `handleSaveProjectData()` writes all data (tasks, risks, resources) to both:
+  - `workbook.extensions['project-wbs']` (persistence)
+  - Source sheet cells (for user editing)
+
+### Results
+- **3233 tests** passing (135 suites)
+- Lint clean, type-check clean, build clean
+
