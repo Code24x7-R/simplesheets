@@ -385,13 +385,22 @@ All tree operations are **immutable** — they return new trees, never mutate in
 
 ## Templates
 
-Templates seed a project with pre-built tasks, risks, and resources.
+Templates seed a project with pre-built tasks, risks, and resources. All 12 planned templates are implemented.
 
-| Template | File | Description |
-|----------|------|-------------|
-| Simple WBS | `templates/simple.ts` | Planning → Execution → Closure |
-| Website | `templates/website.ts` | Website project lifecycle |
-| Software | `templates/software.ts` | Software development phases |
+| # | Template | File | Category | Phases | Tasks |
+|---|----------|------|----------|--------|-------|
+| 1 | Simple WBS | `templates/simple.ts` | Generic | Planning → Execution → Closure | 7 |
+| 2 | Website Project | `templates/website.ts` | Web/Dev | Discovery → Design → Dev → QA → Launch | 15 |
+| 3 | Software Development | `templates/software.ts` | Software | Requirements → Design → Dev → QA → Deploy | 17 |
+| 4 | Home Renovation | `templates/renovation.ts` | Construction | Planning → Demo → Structure → MEP → Finishing | 22 |
+| 5 | Event Planning | `templates/event.ts` | Events | Setup → Catering → Marketing → Logistics → Day-of | 16 |
+| 6 | Marketing Campaign | `templates/marketing.ts` | Marketing | Research → Content → Distribution → Launch → Analysis | 15 |
+| 7 | Business Project | `templates/business.ts` | Business | Feasibility → Planning → Execution → Review | 12 |
+| 8 | Product Launch | `templates/product.ts` | Business | Development → Marketing → Readiness → Launch → Post | 17 |
+| 9 | IT Migration | `templates/it-migration.ts` | IT | Audit → Planning → Migration → Validation → Cutover | 18 |
+| 10 | Agile/Sprint Planning | `templates/agile.ts` | Software | Backlog → Sprint 1-3 → Release | 18 |
+| 11 | Construction Project | `templates/construction.ts` | Construction | Pre-con → Foundation → Structure → MEP → Finishing | 25 |
+| 12 | Mining Consulting | `templates/mining.ts` | Mining | Scoping → Assessment → Analysis → Report → Presentation | 14 |
 
 ### Template Structure
 

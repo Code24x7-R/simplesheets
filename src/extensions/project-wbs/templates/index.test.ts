@@ -4,6 +4,15 @@ import { TEMPLATES, getTemplateById, getTemplatesByCategory, getAllCategories, g
 import { createSimpleWBS } from './simple';
 import { createWebsiteProject } from './website';
 import { createSoftwareProject } from './software';
+import { createRenovationProject } from './renovation';
+import { createEventPlanningProject } from './event';
+import { createMarketingCampaignProject } from './marketing';
+import { createBusinessProject } from './business';
+import { createProductLaunchProject } from './product';
+import { createITMigrationProject } from './it-migration';
+import { createAgileProject } from './agile';
+import { createConstructionProject } from './construction';
+import { createMiningConsultingProject } from './mining';
 import { validateTree } from '../treeOps';
 import { detectDependencyCycles } from '../dependencies';
 import { flattenTasks } from '../dependencies';
@@ -132,6 +141,136 @@ describe('Templates', () => {
 
     it('has risks', () => {
       expect(project.risks.length).toBeGreaterThanOrEqual(2);
+    });
+  });
+
+  describe('Renovation template', () => {
+    const project = createRenovationProject();
+
+    it('has a valid WBS tree', () => {
+      const errors = validateTree(project.wbs);
+      expect(errors).toEqual([]);
+    });
+
+    it('has multiple phases', () => {
+      const flat = flattenTasks(project.wbs);
+      expect(flat.length).toBeGreaterThan(10);
+    });
+
+    it('has resources', () => {
+      expect(project.resources.length).toBeGreaterThanOrEqual(3);
+    });
+  });
+
+  describe('Event Planning template', () => {
+    const project = createEventPlanningProject();
+
+    it('has a valid WBS tree', () => {
+      const errors = validateTree(project.wbs);
+      expect(errors).toEqual([]);
+    });
+
+    it('has multiple phases', () => {
+      const flat = flattenTasks(project.wbs);
+      expect(flat.length).toBeGreaterThan(10);
+    });
+  });
+
+  describe('Marketing Campaign template', () => {
+    const project = createMarketingCampaignProject();
+
+    it('has a valid WBS tree', () => {
+      const errors = validateTree(project.wbs);
+      expect(errors).toEqual([]);
+    });
+
+    it('has multiple phases', () => {
+      const flat = flattenTasks(project.wbs);
+      expect(flat.length).toBeGreaterThan(10);
+    });
+  });
+
+  describe('Business Project template', () => {
+    const project = createBusinessProject();
+
+    it('has a valid WBS tree', () => {
+      const errors = validateTree(project.wbs);
+      expect(errors).toEqual([]);
+    });
+
+    it('has multiple phases', () => {
+      const flat = flattenTasks(project.wbs);
+      expect(flat.length).toBeGreaterThan(8);
+    });
+  });
+
+  describe('Product Launch template', () => {
+    const project = createProductLaunchProject();
+
+    it('has a valid WBS tree', () => {
+      const errors = validateTree(project.wbs);
+      expect(errors).toEqual([]);
+    });
+
+    it('has multiple phases', () => {
+      const flat = flattenTasks(project.wbs);
+      expect(flat.length).toBeGreaterThan(10);
+    });
+  });
+
+  describe('IT Migration template', () => {
+    const project = createITMigrationProject();
+
+    it('has a valid WBS tree', () => {
+      const errors = validateTree(project.wbs);
+      expect(errors).toEqual([]);
+    });
+
+    it('has multiple phases', () => {
+      const flat = flattenTasks(project.wbs);
+      expect(flat.length).toBeGreaterThan(10);
+    });
+  });
+
+  describe('Agile/Sprint template', () => {
+    const project = createAgileProject();
+
+    it('has a valid WBS tree', () => {
+      const errors = validateTree(project.wbs);
+      expect(errors).toEqual([]);
+    });
+
+    it('has multiple phases', () => {
+      const flat = flattenTasks(project.wbs);
+      expect(flat.length).toBeGreaterThan(10);
+    });
+  });
+
+  describe('Construction template', () => {
+    const project = createConstructionProject();
+
+    it('has a valid WBS tree', () => {
+      const errors = validateTree(project.wbs);
+      expect(errors).toEqual([]);
+    });
+
+    it('has multiple phases', () => {
+      const flat = flattenTasks(project.wbs);
+      expect(flat.length).toBeGreaterThan(15);
+    });
+  });
+
+  describe('Mining Consulting template', () => {
+    const project = createMiningConsultingProject();
+
+    it('has a valid WBS tree', () => {
+      const errors = validateTree(project.wbs);
+      expect(errors).toEqual([]);
+    });
+
+    it('has multiple phases', () => {
+      const flat = flattenTasks(project.wbs);
+      expect(flat.length).toBeGreaterThan(8);
     });
   });
 });

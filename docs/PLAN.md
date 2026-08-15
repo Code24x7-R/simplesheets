@@ -14,9 +14,9 @@ Achieve a clean, clutter-free UI with standardized dropdown menus, formula wizar
 
 ## Active Work
 
-### Extensions Architecture (Phases 34-38) — COMPLETE ✅
+### Extensions Architecture (Phases 34-39) — IN PROGRESS 🔄
 
-The WBS/Project extension is fully implemented. See [EXTENSIONS_ARCHITECTURE.md](./EXTENSIONS_ARCHITECTURE.md) for technical details.
+The WBS/Project extension is actively being expanded. See [EXTENSIONS_ARCHITECTURE.md](./EXTENSIONS_ARCHITECTURE.md) for technical details.
 
 | Phase | Description | Status |
 |-------|-------------|--------|
@@ -25,6 +25,7 @@ The WBS/Project extension is fully implemented. See [EXTENSIONS_ARCHITECTURE.md]
 | 36 | Tab-Based Project View — "📊 Project" tab as peer to sheet tabs | ✅ Complete |
 | 37 | Enhanced Project Functions — resource CRUD, dependency lines, collapse/expand | ✅ Complete |
 | 38 | Normalized Schema & Complete Sync — all data persisted and synced | ✅ Complete |
+| 39 | Template Library Expansion — all 12 templates implemented | ✅ Complete |
 
 **Extension Features:**
 - WBS hierarchy (tree structure with parent-child relationships)
@@ -35,7 +36,20 @@ The WBS/Project extension is fully implemented. See [EXTENSIONS_ARCHITECTURE.md]
 - Working calendar with holidays
 - Roll-up calculations for summary tasks
 - Sheet-as-source with bidirectional sync
-- Pre-built templates (Simple WBS, Website, Software)
+- 12 pre-built templates across 8 categories
+
+**Templates (12 of 12):**
+| Category | Templates |
+|----------|----------|
+| Generic | Simple WBS |
+| Web/Dev | Website Project |
+| Software | Software Development, Agile/Sprint Planning |
+| Construction | Home Renovation, Construction Project |
+| Events | Event Planning |
+| Marketing | Marketing Campaign |
+| Business | Business Project, Product Launch |
+| IT | IT Migration |
+| Mining | Mining Consulting |
 
 ---
 
