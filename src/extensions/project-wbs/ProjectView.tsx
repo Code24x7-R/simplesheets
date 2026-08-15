@@ -15,6 +15,8 @@ import { GanttChart } from './GanttChart';
 import { RiskRegister } from './RiskRegister';
 import { RiskMatrix } from './RiskMatrix';
 import { WBSTreePanel } from './WBSTreePanel';
+import { ResourceHeatmap } from './ResourceHeatmap';
+import { CalendarConfigModal } from './CalendarConfigModal';
 import { TaskEditorModal } from './TaskEditorModal';
 import { RiskEditorModal } from './RiskEditorModal';
 import { ResourceEditorModal } from './ResourceEditorModal';
@@ -22,6 +24,7 @@ import { ColumnMappingDialog } from './ColumnMappingDialog';
 import { sheetToProject, projectModelToProject } from './sheetToProject';
 import { addTask, removeTask, updateTask, toggleCollapse, findTaskById, getAllTasks, addResource, updateResource, removeResource } from './treeOps';
 import { addRisk, updateRisk, removeRisk, getRiskSummary } from './risks';
+import { recomputeRollups } from './rollups';
 import type { Project, ViewMode, WBSTask, Risk, Resource } from '../types';
 import type { Sheet, ColumnMapping, ProjectModel } from '../../types';
 
@@ -40,6 +43,7 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [selectedRiskId, setSelectedRiskId] = useState<string | null>(null);
   const [showColumnMapping, setShowColumnMapping] = useState(false);
+  const [showCalendarConfig, setShowCalendarConfig] = useState(false);
 
   // Modal states
   const [taskModal, setTaskModal] = useState<{
@@ -87,6 +91,8 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
         // Add new
         next = { ...prev, wbs: addTask(prev.wbs, taskModal.parentId, task) };
       }
+      // Recompute rollups for summary tasks
+      next = { ...next, wbs: recomputeRollups(next.wbs, next.risks) };
       // Sync changes back to sheet
       syncProjectToSheet(next);
       return next;
@@ -106,8 +112,10 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
 
     setProject((prev) => {
       const next = { ...prev, wbs: removeTask(prev.wbs, taskId) };
-      syncProjectToSheet(next);
-      return next;
+      // Recompute rollups for summary tasks
+      const recomputed = { ...next, wbs: recomputeRollups(next.wbs, next.risks) };
+      syncProjectToSheet(recomputed);
+      return recomputed;
     });
     if (selectedTaskId === taskId) setSelectedTaskId(null);
   }
@@ -289,6 +297,13 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
     setShowColumnMapping(false);
   }
 
+  // ─── Calendar Configuration ─────────────────────────────────────────
+
+  function handleCalendarSave(calendar: import('../types').WorkingCalendar) {
+    setProject((prev) => ({ ...prev, calendar }));
+    setShowCalendarConfig(false);
+  }
+
   function handleSaveToSheet() {
     // Save current project state back to workbook
     const model: ProjectModel = {
@@ -362,7 +377,7 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
         <div className="flex items-center gap-2">
           {/* View mode toggle */}
           <div className="flex rounded border border-gray-200 overflow-hidden">
-            {(['gantt', 'risk-register', 'risk-matrix'] as ViewMode[]).map((mode) => (
+            {(['gantt', 'risk-register', 'risk-matrix', 'resource-heatmap'] as ViewMode[]).map((mode) => (
               <button
                 key={mode}
                 className={`px-3 py-1 text-sm ${
@@ -372,7 +387,7 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
                 }`}
                 onClick={() => setViewMode(mode)}
               >
-                {mode === 'gantt' ? 'Gantt' : mode === 'risk-register' ? 'Risk Register' : 'Risk Matrix'}
+                {mode === 'gantt' ? 'Gantt' : mode === 'risk-register' ? 'Risk Register' : mode === 'risk-matrix' ? 'Risk Matrix' : 'Resources'}
               </button>
             ))}
           </div>
@@ -419,6 +434,15 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
               👥 Resources ({project.resources.length})
             </button>
           )}
+
+          {/* Calendar Config button */}
+          <button
+            className="ml-2 px-3 py-1 text-sm text-gray-600 border border-gray-300 rounded hover:bg-gray-50"
+            onClick={() => setShowCalendarConfig(true)}
+            title="Configure working calendar"
+          >
+            📅 Calendar
+          </button>
 
           {/* Convert Sheet button */}
           {activeSheet && (
@@ -496,6 +520,9 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
           {viewMode === 'risk-matrix' && (
             <RiskMatrix risks={project.risks} />
           )}
+          {viewMode === 'resource-heatmap' && (
+            <ResourceHeatmap project={project} />
+          )}
         </div>
       </div>
 
@@ -539,6 +566,15 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
           sheet={activeSheet}
           onConfirm={handleColumnMappingConfirm}
           onCancel={handleColumnMappingCancel}
+        />
+      )}
+
+      {/* Calendar Configuration Modal */}
+      {showCalendarConfig && (
+        <CalendarConfigModal
+          calendar={project.calendar}
+          onClose={() => setShowCalendarConfig(false)}
+          onSave={handleCalendarSave}
         />
       )}
     </div>

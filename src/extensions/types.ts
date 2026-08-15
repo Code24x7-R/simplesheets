@@ -267,7 +267,7 @@ export interface RiskSummary {
 
 export type GanttZoom = 'day' | 'week' | 'month';
 
-export type ViewMode = 'gantt' | 'wbs' | 'risk-register' | 'risk-matrix';
+export type ViewMode = 'gantt' | 'wbs' | 'risk-register' | 'risk-matrix' | 'resource-heatmap';
 
 /**
  * Gantt rendering configuration.
