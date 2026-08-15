@@ -74,6 +74,31 @@ describe('Templates', () => {
     });
   });
 
+  describe('Resource auto-assignment', () => {
+    it('auto-assigns resources to tasks when none are assigned', () => {
+      const project = templateToProject(miningJSON as ProjectTemplateJSON);
+      const allTasks = flattenTasks(project.wbs);
+      const leafTasks = allTasks.filter((t) => !t.isSummary && !t.isMilestone);
+      
+      // All leaf tasks should have a resource assigned
+      for (const task of leafTasks) {
+        expect(task.responsibleResourceId).toBeTruthy();
+      }
+      
+      // Should use existing resources
+      const resourceIds = new Set(project.resources.map((r) => r.id));
+      for (const task of leafTasks) {
+        expect(resourceIds.has(task.responsibleResourceId!)).toBe(true);
+      }
+    });
+
+    it('does not override manually assigned resources', () => {
+      const template = { ...simpleJSON, tasks: [{ ...simpleJSON.tasks[0], resourceId: 'res-1' }] } as ProjectTemplateJSON;
+      const project = templateToProject(template);
+      expect(project.wbs[0].responsibleResourceId).toBe('res-1');
+    });
+  });
+
   describe('Simple WBS template', () => {
     const project = templateToProject(simpleJSON as ProjectTemplateJSON);
 
