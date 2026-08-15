@@ -16,7 +16,7 @@ import { colToLetter } from '../../types';
 import type { Project, WBSTask, Resource } from '../types';
 import { getTemplateById } from './templates/index';
 import { getAllTasks } from './treeOps';
-import { getDefaultCurrency } from '../../utils/currency';
+import { getDefaultCurrency, getCurrencyFormatPattern } from '../../utils/currency';
 
 // ─── Sheet Name Constants ──────────────────────────────────────────────────
 
@@ -795,7 +795,11 @@ function createResourcesSheetFromModel(model: ProjectModel): Sheet {
     const row = 1 + i;
     cells[`${row}:0`] = { rawValue: resource.name, computedValue: resource.name };
     cells[`${row}:1`] = { rawValue: resource.role, computedValue: resource.role };
-    cells[`${row}:2`] = { rawValue: String(resource.costRate), computedValue: String(resource.costRate) };
+    cells[`${row}:2`] = {
+      rawValue: String(resource.costRate),
+      computedValue: resource.costRate,
+      style: { numberFormat: getCurrencyFormatPattern(resource.costCurrency) },
+    };
     cells[`${row}:3`] = { rawValue: resource.costCurrency, computedValue: resource.costCurrency };
     // Store availability as decimal (0-1) with percentage format for display
     cells[`${row}:4`] = {
