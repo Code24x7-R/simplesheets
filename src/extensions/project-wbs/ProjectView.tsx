@@ -20,6 +20,7 @@ import { CalendarConfigModal } from './CalendarConfigModal';
 import { TaskEditorModal } from './TaskEditorModal';
 import { RiskEditorModal } from './RiskEditorModal';
 import { ResourceEditorModal } from './ResourceEditorModal';
+import { ResourceListModal } from './ResourceListModal';
 import { ColumnMappingDialog } from './ColumnMappingDialog';
 import { sheetToProject, projectModelToProject } from './sheetToProject';
 import { addTask, removeTask, updateTask, toggleCollapse, findTaskById, getAllTasks, addResource, updateResource, removeResource } from './treeOps';
@@ -62,6 +63,8 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
     open: boolean;
     resource: Resource | null;
   }>({ open: false, resource: null });
+
+  const [resourceListOpen, setResourceListOpen] = useState(false);
 
   // Derived values
   const riskSummary = useMemo(() => getRiskSummary(project), [project]);
@@ -241,10 +244,6 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
   }, [syncProjectToSheet]);
 
   // ─── Resource CRUD ───────────────────────────────────────────────────
-
-  function handleAddResource() {
-    setResourceModal({ open: true, resource: null });
-  }
 
   function handleResourceSave(resource: Resource) {
     setProject((prev) => {
@@ -428,7 +427,7 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
           {viewMode === 'gantt' && (
             <button
               className="ml-2 px-3 py-1 text-sm text-purple-600 border border-purple-300 rounded hover:bg-purple-50"
-              onClick={handleAddResource}
+              onClick={() => setResourceListOpen(true)}
               title="Manage project resources"
             >
               👥 Resources ({project.resources.length})
@@ -550,7 +549,17 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
         />
       )}
 
-      {/* Resource Editor Modal */}
+      {/* Resource List Modal */}
+      {resourceListOpen && (
+        <ResourceListModal
+          resources={project.resources}
+          onClose={() => setResourceListOpen(false)}
+          onSave={handleResourceSave}
+          onDelete={handleResourceDelete}
+        />
+      )}
+
+      {/* Resource Editor Modal (for backward compatibility) */}
       {resourceModal.open && (
         <ResourceEditorModal
           resource={resourceModal.resource}
