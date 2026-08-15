@@ -12,6 +12,7 @@
  */
 
 import type { Sheet, ColumnMapping, ProjectModel, TaskRow, RiskRow, ResourceRow, Cell } from '../../types';
+import { colToLetter } from '../../types';
 import type { Project, WBSTask, Resource } from '../types';
 import { getTemplateById } from './templates/index';
 import { getAllTasks } from './treeOps';
@@ -129,7 +130,13 @@ export function sheetToProject(sheet: Sheet, mapping: ColumnMapping, projectName
   // Build a map from row index to task for parent/dependency resolution
   const rowIndexToTaskId = new Map<number, string>();
 
-  for (let row = headerRow + 1; row < sheet.rowCount; row++) {
+  // Find section boundaries by scanning for headers
+  const riskHeaderRow = findSectionHeader(sheet, headerRow + 1, 'Risk');
+  const resourceHeaderRow = findSectionHeader(sheet, headerRow + 1, 'Resource');
+
+  // Parse tasks until we hit the risk section or end of sheet
+  const taskEndRow = riskHeaderRow ?? sheet.rowCount;
+  for (let row = headerRow + 1; row < taskEndRow; row++) {
     const task = parseTaskRow(sheet, row, mapping);
     if (task) {
       tasks.push(task);
@@ -148,9 +155,9 @@ export function sheetToProject(sheet: Sheet, mapping: ColumnMapping, projectName
   const projectStart = dates.length > 0 ? dates.reduce((a, b) => (a < b ? a : b)) : new Date().toISOString().slice(0, 10);
   const projectEnd = dates.length > 0 ? dates.reduce((a, b) => (a > b ? a : b)) : new Date().toISOString().slice(0, 10);
 
-  // Parse risks and resources from dedicated sections
-  const risks = parseRiskSection(sheet, headerRow, tasks.length);
-  const resources = parseResourceSection(sheet, headerRow, tasks.length, risks.length);
+  // Parse risks and resources from dynamically-located sections
+  const risks = riskHeaderRow !== null ? parseRiskSectionAt(sheet, riskHeaderRow) : [];
+  const resources = resourceHeaderRow !== null ? parseResourceSectionAt(sheet, resourceHeaderRow) : [];
 
   return {
     id: `proj-${Date.now()}`,
@@ -165,15 +172,15 @@ export function sheetToProject(sheet: Sheet, mapping: ColumnMapping, projectName
 }
 
 /**
- * Find the risk section header row by searching for "Risk" header.
- * Returns the header row index or null if not found.
+ * Find a section header row by scanning for specific header text.
+ * Returns the row index or null if not found.
  */
-function findRiskSectionHeader(sheet: Sheet, startRow: number): number | null {
-  for (let row = startRow; row < Math.min(startRow + 50, sheet.rowCount); row++) {
+function findSectionHeader(sheet: Sheet, startRow: number, headerText: string): number | null {
+  for (let row = startRow; row < sheet.rowCount; row++) {
     const cell = sheet.cells[`${row}:0`];
     if (cell) {
       const value = (cell.rawValue ?? '').toString().trim().toLowerCase();
-      if (value === 'risk' || value === 'risks' || value === 'title') {
+      if (value === headerText.toLowerCase()) {
         return row;
       }
     }
@@ -182,41 +189,40 @@ function findRiskSectionHeader(sheet: Sheet, startRow: number): number | null {
 }
 
 /**
- * Find the resource section header row by searching for "Resource" header.
- * Returns the header row index or null if not found.
+ * Parse risk rows starting from a known header row.
  */
-function findResourceSectionHeader(sheet: Sheet, startRow: number): number | null {
-  for (let row = startRow; row < Math.min(startRow + 80, sheet.rowCount); row++) {
-    const cell = sheet.cells[`${row}:0`];
-    if (cell) {
-      const value = (cell.rawValue ?? '').toString().trim().toLowerCase();
-      if (value === 'resource' || value === 'resources' || value === 'name') {
-        return row;
-      }
-    }
-  }
-  return null;
-}
-
-/**
- * Parse risk rows from the sheet's risk section.
- */
-function parseRiskSection(sheet: Sheet, headerRow: number, taskCount: number): RiskRow[] {
+function parseRiskSectionAt(sheet: Sheet, headerRow: number): RiskRow[] {
   const risks: RiskRow[] = [];
-  const sectionStart = headerRow + 1 + taskCount + 1; // After tasks + separator
-  const riskHeaderRow = findRiskSectionHeader(sheet, sectionStart);
-  if (riskHeaderRow === null) return risks;
+  for (let row = headerRow + 1; row < sheet.rowCount; row++) {
+    // Stop if we hit another section header
+    const firstCell = sheet.cells[`${row}:0`];
+    const firstValue = (firstCell?.rawValue ?? '').toString().trim().toLowerCase();
+    if (firstValue === 'resource' || firstValue === 'name') break;
 
-  for (let row = riskHeaderRow + 1; row < sheet.rowCount; row++) {
     const risk = parseRiskRow(sheet, row);
     if (risk) {
       risks.push(risk);
     } else {
-      // Stop at first empty row (end of section)
-      break;
+      break; // Empty row = end of section
     }
   }
   return risks;
+}
+
+/**
+ * Parse resource rows starting from a known header row.
+ */
+function parseResourceSectionAt(sheet: Sheet, headerRow: number): ResourceRow[] {
+  const resources: ResourceRow[] = [];
+  for (let row = headerRow + 1; row < sheet.rowCount; row++) {
+    const resource = parseResourceRow(sheet, row);
+    if (resource) {
+      resources.push(resource);
+    } else {
+      break; // Empty row = end of section
+    }
+  }
+  return resources;
 }
 
 /**
@@ -237,27 +243,6 @@ function parseRiskRow(sheet: Sheet, row: number): RiskRow | null {
     mitigationPlan: getCellStringValue(sheet, row, 6),
     notes: getCellStringValue(sheet, row, 7),
   };
-}
-
-/**
- * Parse resource rows from the sheet's resource section.
- */
-function parseResourceSection(sheet: Sheet, headerRow: number, taskCount: number, riskCount: number): ResourceRow[] {
-  const resources: ResourceRow[] = [];
-  const sectionStart = headerRow + 1 + taskCount + 1 + 1 + riskCount + 1; // After tasks + separator + risks + separator
-  const resourceHeaderRow = findResourceSectionHeader(sheet, sectionStart);
-  if (resourceHeaderRow === null) return resources;
-
-  for (let row = resourceHeaderRow + 1; row < sheet.rowCount; row++) {
-    const resource = parseResourceRow(sheet, row);
-    if (resource) {
-      resources.push(resource);
-    } else {
-      // Stop at first empty row (end of section)
-      break;
-    }
-  }
-  return resources;
 }
 
 /**
@@ -287,8 +272,12 @@ function parseTaskRow(sheet: Sheet, row: number, mapping: ColumnMapping): TaskRo
 
   const startDate = parseDate(getCellStringValue(sheet, row, mapping.startDateCol));
   const endDate = parseDate(getCellStringValue(sheet, row, mapping.endDateCol));
+  // Duration may be a NETWORKDAYS formula - read computedValue for formulas
+  const durationRaw = mapping.durationCol !== null
+    ? getCellStringValue(sheet, row, mapping.durationCol)
+    : '';
   const duration = mapping.durationCol !== null
-    ? parseInt(getCellStringValue(sheet, row, mapping.durationCol)) || 1
+    ? parseInt(durationRaw) || 1
     : 1;
 
   const progressRaw = mapping.progressCol !== null
@@ -558,6 +547,7 @@ export function projectModelToSheetCells(
   for (let i = 0; i < model.tasks.length; i++) {
     const task = model.tasks[i];
     const row = headerRow + 1 + i;
+    const rowNum = row + 1; // 1-based row for formulas
 
     if (mapping.taskCol >= 0) {
       cells[`${row}:${mapping.taskCol}`] = task.name;
@@ -569,7 +559,10 @@ export function projectModelToSheetCells(
       cells[`${row}:${mapping.endDateCol}`] = task.endDate;
     }
     if (mapping.durationCol !== null && mapping.durationCol >= 0) {
-      cells[`${row}:${mapping.durationCol}`] = String(task.duration);
+      // Use NETWORKDAYS formula to calculate working days between start and end
+      const startCol = colToLetter(mapping.startDateCol);
+      const endCol = colToLetter(mapping.endDateCol);
+      cells[`${row}:${mapping.durationCol}`] = `=NETWORKDAYS(${startCol}${rowNum},${endCol}${rowNum})`;
     }
     if (mapping.parentCol !== null && mapping.parentCol >= 0) {
       // Convert parentId to parent name for readability

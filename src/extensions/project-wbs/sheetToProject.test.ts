@@ -690,6 +690,25 @@ describe('sheetToProject', () => {
       expect(cells['6:0']).toBe('Alice');
       expect(cells['6:1']).toBe('Dev');
     });
+
+    it('writes duration as NETWORKDAYS formula', () => {
+      const model: ProjectModel = {
+        id: 'proj-1',
+        name: 'Test',
+        description: '',
+        startDate: '2025-01-01',
+        endDate: '2025-01-31',
+        tasks: [
+          { id: 't1', name: 'Task 1', startDate: '2025-01-01', endDate: '2025-01-05', duration: 5, parentId: null, dependencies: [], progress: 0, resourceId: null, isMilestone: false, color: '#3B82F6', notes: '' },
+        ],
+        risks: [],
+        resources: [],
+      };
+
+      const cells = projectModelToSheetCells(model, mapping);
+      // Duration should be a NETWORKDAYS formula referencing start and end date cells
+      expect(cells['1:3']).toBe('=NETWORKDAYS(B2,C2)');
+    });
   });
 
   describe('createSheetFromTemplate', () => {
