@@ -120,12 +120,12 @@ export function ResourceHeatmap({ project }: ResourceHeatmapProps) {
 
   // Get color based on allocation percentage
   function getAllocationColor(percentage: number): string {
-    if (percentage === 0) return 'bg-gray-50';
-    if (percentage <= 25) return 'bg-green-100';
-    if (percentage <= 50) return 'bg-green-200';
-    if (percentage <= 75) return 'bg-yellow-200';
-    if (percentage <= 100) return 'bg-orange-200';
-    return 'bg-red-300'; // Over-allocated
+    if (percentage === 0) return 'bg-gray-100';
+    if (percentage <= 25) return 'bg-green-300';
+    if (percentage <= 50) return 'bg-green-400';
+    if (percentage <= 75) return 'bg-yellow-400';
+    if (percentage <= 100) return 'bg-orange-400';
+    return 'bg-red-500'; // Over-allocated
   }
 
   // Get day of week for a date string (0=Sun, 6=Sat)
@@ -254,13 +254,13 @@ export function ResourceHeatmap({ project }: ResourceHeatmapProps) {
 
         {/* Month labels */}
         <div className="flex">
-          <div className="w-40 flex-shrink-0 border-r border-gray-200 bg-gray-50" />
+          <div className="w-48 flex-shrink-0 border-r border-gray-200 bg-gray-50" />
           <div className="flex">
             {monthLabels.map((label, idx) => (
               <div
                 key={idx}
-                className="text-xs text-gray-600 font-medium border-r border-gray-100 text-center"
-                style={{ width: `${label.colSpan * 28}px` }}
+                className="text-xs text-gray-600 font-medium border-r border-gray-100 text-center py-1"
+                style={{ width: `${label.colSpan * 40}px` }}
               >
                 {label.month}
               </div>
@@ -270,7 +270,7 @@ export function ResourceHeatmap({ project }: ResourceHeatmapProps) {
 
         {/* Day numbers */}
         <div className="flex">
-          <div className="w-40 flex-shrink-0 border-r border-gray-200 bg-gray-50" />
+          <div className="w-48 flex-shrink-0 border-r border-gray-200 bg-gray-50" />
           <div className="flex">
             {visibleDateRange.map((dateStr, idx) => {
               const weekend = isWeekend(dateStr);
@@ -278,12 +278,12 @@ export function ResourceHeatmap({ project }: ResourceHeatmapProps) {
               return (
                 <div
                   key={idx}
-                  className={`w-7 text-[10px] text-center border-r border-gray-100 py-1 ${
+                  className={`w-10 text-xs text-center border-r border-gray-100 py-1 ${
                     weekend ? 'bg-gray-100 text-gray-400' : isWorking ? 'text-gray-600' : 'bg-gray-50 text-gray-400'
                   }`}
                 >
                   <div>{isoToDate(dateStr).getDate()}</div>
-                  <div className="text-[8px] text-gray-400">{['S', 'M', 'T', 'W', 'T', 'F', 'S'][getDayOfWeek(dateStr)]}</div>
+                  <div className="text-[10px] text-gray-400">{['S', 'M', 'T', 'W', 'T', 'F', 'S'][getDayOfWeek(dateStr)]}</div>
                 </div>
               );
             })}
@@ -296,7 +296,7 @@ export function ResourceHeatmap({ project }: ResourceHeatmapProps) {
         {allocations.map(({ resource, allocations: allocationMap }) => (
           <div key={resource.id} className="flex hover:bg-gray-50">
             {/* Resource name */}
-            <div className="w-40 flex-shrink-0 border-r border-gray-200 bg-gray-50 px-3 py-2 sticky left-0">
+            <div className="w-48 flex-shrink-0 border-r border-gray-200 bg-gray-50 px-3 py-2 sticky left-0">
               <div className="flex items-center gap-2">
                 <div
                   className="w-3 h-3 rounded-full flex-shrink-0"
@@ -321,17 +321,17 @@ export function ResourceHeatmap({ project }: ResourceHeatmapProps) {
                 return (
                   <div
                     key={idx}
-                    className={`w-7 h-10 border-r border-gray-100 cursor-pointer transition-colors flex items-center justify-center ${
+                    className={`w-10 h-12 border-r border-gray-200 cursor-pointer transition-colors flex items-center justify-center ${
                       getAllocationColor(pct)
-                    } ${weekend ? 'opacity-60' : ''} ${!isWorking && !weekend ? 'opacity-80' : ''} ${
-                      isHovered ? 'ring-2 ring-blue-400 z-10' : ''
+                    } ${weekend ? 'opacity-50' : ''} ${!isWorking && !weekend ? 'opacity-70' : ''} ${
+                      isHovered ? 'ring-2 ring-blue-500 z-10' : ''
                     }`}
                     onMouseEnter={() => setHoveredCell({ resourceId: resource.id, date: dateStr })}
                     onMouseLeave={() => setHoveredCell(null)}
                     title={`${resource.name} - ${dateStr}: ${pct}% allocated`}
                   >
                     {pct > 0 && (
-                      <span className="text-[9px] font-medium text-gray-700">{pct}%</span>
+                      <span className="text-xs font-bold text-gray-800 drop-shadow-sm">{pct}%</span>
                     )}
                   </div>
                 );
@@ -346,27 +346,27 @@ export function ResourceHeatmap({ project }: ResourceHeatmapProps) {
         <div className="flex items-center gap-4 text-xs text-gray-600">
           <span className="font-medium">Allocation:</span>
           <div className="flex items-center gap-1">
-            <div className="w-4 h-4 bg-gray-50 border border-gray-200" />
+            <div className="w-4 h-4 bg-gray-100 border border-gray-200" />
             <span>0%</span>
           </div>
           <div className="flex items-center gap-1">
-            <div className="w-4 h-4 bg-green-100" />
+            <div className="w-4 h-4 bg-green-300" />
             <span>1-25%</span>
           </div>
           <div className="flex items-center gap-1">
-            <div className="w-4 h-4 bg-green-200" />
+            <div className="w-4 h-4 bg-green-400" />
             <span>26-50%</span>
           </div>
           <div className="flex items-center gap-1">
-            <div className="w-4 h-4 bg-yellow-200" />
+            <div className="w-4 h-4 bg-yellow-400" />
             <span>51-75%</span>
           </div>
           <div className="flex items-center gap-1">
-            <div className="w-4 h-4 bg-orange-200" />
+            <div className="w-4 h-4 bg-orange-400" />
             <span>76-100%</span>
           </div>
           <div className="flex items-center gap-1">
-            <div className="w-4 h-4 bg-red-300" />
+            <div className="w-4 h-4 bg-red-500" />
             <span>Over-allocated</span>
           </div>
           {hoveredCell && (() => {
