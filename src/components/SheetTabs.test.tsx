@@ -28,6 +28,7 @@ function createTestWorkbook(sheetNames: string[]): Workbook {
 
 const mockCallbacks = {
   showProjectView: false,
+  showProjectTab: true,
   onSwitchSheet: jest.fn(),
   onAddSheet: jest.fn(),
   onRenameSheet: jest.fn(),
@@ -219,14 +220,14 @@ describe('SheetTabs', () => {
 
       it('calls onShowProjectView when Project tab is clicked', () => {
         const wb = createTestWorkbook(['Sheet1']);
-        render(<SheetTabs workbook={wb} {...mockCallbacks} />);
+        render(<SheetTabs workbook={wb} {...mockCallbacks} showProjectTab={true} />);
         fireEvent.click(screen.getByText('📊 Project'));
         expect(mockCallbacks.onShowProjectView).toHaveBeenCalledTimes(1);
       });
 
       it('highlights Project tab when showProjectView is true', () => {
         const wb = createTestWorkbook(['Sheet1']);
-        render(<SheetTabs workbook={wb} {...mockCallbacks} showProjectView={true} />);
+        render(<SheetTabs workbook={wb} {...mockCallbacks} showProjectView={true} showProjectTab={true} />);
         const projectTab = screen.getByText('📊 Project');
         expect(projectTab.className).toContain('bg-white');
         expect(projectTab.className).toContain('font-medium');
@@ -234,9 +235,21 @@ describe('SheetTabs', () => {
 
       it('does not highlight Project tab when showProjectView is false', () => {
         const wb = createTestWorkbook(['Sheet1']);
-        render(<SheetTabs workbook={wb} {...mockCallbacks} showProjectView={false} />);
+        render(<SheetTabs workbook={wb} {...mockCallbacks} showProjectView={false} showProjectTab={true} />);
         const projectTab = screen.getByText('📊 Project');
         expect(projectTab.className).toContain('bg-purple-50');
+      });
+
+      it('does not show Project tab when showProjectTab is false', () => {
+        const wb = createTestWorkbook(['Sheet1']);
+        render(<SheetTabs workbook={wb} {...mockCallbacks} showProjectTab={false} />);
+        expect(screen.queryByText('📊 Project')).toBeNull();
+      });
+
+      it('shows Project tab when showProjectTab is true', () => {
+        const wb = createTestWorkbook(['Sheet1']);
+        render(<SheetTabs workbook={wb} {...mockCallbacks} showProjectTab={true} />);
+        expect(screen.getByText('📊 Project')).toBeTruthy();
       });
     });
   });

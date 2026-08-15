@@ -7,6 +7,7 @@ import type { Workbook } from '../types';
 interface SheetTabsProps {
   workbook: Workbook;
   showProjectView: boolean;
+  showProjectTab: boolean;
   onSwitchSheet: (index: number) => void;
   onAddSheet: () => void;
   onRenameSheet: (index: number, newName: string) => void;
@@ -22,6 +23,7 @@ interface SheetTabsProps {
 export function SheetTabs({
   workbook,
   showProjectView,
+  showProjectTab,
   onSwitchSheet,
   onAddSheet,
   onRenameSheet,
@@ -214,18 +216,20 @@ export function SheetTabs({
         +
       </button>
 
-      {/* Project View Tab */}
-      <button
-        className={`ml-4 px-3 py-1 text-sm rounded-t border border-b-0 whitespace-nowrap transition-colors ${
-          showProjectView
-            ? 'bg-white border-gray-300 font-medium text-gray-900 -mb-px'
-            : 'bg-purple-50 border-transparent text-purple-600 hover:bg-purple-100 hover:text-purple-800'
-        }`}
-        onClick={onShowProjectView}
-        title="View project plan (Gantt, WBS, Table)"
-      >
-        📊 Project
-      </button>
+      {/* Project View Tab — only shown when extension is activated */}
+      {showProjectTab && (
+        <button
+          className={`ml-4 px-3 py-1 text-sm rounded-t border border-b-0 whitespace-nowrap transition-colors ${
+            showProjectView
+              ? 'bg-white border-gray-300 font-medium text-gray-900 -mb-px'
+              : 'bg-purple-50 border-transparent text-purple-600 hover:bg-purple-100 hover:text-purple-800'
+          }`}
+          onClick={onShowProjectView}
+          title="View project plan (Gantt, WBS, Table)"
+        >
+          📊 Project
+        </button>
+      )}
     </div>
   );
 }

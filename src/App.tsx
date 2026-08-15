@@ -266,6 +266,7 @@ function WorkbookView() {
 
   // Project / WBS extension state
   const [showProjectView, setShowProjectView] = useState(false);
+  const [showProjectTab, setShowProjectTab] = useState(false);
   const [currentProject, setCurrentProject] = useState<Project | null>(null);
 
   // Chart state
@@ -1041,6 +1042,13 @@ function WorkbookView() {
         : importedWb;
       pushHistory(wbWithTitle, 'Import file', filterStateRef.current, gridSelectionRef.current);
       setStatusMessage(`Imported "${title}" — ${wbWithTitle.sheets.length} sheet(s)`);
+
+      // Check if imported workbook has project data and show project tab
+      const hasProjectData = importedWb.extensions?.['project-wbs'] ||
+        importedWb.sheets.some((s) => s.name === TASKS_SHEET_NAME);
+      if (hasProjectData) {
+        setShowProjectTab(true);
+      }
     },
     [pushHistory]
   );
@@ -1055,6 +1063,7 @@ function WorkbookView() {
       // Clear project state — new workbook has no project data
       setCurrentProject(null);
       setShowProjectView(false);
+      setShowProjectTab(false);
       setStatusMessage('Created new workbook');
       gridRef.current?.focus();
     },
@@ -1809,6 +1818,7 @@ function WorkbookView() {
 
     setCurrentProject(project);
     setShowProjectView(true);
+    setShowProjectTab(true);
   }, [workbook, pushHistory]);
 
   const handleProjectNewSheet = useCallback(() => {
@@ -1834,6 +1844,7 @@ function WorkbookView() {
 
     setCurrentProject(project);
     setShowProjectView(true);
+    setShowProjectTab(true);
   }, [workbook, pushHistory]);
 
   const handleSaveProjectData = useCallback(
@@ -2630,6 +2641,7 @@ function WorkbookView() {
       <SheetTabs
         workbook={workbook}
         showProjectView={showProjectView}
+        showProjectTab={showProjectTab}
         onSwitchSheet={(idx) => {
           handleSwitchSheet(idx);
           // Switching to a sheet tab exits project view
