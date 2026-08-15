@@ -27,6 +27,24 @@ interface DependencyDrawerProps {
   onSaveDependencies: (taskId: string, dependencies: TaskDependency[]) => void;
 }
 
+/**
+ * Get human-readable description for a dependency type.
+ */
+function getDependencyTypeDescription(type: DependencyType): string {
+  switch (type) {
+    case 'FS':
+      return 'Predecessor must finish before this task can start';
+    case 'SS':
+      return 'Predecessor must start before this task can start';
+    case 'FF':
+      return 'Predecessor must finish before this task can finish';
+    case 'SF':
+      return 'Predecessor must start before this task can finish';
+    default:
+      return '';
+  }
+}
+
 export function DependencyDrawer({
   task,
   allTasks,
@@ -232,10 +250,10 @@ export function DependencyDrawer({
                   onChange={(e) => handleUpdateDep(index, { type: e.target.value as DependencyType })}
                   className="flex-1 border border-gray-300 rounded px-2 py-1 text-xs"
                 >
-                  <option value="FS">Finish-to-Start</option>
-                  <option value="SS">Start-to-Start</option>
-                  <option value="FF">Finish-to-Finish</option>
-                  <option value="SF">Start-to-Finish</option>
+                  <option value="FS">FS - Finish-to-Start</option>
+                  <option value="SS">SS - Start-to-Start</option>
+                  <option value="FF">FF - Finish-to-Finish</option>
+                  <option value="SF">SF - Start-to-Finish</option>
                 </select>
                 <div className="flex items-center gap-1">
                   <input
@@ -249,8 +267,13 @@ export function DependencyDrawer({
                 </div>
               </div>
 
+              {/* Type description */}
+              <div className="mt-1 text-xs text-gray-400 italic">
+                {getDependencyTypeDescription(dep.type)}
+              </div>
+
               {/* Predecessor dates */}
-              <div className="mt-1 text-xs text-gray-400">
+              <div className="mt-0.5 text-xs text-gray-400">
                 {pred.startDate} → {pred.endDate}
                 {predResource && <span className="ml-1">({predResource.name})</span>}
               </div>
@@ -284,10 +307,10 @@ export function DependencyDrawer({
                 onChange={(e) => setNewDepType(e.target.value as DependencyType)}
                 className="flex-1 border border-gray-300 rounded px-2 py-1 text-xs"
               >
-                <option value="FS">FS</option>
-                <option value="SS">SS</option>
-                <option value="FF">FF</option>
-                <option value="SF">SF</option>
+                <option value="FS">FS - Finish-to-Start</option>
+                <option value="SS">SS - Start-to-Start</option>
+                <option value="FF">FF - Finish-to-Finish</option>
+                <option value="SF">SF - Start-to-Finish</option>
               </select>
               <input
                 type="number"
@@ -297,6 +320,11 @@ export function DependencyDrawer({
                 placeholder="Lag"
                 title="Lag days (negative = lead)"
               />
+            </div>
+
+            {/* Type description */}
+            <div className="text-xs text-gray-400 italic mb-2">
+              {getDependencyTypeDescription(newDepType)}
             </div>
 
             {/* Actions */}
