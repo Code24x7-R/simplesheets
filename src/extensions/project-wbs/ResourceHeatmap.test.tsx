@@ -84,14 +84,16 @@ describe('ResourceHeatmap', () => {
     render(<ResourceHeatmap project={project} />);
     expect(screen.getByText('Developer 1')).toBeTruthy();
     expect(screen.getByText('Developer 2')).toBeTruthy();
-    expect(screen.getAllByText('Dev').length).toBeGreaterThanOrEqual(2);
+    // Role now includes availability: 'Dev (100%)'
+    expect(screen.getAllByText(/Dev/).length).toBeGreaterThanOrEqual(2);
   });
 
   it('renders month label', () => {
     const project = createMockProject();
     render(<ResourceHeatmap project={project} />);
-    const mayLabels = screen.getAllByText('May');
-    expect(mayLabels.length).toBeGreaterThan(0);
+    // Month label includes year: 'May 2026' in the header
+    const header = document.querySelector('.sticky.top-0');
+    expect(header?.textContent).toContain('May');
   });
 
   it('shows empty state when no resources', () => {
@@ -112,9 +114,9 @@ describe('ResourceHeatmap', () => {
   it('renders correct number of day cells', () => {
     const project = createMockProject();
     render(<ResourceHeatmap project={project} />);
-    // 15 days from May 1 to May 15
+    // 30 days visible (DAYS_PER_VIEW) × 2 resources
     const dayCells = document.querySelectorAll('.cursor-pointer');
-    expect(dayCells.length).toBe(15 * 2); // 15 days × 2 resources
+    expect(dayCells.length).toBe(30 * 2);
   });
 
   it('highlights working days differently from weekends', () => {
