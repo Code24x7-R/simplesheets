@@ -141,6 +141,12 @@ export function useFormulaWizard(): UseFormulaWizardResult {
       const { root, nodeMap } = result;
       const schema = getFunctionSchema(root.functionName);
 
+      // If no schema exists for this function, can't show in wizard
+      // Return false so caller can fall back to autocomplete
+      if (!schema) {
+        return false;
+      }
+
       // Compile the formula from the imported tree
       const compiled = compileASTNodeToString(root, nodeMap);
 
