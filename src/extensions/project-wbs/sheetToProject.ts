@@ -11,7 +11,7 @@
  * - Progress and date parsing
  */
 
-import type { Sheet, Workbook, ColumnMapping, ProjectModel, TaskRow, RiskRow, ResourceRow, Cell } from '../../types';
+import type { Sheet, Workbook, ColumnMapping, ProjectModel, TaskRow, RiskRow, ResourceRow, MaterialRow, Cell } from '../../types';
 import { colToLetter } from '../../types';
 import type { Project, WBSTask, Resource } from '../types';
 import { getTemplateById } from './templates/index';
@@ -23,11 +23,13 @@ import { getDefaultCurrency, getCurrencyFormatPattern } from '../../utils/curren
 export const TASKS_SHEET_NAME = 'Project Plan';
 export const RISKS_SHEET_NAME = 'Risks';
 export const RESOURCES_SHEET_NAME = 'Resources';
+export const MATERIALS_SHEET_NAME = 'Materials';
 
 // ─── Risk & Resource Column Layouts ───────────────────────────────────────
 
 const RISK_HEADERS = ['Risk', 'Category', 'Probability', 'Impact', 'Status', 'Owner', 'Mitigation Plan', 'Notes'];
 const RESOURCE_HEADERS = ['Resource', 'Role', 'Cost Rate', 'Currency', 'Availability %', 'Color'];
+const MATERIAL_HEADERS = ['Material', 'Classification', 'Unit', 'Unit Cost', 'Quantity', 'Vendor', 'Depreciation', 'Useful Life', 'Salvage', 'Billing', 'Rental Rate', 'Lease Start', 'Lease End', 'Wastage %', 'Reorder Pt', 'Carrying Cost', 'Currency', 'Status'];
 
 // ─── Column Auto-Detection ──────────────────────────────────────────────────
 
@@ -174,6 +176,10 @@ export function workbookToProject(
   const resourcesSheet = workbook.sheets.find((s) => s.name === RESOURCES_SHEET_NAME);
   const resources = resourcesSheet ? parseAllResources(resourcesSheet) : [];
 
+  // Parse materials from the Materials sheet
+  const materialsSheet = workbook.sheets.find((s) => s.name === MATERIALS_SHEET_NAME);
+  const materials = materialsSheet ? parseAllMaterials(materialsSheet) : [];
+
   // Build resource name-to-ID lookup map
   const resourceNameToId = new Map<string, string>();
   for (const r of resources) {
@@ -200,6 +206,7 @@ export function workbookToProject(
     tasks,
     risks,
     resources,
+    materials,
   };
 }
 
@@ -343,6 +350,7 @@ function sheetToProjectLegacy(sheet: Sheet, mapping: ColumnMapping, projectName?
     tasks,
     risks,
     resources,
+    materials: [],
   };
 }
 
@@ -383,6 +391,63 @@ function parseResourceRow(sheet: Sheet, row: number): ResourceRow | null {
     availability: Math.round((parseFloat(getCellStringValue(sheet, row, 4)) || 1) * 100),
     color: getCellStringValue(sheet, row, 5) || '#3B82F6',
   };
+}
+
+/**
+ * Parse a single material row.
+ */
+function parseMaterialRow(sheet: Sheet, row: number): MaterialRow | null {
+  const name = getCellStringValue(sheet, row, 0);
+  if (!name) return null;
+
+  return {
+    id: `m-${row}-${Date.now()}`,
+    name,
+    classification: (getCellStringValue(sheet, row, 1) || 'consumable').toLowerCase(),
+    unit: getCellStringValue(sheet, row, 2) || 'each',
+    unitCost: parseFloat(getCellStringValue(sheet, row, 3)) || 0,
+    quantity: parseInt(getCellStringValue(sheet, row, 4)) || 1,
+    vendor: getCellStringValue(sheet, row, 5) || null,
+    depreciationMethod: (getCellStringValue(sheet, row, 6) || 'straight-line').toLowerCase(),
+    usefulLifeMonths: parseInt(getCellStringValue(sheet, row, 7)) || 36,
+    salvageValue: parseFloat(getCellStringValue(sheet, row, 8)) || 0,
+    billingPeriod: (getCellStringValue(sheet, row, 9) || 'daily').toLowerCase(),
+    rentalRate: parseFloat(getCellStringValue(sheet, row, 10)) || 0,
+    leaseStartDate: getCellStringValue(sheet, row, 11) || null,
+    leaseEndDate: getCellStringValue(sheet, row, 12) || null,
+    wastageRate: parseFloat(getCellStringValue(sheet, row, 13)) || 0,
+    reorderPoint: parseInt(getCellStringValue(sheet, row, 14)) || 0,
+    carryingCostPerUnit: parseFloat(getCellStringValue(sheet, row, 15)) || 0,
+    currency: getCellStringValue(sheet, row, 16) || getDefaultCurrency(),
+    status: (getCellStringValue(sheet, row, 17) || 'delivered').toLowerCase(),
+  };
+}
+
+/**
+ * Parse all materials from a materials sheet.
+ */
+function parseAllMaterials(sheet: Sheet): MaterialRow[] {
+  const materials: MaterialRow[] = [];
+
+  // Find header row
+  let headerRow = -1;
+  for (let row = 0; row < Math.min(5, sheet.rowCount); row++) {
+    const cell = sheet.cells[`${row}:0`];
+    const value = (cell?.rawValue ?? '').toString().trim().toLowerCase();
+    if (value === 'material' || value === 'name') {
+      headerRow = row;
+      break;
+    }
+  }
+  if (headerRow === -1) return materials;
+
+  for (let row = headerRow + 1; row < sheet.rowCount; row++) {
+    const material = parseMaterialRow(sheet, row);
+    if (material) {
+      materials.push(material);
+    }
+  }
+  return materials;
 }
 
 /**
@@ -670,6 +735,9 @@ export function projectModelToWorkbook(
   // ─── Resources Sheet ───────────────────────────────────────────────
   sheets.push(createResourcesSheetFromModel(model));
 
+  // ─── Materials Sheet ──────────────────────────────────────────────
+  sheets.push(createMaterialsSheetFromModel(model));
+
   return {
     id: `wb-${model.id}`,
     title: model.name,
@@ -872,6 +940,62 @@ function createResourcesSheetFromModel(model: ProjectModel): Sheet {
     name: RESOURCES_SHEET_NAME,
     cells,
     defaultColWidth: 120,
+    defaultRowHeight: 24,
+    columnWidths: { 0: 150 },
+    rowHeights: {},
+    columnCount: colCount,
+    rowCount: rowCount,
+    frozenColumns: 0,
+    frozenRows: 1,
+  };
+}
+
+/**
+ * Create the materials sheet from a ProjectModel.
+ */
+function createMaterialsSheetFromModel(model: ProjectModel): Sheet {
+  const colCount = MATERIAL_HEADERS.length;
+  const rowCount = 1 + model.materials.length + 2;
+  const cells: Record<string, Cell> = {};
+
+  // Headers
+  for (let col = 0; col < MATERIAL_HEADERS.length; col++) {
+    cells[`0:${col}`] = {
+      rawValue: MATERIAL_HEADERS[col],
+      computedValue: MATERIAL_HEADERS[col],
+      style: { fontWeight: 'bold', backgroundColor: '#F3E8FF', color: '#6B21A8' },
+    };
+  }
+
+  // Data rows
+  for (let i = 0; i < model.materials.length; i++) {
+    const material = model.materials[i];
+    const row = 1 + i;
+    cells[`${row}:0`] = { rawValue: material.name, computedValue: material.name };
+    cells[`${row}:1`] = { rawValue: material.classification, computedValue: material.classification };
+    cells[`${row}:2`] = { rawValue: material.unit, computedValue: material.unit };
+    cells[`${row}:3`] = { rawValue: String(material.unitCost), computedValue: material.unitCost };
+    cells[`${row}:4`] = { rawValue: String(material.quantity), computedValue: material.quantity };
+    cells[`${row}:5`] = { rawValue: material.vendor ?? '', computedValue: material.vendor ?? '' };
+    cells[`${row}:6`] = { rawValue: material.depreciationMethod, computedValue: material.depreciationMethod };
+    cells[`${row}:7`] = { rawValue: String(material.usefulLifeMonths), computedValue: material.usefulLifeMonths };
+    cells[`${row}:8`] = { rawValue: String(material.salvageValue), computedValue: material.salvageValue };
+    cells[`${row}:9`] = { rawValue: material.billingPeriod, computedValue: material.billingPeriod };
+    cells[`${row}:10`] = { rawValue: String(material.rentalRate), computedValue: material.rentalRate };
+    cells[`${row}:11`] = { rawValue: material.leaseStartDate ?? '', computedValue: material.leaseStartDate ?? '' };
+    cells[`${row}:12`] = { rawValue: material.leaseEndDate ?? '', computedValue: material.leaseEndDate ?? '' };
+    cells[`${row}:13`] = { rawValue: String(material.wastageRate), computedValue: material.wastageRate };
+    cells[`${row}:14`] = { rawValue: String(material.reorderPoint), computedValue: material.reorderPoint };
+    cells[`${row}:15`] = { rawValue: String(material.carryingCostPerUnit), computedValue: material.carryingCostPerUnit };
+    cells[`${row}:16`] = { rawValue: material.currency, computedValue: material.currency };
+    cells[`${row}:17`] = { rawValue: material.status, computedValue: material.status };
+  }
+
+  return {
+    id: `sheet-materials-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    name: MATERIALS_SHEET_NAME,
+    cells,
+    defaultColWidth: 110,
     defaultRowHeight: 24,
     columnWidths: { 0: 150 },
     rowHeights: {},
@@ -1316,6 +1440,7 @@ export function createSheetFromTemplate(templateId: string, projectName?: string
       availability: r.availability,
       color: r.color,
     })),
+    materials: [],
   };
 
   // Use projectModelToSheetCells to generate cells
@@ -1419,6 +1544,27 @@ export function createWorkbookFromTemplate(templateId: string, projectName?: str
       availability: r.availability,
       color: r.color,
     })),
+    materials: (project.materials ?? []).map((m) => ({
+      id: m.id,
+      name: m.name,
+      classification: m.classification,
+      unit: m.unit,
+      unitCost: m.unitCost,
+      quantity: m.quantity,
+      vendor: m.vendor,
+      depreciationMethod: m.depreciationMethod,
+      usefulLifeMonths: m.usefulLifeMonths,
+      salvageValue: m.salvageValue,
+      billingPeriod: m.billingPeriod,
+      rentalRate: m.rentalRate,
+      leaseStartDate: m.leaseStartDate,
+      leaseEndDate: m.leaseEndDate,
+      wastageRate: m.wastageRate,
+      reorderPoint: m.reorderPoint,
+      carryingCostPerUnit: m.carryingCostPerUnit,
+      currency: m.currency,
+      status: m.status,
+    })),
   };
 
   return projectModelToWorkbook(model);
@@ -1474,6 +1620,33 @@ export function createResourcesSheet(): Sheet {
     columnWidths: { 0: 150 },
     rowHeights: {},
     columnCount: RESOURCE_HEADERS.length,
+    rowCount: 10,
+    frozenColumns: 0,
+    frozenRows: 1,
+  };
+}
+
+/**
+ * Create a blank materials sheet with headers.
+ */
+export function createMaterialsSheet(): Sheet {
+  const cells: Record<string, Cell> = {};
+  for (let col = 0; col < MATERIAL_HEADERS.length; col++) {
+    cells[`0:${col}`] = {
+      rawValue: MATERIAL_HEADERS[col],
+      computedValue: MATERIAL_HEADERS[col],
+      style: { fontWeight: 'bold', backgroundColor: '#F3E8FF', color: '#6B21A8' },
+    };
+  }
+  return {
+    id: `sheet-materials-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    name: MATERIALS_SHEET_NAME,
+    cells,
+    defaultColWidth: 110,
+    defaultRowHeight: 24,
+    columnWidths: { 0: 150 },
+    rowHeights: {},
+    columnCount: MATERIAL_HEADERS.length,
     rowCount: 10,
     frozenColumns: 0,
     frozenRows: 1,

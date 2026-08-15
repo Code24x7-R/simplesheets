@@ -181,6 +181,7 @@ export interface ProjectModel {
   tasks: TaskRow[];
   risks: RiskRow[];
   resources: ResourceRow[];
+  materials: MaterialRow[];
 }
 
 /**
@@ -194,6 +195,35 @@ export interface ResourceRow {
   costCurrency: string;
   availability: number;
   color: string;
+}
+
+/**
+ * Serializable material row (flat structure from sheet data).
+ */
+export interface MaterialRow {
+  id: string;
+  name: string;
+  classification: string; // 'capex' | 'opex' | 'consumable'
+  unit: string;
+  unitCost: number;
+  quantity: number;
+  vendor: string | null;
+  // CapEx fields
+  depreciationMethod: string;
+  usefulLifeMonths: number;
+  salvageValue: number;
+  // OpEx fields
+  billingPeriod: string;
+  rentalRate: number;
+  leaseStartDate: string | null;
+  leaseEndDate: string | null;
+  // Consumable fields
+  wastageRate: number;
+  reorderPoint: number;
+  carryingCostPerUnit: number;
+  // Common
+  currency: string;
+  status: string;
 }
 
 /**
