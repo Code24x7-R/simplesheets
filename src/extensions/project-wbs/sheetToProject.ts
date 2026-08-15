@@ -13,6 +13,8 @@
 
 import type { Sheet, ColumnMapping, ProjectModel, TaskRow, RiskRow, ResourceRow, Cell } from '../../types';
 import type { Project, WBSTask, Resource } from '../types';
+import { getTemplateById } from './templates/index';
+import { getAllTasks } from './treeOps';
 
 // ─── Column Auto-Detection ──────────────────────────────────────────────────
 
@@ -1003,5 +1005,110 @@ export function getDefaultColumnMapping(): ColumnMapping {
     colorCol: 9,
     notesCol: 10,
     headerRow: 0,
+  };
+}
+
+// ─── Template to Sheet ─────────────────────────────────────────────────────
+
+/**
+ * Create a new Sheet pre-populated with data from a project template.
+ * The sheet includes task, risk, and resource sections.
+ *
+ * @param templateId - ID of the template to use
+ * @param projectName - Optional custom name for the project
+ * @returns A new Sheet ready to be added to a workbook, or null if template not found
+ */
+export function createSheetFromTemplate(templateId: string, projectName?: string): Sheet | null {
+  const template = getTemplateById(templateId);
+  if (!template) return null;
+
+  const project = template.create();
+  const colCount = PROJECT_SHEET_HEADERS.length;
+  const cells: Record<string, Cell> = {};
+
+  // Convert project to model (serializable)
+  const allTasks = getAllTasks(project.wbs);
+  const model: ProjectModel = {
+    id: project.id,
+    name: projectName ?? project.name,
+    description: project.description,
+    startDate: project.startDate,
+    endDate: project.endDate,
+    tasks: allTasks.map((t) => ({
+      id: t.id,
+      name: t.name,
+      startDate: t.startDate,
+      endDate: t.endDate,
+      duration: t.duration,
+      parentId: t.parentId,
+      dependencies: t.dependencies.map((d) => d.predecessorId),
+      progress: t.progress,
+      resourceId: t.responsibleResourceId,
+      isMilestone: t.isMilestone,
+      color: t.color,
+      notes: t.description,
+    })),
+    risks: project.risks.map((r) => ({
+      id: r.id,
+      title: r.title,
+      category: r.category,
+      probability: r.probability,
+      impact: r.impact,
+      status: r.status,
+      ownerId: r.ownerId,
+      mitigationPlan: r.mitigationPlan,
+      notes: r.description,
+    })),
+    resources: project.resources.map((r) => ({
+      id: r.id,
+      name: r.name,
+      role: r.role,
+      costRate: r.costRate,
+      costCurrency: r.costCurrency,
+      availability: r.availability,
+      color: r.color,
+    })),
+  };
+
+  // Use projectModelToSheetCells to generate cells
+  const mapping = getDefaultColumnMapping();
+  const cellValues = projectModelToSheetCells(model, mapping);
+
+  // Convert string values to Cell objects with headers styled
+  for (const [key, value] of Object.entries(cellValues)) {
+    const [row, col] = key.split(':').map(Number);
+    const isHeader = row === 0 || row === model.tasks.length + 1 || row === model.tasks.length + 1 + 1 + model.risks.length + 1;
+    cells[key] = {
+      rawValue: value,
+      computedValue: value,
+      style: isHeader ? {
+        fontWeight: 'bold',
+        backgroundColor: col === 0 ? '#EFF6FF' : undefined,
+        color: '#1E40AF',
+      } : undefined,
+    };
+  }
+
+  // Calculate row count
+  const taskRowCount = model.tasks.length;
+  const riskRowCount = model.risks.length;
+  const resourceRowCount = model.resources.length;
+  const rowCount = 1 + taskRowCount + 1 + 1 + riskRowCount + 1 + 1 + resourceRowCount + 5;
+
+  return {
+    id: `sheet-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    name: projectName ?? project.name,
+    cells,
+    defaultColWidth: 120,
+    defaultRowHeight: 24,
+    columnWidths: {
+      0: 200,
+      10: 180,
+    },
+    rowHeights: {},
+    columnCount: colCount,
+    rowCount: rowCount,
+    frozenColumns: 1,
+    frozenRows: 1,
   };
 }

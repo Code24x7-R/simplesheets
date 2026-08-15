@@ -58,8 +58,7 @@ import { createDemoWorkbook } from './utils/demoWorkbook';
 import { useChartSettings } from './hooks/useChartSettings';
 import { SheetLinkProvider } from './components/SheetLink';
 import { ProjectView } from './extensions/project-wbs/ProjectView';
-import { getTemplateById } from './extensions/project-wbs/templates';
-import { createProjectSheet, getDefaultColumnMapping, sheetToProject, projectModelToProject, projectModelToSheetCells } from './extensions/project-wbs/sheetToProject';
+import { createProjectSheet, createSheetFromTemplate, getDefaultColumnMapping, sheetToProject, projectModelToProject, projectModelToSheetCells } from './extensions/project-wbs/sheetToProject';
 import type { Project } from './extensions/types';
 import type { ProjectModel, ColumnMapping } from './types';
 
@@ -1052,6 +1051,9 @@ function WorkbookView() {
       sheetActiveCellsRef.current.clear();
       // Default to A1 on the first sheet
       restoreActiveCellForSheet(wb.sheets[0].id);
+      // Clear project state — new workbook has no project data
+      setCurrentProject(null);
+      setShowProjectView(false);
       setStatusMessage('Created new workbook');
       gridRef.current?.focus();
     },
@@ -1785,13 +1787,29 @@ function WorkbookView() {
   // ─── Extension Handlers ─────────────────────────────────────────
 
   const handleProjectNew = useCallback((templateId: string) => {
-    const template = getTemplateById(templateId);
-    if (template) {
-      const project = template.create();
-      setCurrentProject(project);
-      setShowProjectView(true);
-    }
-  }, []);
+    // Create a sheet from the template data
+    const newSheet = createSheetFromTemplate(templateId);
+    if (!newSheet) return;
+
+    // Add sheet to workbook and switch to it
+    const updatedSheets = [...workbook.sheets, newSheet];
+    const updatedWb = {
+      ...workbook,
+      sheets: updatedSheets,
+      activeSheetIndex: updatedSheets.length - 1,
+      extensions: undefined, // Clear any previous extension data
+      lastModified: Date.now(),
+    };
+    pushHistory(updatedWb, `New project from template: ${newSheet.name}`, filterStateRef.current, gridSelectionRef.current);
+
+    // Convert the sheet to a project and open the view
+    const mapping = getDefaultColumnMapping();
+    const model = sheetToProject(newSheet, mapping, newSheet.name);
+    const project = projectModelToProject(model);
+
+    setCurrentProject(project);
+    setShowProjectView(true);
+  }, [workbook, pushHistory]);
 
   const handleProjectNewSheet = useCallback(() => {
     // Create a new project sheet with headers and sample data

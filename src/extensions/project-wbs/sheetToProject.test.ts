@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
-import { detectColumnMapping, sheetToProject, projectModelToProject, projectModelToSheetCells, createProjectSheet, getDefaultColumnMapping, PROJECT_SHEET_HEADERS, resourceToRow, rowToResource, riskToRow, rowToRisk } from './sheetToProject';
+import { detectColumnMapping, sheetToProject, projectModelToProject, projectModelToSheetCells, createProjectSheet, createSheetFromTemplate, getDefaultColumnMapping, PROJECT_SHEET_HEADERS, resourceToRow, rowToResource, riskToRow, rowToRisk } from './sheetToProject';
 import type { Resource, Risk } from '../types';
 import type { Sheet, ColumnMapping, ProjectModel } from '../../types';
 
@@ -689,6 +689,58 @@ describe('sheetToProject', () => {
       expect(cells['5:0']).toBe('Resource');
       expect(cells['6:0']).toBe('Alice');
       expect(cells['6:1']).toBe('Dev');
+    });
+  });
+
+  describe('createSheetFromTemplate', () => {
+    it('creates a sheet from simple-wbs template', () => {
+      const sheet = createSheetFromTemplate('simple-wbs');
+      expect(sheet).not.toBeNull();
+      expect(sheet!.name).toBe('Simple WBS');
+      expect(sheet!.cells['0:0']).toBeDefined(); // Task header
+      expect(sheet!.columnCount).toBe(11);
+    });
+
+    it('creates a sheet from website template', () => {
+      const sheet = createSheetFromTemplate('website');
+      expect(sheet).not.toBeNull();
+      expect(sheet!.name).toBe('Website Project');
+      // Should have task data
+      expect(sheet!.cells['0:0']).toBeDefined();
+    });
+
+    it('creates a sheet from software template', () => {
+      const sheet = createSheetFromTemplate('software');
+      expect(sheet).not.toBeNull();
+      expect(sheet!.name).toBe('Software Development');
+    });
+
+    it('returns null for unknown template', () => {
+      const sheet = createSheetFromTemplate('nonexistent');
+      expect(sheet).toBeNull();
+    });
+
+    it('creates sheet with custom project name', () => {
+      const sheet = createSheetFromTemplate('simple-wbs', 'My Custom Project');
+      expect(sheet).not.toBeNull();
+      expect(sheet!.name).toBe('My Custom Project');
+    });
+
+    it('creates sheet with all sections', () => {
+      const sheet = createSheetFromTemplate('simple-wbs');
+      expect(sheet).not.toBeNull();
+      // Task header at row 0
+      expect(sheet!.cells['0:0']).toBeDefined();
+      // Risk section should exist after tasks
+      // Resource section should exist after risks
+      expect(sheet!.rowCount).toBeGreaterThan(5);
+    });
+
+    it('freezes header row and first column', () => {
+      const sheet = createSheetFromTemplate('simple-wbs');
+      expect(sheet).not.toBeNull();
+      expect(sheet!.frozenRows).toBe(1);
+      expect(sheet!.frozenColumns).toBe(1);
     });
   });
 });

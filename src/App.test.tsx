@@ -909,4 +909,67 @@ describe('App - Global Keyboard Shortcuts', () => {
     act(() => { fireEvent.keyDown(formulaBarInput, { key: 'F4' }); });
     expect(formulaBarInput.value).toBe('=B1');
   });
+
+  describe('Project workflow', () => {
+    // Helper to click a menu item (handles multiple matches)
+    const clickMenuItem = (text: string) => {
+      const elements = screen.getAllByText(text);
+      fireEvent.click(elements[0]);
+    };
+
+    it('selecting a template creates project sheet and opens project view', () => {
+      render(<App />);
+
+      // Open Extensions menu → Project / WBS submenu → template
+      clickMenuItem('Extensions');
+      clickMenuItem('Project / WBS');
+      clickMenuItem('Simple WBS');
+
+      // Project view should be visible
+      expect(screen.getByTestId('project-view')).toBeInTheDocument();
+    });
+
+    it('selecting a template switches to the new sheet tab', () => {
+      render(<App />);
+
+      // Create project from template
+      clickMenuItem('Extensions');
+      clickMenuItem('Project / WBS');
+      clickMenuItem('Website Project');
+
+      // The project sheet should be present in the tab bar
+      // (may also appear in menu, so use getAllByText)
+      const elements = screen.getAllByText('Website Project');
+      expect(elements.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('File → New clears project state', () => {
+      render(<App />);
+
+      // First create a project
+      clickMenuItem('Extensions');
+      clickMenuItem('Project / WBS');
+      clickMenuItem('Simple WBS');
+      expect(screen.getByTestId('project-view')).toBeInTheDocument();
+
+      // Now create a new workbook (File → New)
+      clickMenuItem('File');
+      clickMenuItem('New');
+
+      // Project view should no longer be visible
+      expect(screen.queryByTestId('project-view')).not.toBeInTheDocument();
+    });
+
+    it('New Project Sheet creates sheet and opens project view', () => {
+      render(<App />);
+
+      // Open Extensions menu → Project / WBS submenu → New Project Sheet
+      clickMenuItem('Extensions');
+      clickMenuItem('Project / WBS');
+      clickMenuItem('New Project Sheet');
+
+      // Project view should be visible
+      expect(screen.getByTestId('project-view')).toBeInTheDocument();
+    });
+  });
 });
