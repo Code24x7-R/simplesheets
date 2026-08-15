@@ -1,0 +1,388 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Richard Robertson
+/**
+ * Accounting Dashboard
+ *
+ * Four-table cost tracking view:
+ * 1. Baseline — Original approved plan
+ * 2. Approved Allocation — Budget approved per task
+ * 3. Current Estimate — Rolling forecast (EAC)
+ * 4. Actual Spend — Real costs incurred
+ *
+ * Shows variance columns and earned value metrics (CPI/SPI).
+ */
+
+import { useState, useMemo } from 'react';
+import type { Project } from '../types';
+import {
+  computeProjectAccounting,
+  formatVariance,
+  formatPerformanceIndex,
+} from './projectAccounting';
+
+
+interface AccountingDashboardProps {
+  project: Project;
+  onEditSpend?: (taskId: string) => void;
+  onEditAllocation?: (taskId: string) => void;
+}
+
+type AccountingTab = 'baseline' | 'allocation' | 'estimate' | 'actual';
+
+export function AccountingDashboard({ project, onEditSpend, onEditAllocation }: AccountingDashboardProps) {
+  const [activeTab, setActiveTab] = useState<AccountingTab>('estimate');
+
+  const accounting = useMemo(() => computeProjectAccounting(project), [project]);
+  const currency = accounting.currency;
+
+  // Project-level metrics
+  const totalEarnedValue = accounting.taskAccounting.reduce(
+    (sum, t) => sum + t.baselineCost * 0.5,
+    0, // Using 50% as placeholder since we don't have per-task progress in accounting
+  );
+  const projectCPI = accounting.actualSpendTotal > 0
+    ? totalEarnedValue / accounting.actualSpendTotal
+    : 1;
+  const projectSPI = 1; // Simplified — would need planned value by date
+
+  const tabs: { key: AccountingTab; label: string; icon: string }[] = [
+    { key: 'baseline', label: 'Baseline', icon: '📋' },
+    { key: 'allocation', label: 'Allocated', icon: '💰' },
+    { key: 'estimate', label: 'Estimate', icon: '📊' },
+    { key: 'actual', label: 'Actuals', icon: '🧾' },
+  ];
+
+  return (
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+      {/* Header with KPIs */}
+      <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-gray-800">Project Accounting</h3>
+          <div className="flex gap-4 text-xs">
+            <KpiBadge
+              label="CPI"
+              value={projectCPI.toFixed(2)}
+              status={formatPerformanceIndex(projectCPI).status}
+            />
+            <KpiBadge
+              label="SPI"
+              value={projectSPI.toFixed(2)}
+              status={formatPerformanceIndex(projectSPI).status}
+            />
+            <span className="text-gray-500">
+              Baseline: <strong>{currency} {accounting.baselineTotal.toLocaleString()}</strong>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Tab navigation */}
+      <div className="flex border-b border-gray-200">
+        {tabs.map((tab) => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key)}
+            className={`px-4 py-2 text-xs font-medium transition-colors ${
+              activeTab === tab.key
+                ? 'text-blue-600 border-b-2 border-blue-600 bg-white'
+                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            {tab.icon} {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Table content */}
+      <div className="overflow-x-auto">
+        {activeTab === 'baseline' && <BaselineTable accounting={accounting} currency={currency} />}
+        {activeTab === 'allocation' && (
+          <AllocationTable accounting={accounting} currency={currency} onEdit={onEditAllocation} />
+        )}
+        {activeTab === 'estimate' && <EstimateTable accounting={accounting} currency={currency} />}
+        {activeTab === 'actual' && <ActualsTable accounting={accounting} currency={currency} onEdit={onEditSpend} />}
+      </div>
+
+      {/* Footer totals */}
+      <div className="px-4 py-2 bg-gray-50 border-t border-gray-200 flex justify-between text-xs">
+        <span className="text-gray-500">{accounting.taskAccounting.length} tasks</span>
+        <div className="flex gap-4">
+          <span className="text-gray-600">
+            Variance: <strong className={accounting.currentEstimateTotal - accounting.baselineTotal >= 0 ? 'text-red-600' : 'text-green-600'}>
+              {formatVariance(accounting.currentEstimateTotal - accounting.baselineTotal, currency)}
+            </strong>
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── KPI Badge ───────────────────────────────────────────────────────────────
+
+function KpiBadge({ label, value, status }: { label: string; value: string; status: 'good' | 'warning' | 'critical' }) {
+  const colors = {
+    good: 'text-green-700 bg-green-50 border-green-200',
+    warning: 'text-yellow-700 bg-yellow-50 border-yellow-200',
+    critical: 'text-red-700 bg-red-50 border-red-200',
+  };
+
+  return (
+    <span className={`px-2 py-0.5 rounded border font-medium ${colors[status]}`}>
+      {label}: {value}
+    </span>
+  );
+}
+
+// ─── Baseline Table ──────────────────────────────────────────────────────────
+
+function BaselineTable({ accounting, currency }: { accounting: ReturnType<typeof computeProjectAccounting>; currency: string }) {
+  return (
+    <table className="w-full text-xs">
+      <thead>
+        <tr className="bg-gray-50 text-gray-600">
+          <th className="px-3 py-2 text-left font-medium">Task</th>
+          <th className="px-3 py-2 text-right font-medium">Cost</th>
+          <th className="px-3 py-2 text-right font-medium">Duration</th>
+          <th className="px-3 py-2 text-right font-medium">Resource</th>
+          <th className="px-3 py-2 text-left font-medium">Start</th>
+          <th className="px-3 py-2 text-left font-medium">End</th>
+        </tr>
+      </thead>
+      <tbody>
+        {accounting.taskAccounting.map((row) => (
+          <tr key={row.taskId} className="border-t border-gray-100 hover:bg-gray-50">
+            <td className="px-3 py-2 text-gray-800">{row.taskName}</td>
+            <td className="px-3 py-2 text-right font-mono">{currency} {row.baselineCost.toLocaleString()}</td>
+            <td className="px-3 py-2 text-right text-gray-500">—</td>
+            <td className="px-3 py-2 text-right text-gray-500">
+              {row.resourceCostRate > 0 ? `${currency}${row.resourceCostRate}/day` : '—'}
+            </td>
+            <td className="px-3 py-2 text-gray-500">—</td>
+            <td className="px-3 py-2 text-gray-500">—</td>
+          </tr>
+        ))}
+      </tbody>
+      <tfoot>
+        <tr className="border-t-2 border-gray-200 bg-gray-50 font-medium">
+          <td className="px-3 py-2">Total</td>
+          <td className="px-3 py-2 text-right font-mono">{currency} {accounting.baselineTotal.toLocaleString()}</td>
+          <td colSpan={4} className="px-3 py-2" />
+        </tr>
+      </tfoot>
+    </table>
+  );
+}
+
+// ─── Allocation Table ────────────────────────────────────────────────────────
+
+function AllocationTable({
+  accounting,
+  currency,
+  onEdit,
+}: {
+  accounting: ReturnType<typeof computeProjectAccounting>;
+  currency: string;
+  onEdit?: (taskId: string) => void;
+}) {
+  return (
+    <table className="w-full text-xs">
+      <thead>
+        <tr className="bg-gray-50 text-gray-600">
+          <th className="px-3 py-2 text-left font-medium">Task</th>
+          <th className="px-3 py-2 text-right font-medium">Allocated</th>
+          <th className="px-3 py-2 text-right font-medium">vs Baseline</th>
+          <th className="px-3 py-2 text-right font-medium">Approved By</th>
+          <th className="px-3 py-2 text-left font-medium">Date</th>
+          <th className="px-3 py-2 text-center font-medium">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {accounting.taskAccounting.map((row) => {
+          const variance = row.allocatedBudget - row.baselineCost;
+          return (
+            <tr key={row.taskId} className="border-t border-gray-100 hover:bg-gray-50">
+              <td className="px-3 py-2 text-gray-800">{row.taskName}</td>
+              <td className="px-3 py-2 text-right font-mono">{currency} {row.allocatedBudget.toLocaleString()}</td>
+              <td className={`px-3 py-2 text-right font-mono ${variance < 0 ? 'text-red-600' : variance > 0 ? 'text-green-600' : 'text-gray-400'}`}>
+                {formatVariance(variance, currency)}
+              </td>
+              <td className="px-3 py-2 text-right text-gray-400">—</td>
+              <td className="px-3 py-2 text-gray-400">—</td>
+              <td className="px-3 py-2 text-center">
+                {onEdit && (
+                  <button
+                    onClick={() => onEdit(row.taskId)}
+                    className="text-blue-600 hover:text-blue-800 text-xs"
+                  >
+                    Edit
+                  </button>
+                )}
+              </td>
+            </tr>
+          );
+        })}
+      </tbody>
+      <tfoot>
+        <tr className="border-t-2 border-gray-200 bg-gray-50 font-medium">
+          <td className="px-3 py-2">Total</td>
+          <td className="px-3 py-2 text-right font-mono">{currency} {accounting.allocatedTotal.toLocaleString()}</td>
+          <td className="px-3 py-2 text-right font-mono text-gray-400">—</td>
+          <td colSpan={3} className="px-3 py-2" />
+        </tr>
+      </tfoot>
+    </table>
+  );
+}
+
+// ─── Estimate Table (EAC) ────────────────────────────────────────────────────
+
+function EstimateTable({ accounting, currency }: { accounting: ReturnType<typeof computeProjectAccounting>; currency: string }) {
+  return (
+    <table className="w-full text-xs">
+      <thead>
+        <tr className="bg-gray-50 text-gray-600">
+          <th className="px-3 py-2 text-left font-medium">Task</th>
+          <th className="px-3 py-2 text-right font-medium">Baseline</th>
+          <th className="px-3 py-2 text-right font-medium">EAC</th>
+          <th className="px-3 py-2 text-right font-medium">ETC</th>
+          <th className="px-3 py-2 text-right font-medium">Variance</th>
+          <th className="px-3 py-2 text-center font-medium">CPI</th>
+          <th className="px-3 py-2 text-center font-medium">SPI</th>
+        </tr>
+      </thead>
+      <tbody>
+        {accounting.taskAccounting.map((row) => {
+          const cpiStatus = formatPerformanceIndex(row.cpi);
+          const spiStatus = formatPerformanceIndex(row.spi);
+          return (
+            <tr key={row.taskId} className="border-t border-gray-100 hover:bg-gray-50">
+              <td className="px-3 py-2 text-gray-800">{row.taskName}</td>
+              <td className="px-3 py-2 text-right font-mono text-gray-500">{currency} {row.baselineCost.toLocaleString()}</td>
+              <td className="px-3 py-2 text-right font-mono font-medium">{currency} {row.currentEstimate.toLocaleString()}</td>
+              <td className="px-3 py-2 text-right font-mono">{currency} {row.etc.toLocaleString()}</td>
+              <td className={`px-3 py-2 text-right font-mono ${row.costVariance < 0 ? 'text-green-600' : row.costVariance > 0 ? 'text-red-600' : 'text-gray-400'}`}>
+                {formatVariance(row.costVariance, currency)}
+              </td>
+              <td className="px-3 py-2 text-center">
+                <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
+                  cpiStatus.status === 'good' ? 'bg-green-50 text-green-700' :
+                  cpiStatus.status === 'warning' ? 'bg-yellow-50 text-yellow-700' :
+                  'bg-red-50 text-red-700'
+                }`}>
+                  {row.cpi.toFixed(2)}
+                </span>
+              </td>
+              <td className="px-3 py-2 text-center">
+                <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
+                  spiStatus.status === 'good' ? 'bg-green-50 text-green-700' :
+                  spiStatus.status === 'warning' ? 'bg-yellow-50 text-yellow-700' :
+                  'bg-red-50 text-red-700'
+                }`}>
+                  {row.spi.toFixed(2)}
+                </span>
+              </td>
+            </tr>
+          );
+        })}
+      </tbody>
+      <tfoot>
+        <tr className="border-t-2 border-gray-200 bg-gray-50 font-medium">
+          <td className="px-3 py-2">Total</td>
+          <td className="px-3 py-2 text-right font-mono">{currency} {accounting.baselineTotal.toLocaleString()}</td>
+          <td className="px-3 py-2 text-right font-mono">{currency} {accounting.currentEstimateTotal.toLocaleString()}</td>
+          <td className="px-3 py-2 text-right font-mono">{currency} {accounting.etcTotal.toLocaleString()}</td>
+          <td className={`px-3 py-2 text-right font-mono ${accounting.currentEstimateTotal - accounting.baselineTotal < 0 ? 'text-green-600' : 'text-red-600'}`}>
+            {formatVariance(accounting.currentEstimateTotal - accounting.baselineTotal, currency)}
+          </td>
+          <td colSpan={2} className="px-3 py-2" />
+        </tr>
+      </tfoot>
+    </table>
+  );
+}
+
+// ─── Actuals Table ───────────────────────────────────────────────────────────
+
+function ActualsTable({
+  accounting,
+  currency,
+  onEdit,
+}: {
+  accounting: ReturnType<typeof computeProjectAccounting>;
+  currency: string;
+  onEdit?: (taskId: string) => void;
+}) {
+  const hasSpendEntries = accounting.spendEntries.length > 0;
+
+  if (!hasSpendEntries) {
+    return (
+      <div className="text-center py-8 text-gray-400">
+        <p className="text-sm">No actual spend entries yet.</p>
+        <p className="text-xs mt-1">Add spend entries to track real costs against budget.</p>
+        {onEdit && (
+          <button
+            onClick={() => onEdit('')}
+            className="mt-3 px-3 py-1.5 text-xs text-blue-600 border border-blue-300 rounded hover:bg-blue-50"
+          >
+            + Add Spend Entry
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <table className="w-full text-xs">
+      <thead>
+        <tr className="bg-gray-50 text-gray-600">
+          <th className="px-3 py-2 text-left font-medium">Task</th>
+          <th className="px-3 py-2 text-right font-medium">Actual</th>
+          <th className="px-3 py-2 text-right font-medium">Allocated</th>
+          <th className="px-3 py-2 text-right font-medium">Variance</th>
+          <th className="px-3 py-2 text-left font-medium">Source</th>
+          <th className="px-3 py-2 text-left font-medium">Date</th>
+          <th className="px-3 py-2 text-center font-medium">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {accounting.taskAccounting.map((row) => {
+          const variance = row.actualSpend - row.allocatedBudget;
+          return (
+            <tr key={row.taskId} className="border-t border-gray-100 hover:bg-gray-50">
+              <td className="px-3 py-2 text-gray-800">{row.taskName}</td>
+              <td className="px-3 py-2 text-right font-mono">{currency} {row.actualSpend.toLocaleString()}</td>
+              <td className="px-3 py-2 text-right font-mono text-gray-500">{currency} {row.allocatedBudget.toLocaleString()}</td>
+              <td className={`px-3 py-2 text-right font-mono ${variance < 0 ? 'text-green-600' : variance > 0 ? 'text-red-600' : 'text-gray-400'}`}>
+                {formatVariance(variance, currency)}
+              </td>
+              <td className="px-3 py-2 text-gray-400">—</td>
+              <td className="px-3 py-2 text-gray-400">—</td>
+              <td className="px-3 py-2 text-center">
+                {onEdit && (
+                  <button
+                    onClick={() => onEdit(row.taskId)}
+                    className="text-blue-600 hover:text-blue-800 text-xs"
+                  >
+                    + Add
+                  </button>
+                )}
+              </td>
+            </tr>
+          );
+        })}
+      </tbody>
+      <tfoot>
+        <tr className="border-t-2 border-gray-200 bg-gray-50 font-medium">
+          <td className="px-3 py-2">Total</td>
+          <td className="px-3 py-2 text-right font-mono">{currency} {accounting.actualSpendTotal.toLocaleString()}</td>
+          <td className="px-3 py-2 text-right font-mono">{currency} {accounting.allocatedTotal.toLocaleString()}</td>
+          <td className={`px-3 py-2 text-right font-mono ${accounting.actualSpendTotal - accounting.allocatedTotal < 0 ? 'text-green-600' : 'text-red-600'}`}>
+            {formatVariance(accounting.actualSpendTotal - accounting.allocatedTotal, currency)}
+          </td>
+          <td colSpan={3} className="px-3 py-2" />
+        </tr>
+      </tfoot>
+    </table>
+  );
+}

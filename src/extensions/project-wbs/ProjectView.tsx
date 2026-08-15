@@ -22,6 +22,7 @@ import { RiskEditorModal } from './RiskEditorModal';
 import { ResourceEditorModal } from './ResourceEditorModal';
 import { ResourceListModal } from './ResourceListModal';
 import { ColumnMappingDialog } from './ColumnMappingDialog';
+import { AccountingDashboard } from './AccountingDashboard';
 import { sheetToProject, projectModelToProject } from './sheetToProject';
 import { addTask, removeTask, updateTask, toggleCollapse, findTaskById, getAllTasks, addResource, updateResource, removeResource } from './treeOps';
 import { addRisk, updateRisk, removeRisk, getRiskSummary } from './risks';
@@ -417,7 +418,7 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
         <div className="flex items-center gap-2">
           {/* View mode toggle */}
           <div className="flex rounded border border-gray-200 overflow-hidden">
-            {(['gantt', 'risk-register', 'risk-matrix', 'resource-heatmap'] as ViewMode[]).map((mode) => (
+            {(['gantt', 'risk-register', 'risk-matrix', 'resource-heatmap', 'accounting'] as ViewMode[]).map((mode) => (
               <button
                 key={mode}
                 className={`px-3 py-1 text-sm ${
@@ -427,7 +428,7 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
                 }`}
                 onClick={() => setViewMode(mode)}
               >
-                {mode === 'gantt' ? 'Gantt' : mode === 'risk-register' ? 'Risk Register' : mode === 'risk-matrix' ? 'Risk Matrix' : 'Resources'}
+                {mode === 'gantt' ? 'Gantt' : mode === 'risk-register' ? 'Risk Register' : mode === 'risk-matrix' ? 'Risk Matrix' : mode === 'accounting' ? 'Accounting' : 'Resources'}
               </button>
             ))}
           </div>
@@ -606,6 +607,19 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
           )}
           {viewMode === 'resource-heatmap' && (
             <ResourceHeatmap project={project} />
+          )}
+          {viewMode === 'accounting' && (
+            <AccountingDashboard
+              project={project}
+              onEditSpend={(taskId) => {
+                // TODO: Open spend editor modal
+                console.log('Edit spend for task:', taskId);
+              }}
+              onEditAllocation={(taskId) => {
+                // TODO: Open allocation editor modal
+                console.log('Edit allocation for task:', taskId);
+              }}
+            />
           )}
         </div>
       </div>

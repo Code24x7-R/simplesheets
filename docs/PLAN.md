@@ -4,10 +4,11 @@
 Achieve a clean, clutter-free UI with standardized dropdown menus, formula wizard, formula bar, R1C1 reference format, and extensible project management capabilities.
 
 ## Current State
-- **3233 tests** across **135 suites**, All passing
+- **3360 tests** across **140 suites**, All passing
 - Lint clean (0 warnings), Type-check clean, Build clean
 - Phases 1-33 complete ✅ (see [HISTORY.md](./HISTORY.md))
-- Phases 34-38 complete ✅ (Extensions Architecture — see below)
+- Phases 34-39 complete ✅ (Extensions Architecture — see below)
+- Phases 40-41 in progress 🔄 (Accounting Dashboard & Dependency Workflow)
 - Phases 22-23 planned 📋 (Conditional Formatting, Data Validation)
 
 ---
@@ -25,7 +26,9 @@ The WBS/Project extension is actively being expanded. See [EXTENSIONS_ARCHITECTU
 | 36 | Tab-Based Project View — "📊 Project" tab as peer to sheet tabs | ✅ Complete |
 | 37 | Enhanced Project Functions — resource CRUD, dependency lines, collapse/expand | ✅ Complete |
 | 38 | Normalized Schema & Complete Sync — all data persisted and synced | ✅ Complete |
-| 39 | Template Library Expansion — all 12 templates implemented | ✅ Complete |
+| 39 | Template Library Expansion — all 16 templates implemented | ✅ Complete |
+| 40 | Project Accounting Dashboard — baseline, allocation, estimate, actual spend | 🔄 In Progress |
+| 41 | Dependency Workflow Drawer — tree + right panel with impact preview | 📋 Planned |
 
 **Extension Features:**
 - WBS hierarchy (tree structure with parent-child relationships)
@@ -38,7 +41,7 @@ The WBS/Project extension is actively being expanded. See [EXTENSIONS_ARCHITECTU
 - Sheet-as-source with bidirectional sync
 - 12 pre-built templates across 8 categories
 
-**Templates (12 of 12):**
+**Templates (16 of 16):**
 | Category | Templates |
 |----------|----------|
 | Generic | Simple WBS |
@@ -49,7 +52,41 @@ The WBS/Project extension is actively being expanded. See [EXTENSIONS_ARCHITECTU
 | Marketing | Marketing Campaign |
 | Business | Business Project, Product Launch |
 | IT | IT Migration |
+| Real Estate | Real Estate Photography |
 | Mining | Mining Consulting |
+
+### Phase 40: Project Accounting Dashboard — IN PROGRESS 🔄
+*Four-table cost tracking with variance analysis.*
+
+**Tables:**
+| Table | Purpose | Key Fields |
+|-------|---------|------------|
+| Baseline | Original approved plan | Task, Start, End, Duration, Cost, Resource |
+| Approved Allocation | Budget approved per task | Task, Allocated Budget, Approved Date, Approver |
+| Current Estimate | Rolling forecast (baseline + changes) | Task, Estimated Cost, EAC, ETC, Variance |
+| Actual Spend | Real costs incurred | Task, Date, Amount, Vendor/Source, Notes |
+
+**Features:**
+- Variance columns (Estimate vs Baseline, Actual vs Allocated)
+- EAC (Estimate at Completion) = ETC + Actual Spend
+- CPI (Cost Performance Index) = Earned Value / Actual Cost
+- SPI (Schedule Performance Index) = Earned Value / Planned Value
+- Change log for dependency-driven cost/timeline shifts
+
+### Phase 41: Dependency Workflow Drawer — PLANNED 📋
+*Hybrid tree + slide-out panel for managing dependencies with real-time impact preview.*
+
+**UI Layout:**
+- WBS Tree on left (existing)
+- Slide-out dependency panel on right when task selected
+- Dependency cards showing predecessor, type, lag with inline edit
+- Impact preview at bottom: schedule delta + cost delta
+
+**Integration:**
+- Dependency changes trigger `autoScheduleSuccessors()` for date recalculation
+- Cost impact computed from resource rates × duration changes
+- Impact preview feeds directly into accounting dashboard tables
+- Full audit trail of why costs/schedule shifted
 
 ---
 
@@ -89,8 +126,10 @@ The extensions architecture supports adding new extensions without modifying cor
 | Kanban Board | Task cards on a board with columns (To Do, In Progress, Done) | Medium |
 | Mind Map | Radiative tree visualization of project scope | Low |
 | PERT Chart | Probabilistic task duration with three-point estimates | Medium |
-| Resource Heatmap | Calendar view of resource allocation | High |
-| Budget Tracker | Cost tracking with variance analysis | Medium |
+| Resource Heatmap | Calendar view of resource allocation | ✅ Complete |
+| Budget Tracker | Cost tracking with variance analysis | 🔄 In Progress (Phase 40) |
+| Earned Value Chart | S-curve visualization of PV, EV, AC over time | Medium |
+| What-If Scenarios | Save/compare multiple schedule scenarios | Low |
 
 ---
 
@@ -103,8 +142,11 @@ The extensions architecture supports adding new extensions without modifying cor
 | [CHANGELOG.md](./CHANGELOG.md) | Concise version history |
 | [PROGRESS_LOG.md](./PROGRESS_LOG.md) | Chronological progress entries |
 | [EXTENSIONS_ARCHITECTURE.md](./EXTENSIONS_ARCHITECTURE.md) | WBS/Project extension technical architecture |
+| [DependencyManagement.md](./DependencyManagement.md) | Dependency rules, relationship types, automation workflows |
 | [BUGFIX.md](./BUGFIX.md) | Bug tracking and fixes |
 | [AGENTS.md](../AGENTS.md) | Development guide for agents |
+| [MANUAL.md](../MANUAL.md) | End-user documentation |
+| [README.md](../README.md) | Project overview and developer guide |
 
 ---
 

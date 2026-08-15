@@ -192,6 +192,70 @@ export interface Project {
   resources: Resource[];
   risks: Risk[];
   wbs: WBSTask[];           // Root-level tasks
+  accounting?: ProjectAccounting; // Optional accounting data
+}
+
+// ─── Project Accounting ────────────────────────────────────────────────────
+
+/**
+ * Cost tracking for a single task across baseline, allocation, estimate, and actuals.
+ */
+export interface TaskAccounting {
+  taskId: string;
+  taskName: string;
+  baselineCost: number;        // Original approved estimate
+  allocatedBudget: number;     // Approved budget (may differ from baseline)
+  currentEstimate: number;     // EAC — rolling forecast
+  actualSpend: number;         // Real costs to date
+  etc: number;                 // Estimate to Complete
+  costVariance: number;        // currentEstimate - baselineCost (negative = under budget)
+  scheduleVarianceDays: number;// Days ahead/behind schedule
+  cpi: number;                 // Cost Performance Index (EV / AC)
+  spi: number;                 // Schedule Performance Index (EV / PV)
+  responsibleResourceId: string | null;
+  resourceCostRate: number;    // For cost impact calculations
+}
+
+/**
+ * A single actual spend entry (timesheet, invoice, expense).
+ */
+export interface ActualSpendEntry {
+  id: string;
+  taskId: string;
+  date: string;                // ISO date string
+  amount: number;
+  currency: string;
+  source: string;              // Vendor, employee, or expense category
+  notes: string;
+}
+
+/**
+ * Tracks why costs or schedule shifted (dependency changes, scope changes, etc.).
+ */
+export interface ChangeLogEntry {
+  id: string;
+  date: string;                // ISO date string
+  taskId: string | null;       // null = project-level change
+  changeType: 'dependency' | 'scope' | 'resource' | 'schedule' | 'risk' | 'other';
+  description: string;
+  costImpact: number;          // Delta to budget
+  scheduleImpactDays: number;  // Delta to timeline
+  approvedBy: string | null;
+}
+
+/**
+ * Top-level project accounting container.
+ */
+export interface ProjectAccounting {
+  baselineTotal: number;
+  allocatedTotal: number;
+  currentEstimateTotal: number;
+  actualSpendTotal: number;
+  etcTotal: number;
+  taskAccounting: TaskAccounting[];
+  spendEntries: ActualSpendEntry[];
+  changeLog: ChangeLogEntry[];
+  currency: string;
 }
 
 // ─── Risk Management ────────────────────────────────────────────────────────
@@ -282,7 +346,7 @@ export interface RiskSummary {
 
 export type GanttZoom = 'day' | 'week' | 'month';
 
-export type ViewMode = 'gantt' | 'wbs' | 'risk-register' | 'risk-matrix' | 'resource-heatmap';
+export type ViewMode = 'gantt' | 'wbs' | 'risk-register' | 'risk-matrix' | 'resource-heatmap' | 'accounting';
 
 /**
  * Gantt rendering configuration.
