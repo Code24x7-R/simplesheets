@@ -9,6 +9,7 @@
 
 import { useState, useEffect } from 'react';
 import type { Resource } from '../types';
+import { getDefaultCurrency, SUPPORTED_CURRENCIES } from '../../utils/currency';
 
 interface ResourceEditorModalProps {
   resource: Resource | null; // null = create mode
@@ -41,7 +42,7 @@ export function ResourceEditorModal({
     name: '',
     role: '',
     costRate: 0,
-    costCurrency: 'USD',
+    costCurrency: getDefaultCurrency(),
     availability: 100,
     color: '#3B82F6',
   });
@@ -183,12 +184,11 @@ export function ResourceEditorModal({
                 onChange={(e) => updateField('costCurrency', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="USD">USD</option>
-                <option value="EUR">EUR</option>
-                <option value="GBP">GBP</option>
-                <option value="JPY">JPY</option>
-                <option value="CAD">CAD</option>
-                <option value="AUD">AUD</option>
+                {SUPPORTED_CURRENCIES.map((currency) => (
+                  <option key={currency} value={currency}>
+                    {currency}
+                  </option>
+                ))}
               </select>
             </div>
           </div>

@@ -11,7 +11,7 @@ import type { Project, WBSTask, Resource, WorkingCalendar, Risk } from '../../ty
 import type { ProjectTemplateJSON, TaskJSON, RiskJSON, ResourceJSON } from './types';
 import { createRisk } from '../risks';
 import { createDefaultCalendar } from '../calendar';
-import { getDefaultCurrency } from '../currency';
+import { getDefaultCurrency } from '../../../utils/currency';
 
 /**
  * Validation error for templates

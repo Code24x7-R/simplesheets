@@ -151,6 +151,41 @@ export const SUPPORTED_CURRENCIES = [
 export type SupportedCurrency = (typeof SUPPORTED_CURRENCIES)[number];
 
 /**
+ * Get the currency symbol for the current locale.
+ * @param currency - ISO 4217 currency code
+ * @param locale - Optional locale string
+ * @returns Currency symbol (e.g., '$', '€', '£')
+ */
+export function getCurrencySymbol(currency: string, locale?: string): string {
+  const userLocale = locale ?? (typeof navigator !== 'undefined' ? navigator.language : 'en-US');
+  try {
+    const formatter = new Intl.NumberFormat(userLocale, {
+      style: 'currency',
+      currency,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    });
+    const parts = formatter.formatToParts(0);
+    const symbolPart = parts.find((p) => p.type === 'currency');
+    return symbolPart?.value ?? currency;
+  } catch {
+    return currency;
+  }
+}
+
+/**
+ * Get the number format pattern for currency based on locale.
+ * Returns an Excel-compatible format string like '$#,##0.00'.
+ * @param currency - ISO 4217 currency code
+ * @param locale - Optional locale string
+ * @returns Excel number format pattern
+ */
+export function getCurrencyFormatPattern(currency: string, locale?: string): string {
+  const symbol = getCurrencySymbol(currency, locale);
+  return `${symbol}#,##0.00`;
+}
+
+/**
  * Format a currency amount with proper symbol for the given locale.
  */
 export function formatCurrency(amount: number, currency: string, locale?: string): string {

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
-import { getDefaultCurrency, formatCurrency, SUPPORTED_CURRENCIES } from './currency';
+import { getDefaultCurrency, formatCurrency, SUPPORTED_CURRENCIES, getCurrencySymbol, getCurrencyFormatPattern } from './currency';
 
 describe('currency', () => {
   describe('getDefaultCurrency', () => {
@@ -68,6 +68,43 @@ describe('currency', () => {
     it('formats AUD for en-AU', () => {
       const result = formatCurrency(1000, 'AUD', 'en-AU');
       expect(result).toContain('1,000');
+    });
+  });
+
+  describe('getCurrencySymbol', () => {
+    it('returns $ for USD en-US', () => {
+      expect(getCurrencySymbol('USD', 'en-US')).toBe('$');
+    });
+
+    it('returns € for EUR de-DE', () => {
+      expect(getCurrencySymbol('EUR', 'de-DE')).toBe('€');
+    });
+
+    it('returns £ for GBP en-GB', () => {
+      expect(getCurrencySymbol('GBP', 'en-GB')).toBe('£');
+    });
+
+    it('returns A$ for AUD en-AU', () => {
+      const symbol = getCurrencySymbol('AUD', 'en-AU');
+      expect(symbol).toContain('$');
+    });
+
+    it('returns ¥ for JPY ja-JP', () => {
+      expect(getCurrencySymbol('JPY', 'ja-JP')).toBe('￥');
+    });
+  });
+
+  describe('getCurrencyFormatPattern', () => {
+    it('returns $#,##0.00 for USD en-US', () => {
+      expect(getCurrencyFormatPattern('USD', 'en-US')).toBe('$#,##0.00');
+    });
+
+    it('returns €#,##0.00 for EUR de-DE', () => {
+      expect(getCurrencyFormatPattern('EUR', 'de-DE')).toBe('€#,##0.00');
+    });
+
+    it('returns £#,##0.00 for GBP en-GB', () => {
+      expect(getCurrencyFormatPattern('GBP', 'en-GB')).toBe('£#,##0.00');
     });
   });
 

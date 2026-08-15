@@ -16,6 +16,7 @@ import { colToLetter } from '../../types';
 import type { Project, WBSTask, Resource } from '../types';
 import { getTemplateById } from './templates/index';
 import { getAllTasks } from './treeOps';
+import { getDefaultCurrency } from '../../utils/currency';
 
 // ─── Sheet Name Constants ──────────────────────────────────────────────────
 
@@ -360,7 +361,7 @@ function parseResourceRow(sheet: Sheet, row: number): ResourceRow | null {
     name,
     role: getCellStringValue(sheet, row, 1),
     costRate: parseFloat(getCellStringValue(sheet, row, 2)) || 0,
-    costCurrency: getCellStringValue(sheet, row, 3) || 'USD',
+    costCurrency: getCellStringValue(sheet, row, 3) || getDefaultCurrency(),
     availability: parseInt(getCellStringValue(sheet, row, 4)) || 100,
     color: getCellStringValue(sheet, row, 5) || '#3B82F6',
   };
@@ -538,7 +539,7 @@ export function projectModelToProject(model: ProjectModel): Project {
       effort: row.duration,
       effortUnit: 'days',
       cost: 0,
-      costCurrency: 'USD',
+      costCurrency: getDefaultCurrency(),
       responsibleResourceId: row.resourceId,
       dependencies: row.dependencies.map((predId) => ({
         predecessorId: predId,
