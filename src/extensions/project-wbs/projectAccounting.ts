@@ -211,20 +211,40 @@ export function computeTaskAccounting(
   const eac = estimateAtCompletion(etc, actualSpend);
   const remainingDays = Math.max(0, task.duration * (1 - task.progress / 100));
 
+  // Duration calculations
+  const baselineDuration = task.duration;
+  // Current duration: if task is in progress, use original (could be updated by dependencies)
+  const currentDuration = task.duration;
+  // Actual duration: elapsed working days since start (simplified: proportional to progress)
+  const actualDuration = task.progress > 0 ? Math.round(task.duration * (task.progress / 100)) : 0;
+  // Remaining duration: working days left
+  const remainingDuration = Math.max(0, currentDuration - actualDuration);
+  // Duration variance: difference between current estimate and baseline
+  const durationVariance = currentDuration - baselineDuration;
+
   return {
     taskId: task.id,
     taskName: task.name,
+    // Cost
     baselineCost: task.cost,
     allocatedBudget: task.cost, // Default allocation = baseline
     currentEstimate: eac,
     actualSpend,
     etc,
     costVariance: eac - task.cost,
-    scheduleVarianceDays: scheduleVarianceDays(remainingDays, spi),
+    // Duration
+    baselineDuration,
+    currentDuration,
+    actualDuration,
+    remainingDuration,
+    durationVariance,
+    // Performance
     cpi,
     spi,
     responsibleResourceId: task.responsibleResourceId,
     resourceCostRate,
+    // Schedule
+    scheduleVarianceDays: scheduleVarianceDays(remainingDays, spi),
   };
 }
 

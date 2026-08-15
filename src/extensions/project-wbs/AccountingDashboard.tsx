@@ -154,7 +154,7 @@ function BaselineTable({ accounting, currency }: { accounting: ReturnType<typeof
           <tr key={row.taskId} className="border-t border-gray-100 hover:bg-gray-50">
             <td className="px-3 py-2 text-gray-800">{row.taskName}</td>
             <td className="px-3 py-2 text-right font-mono">{currency} {row.baselineCost.toLocaleString()}</td>
-            <td className="px-3 py-2 text-right text-gray-500">—</td>
+            <td className="px-3 py-2 text-right">{row.baselineDuration}d</td>
             <td className="px-3 py-2 text-right text-gray-500">
               {row.resourceCostRate > 0 ? `${currency}${row.resourceCostRate}/day` : '—'}
             </td>
@@ -167,7 +167,8 @@ function BaselineTable({ accounting, currency }: { accounting: ReturnType<typeof
         <tr className="border-t-2 border-gray-200 bg-gray-50 font-medium">
           <td className="px-3 py-2">Total</td>
           <td className="px-3 py-2 text-right font-mono">{currency} {accounting.baselineTotal.toLocaleString()}</td>
-          <td colSpan={4} className="px-3 py-2" />
+          <td className="px-3 py-2 text-right">{accounting.taskAccounting.reduce((s, r) => s + r.baselineDuration, 0)}d</td>
+          <td colSpan={3} className="px-3 py-2" />
         </tr>
       </tfoot>
     </table>
@@ -246,7 +247,9 @@ function EstimateTable({ accounting, currency }: { accounting: ReturnType<typeof
           <th className="px-3 py-2 text-right font-medium">Baseline</th>
           <th className="px-3 py-2 text-right font-medium">EAC</th>
           <th className="px-3 py-2 text-right font-medium">ETC</th>
-          <th className="px-3 py-2 text-right font-medium">Variance</th>
+          <th className="px-3 py-2 text-right font-medium">Cost Var</th>
+          <th className="px-3 py-2 text-right font-medium">Duration</th>
+          <th className="px-3 py-2 text-right font-medium">Rem</th>
           <th className="px-3 py-2 text-center font-medium">CPI</th>
           <th className="px-3 py-2 text-center font-medium">SPI</th>
         </tr>
@@ -264,6 +267,8 @@ function EstimateTable({ accounting, currency }: { accounting: ReturnType<typeof
               <td className={`px-3 py-2 text-right font-mono ${row.costVariance < 0 ? 'text-green-600' : row.costVariance > 0 ? 'text-red-600' : 'text-gray-400'}`}>
                 {formatVariance(row.costVariance, currency)}
               </td>
+              <td className="px-3 py-2 text-right">{row.baselineDuration}d</td>
+              <td className="px-3 py-2 text-right">{row.remainingDuration}d</td>
               <td className="px-3 py-2 text-center">
                 <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
                   cpiStatus.status === 'good' ? 'bg-green-50 text-green-700' :
@@ -295,6 +300,8 @@ function EstimateTable({ accounting, currency }: { accounting: ReturnType<typeof
           <td className={`px-3 py-2 text-right font-mono ${accounting.currentEstimateTotal - accounting.baselineTotal < 0 ? 'text-green-600' : 'text-red-600'}`}>
             {formatVariance(accounting.currentEstimateTotal - accounting.baselineTotal, currency)}
           </td>
+          <td className="px-3 py-2 text-right">{accounting.taskAccounting.reduce((s, r) => s + r.baselineDuration, 0)}d</td>
+          <td className="px-3 py-2 text-right">{accounting.taskAccounting.reduce((s, r) => s + r.remainingDuration, 0)}d</td>
           <td colSpan={2} className="px-3 py-2" />
         </tr>
       </tfoot>

@@ -239,6 +239,33 @@ describe('computeTaskAccounting', () => {
     // EV = 500, AC = 400 → CPI = 1.25
     expect(result.cpi).toBe(1.25);
   });
+
+  it('computes duration fields for a task', () => {
+    const task = createTask({ duration: 10, progress: 50 });
+    const result = computeTaskAccounting(task, [], 100);
+
+    expect(result.baselineDuration).toBe(10);
+    expect(result.currentDuration).toBe(10);
+    expect(result.actualDuration).toBe(5); // 50% of 10 days
+    expect(result.remainingDuration).toBe(5); // 10 - 5
+    expect(result.durationVariance).toBe(0); // no change from baseline
+  });
+
+  it('computes actual duration as 0 for not-started task', () => {
+    const task = createTask({ duration: 8, progress: 0 });
+    const result = computeTaskAccounting(task, [], 100);
+
+    expect(result.actualDuration).toBe(0);
+    expect(result.remainingDuration).toBe(8);
+  });
+
+  it('computes remaining duration for completed task', () => {
+    const task = createTask({ duration: 6, progress: 100 });
+    const result = computeTaskAccounting(task, [], 100);
+
+    expect(result.actualDuration).toBe(6);
+    expect(result.remainingDuration).toBe(0);
+  });
 });
 
 describe('computeProjectAccounting', () => {

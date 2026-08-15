@@ -203,17 +203,27 @@ export interface Project {
 export interface TaskAccounting {
   taskId: string;
   taskName: string;
+  // Cost fields
   baselineCost: number;        // Original approved estimate
   allocatedBudget: number;     // Approved budget (may differ from baseline)
   currentEstimate: number;     // EAC — rolling forecast
   actualSpend: number;         // Real costs to date
   etc: number;                 // Estimate to Complete
   costVariance: number;        // currentEstimate - baselineCost (negative = under budget)
-  scheduleVarianceDays: number;// Days ahead/behind schedule
+  // Duration fields
+  baselineDuration: number;    // Original approved duration (working days)
+  currentDuration: number;     // Current estimated duration (working days)
+  actualDuration: number;      // Actual duration to date (working days)
+  remainingDuration: number;   // Remaining duration (working days)
+  durationVariance: number;    // currentDuration - baselineDuration (negative = shorter)
+  // Performance indices
   cpi: number;                 // Cost Performance Index (EV / AC)
   spi: number;                 // Schedule Performance Index (EV / PV)
+  // Resource
   responsibleResourceId: string | null;
   resourceCostRate: number;    // For cost impact calculations
+  // Schedule variance
+  scheduleVarianceDays: number;// Days ahead/behind schedule
 }
 
 /**
