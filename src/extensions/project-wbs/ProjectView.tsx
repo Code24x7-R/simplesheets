@@ -23,11 +23,13 @@ import { ResourceEditorModal } from './ResourceEditorModal';
 import { ResourceListModal } from './ResourceListModal';
 import { ColumnMappingDialog } from './ColumnMappingDialog';
 import { AccountingDashboard } from './AccountingDashboard';
+import { DependencyDrawer } from './DependencyDrawer';
 import { sheetToProject, projectModelToProject } from './sheetToProject';
 import { addTask, removeTask, updateTask, toggleCollapse, findTaskById, getAllTasks, addResource, updateResource, removeResource } from './treeOps';
 import { addRisk, updateRisk, removeRisk, getRiskSummary } from './risks';
 import { recomputeRollups } from './rollups';
-import type { Project, ViewMode, WBSTask, Risk, Resource } from '../types';
+import { autoScheduleSuccessors, updateTaskStatuses } from './dependencyWorkflows';
+import type { Project, ViewMode, WBSTask, Risk, Resource, TaskDependency } from '../types';
 import type { Sheet, ColumnMapping, ProjectModel } from '../../types';
 
 interface ProjectViewProps {
@@ -136,6 +138,75 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
 
   function handleToggleCollapse(taskId: string) {
     setProject((prev) => ({ ...prev, wbs: toggleCollapse(prev.wbs, taskId) }));
+  }
+
+  // ─── Dependency Management ──────────────────────────────────────────
+
+  const [dependencyDrawerOpen, setDependencyDrawerOpen] = useState(false);
+  const [dependencyTaskId, setDependencyTaskId] = useState<string | null>(null);
+
+  function handleOpenDependencyDrawer(taskId: string) {
+    setDependencyTaskId(taskId);
+    setDependencyDrawerOpen(true);
+  }
+
+  function handleCloseDependencyDrawer() {
+    setDependencyDrawerOpen(false);
+    setDependencyTaskId(null);
+  }
+
+  function handleSaveDependencies(taskId: string, dependencies: TaskDependency[]) {
+    setProject((prev) => {
+      // Update the task's dependencies in the tree
+      let next = { ...prev, wbs: updateTask(prev.wbs, taskId, (t) => ({ ...t, dependencies })) };
+
+      // Auto-schedule successors based on new dependencies
+      const allTasks = getAllTasks(next.wbs);
+      const rescheduled = autoScheduleSuccessors(allTasks, taskId, next.calendar);
+      const rescheduleMap = new Map(rescheduled.map((t) => [t.id, t]));
+
+      // Apply rescheduled dates back to tree
+      next = {
+        ...next,
+        wbs: next.wbs.map((root) => applyRescheduleToTree(root, rescheduleMap)),
+      };
+
+      // Update task statuses based on new schedule
+      const allTasksUpdated = getAllTasks(next.wbs);
+      const statusUpdated = updateTaskStatuses(allTasksUpdated);
+      const statusMap = new Map(statusUpdated.map((t) => [t.id, t]));
+      next = {
+        ...next,
+        wbs: next.wbs.map((root) => applyStatusToTree(root, statusMap)),
+      };
+
+      // Recompute rollups for summary tasks
+      next = { ...next, wbs: recomputeRollups(next.wbs, next.risks) };
+
+      return next;
+    });
+
+    handleCloseDependencyDrawer();
+  }
+
+  // ─── Tree Helpers ────────────────────────────────────────────────
+
+  /**
+   * Apply rescheduled dates from a map to a task tree.
+   */
+  function applyRescheduleToTree(task: WBSTask, scheduleMap: Map<string, WBSTask>): WBSTask {
+    const rescheduled = scheduleMap.get(task.id);
+    const updated = rescheduled ? { ...task, startDate: rescheduled.startDate, endDate: rescheduled.endDate, duration: rescheduled.duration } : task;
+    return { ...updated, children: updated.children.map((child) => applyRescheduleToTree(child, scheduleMap)) };
+  }
+
+  /**
+   * Apply updated statuses from a map to a task tree.
+   */
+  function applyStatusToTree(task: WBSTask, statusMap: Map<string, WBSTask>): WBSTask {
+    const updated = statusMap.get(task.id);
+    const withStatus = updated ? { ...task, status: updated.status } : task;
+    return { ...withStatus, children: withStatus.children.map((child) => applyStatusToTree(child, statusMap)) };
   }
 
   // ─── Gantt Calendar Navigation ─────────────────────────────────────
@@ -569,8 +640,25 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
             onEditTask={handleEditTask}
             onDeleteTask={handleDeleteTask}
             onToggleCollapse={handleToggleCollapse}
+            onOpenDependencies={handleOpenDependencyDrawer}
           />
         )}
+
+        {/* Dependency Drawer (between tree and main content) */}
+        {viewMode === 'gantt' && dependencyDrawerOpen && dependencyTaskId && (() => {
+          const depTask = findTaskById(project.wbs, dependencyTaskId);
+          if (!depTask) return null;
+          return (
+            <DependencyDrawer
+              task={depTask}
+              allTasks={allTasks}
+              resources={project.resources}
+              isOpen={dependencyDrawerOpen}
+              onClose={handleCloseDependencyDrawer}
+              onSaveDependencies={handleSaveDependencies}
+            />
+          );
+        })()}
 
         {/* Main content */}
         <div className="flex-1 overflow-auto p-4">

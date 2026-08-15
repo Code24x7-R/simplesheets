@@ -24,6 +24,7 @@ interface WBSTreePanelProps {
   onEditTask: (taskId: string) => void;
   onDeleteTask: (taskId: string) => void;
   onToggleCollapse: (taskId: string) => void;
+  onOpenDependencies?: (taskId: string) => void;
 }
 
 /**
@@ -54,6 +55,7 @@ export function WBSTreePanel({
   onEditTask,
   onDeleteTask,
   onToggleCollapse,
+  onOpenDependencies,
 }: WBSTreePanelProps) {
   const [collapsedSet, setCollapsedSet] = useState<Set<string>>(new Set());
 
@@ -170,6 +172,16 @@ export function WBSTreePanel({
                   }}
                 >
                   +
+                </button>
+                <button
+                  className="w-5 h-5 flex items-center justify-center text-gray-500 hover:text-purple-600 text-xs rounded hover:bg-purple-50"
+                  title="Manage dependencies"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onOpenDependencies?.(task.id);
+                  }}
+                >
+                  🔗
                 </button>
                 <button
                   className="w-5 h-5 flex items-center justify-center text-gray-500 hover:text-blue-600 text-xs rounded hover:bg-blue-50"
