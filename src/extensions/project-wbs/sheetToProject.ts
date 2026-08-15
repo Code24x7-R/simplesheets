@@ -11,11 +11,22 @@
  * - Progress and date parsing
  */
 
-import type { Sheet, ColumnMapping, ProjectModel, TaskRow, RiskRow, ResourceRow, Cell } from '../../types';
+import type { Sheet, Workbook, ColumnMapping, ProjectModel, TaskRow, RiskRow, ResourceRow, Cell } from '../../types';
 import { colToLetter } from '../../types';
 import type { Project, WBSTask, Resource } from '../types';
 import { getTemplateById } from './templates/index';
 import { getAllTasks } from './treeOps';
+
+// ─── Sheet Name Constants ──────────────────────────────────────────────────
+
+export const TASKS_SHEET_NAME = 'Project Plan';
+export const RISKS_SHEET_NAME = 'Risks';
+export const RESOURCES_SHEET_NAME = 'Resources';
+
+// ─── Risk & Resource Column Layouts ───────────────────────────────────────
+
+const RISK_HEADERS = ['Risk', 'Category', 'Probability', 'Impact', 'Status', 'Owner', 'Mitigation Plan', 'Notes'];
+const RESOURCE_HEADERS = ['Resource', 'Role', 'Cost Rate', 'Currency', 'Availability %', 'Color'];
 
 // ─── Column Auto-Detection ──────────────────────────────────────────────────
 
@@ -118,23 +129,160 @@ function findHeaderRow(sheet: Sheet): number | null {
   return null;
 }
 
-// ─── Sheet to Project Conversion ────────────────────────────────────────────
+// ─── Workbook to Project Conversion ────────────────────────────────────────
 
 /**
- * Convert sheet data to a Project model using the provided column mapping.
+ * Convert a workbook (with separate sheets for tasks, risks, resources) to a Project model.
+ * Falls back to single-sheet format for backward compatibility.
+ */
+export function workbookToProject(
+  workbook: Workbook,
+  tasksSheetName: string = TASKS_SHEET_NAME,
+  mapping?: ColumnMapping | null,
+  projectName?: string,
+): ProjectModel {
+  // Find the tasks sheet
+  const tasksSheetIndex = workbook.sheets.findIndex((s) => s.name === tasksSheetName);
+  if (tasksSheetIndex === -1) {
+    // Fallback: use first sheet
+    return sheetToProjectLegacy(workbook.sheets[0], mapping ?? detectColumnMapping(workbook.sheets[0]) ?? getDefaultColumnMapping(), projectName);
+  }
+
+  const tasksSheet = workbook.sheets[tasksSheetIndex];
+  const taskMapping = mapping ?? detectColumnMapping(tasksSheet) ?? getDefaultColumnMapping();
+
+  // Parse tasks from the tasks sheet
+  const tasks = parseTasksFromSheet(tasksSheet, taskMapping);
+
+  // Resolve parent and dependency references
+  const rowIndexToTaskId = new Map<number, string>();
+  tasks.forEach((t, i) => rowIndexToTaskId.set(i + 1, t.id));
+  resolveParentRefs(tasks, tasksSheet, taskMapping, rowIndexToTaskId);
+  resolveDependencyRefs(tasks, tasksSheet, taskMapping, rowIndexToTaskId);
+
+  // Compute project date range
+  const dates = tasks.flatMap((t) => [t.startDate, t.endDate]).filter(Boolean);
+  const projectStart = dates.length > 0 ? dates.reduce((a, b) => (a < b ? a : b)) : new Date().toISOString().slice(0, 10);
+  const projectEnd = dates.length > 0 ? dates.reduce((a, b) => (a > b ? a : b)) : new Date().toISOString().slice(0, 10);
+
+  // Parse risks from the Risks sheet
+  const risksSheet = workbook.sheets.find((s) => s.name === RISKS_SHEET_NAME);
+  const risks = risksSheet ? parseAllRisks(risksSheet) : [];
+
+  // Parse resources from the Resources sheet
+  const resourcesSheet = workbook.sheets.find((s) => s.name === RESOURCES_SHEET_NAME);
+  const resources = resourcesSheet ? parseAllResources(resourcesSheet) : [];
+
+  return {
+    id: `proj-${Date.now()}`,
+    name: projectName ?? tasksSheetName ?? 'Project Plan',
+    description: `Imported from workbook "${workbook.title ?? 'Project'}"`,
+    startDate: projectStart,
+    endDate: projectEnd,
+    tasks,
+    risks,
+    resources,
+  };
+}
+
+/**
+ * Legacy single-sheet converter for backward compatibility.
  */
 export function sheetToProject(sheet: Sheet, mapping: ColumnMapping, projectName?: string): ProjectModel {
+  return sheetToProjectLegacy(sheet, mapping, projectName);
+}
+
+/**
+ * Parse tasks from a dedicated tasks sheet.
+ */
+function parseTasksFromSheet(sheet: Sheet, mapping: ColumnMapping): TaskRow[] {
   const headerRow = mapping.headerRow ?? 0;
   const tasks: TaskRow[] = [];
 
-  // Build a map from row index to task for parent/dependency resolution
+  for (let row = headerRow + 1; row < sheet.rowCount; row++) {
+    const task = parseTaskRow(sheet, row, mapping);
+    if (task) {
+      tasks.push(task);
+    }
+  }
+  return tasks;
+}
+
+/**
+ * Parse all risks from a dedicated risks sheet.
+ */
+function parseAllRisks(sheet: Sheet): RiskRow[] {
+  const risks: RiskRow[] = [];
+  // Find header row
+  let headerRow = -1;
+  for (let row = 0; row < Math.min(5, sheet.rowCount); row++) {
+    const cell = sheet.cells[`${row}:0`];
+    const value = (cell?.rawValue ?? '').toString().trim().toLowerCase();
+    if (value === 'risk' || value === 'title') {
+      headerRow = row;
+      break;
+    }
+  }
+  if (headerRow === -1) return risks;
+
+  for (let row = headerRow + 1; row < sheet.rowCount; row++) {
+    const risk = parseRiskRow(sheet, row);
+    if (risk) {
+      risks.push(risk);
+    }
+  }
+  return risks;
+}
+
+/**
+ * Parse all resources from a dedicated resources sheet.
+ */
+function parseAllResources(sheet: Sheet): ResourceRow[] {
+  const resources: ResourceRow[] = [];
+  // Find header row
+  let headerRow = -1;
+  for (let row = 0; row < Math.min(5, sheet.rowCount); row++) {
+    const cell = sheet.cells[`${row}:0`];
+    const value = (cell?.rawValue ?? '').toString().trim().toLowerCase();
+    if (value === 'resource' || value === 'name') {
+      headerRow = row;
+      break;
+    }
+  }
+  if (headerRow === -1) return resources;
+
+  for (let row = headerRow + 1; row < sheet.rowCount; row++) {
+    const resource = parseResourceRow(sheet, row);
+    if (resource) {
+      resources.push(resource);
+    }
+  }
+  return resources;
+}
+
+/**
+ * Legacy single-sheet parser for backward compatibility.
+ */
+function sheetToProjectLegacy(sheet: Sheet, mapping: ColumnMapping, projectName?: string): ProjectModel {
+  const headerRow = mapping.headerRow ?? 0;
+  const tasks: TaskRow[] = [];
   const rowIndexToTaskId = new Map<number, string>();
 
   // Find section boundaries by scanning for headers
-  const riskHeaderRow = findSectionHeader(sheet, headerRow + 1, 'Risk');
-  const resourceHeaderRow = findSectionHeader(sheet, headerRow + 1, 'Resource');
+  let riskHeaderRow: number | null = null;
+  let resourceHeaderRow: number | null = null;
+  for (let row = headerRow + 1; row < sheet.rowCount; row++) {
+    const cell = sheet.cells[`${row}:0`];
+    const value = (cell?.rawValue ?? '').toString().trim().toLowerCase();
+    if (value === 'risk' || value === 'risks' || value === 'title') {
+      riskHeaderRow = row;
+    } else if (value === 'resource' || value === 'resources' || value === 'name') {
+      resourceHeaderRow = row;
+      break;
+    }
+  }
 
-  // Parse tasks until we hit the risk section or end of sheet
+  // Parse tasks until risk section or end
   const taskEndRow = riskHeaderRow ?? sheet.rowCount;
   for (let row = headerRow + 1; row < taskEndRow; row++) {
     const task = parseTaskRow(sheet, row, mapping);
@@ -144,20 +292,29 @@ export function sheetToProject(sheet: Sheet, mapping: ColumnMapping, projectName
     }
   }
 
-  // Resolve parent references (by row reference or by name match)
   resolveParentRefs(tasks, sheet, mapping, rowIndexToTaskId);
-
-  // Resolve dependency references
   resolveDependencyRefs(tasks, sheet, mapping, rowIndexToTaskId);
 
-  // Compute project date range
   const dates = tasks.flatMap((t) => [t.startDate, t.endDate]).filter(Boolean);
   const projectStart = dates.length > 0 ? dates.reduce((a, b) => (a < b ? a : b)) : new Date().toISOString().slice(0, 10);
   const projectEnd = dates.length > 0 ? dates.reduce((a, b) => (a > b ? a : b)) : new Date().toISOString().slice(0, 10);
 
-  // Parse risks and resources from dynamically-located sections
-  const risks = riskHeaderRow !== null ? parseRiskSectionAt(sheet, riskHeaderRow) : [];
-  const resources = resourceHeaderRow !== null ? parseResourceSectionAt(sheet, resourceHeaderRow) : [];
+  const risks: RiskRow[] = [];
+  const resources: ResourceRow[] = [];
+
+  if (riskHeaderRow !== null) {
+    for (let row = riskHeaderRow + 1; row < (resourceHeaderRow ?? sheet.rowCount); row++) {
+      const risk = parseRiskRow(sheet, row);
+      if (risk) risks.push(risk);
+    }
+  }
+
+  if (resourceHeaderRow !== null) {
+    for (let row = resourceHeaderRow + 1; row < sheet.rowCount; row++) {
+      const resource = parseResourceRow(sheet, row);
+      if (resource) resources.push(resource);
+    }
+  }
 
   return {
     id: `proj-${Date.now()}`,
@@ -169,60 +326,6 @@ export function sheetToProject(sheet: Sheet, mapping: ColumnMapping, projectName
     risks,
     resources,
   };
-}
-
-/**
- * Find a section header row by scanning for specific header text.
- * Returns the row index or null if not found.
- */
-function findSectionHeader(sheet: Sheet, startRow: number, headerText: string): number | null {
-  for (let row = startRow; row < sheet.rowCount; row++) {
-    const cell = sheet.cells[`${row}:0`];
-    if (cell) {
-      const value = (cell.rawValue ?? '').toString().trim().toLowerCase();
-      if (value === headerText.toLowerCase()) {
-        return row;
-      }
-    }
-  }
-  return null;
-}
-
-/**
- * Parse risk rows starting from a known header row.
- */
-function parseRiskSectionAt(sheet: Sheet, headerRow: number): RiskRow[] {
-  const risks: RiskRow[] = [];
-  for (let row = headerRow + 1; row < sheet.rowCount; row++) {
-    // Stop if we hit another section header
-    const firstCell = sheet.cells[`${row}:0`];
-    const firstValue = (firstCell?.rawValue ?? '').toString().trim().toLowerCase();
-    if (firstValue === 'resource' || firstValue === 'name') break;
-
-    const risk = parseRiskRow(sheet, row);
-    if (risk) {
-      risks.push(risk);
-    } else {
-      break; // Empty row = end of section
-    }
-  }
-  return risks;
-}
-
-/**
- * Parse resource rows starting from a known header row.
- */
-function parseResourceSectionAt(sheet: Sheet, headerRow: number): ResourceRow[] {
-  const resources: ResourceRow[] = [];
-  for (let row = headerRow + 1; row < sheet.rowCount; row++) {
-    const resource = parseResourceRow(sheet, row);
-    if (resource) {
-      resources.push(resource);
-    } else {
-      break; // Empty row = end of section
-    }
-  }
-  return resources;
 }
 
 /**
@@ -521,131 +624,215 @@ export function projectModelToProject(model: ProjectModel): Project {
   };
 }
 
-// ─── Project Model to Sheet Cells ───────────────────────────────────────────
+// ─── Project Model to Workbook ────────────────────────────────────────────
 
 /**
- * Convert a ProjectModel back to sheet cell data using a ColumnMapping.
- * Returns a record of cell keys to cell values that can be applied to a sheet.
- * This enables Project → Sheet sync.
+ * Convert a ProjectModel to a workbook with separate sheets for tasks, risks, and resources.
+ * This enables Project → Sheet sync with proper separation of concerns.
+ */
+export function projectModelToWorkbook(
+  model: ProjectModel,
+  mapping?: ColumnMapping | null,
+): Workbook {
+  const taskMapping = mapping ?? getDefaultColumnMapping();
+  const sheets: Sheet[] = [];
+
+  // ─── Tasks Sheet ───────────────────────────────────────────────────
+  sheets.push(createTasksSheet(model, taskMapping));
+
+  // ─── Risks Sheet ───────────────────────────────────────────────────
+  sheets.push(createRisksSheetFromModel(model));
+
+  // ─── Resources Sheet ───────────────────────────────────────────────
+  sheets.push(createResourcesSheetFromModel(model));
+
+  return {
+    id: `wb-${model.id}`,
+    title: model.name,
+    sheets,
+    activeSheetIndex: 0,
+    lastModified: Date.now(),
+  };
+}
+
+/**
+ * Create the tasks sheet from a ProjectModel.
+ */
+function createTasksSheet(model: ProjectModel, mapping: ColumnMapping): Sheet {
+  const headerRow = mapping.headerRow ?? 0;
+  const colCount = 11; // Task columns
+  const rowCount = headerRow + 1 + model.tasks.length + 2;
+  const cells: Record<string, Cell> = {};
+
+  // Headers
+  const headers = ['Task', 'Start Date', 'End Date', 'Duration', 'Parent', 'Dependency', 'Progress', 'Resource', 'Milestone', 'Color', 'Notes'];
+  for (let col = 0; col < headers.length; col++) {
+    cells[`${headerRow}:${col}`] = {
+      rawValue: headers[col],
+      computedValue: headers[col],
+      style: { fontWeight: 'bold', backgroundColor: '#EFF6FF', color: '#1E40AF' },
+    };
+  }
+
+  // Data rows
+  for (let i = 0; i < model.tasks.length; i++) {
+    const task = model.tasks[i];
+    const row = headerRow + 1 + i;
+    const rowNum = row + 1;
+
+    if (mapping.taskCol >= 0) cells[`${row}:${mapping.taskCol}`] = { rawValue: task.name, computedValue: task.name };
+    if (mapping.startDateCol >= 0) cells[`${row}:${mapping.startDateCol}`] = { rawValue: task.startDate, computedValue: task.startDate };
+    if (mapping.endDateCol >= 0) cells[`${row}:${mapping.endDateCol}`] = { rawValue: task.endDate, computedValue: task.endDate };
+    if (mapping.durationCol !== null && mapping.durationCol >= 0) {
+      const startCol = colToLetter(mapping.startDateCol);
+      const endCol = colToLetter(mapping.endDateCol);
+      cells[`${row}:${mapping.durationCol}`] = {
+        rawValue: `=NETWORKDAYS(${startCol}${rowNum},${endCol}${rowNum})`,
+        computedValue: String(task.duration),
+      };
+    }
+    if (mapping.parentCol !== null && mapping.parentCol >= 0) {
+      const parentTask = model.tasks.find((t) => t.id === task.parentId);
+      cells[`${row}:${mapping.parentCol}`] = { rawValue: parentTask?.name ?? '', computedValue: parentTask?.name ?? '' };
+    }
+    if (mapping.dependencyCol !== null && mapping.dependencyCol >= 0) {
+      const depRows = task.dependencies.map((depId) => {
+        const idx = model.tasks.findIndex((t) => t.id === depId);
+        return idx >= 0 ? String(idx + 1) : '';
+      }).filter(Boolean);
+      cells[`${row}:${mapping.dependencyCol}`] = { rawValue: depRows.join(', '), computedValue: depRows.join(', ') };
+    }
+    if (mapping.progressCol !== null && mapping.progressCol >= 0) cells[`${row}:${mapping.progressCol}`] = { rawValue: String(task.progress), computedValue: String(task.progress) };
+    if (mapping.resourceCol !== null && mapping.resourceCol >= 0) cells[`${row}:${mapping.resourceCol}`] = { rawValue: task.resourceId ?? '', computedValue: task.resourceId ?? '' };
+    if (mapping.milestoneCol !== null && mapping.milestoneCol >= 0) cells[`${row}:${mapping.milestoneCol}`] = { rawValue: task.isMilestone ? 'yes' : 'no', computedValue: task.isMilestone ? 'yes' : 'no' };
+    if (mapping.colorCol !== null && mapping.colorCol >= 0) cells[`${row}:${mapping.colorCol}`] = { rawValue: task.color, computedValue: task.color };
+    if (mapping.notesCol !== null && mapping.notesCol >= 0) cells[`${row}:${mapping.notesCol}`] = { rawValue: task.notes, computedValue: task.notes };
+  }
+
+  return {
+    id: `sheet-tasks-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    name: TASKS_SHEET_NAME,
+    cells,
+    defaultColWidth: 120,
+    defaultRowHeight: 24,
+    columnWidths: { 0: 200, 10: 180 },
+    rowHeights: {},
+    columnCount: colCount,
+    rowCount: rowCount,
+    frozenColumns: 1,
+    frozenRows: 1,
+  };
+}
+
+/**
+ * Create the risks sheet from a ProjectModel.
+ */
+function createRisksSheetFromModel(model: ProjectModel): Sheet {
+  const colCount = RISK_HEADERS.length;
+  const rowCount = 1 + model.risks.length + 2;
+  const cells: Record<string, Cell> = {};
+
+  // Headers
+  for (let col = 0; col < RISK_HEADERS.length; col++) {
+    cells[`0:${col}`] = {
+      rawValue: RISK_HEADERS[col],
+      computedValue: RISK_HEADERS[col],
+      style: { fontWeight: 'bold', backgroundColor: '#FEF3C7', color: '#92400E' },
+    };
+  }
+
+  // Data rows
+  for (let i = 0; i < model.risks.length; i++) {
+    const risk = model.risks[i];
+    const row = 1 + i;
+    cells[`${row}:0`] = { rawValue: risk.title, computedValue: risk.title };
+    cells[`${row}:1`] = { rawValue: risk.category, computedValue: risk.category };
+    cells[`${row}:2`] = { rawValue: String(risk.probability), computedValue: String(risk.probability) };
+    cells[`${row}:3`] = { rawValue: String(risk.impact), computedValue: String(risk.impact) };
+    cells[`${row}:4`] = { rawValue: risk.status, computedValue: risk.status };
+    cells[`${row}:5`] = { rawValue: risk.ownerId ?? '', computedValue: risk.ownerId ?? '' };
+    cells[`${row}:6`] = { rawValue: risk.mitigationPlan, computedValue: risk.mitigationPlan };
+    cells[`${row}:7`] = { rawValue: risk.notes, computedValue: risk.notes };
+  }
+
+  return {
+    id: `sheet-risks-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    name: RISKS_SHEET_NAME,
+    cells,
+    defaultColWidth: 120,
+    defaultRowHeight: 24,
+    columnWidths: { 0: 180, 6: 200 },
+    rowHeights: {},
+    columnCount: colCount,
+    rowCount: rowCount,
+    frozenColumns: 0,
+    frozenRows: 1,
+  };
+}
+
+/**
+ * Create the resources sheet from a ProjectModel.
+ */
+function createResourcesSheetFromModel(model: ProjectModel): Sheet {
+  const colCount = RESOURCE_HEADERS.length;
+  const rowCount = 1 + model.resources.length + 2;
+  const cells: Record<string, Cell> = {};
+
+  // Headers
+  for (let col = 0; col < RESOURCE_HEADERS.length; col++) {
+    cells[`0:${col}`] = {
+      rawValue: RESOURCE_HEADERS[col],
+      computedValue: RESOURCE_HEADERS[col],
+      style: { fontWeight: 'bold', backgroundColor: '#ECFDF5', color: '#065F46' },
+    };
+  }
+
+  // Data rows
+  for (let i = 0; i < model.resources.length; i++) {
+    const resource = model.resources[i];
+    const row = 1 + i;
+    cells[`${row}:0`] = { rawValue: resource.name, computedValue: resource.name };
+    cells[`${row}:1`] = { rawValue: resource.role, computedValue: resource.role };
+    cells[`${row}:2`] = { rawValue: String(resource.costRate), computedValue: String(resource.costRate) };
+    cells[`${row}:3`] = { rawValue: resource.costCurrency, computedValue: resource.costCurrency };
+    cells[`${row}:4`] = { rawValue: String(resource.availability), computedValue: String(resource.availability) };
+    cells[`${row}:5`] = { rawValue: resource.color, computedValue: resource.color };
+  }
+
+  return {
+    id: `sheet-resources-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    name: RESOURCES_SHEET_NAME,
+    cells,
+    defaultColWidth: 120,
+    defaultRowHeight: 24,
+    columnWidths: { 0: 150 },
+    rowHeights: {},
+    columnCount: colCount,
+    rowCount: rowCount,
+    frozenColumns: 0,
+    frozenRows: 1,
+  };
+}
+
+/**
+ * Legacy: Convert a ProjectModel back to single-sheet cell data.
+ * @deprecated Use projectModelToWorkbook instead.
  */
 export function projectModelToSheetCells(
   model: ProjectModel,
   mapping: ColumnMapping,
 ): Record<string, string> {
+  const workbook = projectModelToWorkbook(model, mapping);
+  // Flatten all sheets into a single cell record (for backward compat)
   const cells: Record<string, string> = {};
-  const headerRow = mapping.headerRow ?? 0;
-
-  // ─── Task Section ──────────────────────────────────────────────────
-
-  // Write task headers
-  const headers = ['Task', 'Start Date', 'End Date', 'Duration', 'Parent', 'Dependency', 'Progress', 'Resource', 'Milestone', 'Color', 'Notes'];
-  for (let col = 0; col < headers.length; col++) {
-    cells[`${headerRow}:${col}`] = headers[col];
+  let rowOffset = 0;
+  for (const sheet of workbook.sheets) {
+    for (const [key, cell] of Object.entries(sheet.cells)) {
+      const [r, c] = key.split(':').map(Number);
+      cells[`${r + rowOffset}:${c}`] = cell.rawValue;
+    }
+    rowOffset += sheet.rowCount + 1; // +1 for blank separator
   }
-
-  // Write task data rows
-  for (let i = 0; i < model.tasks.length; i++) {
-    const task = model.tasks[i];
-    const row = headerRow + 1 + i;
-    const rowNum = row + 1; // 1-based row for formulas
-
-    if (mapping.taskCol >= 0) {
-      cells[`${row}:${mapping.taskCol}`] = task.name;
-    }
-    if (mapping.startDateCol >= 0) {
-      cells[`${row}:${mapping.startDateCol}`] = task.startDate;
-    }
-    if (mapping.endDateCol >= 0) {
-      cells[`${row}:${mapping.endDateCol}`] = task.endDate;
-    }
-    if (mapping.durationCol !== null && mapping.durationCol >= 0) {
-      // Use NETWORKDAYS formula to calculate working days between start and end
-      const startCol = colToLetter(mapping.startDateCol);
-      const endCol = colToLetter(mapping.endDateCol);
-      cells[`${row}:${mapping.durationCol}`] = `=NETWORKDAYS(${startCol}${rowNum},${endCol}${rowNum})`;
-    }
-    if (mapping.parentCol !== null && mapping.parentCol >= 0) {
-      // Convert parentId to parent name for readability
-      const parentTask = model.tasks.find((t) => t.id === task.parentId);
-      cells[`${row}:${mapping.parentCol}`] = parentTask?.name ?? '';
-    }
-    if (mapping.dependencyCol !== null && mapping.dependencyCol >= 0) {
-      // Convert dependency IDs to row numbers (1-based)
-      const depRows = task.dependencies
-        .map((depId) => {
-          const idx = model.tasks.findIndex((t) => t.id === depId);
-          return idx >= 0 ? String(idx + 1) : '';
-        })
-        .filter(Boolean);
-      cells[`${row}:${mapping.dependencyCol}`] = depRows.join(', ');
-    }
-    if (mapping.progressCol !== null && mapping.progressCol >= 0) {
-      cells[`${row}:${mapping.progressCol}`] = String(task.progress);
-    }
-    if (mapping.resourceCol !== null && mapping.resourceCol >= 0) {
-      cells[`${row}:${mapping.resourceCol}`] = task.resourceId ?? '';
-    }
-    if (mapping.milestoneCol !== null && mapping.milestoneCol >= 0) {
-      cells[`${row}:${mapping.milestoneCol}`] = task.isMilestone ? 'yes' : 'no';
-    }
-    if (mapping.colorCol !== null && mapping.colorCol >= 0) {
-      cells[`${row}:${mapping.colorCol}`] = task.color;
-    }
-    if (mapping.notesCol !== null && mapping.notesCol >= 0) {
-      cells[`${row}:${mapping.notesCol}`] = task.notes;
-    }
-  }
-
-  // ─── Risk Section ──────────────────────────────────────────────────
-
-  // Risk section starts after task data + 1 blank row separator
-  const taskEndRow = headerRow + 1 + model.tasks.length;
-  const riskHeaderRow = taskEndRow + 1;
-
-  // Risk headers (columns: Title, Category, Probability, Impact, Status, Owner, Mitigation, Notes)
-  const riskHeaders = ['Risk', 'Category', 'Probability', 'Impact', 'Status', 'Owner', 'Mitigation Plan', 'Notes'];
-  for (let col = 0; col < riskHeaders.length; col++) {
-    cells[`${riskHeaderRow}:${col}`] = riskHeaders[col];
-  }
-
-  // Write risk data rows
-  for (let i = 0; i < model.risks.length; i++) {
-    const risk = model.risks[i];
-    const row = riskHeaderRow + 1 + i;
-    cells[`${row}:0`] = risk.title;
-    cells[`${row}:1`] = risk.category;
-    cells[`${row}:2`] = String(risk.probability);
-    cells[`${row}:3`] = String(risk.impact);
-    cells[`${row}:4`] = risk.status;
-    cells[`${row}:5`] = risk.ownerId ?? '';
-    cells[`${row}:6`] = risk.mitigationPlan;
-    cells[`${row}:7`] = risk.notes;
-  }
-
-  // ─── Resource Section ───────────────────────────────────────────────
-
-  // Resource section starts after risk data + 1 blank row separator
-  const riskEndRow = riskHeaderRow + 1 + model.risks.length;
-  const resourceHeaderRow = riskEndRow + 1;
-
-  // Resource headers (columns: Name, Role, Cost Rate, Currency, Availability, Color)
-  const resourceHeaders = ['Resource', 'Role', 'Cost Rate', 'Currency', 'Availability %', 'Color'];
-  for (let col = 0; col < resourceHeaders.length; col++) {
-    cells[`${resourceHeaderRow}:${col}`] = resourceHeaders[col];
-  }
-
-  // Write resource data rows
-  for (let i = 0; i < model.resources.length; i++) {
-    const resource = model.resources[i];
-    const row = resourceHeaderRow + 1 + i;
-    cells[`${row}:0`] = resource.name;
-    cells[`${row}:1`] = resource.role;
-    cells[`${row}:2`] = String(resource.costRate);
-    cells[`${row}:3`] = resource.costCurrency;
-    cells[`${row}:4`] = String(resource.availability);
-    cells[`${row}:5`] = resource.color;
-  }
-
   return cells;
 }
 
@@ -1102,6 +1289,125 @@ export function createSheetFromTemplate(templateId: string, projectName?: string
     columnCount: colCount,
     rowCount: rowCount,
     frozenColumns: 1,
+    frozenRows: 1,
+  };
+}
+
+// ─── Template to Workbook ──────────────────────────────────────────────────
+
+/**
+ * Create a new Workbook with separate sheets for tasks, risks, and resources
+ * from a project template.
+ *
+ * @param templateId - ID of the template to use
+ * @param projectName - Optional custom name for the project
+ * @returns A new Workbook ready to be loaded, or null if template not found
+ */
+export function createWorkbookFromTemplate(templateId: string, projectName?: string): Workbook | null {
+  const template = getTemplateById(templateId);
+  if (!template) return null;
+
+  const project = template.create();
+
+  // Convert project to model (serializable)
+  const allTasks = getAllTasks(project.wbs);
+  const model: ProjectModel = {
+    id: project.id,
+    name: projectName ?? project.name,
+    description: project.description,
+    startDate: project.startDate,
+    endDate: project.endDate,
+    tasks: allTasks.map((t) => ({
+      id: t.id,
+      name: t.name,
+      startDate: t.startDate,
+      endDate: t.endDate,
+      duration: t.duration,
+      parentId: t.parentId,
+      dependencies: t.dependencies.map((d) => d.predecessorId),
+      progress: t.progress,
+      resourceId: t.responsibleResourceId,
+      isMilestone: t.isMilestone,
+      color: t.color,
+      notes: t.description,
+    })),
+    risks: project.risks.map((r) => ({
+      id: r.id,
+      title: r.title,
+      category: r.category,
+      probability: r.probability,
+      impact: r.impact,
+      status: r.status,
+      ownerId: r.ownerId,
+      mitigationPlan: r.mitigationPlan,
+      notes: r.description,
+    })),
+    resources: project.resources.map((r) => ({
+      id: r.id,
+      name: r.name,
+      role: r.role,
+      costRate: r.costRate,
+      costCurrency: r.costCurrency,
+      availability: r.availability,
+      color: r.color,
+    })),
+  };
+
+  return projectModelToWorkbook(model);
+}
+
+// ─── Blank Sheet Creators ──────────────────────────────────────────────────
+
+/**
+ * Create a blank risks sheet with headers.
+ */
+export function createRisksSheet(): Sheet {
+  const cells: Record<string, Cell> = {};
+  for (let col = 0; col < RISK_HEADERS.length; col++) {
+    cells[`0:${col}`] = {
+      rawValue: RISK_HEADERS[col],
+      computedValue: RISK_HEADERS[col],
+      style: { fontWeight: 'bold', backgroundColor: '#FEF3C7', color: '#92400E' },
+    };
+  }
+  return {
+    id: `sheet-risks-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    name: RISKS_SHEET_NAME,
+    cells,
+    defaultColWidth: 120,
+    defaultRowHeight: 24,
+    columnWidths: { 0: 180, 6: 200 },
+    rowHeights: {},
+    columnCount: RISK_HEADERS.length,
+    rowCount: 10,
+    frozenColumns: 0,
+    frozenRows: 1,
+  };
+}
+
+/**
+ * Create a blank resources sheet with headers.
+ */
+export function createResourcesSheet(): Sheet {
+  const cells: Record<string, Cell> = {};
+  for (let col = 0; col < RESOURCE_HEADERS.length; col++) {
+    cells[`0:${col}`] = {
+      rawValue: RESOURCE_HEADERS[col],
+      computedValue: RESOURCE_HEADERS[col],
+      style: { fontWeight: 'bold', backgroundColor: '#ECFDF5', color: '#065F46' },
+    };
+  }
+  return {
+    id: `sheet-resources-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    name: RESOURCES_SHEET_NAME,
+    cells,
+    defaultColWidth: 120,
+    defaultRowHeight: 24,
+    columnWidths: { 0: 150 },
+    rowHeights: {},
+    columnCount: RESOURCE_HEADERS.length,
+    rowCount: 10,
+    frozenColumns: 0,
     frozenRows: 1,
   };
 }

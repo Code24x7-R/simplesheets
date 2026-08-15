@@ -937,10 +937,10 @@ describe('App - Global Keyboard Shortcuts', () => {
       clickMenuItem('Project / WBS');
       clickMenuItem('Website Project');
 
-      // The project sheet should be present in the tab bar
+      // The project sheets should be present in the tab bar
       // (may also appear in menu, so use getAllByText)
-      const elements = screen.getAllByText('Website Project');
-      expect(elements.length).toBeGreaterThanOrEqual(1);
+      const taskSheets = screen.getAllByText('Project Plan');
+      expect(taskSheets.length).toBeGreaterThanOrEqual(1);
     });
 
     it('File → New clears project state', () => {

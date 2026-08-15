@@ -58,7 +58,8 @@ import { createDemoWorkbook } from './utils/demoWorkbook';
 import { useChartSettings } from './hooks/useChartSettings';
 import { SheetLinkProvider } from './components/SheetLink';
 import { ProjectView } from './extensions/project-wbs/ProjectView';
-import { createProjectSheet, createSheetFromTemplate, getDefaultColumnMapping, sheetToProject, projectModelToProject, projectModelToSheetCells } from './extensions/project-wbs/sheetToProject';
+import { createProjectSheet, createWorkbookFromTemplate, createRisksSheet, createResourcesSheet, workbookToProject, projectModelToProject, projectModelToWorkbook } from './extensions/project-wbs/sheetToProject';
+import { TASKS_SHEET_NAME, RISKS_SHEET_NAME, RESOURCES_SHEET_NAME } from './extensions/project-wbs/sheetToProject';
 import type { Project } from './extensions/types';
 import type { ProjectModel, ColumnMapping } from './types';
 
@@ -1787,48 +1788,49 @@ function WorkbookView() {
   // ─── Extension Handlers ─────────────────────────────────────────
 
   const handleProjectNew = useCallback((templateId: string) => {
-    // Create a sheet from the template data
-    const newSheet = createSheetFromTemplate(templateId);
-    if (!newSheet) return;
+    // Create a workbook from the template data (3 sheets: tasks, risks, resources)
+    const newWorkbook = createWorkbookFromTemplate(templateId);
+    if (!newWorkbook) return;
 
-    // Add sheet to workbook and switch to it
-    const updatedSheets = [...workbook.sheets, newSheet];
+    // Replace workbook sheets with the new project sheets
     const updatedWb = {
       ...workbook,
-      sheets: updatedSheets,
-      activeSheetIndex: updatedSheets.length - 1,
+      sheets: newWorkbook.sheets,
+      activeSheetIndex: 0,
       extensions: undefined, // Clear any previous extension data
       lastModified: Date.now(),
     };
-    pushHistory(updatedWb, `New project from template: ${newSheet.name}`, filterStateRef.current, gridSelectionRef.current);
+    pushHistory(updatedWb, `New project from template: ${newWorkbook.sheets[0].name}`, filterStateRef.current, gridSelectionRef.current);
 
-    // Convert the sheet to a project and open the view
-    const mapping = getDefaultColumnMapping();
-    const model = sheetToProject(newSheet, mapping, newSheet.name);
-    const project = projectModelToProject(model);
+    // Convert the workbook to a project and open the view
+    const project = projectModelToProject(
+      workbookToProject(updatedWb, TASKS_SHEET_NAME, undefined, newWorkbook.sheets[0].name)
+    );
 
     setCurrentProject(project);
     setShowProjectView(true);
   }, [workbook, pushHistory]);
 
   const handleProjectNewSheet = useCallback(() => {
-    // Create a new project sheet with headers and sample data
-    const newSheet = createProjectSheet('Project Plan');
+    // Create a blank project workbook with 3 sheets (tasks, risks, resources)
+    const tasksSheet = createProjectSheet('Project Plan', false);
+    const risksSheet = createRisksSheet();
+    const resourcesSheet = createResourcesSheet();
 
-    // Add sheet to workbook and switch to it
-    const updatedSheets = [...workbook.sheets, newSheet];
+    const newSheets = [tasksSheet, risksSheet, resourcesSheet];
     const updatedWb = {
       ...workbook,
-      sheets: updatedSheets,
-      activeSheetIndex: updatedSheets.length - 1,
+      sheets: newSheets,
+      activeSheetIndex: 0,
+      extensions: undefined,
       lastModified: Date.now(),
     };
-    pushHistory(updatedWb, 'Add project sheet', filterStateRef.current, gridSelectionRef.current);
+    pushHistory(updatedWb, 'New project workbook', filterStateRef.current, gridSelectionRef.current);
 
-    // Auto-convert the new sheet to a project and open the view
-    const mapping = getDefaultColumnMapping();
-    const model = sheetToProject(newSheet, mapping, newSheet.name);
-    const project = projectModelToProject(model);
+    // Auto-convert the workbook to a project and open the view
+    const project = projectModelToProject(
+      workbookToProject(updatedWb, TASKS_SHEET_NAME, undefined, 'Project Plan')
+    );
 
     setCurrentProject(project);
     setShowProjectView(true);
@@ -1847,37 +1849,19 @@ function WorkbookView() {
         },
       };
 
-      // Determine which sheet to sync data back to
-      const targetSheet = sheetId
-        ? workbook.sheets.find((s) => s.id === sheetId)
-        : sheet;
-      const targetSheetIndex = sheetId
-        ? workbook.sheets.findIndex((s) => s.id === sheetId)
-        : workbook.activeSheetIndex;
+      // Create new sheets from the project model
+      const newWorkbook = projectModelToWorkbook(model, mapping);
 
-      // If we have a mapping and a target sheet, sync project data back to sheet cells
-      let updatedSheets = workbook.sheets;
-      if (mapping && targetSheet && targetSheetIndex >= 0) {
-        const newCellValues = projectModelToSheetCells(model, mapping);
-        const newCells: Record<string, Cell> = {};
-        for (const [key, value] of Object.entries(newCellValues)) {
-          newCells[key] = { rawValue: value, computedValue: value };
-        }
-        const mergedCells = { ...targetSheet.cells, ...newCells };
-        const updatedSheet: typeof targetSheet = {
-          ...targetSheet,
-          cells: mergedCells,
-          rowCount: Math.max(
-            targetSheet.rowCount,
-            model.tasks.length + (mapping.headerRow ?? 0) + 2,
-          ),
-        };
-        updatedSheets = workbook.sheets.map((s, idx) =>
-          idx === targetSheetIndex ? updatedSheet : s,
-        );
-      }
+      // Replace existing project sheets (by name) with new ones
+      const projectSheetNames = new Set([TASKS_SHEET_NAME, RISKS_SHEET_NAME, RESOURCES_SHEET_NAME]);
+      const existingNonProjectSheets = workbook.sheets.filter(
+        (s) => !projectSheetNames.has(s.name)
+      );
 
-      // Push a history entry with the extension data and updated sheet
+      // Build updated sheets: non-project sheets + new project sheets
+      const updatedSheets = [...existingNonProjectSheets, ...newWorkbook.sheets];
+
+      // Push a history entry with the extension data and updated sheets
       const updatedWb: typeof workbook = {
         ...workbook,
         sheets: updatedSheets,
@@ -1889,7 +1873,7 @@ function WorkbookView() {
       };
       pushHistory(updatedWb, 'Update project plan');
     },
-    [workbook, pushHistory, sheet],
+    [workbook, pushHistory],
   );
 
   // ─── Chart Handlers ──────────────────────────────────────────────────
@@ -2656,15 +2640,17 @@ function WorkbookView() {
         onCopySheet={handleCopySheet}
         onDeleteSheet={handleDeleteSheet}
         onShowProjectView={() => {
-          // Re-convert sheet to project to pick up any edits made in sheet view
-          const extData = workbook.extensions?.['project-wbs'];
-          if (sheet && extData && extData.extensionId === 'project-wbs') {
-            const data = extData.data as { columnMapping?: ColumnMapping; sourceSheetId?: string };
-            if (data.columnMapping && data.sourceSheetId === sheet.id) {
-              const model = sheetToProject(sheet, data.columnMapping, sheet.name);
-              const project = projectModelToProject(model);
-              setCurrentProject(project);
-            }
+          // Re-convert workbook to project to pick up any edits made in sheet view
+          const tasksSheet = workbook.sheets.find((s) => s.name === TASKS_SHEET_NAME);
+          if (tasksSheet) {
+            // Multi-sheet project format
+            const extData = workbook.extensions?.['project-wbs'];
+            const mapping = extData?.data
+              ? (extData.data as { columnMapping?: ColumnMapping }).columnMapping
+              : undefined;
+            const model = workbookToProject(workbook, TASKS_SHEET_NAME, mapping ?? undefined);
+            const project = projectModelToProject(model);
+            setCurrentProject(project);
           }
           setShowProjectView(true);
         }}

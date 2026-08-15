@@ -662,10 +662,10 @@ describe('sheetToProject', () => {
       };
 
       const cells = projectModelToSheetCells(model, mapping);
-      // Risk header at row 3 (after task header + 1 task + separator)
-      expect(cells['3:0']).toBe('Risk');
-      expect(cells['4:0']).toBe('Scope creep');
-      expect(cells['4:1']).toBe('scope');
+      // Legacy format stacks sheets: Tasks(0-3), sep(4), Risks(5-7), sep(8), Resources(9+)
+      expect(cells['5:0']).toBe('Risk');
+      expect(cells['6:0']).toBe('Scope creep');
+      expect(cells['6:1']).toBe('scope');
     });
 
     it('writes resource section after risks', () => {
@@ -685,10 +685,10 @@ describe('sheetToProject', () => {
       };
 
       const cells = projectModelToSheetCells(model, mapping);
-      // Resource header at row 5 (after task header + 1 task + separator + risk header + separator)
-      expect(cells['5:0']).toBe('Resource');
-      expect(cells['6:0']).toBe('Alice');
-      expect(cells['6:1']).toBe('Dev');
+      // Legacy format stacks sheets: Tasks(0-3), sep(4), Risks(5-7), sep(8), Resources(9+)
+      expect(cells['9:0']).toBe('Resource');
+      expect(cells['10:0']).toBe('Alice');
+      expect(cells['10:1']).toBe('Dev');
     });
 
     it('writes duration as NETWORKDAYS formula', () => {
