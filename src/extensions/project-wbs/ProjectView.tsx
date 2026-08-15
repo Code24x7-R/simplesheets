@@ -24,6 +24,7 @@ import { ResourceListModal } from './ResourceListModal';
 import { ColumnMappingDialog } from './ColumnMappingDialog';
 import { AccountingDashboard } from './AccountingDashboard';
 import { DependencyDrawer } from './DependencyDrawer';
+import { EvmReport } from './EvmReport';
 import { sheetToProject, projectModelToProject } from './sheetToProject';
 import { addTask, removeTask, updateTask, toggleCollapse, findTaskById, getAllTasks, addResource, updateResource, removeResource } from './treeOps';
 import { addRisk, updateRisk, removeRisk, getRiskSummary } from './risks';
@@ -489,7 +490,7 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
         <div className="flex items-center gap-2">
           {/* View mode toggle */}
           <div className="flex rounded border border-gray-200 overflow-hidden">
-            {(['gantt', 'risk-register', 'risk-matrix', 'resource-heatmap', 'accounting'] as ViewMode[]).map((mode) => (
+            {(['gantt', 'risk-register', 'risk-matrix', 'resource-heatmap', 'accounting', 'evm-report'] as ViewMode[]).map((mode) => (
               <button
                 key={mode}
                 className={`px-3 py-1 text-sm ${
@@ -499,7 +500,7 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
                 }`}
                 onClick={() => setViewMode(mode)}
               >
-                {mode === 'gantt' ? 'Gantt' : mode === 'risk-register' ? 'Risk Register' : mode === 'risk-matrix' ? 'Risk Matrix' : mode === 'accounting' ? 'Accounting' : 'Resources'}
+                {mode === 'gantt' ? 'Gantt' : mode === 'risk-register' ? 'Risk Register' : mode === 'risk-matrix' ? 'Risk Matrix' : mode === 'accounting' ? 'Accounting' : mode === 'evm-report' ? 'EVM Report' : 'Resources'}
               </button>
             ))}
           </div>
@@ -708,6 +709,9 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
                 console.log('Edit allocation for task:', taskId);
               }}
             />
+          )}
+          {viewMode === 'evm-report' && (
+            <EvmReport project={project} />
           )}
         </div>
       </div>
