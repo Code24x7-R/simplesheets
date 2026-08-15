@@ -1,240 +1,302 @@
 {
   "id": "realestate-photo",
   "name": "Real Estate Photoshoot",
-  "description": "Professional real estate photography project from staging to final delivery, including photography, video, drone, 3D animation, and web delivery.",
+  "description": "Professional real estate photography project from initial contact to final delivery, including travel, on-site capture (up to 2 hrs), options selection, post-editing, and social media publishing.",
   "category": "Real Estate",
   "startDate": "2026-05-01",
-  "endDate": "2026-05-15",
+  "endDate": "2026-05-08",
   "calendar": {
-    "workingDays": [1, 2, 3, 4, 5],
+    "workingDays": [1, 2, 3, 4, 5, 6],
     "holidays": [],
     "hoursPerDay": 8
   },
   "tasks": [
     {
-      "id": "prep",
-      "name": "Pre-Production",
+      "id": "brief",
+      "name": "Briefing & Quote",
       "startDate": "2026-05-01",
-      "endDate": "2026-05-02",
+      "endDate": "2026-05-01",
       "children": [
         {
-          "id": "prep-1",
-          "name": "Client consultation & briefing",
+          "id": "brief-1",
+          "name": "Initial client enquiry",
           "startDate": "2026-05-01",
           "endDate": "2026-05-01",
-          "description": "Discuss property details, shot list, and client expectations"
+          "description": "Receive enquiry, discuss property type and client needs"
         },
         {
-          "id": "prep-2",
-          "name": "Property scouting & scheduling",
+          "id": "brief-2",
+          "name": "Quote & options selection",
           "startDate": "2026-05-01",
-          "endDate": "2026-05-02",
-          "description": "Visit property, plan shots, schedule shoot times"
+          "endDate": "2026-05-01",
+          "description": "Send quote with options: photography, video, drone, 3D, floor plan, twilight"
         },
         {
-          "id": "prep-3",
-          "name": "Equipment preparation",
-          "startDate": "2026-05-02",
-          "endDate": "2026-05-02",
-          "description": "Check cameras, lenses, drones, lighting, batteries"
-        },
-        {
-          "id": "prep-4",
-          "name": "Staging coordination",
-          "startDate": "2026-05-02",
-          "endDate": "2026-05-02",
-          "description": "Coordinate with stager, finalize property presentation",
-          "resourceId": "stager"
+          "id": "brief-3",
+          "name": "Booking confirmation",
+          "startDate": "2026-05-01",
+          "endDate": "2026-05-01",
+          "description": "Confirm booking, receive deposit, schedule shoot date"
         }
       ]
     },
     {
-      "id": "shoot",
-      "name": "Photography Day",
+      "id": "prep",
+      "name": "Pre-Production",
+      "startDate": "2026-05-02",
+      "endDate": "2026-05-02",
+      "children": [
+        {
+          "id": "prep-1",
+          "name": "Equipment preparation",
+          "startDate": "2026-05-02",
+          "endDate": "2026-05-02",
+          "description": "Check cameras, lenses, drone, lighting, batteries, memory cards"
+        },
+        {
+          "id": "prep-2",
+          "name": "Location planning",
+          "startDate": "2026-05-02",
+          "endDate": "2026-05-02",
+          "description": "Check route, estimate travel time, confirm access arrangements"
+        },
+        {
+          "id": "prep-3",
+          "name": "Weather check",
+          "startDate": "2026-05-02",
+          "endDate": "2026-05-02",
+          "description": "Monitor weather forecast, confirm shoot conditions"
+        }
+      ]
+    },
+    {
+      "id": "travel-out",
+      "name": "Travel to Property",
       "startDate": "2026-05-03",
-      "endDate": "2026-05-04",
+      "endDate": "2026-05-03",
+      "description": "Travel to property location (allow 30-60 min each way)",
+      "resourceId": "photog"
+    },
+    {
+      "id": "shoot",
+      "name": "On-Site Photography",
+      "startDate": "2026-05-03",
+      "endDate": "2026-05-03",
+      "description": "On-site shoot (up to 2 hours depending on property size and options)",
+      "resourceId": "photog",
       "children": [
         {
           "id": "shoot-1",
           "name": "Exterior photography",
           "startDate": "2026-05-03",
           "endDate": "2026-05-03",
-          "description": "Front, back, sides, landscaping, architectural details"
+          "description": "Front façade, rear, sides, landscaping, architectural details"
         },
         {
           "id": "shoot-2",
           "name": "Interior photography",
           "startDate": "2026-05-03",
-          "endDate": "2026-05-04",
+          "endDate": "2026-05-03",
           "description": "All rooms, wide angles, detail shots, ambient lighting"
         },
         {
           "id": "shoot-3",
-          "name": "Twilight photography",
-          "startDate": "2026-05-04",
-          "endDate": "2026-05-04",
-          "description": "Exterior twilight shots with interior lights on"
-        },
-        {
-          "id": "shoot-4",
           "name": "Drone/aerial photography",
-          "startDate": "2026-05-04",
-          "endDate": "2026-05-04",
-          "description": "Aerial property shots, neighborhood context, roof condition",
+          "startDate": "2026-05-03",
+          "endDate": "2026-05-03",
+          "description": "Aerial property shots, neighborhood context (if option selected)",
           "resourceId": "pilot"
         },
         {
-          "id": "shoot-5",
+          "id": "shoot-4",
           "name": "Video walkthrough",
+          "startDate": "2026-05-03",
+          "endDate": "2026-05-03",
+          "description": "Cinematic property walkthrough video (if option selected)"
+        },
+        {
+          "id": "shoot-5",
+          "name": "3D scan / Matterport",
+          "startDate": "2026-05-03",
+          "endDate": "2026-05-03",
+          "description": "3D virtual tour capture (if option selected)"
+        },
+        {
+          "id": "shoot-6",
+          "name": "Floor plan capture",
+          "startDate": "2026-05-03",
+          "endDate": "2026-05-03",
+          "description": "Measure and capture data for floor plan (if option selected)"
+        }
+      ]
+    },
+    {
+      "id": "travel-back",
+      "name": "Travel from Property",
+      "startDate": "2026-05-03",
+      "endDate": "2026-05-03",
+      "description": "Travel back from property location",
+      "resourceId": "photog"
+    },
+    {
+      "id": "twilight",
+      "name": "Twilight Photography",
+      "startDate": "2026-05-03",
+      "endDate": "2026-05-03",
+      "description": "Return for twilight exterior shots (if option selected, seasonal timing)",
+      "resourceId": "photog"
+    },
+    {
+      "id": "edit-photo",
+      "name": "Photo Editing",
+      "startDate": "2026-05-04",
+      "endDate": "2026-05-05",
+      "children": [
+        {
+          "id": "edit-p1",
+          "name": "Photo culling & selection",
           "startDate": "2026-05-04",
           "endDate": "2026-05-04",
-          "description": "Cinematic property walkthrough video"
-        }
-      ]
-    },
-    {
-      "id": "capture-extra",
-      "name": "Specialty Capture",
-      "startDate": "2026-05-05",
-      "endDate": "2026-05-06",
-      "children": [
+          "description": "Cull and select best shots from all captures"
+        },
         {
-          "id": "cap-1",
-          "name": "Floor plan creation",
+          "id": "edit-p2",
+          "name": "HDR processing & color correction",
+          "startDate": "2026-05-04",
+          "endDate": "2026-05-04",
+          "description": "HDR blending, exposure correction, white balance"
+        },
+        {
+          "id": "edit-p3",
+          "name": "Retouching & enhancements",
           "startDate": "2026-05-05",
           "endDate": "2026-05-05",
-          "description": "Measure and create 2D/3D floor plan",
-          "resourceId": "designer"
+          "description": "Sky replacement, staging cleanup, verticals correction"
         },
         {
-          "id": "cap-2",
-          "name": "3D virtual tour capture",
+          "id": "edit-p4",
+          "name": "Final export (print + web)",
           "startDate": "2026-05-05",
-          "endDate": "2026-05-06",
-          "description": "Matterport or similar 3D scan of property"
-        },
+          "endDate": "2026-05-05",
+          "description": "Export high-res for print and optimized web versions"
+        }
+      ]
+    },
+    {
+      "id": "edit-video",
+      "name": "Video & Drone Editing",
+      "startDate": "2026-05-05",
+      "endDate": "2026-05-06",
+      "description": "Video editing, color grading, stabilization (if video/drone options selected)"
+    },
+    {
+      "id": "edit-3d",
+      "name": "3D & Floor Plan Production",
+      "startDate": "2026-05-06",
+      "endDate": "2026-05-06",
+      "description": "Process 3D scan, create floor plan (if options selected)",
+      "resourceId": "designer"
+    },
+    {
+      "id": "proofs",
+      "name": "Proofs & Client Review",
+      "startDate": "2026-05-06",
+      "endDate": "2026-05-07",
+      "children": [
         {
-          "id": "cap-3",
-          "name": "Detail & feature shots",
+          "id": "proof-1",
+          "name": "Create proof gallery",
           "startDate": "2026-05-06",
           "endDate": "2026-05-06",
-          "description": "Close-ups of finishes, appliances, fixtures"
+          "description": "Upload to online proof gallery for client review"
+        },
+        {
+          "id": "proof-2",
+          "name": "Client feedback period",
+          "startDate": "2026-05-06",
+          "endDate": "2026-05-07",
+          "description": "Allow time for client to review and request edits"
+        },
+        {
+          "id": "proof-3",
+          "name": "Revision round",
+          "startDate": "2026-05-07",
+          "endDate": "2026-05-07",
+          "description": "Complete client-requested revisions"
         }
       ]
     },
     {
-      "id": "edit",
-      "name": "Post-Production",
+      "id": "dtp-social",
+      "name": "DTP & Social Media Publishing",
       "startDate": "2026-05-07",
-      "endDate": "2026-05-10",
+      "endDate": "2026-05-08",
       "children": [
         {
-          "id": "edit-1",
-          "name": "Photo culling & selection",
+          "id": "dtp-1",
+          "name": "Marketing materials",
           "startDate": "2026-05-07",
           "endDate": "2026-05-07",
-          "description": "Select best shots from all captures"
-        },
-        {
-          "id": "edit-2",
-          "name": "Photo editing & retouching",
-          "startDate": "2026-05-07",
-          "endDate": "2026-05-09",
-          "description": "Color correction, HDR blending, sky replacement, staging cleanup"
-        },
-        {
-          "id": "edit-3",
-          "name": "Video editing",
-          "startDate": "2026-05-08",
-          "endDate": "2026-05-09",
-          "description": "Color grading, transitions, music, titles"
-        },
-        {
-          "id": "edit-4",
-          "name": "3D animation & virtual tour",
-          "startDate": "2026-05-09",
-          "endDate": "2026-05-10",
-          "description": "Process 3D scan, create virtual tour, add hotspots",
+          "description": "Create flyers, brochures, listing cards (if required)",
           "resourceId": "designer"
         },
         {
-          "id": "edit-5",
-          "name": "Drone photo/video editing",
-          "startDate": "2026-05-10",
-          "endDate": "2026-05-10",
-          "description": "Stabilize, color grade aerial footage"
-        }
-      ]
-    },
-    {
-      "id": "review",
-      "name": "Client Review",
-      "startDate": "2026-05-11",
-      "endDate": "2026-05-12",
-      "children": [
-        {
-          "id": "rev-1",
-          "name": "Proof gallery creation",
-          "startDate": "2026-05-11",
-          "endDate": "2026-05-11",
-          "description": "Create online proof gallery for client review"
+          "id": "dtp-2",
+          "name": "Social media assets",
+          "startDate": "2026-05-07",
+          "endDate": "2026-05-08",
+          "description": "Create Instagram, Facebook, LinkedIn posts and stories",
+          "resourceId": "designer"
         },
         {
-          "id": "rev-2",
-          "name": "Client review period",
-          "startDate": "2026-05-11",
-          "endDate": "2026-05-12",
-          "description": "Client reviews and requests edits"
+          "id": "dtp-3",
+          "name": "Schedule social posts",
+          "startDate": "2026-05-08",
+          "endDate": "2026-05-08",
+          "description": "Schedule posts across platforms using social media tools",
+          "resourceId": "designer"
         },
         {
-          "id": "rev-3",
-          "name": "Revision & adjustments",
-          "startDate": "2026-05-12",
-          "endDate": "2026-05-12",
-          "description": "Make client-requested edits"
+          "id": "dtp-4",
+          "name": "Publish to social channels",
+          "startDate": "2026-05-08",
+          "endDate": "2026-05-08",
+          "description": "Publish posts to Instagram, Facebook, LinkedIn, TikTok"
         }
       ]
     },
     {
       "id": "deliver",
-      "name": "Delivery & DTP",
-      "startDate": "2026-05-13",
-      "endDate": "2026-05-15",
+      "name": "Delivery & Archiving",
+      "startDate": "2026-05-08",
+      "endDate": "2026-05-08",
       "children": [
         {
           "id": "del-1",
-          "name": "Final image export",
-          "startDate": "2026-05-13",
-          "endDate": "2026-05-13",
-          "description": "Export high-res and web-ready images"
+          "name": "Upload to MLS & portals",
+          "startDate": "2026-05-08",
+          "endDate": "2026-05-08",
+          "description": "Upload final images to MLS, realtor.com, client portal"
         },
         {
           "id": "del-2",
-          "name": "DTP & marketing materials",
-          "startDate": "2026-05-13",
-          "endDate": "2026-05-14",
-          "description": "Create flyers, brochures, social media assets",
-          "resourceId": "designer"
+          "name": "Client file delivery",
+          "startDate": "2026-05-08",
+          "endDate": "2026-05-08",
+          "description": "Deliver final files via download link"
         },
         {
           "id": "del-3",
-          "name": "Web & portal upload",
-          "startDate": "2026-05-14",
-          "endDate": "2026-05-14",
-          "description": "Upload to MLS, Realtor portals, client website"
+          "name": "Project archiving",
+          "startDate": "2026-05-08",
+          "endDate": "2026-05-08",
+          "description": "Archive raw files and project assets"
         },
         {
           "id": "del-4",
-          "name": "Client delivery",
-          "startDate": "2026-05-15",
-          "endDate": "2026-05-15",
-          "description": "Deliver final files, archive project"
-        },
-        {
-          "id": "del-5",
           "name": "Project complete",
-          "startDate": "2026-05-15",
-          "endDate": "2026-05-15",
+          "startDate": "2026-05-08",
+          "endDate": "2026-05-08",
           "isMilestone": true
         }
       ]
@@ -248,8 +310,7 @@
       "probability": 4,
       "impact": 4,
       "status": "identified",
-      "mitigationPlan": "Schedule backup shoot day, monitor weather forecasts",
-      "notes": "Outdoor shoots and drone flights weather-dependent"
+      "mitigationPlan": "Schedule backup shoot day, monitor weather 48hrs ahead, have indoor-only contingency shots"
     },
     {
       "id": "r2",
@@ -258,28 +319,25 @@
       "probability": 3,
       "impact": 3,
       "status": "identified",
-      "mitigationPlan": "Check airspace restrictions, obtain LAANC authorization",
-      "notes": "Verify no-fly zones and altitude limits near property"
+      "mitigationPlan": "Check airspace via LAANC 7 days prior, verify no temporary restrictions, have ground-only backup"
     },
     {
       "id": "r3",
-      "title": "Equipment failure",
+      "title": "Equipment failure on-site",
       "category": "technical",
       "probability": 2,
       "impact": 5,
       "status": "mitigating",
-      "mitigationPlan": "Carry backup camera, batteries, memory cards",
-      "notes": "Always have redundant critical equipment"
+      "mitigationPlan": "Carry backup camera body, 2+ lenses, 6+ batteries, 4+ memory cards, backup drone"
     },
     {
       "id": "r4",
-      "title": "Property not ready",
+      "title": "Property not photo-ready",
       "category": "schedule",
       "probability": 3,
       "impact": 4,
       "status": "identified",
-      "mitigationPlan": "Confirm staging completion day before, have stager contact",
-      "notes": "Sellers may not complete prep work on time"
+      "mitigationPlan": "Confirm staging 24hrs before, provide prep checklist to agent, have stager on standby"
     },
     {
       "id": "r5",
@@ -288,18 +346,34 @@
       "probability": 4,
       "impact": 3,
       "status": "identified",
-      "mitigationPlan": "Clear contract with defined deliverables, charge for extras",
-      "notes": "Clients often request additional shots or edits"
+      "mitigationPlan": "Detailed contract with shot list, fixed revision rounds, hourly rate for extras"
     },
     {
       "id": "r6",
-      "title": "Editing backlog",
+      "title": "Traffic/travel delays",
       "category": "schedule",
       "probability": 3,
-      "impact": 3,
+      "impact": 2,
+      "status": "mitigating",
+      "mitigationPlan": "Allow 50% extra travel time for shoots, schedule buffer between jobs, check traffic apps"
+    },
+    {
+      "id": "r7",
+      "title": "Access issues at property",
+      "category": "external",
+      "probability": 2,
+      "impact": 4,
+      "status": "identified",
+      "mitigationPlan": "Confirm lockbox/code 24hrs prior, have agent contact number, verify parking"
+    },
+    {
+      "id": "r8",
+      "title": "Social media algorithm changes",
+      "category": "external",
+      "probability": 2,
+      "impact": 2,
       "status": "monitoring",
-      "mitigationPlan": "Batch similar projects, use editing presets",
-      "notes": "High season can create editing bottlenecks"
+      "mitigationPlan": "Diversify platforms, focus on engagement metrics, maintain content calendar"
     }
   ],
   "resources": [
@@ -332,7 +406,7 @@
     },
     {
       "id": "designer",
-      "name": "DTP / 3D Designer",
+      "name": "DTP / Social Media Designer",
       "role": "Design",
       "costRate": 120,
       "costCurrency": "USD",
