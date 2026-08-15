@@ -1,20 +1,20 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
 import { TEMPLATES, getTemplateById, getTemplatesByCategory, getAllCategories, getExtensionTemplates } from './index';
-import { createSimpleWBS } from './simple';
-import { createWebsiteProject } from './website';
-import { createSoftwareProject } from './software';
-import { createRenovationProject } from './renovation';
-import { createEventPlanningProject } from './event';
-import { createMarketingCampaignProject } from './marketing';
-import { createBusinessProject } from './business';
-import { createProductLaunchProject } from './product';
-import { createITMigrationProject } from './it-migration';
-import { createAgileProject } from './agile';
-import { createConstructionProject } from './construction';
 import { templateToProject } from './handler';
+import simpleJSON from './json/simple.json';
+import websiteJSON from './json/website.json';
+import softwareJSON from './json/software.json';
 import realestatePhotoJSON from './json/realestate-photo.json';
 import miningJSON from './json/mining.json';
+import renovationJSON from './json/renovation.json';
+import eventJSON from './json/event.json';
+import marketingJSON from './json/marketing.json';
+import businessJSON from './json/business.json';
+import productJSON from './json/product.json';
+import itMigrationJSON from './json/it-migration.json';
+import agileJSON from './json/agile.json';
+import constructionJSON from './json/construction.json';
 import type { ProjectTemplateJSON } from './types';
 import { validateTree } from '../treeOps';
 import { detectDependencyCycles } from '../dependencies';
@@ -75,7 +75,7 @@ describe('Templates', () => {
   });
 
   describe('Simple WBS template', () => {
-    const project = createSimpleWBS();
+    const project = templateToProject(simpleJSON as ProjectTemplateJSON);
 
     it('has a valid WBS tree', () => {
       const errors = validateTree(project.wbs);
@@ -102,7 +102,7 @@ describe('Templates', () => {
   });
 
   describe('Website template', () => {
-    const project = createWebsiteProject();
+    const project = templateToProject(websiteJSON as ProjectTemplateJSON);
 
     it('has a valid WBS tree', () => {
       const errors = validateTree(project.wbs);
@@ -125,7 +125,7 @@ describe('Templates', () => {
   });
 
   describe('Software template', () => {
-    const project = createSoftwareProject();
+    const project = templateToProject(softwareJSON as ProjectTemplateJSON);
 
     it('has a valid WBS tree', () => {
       const errors = validateTree(project.wbs);
@@ -148,7 +148,7 @@ describe('Templates', () => {
   });
 
   describe('Renovation template', () => {
-    const project = createRenovationProject();
+    const project = templateToProject(renovationJSON as ProjectTemplateJSON);
 
     it('has a valid WBS tree', () => {
       const errors = validateTree(project.wbs);
@@ -166,7 +166,7 @@ describe('Templates', () => {
   });
 
   describe('Event Planning template', () => {
-    const project = createEventPlanningProject();
+    const project = templateToProject(eventJSON as ProjectTemplateJSON);
 
     it('has a valid WBS tree', () => {
       const errors = validateTree(project.wbs);
@@ -180,7 +180,7 @@ describe('Templates', () => {
   });
 
   describe('Marketing Campaign template', () => {
-    const project = createMarketingCampaignProject();
+    const project = templateToProject(marketingJSON as ProjectTemplateJSON);
 
     it('has a valid WBS tree', () => {
       const errors = validateTree(project.wbs);
@@ -194,7 +194,7 @@ describe('Templates', () => {
   });
 
   describe('Business Project template', () => {
-    const project = createBusinessProject();
+    const project = templateToProject(businessJSON as ProjectTemplateJSON);
 
     it('has a valid WBS tree', () => {
       const errors = validateTree(project.wbs);
@@ -208,7 +208,7 @@ describe('Templates', () => {
   });
 
   describe('Product Launch template', () => {
-    const project = createProductLaunchProject();
+    const project = templateToProject(productJSON as ProjectTemplateJSON);
 
     it('has a valid WBS tree', () => {
       const errors = validateTree(project.wbs);
@@ -222,7 +222,7 @@ describe('Templates', () => {
   });
 
   describe('IT Migration template', () => {
-    const project = createITMigrationProject();
+    const project = templateToProject(itMigrationJSON as ProjectTemplateJSON);
 
     it('has a valid WBS tree', () => {
       const errors = validateTree(project.wbs);
@@ -236,7 +236,7 @@ describe('Templates', () => {
   });
 
   describe('Agile/Sprint template', () => {
-    const project = createAgileProject();
+    const project = templateToProject(agileJSON as ProjectTemplateJSON);
 
     it('has a valid WBS tree', () => {
       const errors = validateTree(project.wbs);
@@ -250,7 +250,7 @@ describe('Templates', () => {
   });
 
   describe('Construction template', () => {
-    const project = createConstructionProject();
+    const project = templateToProject(constructionJSON as ProjectTemplateJSON);
 
     it('has a valid WBS tree', () => {
       const errors = validateTree(project.wbs);

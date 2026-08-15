@@ -1,0 +1,96 @@
+{
+  "id": "event",
+  "name": "Event Planning",
+  "description": "Complete event planning from venue selection through catering, marketing, logistics, and day-of execution.",
+  "category": "Events",
+  "startDate": "2026-06-01",
+  "endDate": "2026-06-27",
+  "tasks": [
+    {
+      "id": "setup",
+      "name": "Initial Setup",
+      "startDate": "2026-06-01",
+      "endDate": "2026-06-08",
+      "children": [
+        { "id": "setup-1", "name": "Define event objectives", "startDate": "2026-06-01", "endDate": "2026-06-03" },
+        { "id": "setup-2", "name": "Budget planning", "startDate": "2026-06-03", "endDate": "2026-06-05" },
+        { "id": "setup-3", "name": "Venue research & booking", "startDate": "2026-06-05", "endDate": "2026-06-08" },
+        { "id": "setup-4", "name": "Venue confirmed", "startDate": "2026-06-08", "endDate": "2026-06-08", "isMilestone": true }
+      ]
+    },
+    {
+      "id": "catering",
+      "name": "Catering & Menu",
+      "startDate": "2026-06-09",
+      "endDate": "2026-06-15",
+      "children": [
+        { "id": "cat-1", "name": "Menu planning", "startDate": "2026-06-09", "endDate": "2026-06-12" },
+        { "id": "cat-2", "name": "Tasting session", "startDate": "2026-06-12", "endDate": "2026-06-13" },
+        { "id": "cat-3", "name": "Final vendor selection", "startDate": "2026-06-13", "endDate": "2026-06-15" },
+        { "id": "cat-4", "name": "Catering booked", "startDate": "2026-06-15", "endDate": "2026-06-15", "isMilestone": true }
+      ]
+    },
+    {
+      "id": "marketing",
+      "name": "Marketing & Registration",
+      "startDate": "2026-06-09",
+      "endDate": "2026-06-19",
+      "children": [
+        { "id": "mkt-1", "name": "Invitation design", "startDate": "2026-06-09", "endDate": "2026-06-12" },
+        { "id": "mkt-2", "name": "Registration system setup", "startDate": "2026-06-12", "endDate": "2026-06-14" },
+        { "id": "mkt-3", "name": "Promotional campaign", "startDate": "2026-06-14", "endDate": "2026-06-19" }
+      ]
+    },
+    {
+      "id": "logistics",
+      "name": "Logistics & Technical",
+      "startDate": "2026-06-16",
+      "endDate": "2026-06-23",
+      "children": [
+        { "id": "log-1", "name": "AV equipment booking", "startDate": "2026-06-16", "endDate": "2026-06-18" },
+        { "id": "log-2", "name": "Seating arrangement", "startDate": "2026-06-18", "endDate": "2026-06-20" },
+        { "id": "log-3", "name": "Signage & decorations", "startDate": "2026-06-20", "endDate": "2026-06-23" }
+      ]
+    },
+    {
+      "id": "rehearsal",
+      "name": "Final Preparation",
+      "startDate": "2026-06-23",
+      "endDate": "2026-06-26",
+      "children": [
+        { "id": "reh-1", "name": "Vendor confirmations", "startDate": "2026-06-23", "endDate": "2026-06-24" },
+        { "id": "reh-2", "name": "Run-through rehearsal", "startDate": "2026-06-24", "endDate": "2026-06-25" },
+        { "id": "reh-3", "name": "Final venue setup", "startDate": "2026-06-25", "endDate": "2026-06-26" }
+      ]
+    },
+    {
+      "id": "dayof",
+      "name": "Event Day",
+      "startDate": "2026-06-27",
+      "endDate": "2026-06-27",
+      "children": [
+        { "id": "day-1", "name": "Event execution", "startDate": "2026-06-27", "endDate": "2026-06-27" },
+        { "id": "day-2", "name": "Post-event teardown", "startDate": "2026-06-27", "endDate": "2026-06-27" }
+      ]
+    },
+    {
+      "id": "milestone-event",
+      "name": "Event Completed",
+      "startDate": "2026-06-27",
+      "endDate": "2026-06-27",
+      "isMilestone": true
+    }
+  ],
+  "risks": [
+    { "id": "r1", "title": "Venue cancellation", "category": "external", "probability": 2, "impact": 5, "status": "identified", "mitigationPlan": "Have backup venues, review cancellation terms", "identifiedDate": "2026-06-01", "reviewDate": "2026-07-01" },
+    { "id": "r2", "title": "Low attendance", "category": "other", "probability": 3, "impact": 3, "status": "identified", "mitigationPlan": "Early bird pricing, targeted marketing", "identifiedDate": "2026-06-01", "reviewDate": "2026-07-01" },
+    { "id": "r3", "title": "Weather disruption", "category": "external", "probability": 2, "impact": 4, "status": "identified", "mitigationPlan": "Indoor backup plan, weather monitoring", "identifiedDate": "2026-06-01", "reviewDate": "2026-07-01" },
+    { "id": "r4", "title": "Vendor no-shows", "category": "resource", "probability": 2, "impact": 4, "status": "identified", "mitigationPlan": "Confirmations 48hrs prior, backup vendors", "identifiedDate": "2026-06-01", "reviewDate": "2026-07-01" }
+  ],
+  "resources": [
+    { "id": "pm", "name": "Event Manager", "role": "PM", "costRate": 130, "availability": 100, "color": "#3B82F6" },
+    { "id": "coordinator", "name": "Event Coordinator", "role": "Coordination", "costRate": 90, "availability": 100, "color": "#10B981" },
+    { "id": "caterer", "name": "Catering Manager", "role": "Catering", "costRate": 100, "availability": 75, "color": "#F59E0B" },
+    { "id": "av", "name": "AV Technician", "role": "Technical", "costRate": 85, "availability": 50, "color": "#8B5CF6" }
+  ]
+}

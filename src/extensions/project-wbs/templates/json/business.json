@@ -1,0 +1,73 @@
+{
+  "id": "business",
+  "name": "Business Project",
+  "description": "Generic business project from feasibility study through planning, execution, and review.",
+  "category": "Business",
+  "startDate": "2026-08-01",
+  "endDate": "2026-09-05",
+  "tasks": [
+    {
+      "id": "feasibility",
+      "name": "Feasibility Study",
+      "startDate": "2026-08-01",
+      "endDate": "2026-08-08",
+      "children": [
+        { "id": "feas-1", "name": "Problem definition", "startDate": "2026-08-01", "endDate": "2026-08-03" },
+        { "id": "feas-2", "name": "Market analysis", "startDate": "2026-08-03", "endDate": "2026-08-06" },
+        { "id": "feas-3", "name": "Feasibility report", "startDate": "2026-08-06", "endDate": "2026-08-08" },
+        { "id": "feas-4", "name": "Go/no-go decision", "startDate": "2026-08-08", "endDate": "2026-08-08", "isMilestone": true }
+      ]
+    },
+    {
+      "id": "planning",
+      "name": "Project Planning",
+      "startDate": "2026-08-09",
+      "endDate": "2026-08-17",
+      "children": [
+        { "id": "plan-1", "name": "Project charter", "startDate": "2026-08-09", "endDate": "2026-08-11" },
+        { "id": "plan-2", "name": "Resource planning", "startDate": "2026-08-11", "endDate": "2026-08-14" },
+        { "id": "plan-3", "name": "Risk management plan", "startDate": "2026-08-14", "endDate": "2026-08-16" },
+        { "id": "plan-4", "name": "Project plan approved", "startDate": "2026-08-16", "endDate": "2026-08-16", "isMilestone": true }
+      ]
+    },
+    {
+      "id": "execution",
+      "name": "Execution",
+      "startDate": "2026-08-17",
+      "endDate": "2026-09-01",
+      "children": [
+        { "id": "exec-1", "name": "Phase 1 delivery", "startDate": "2026-08-17", "endDate": "2026-08-22" },
+        { "id": "exec-2", "name": "Phase 2 delivery", "startDate": "2026-08-22", "endDate": "2026-08-27" },
+        { "id": "exec-3", "name": "Phase 3 delivery", "startDate": "2026-08-27", "endDate": "2026-09-01" }
+      ]
+    },
+    {
+      "id": "review",
+      "name": "Review & Handover",
+      "startDate": "2026-09-01",
+      "endDate": "2026-09-05",
+      "children": [
+        { "id": "rev-1", "name": "Quality review", "startDate": "2026-09-01", "endDate": "2026-09-03" },
+        { "id": "rev-2", "name": "Documentation", "startDate": "2026-09-03", "endDate": "2026-09-05" },
+        { "id": "rev-3", "name": "Final presentation", "startDate": "2026-09-05", "endDate": "2026-09-06" }
+      ]
+    },
+    {
+      "id": "milestone-business",
+      "name": "Project Complete",
+      "startDate": "2026-09-05",
+      "endDate": "2026-09-05",
+      "isMilestone": true
+    }
+  ],
+  "risks": [
+    { "id": "r1", "title": "Scope creep", "category": "scope", "probability": 4, "impact": 3, "status": "identified", "mitigationPlan": "Change control process, regular scope reviews", "identifiedDate": "2026-08-01", "reviewDate": "2026-09-01" },
+    { "id": "r2", "title": "Stakeholder misalignment", "category": "resource", "probability": 3, "impact": 4, "status": "identified", "mitigationPlan": "Regular status updates, stakeholder meetings", "identifiedDate": "2026-08-01", "reviewDate": "2026-09-01" },
+    { "id": "r3", "title": "Budget constraints", "category": "cost", "probability": 3, "impact": 3, "status": "identified", "mitigationPlan": "Contingency budget, monthly budget reviews", "identifiedDate": "2026-08-01", "reviewDate": "2026-09-01" }
+  ],
+  "resources": [
+    { "id": "pm", "name": "Project Manager", "role": "PM", "costRate": 150, "availability": 100, "color": "#3B82F6" },
+    { "id": "analyst", "name": "Business Analyst", "role": "Analysis", "costRate": 120, "availability": 100, "color": "#10B981" },
+    { "id": "lead", "name": "Team Lead", "role": "Leadership", "costRate": 160, "availability": 75, "color": "#8B5CF6" }
+  ]
+}

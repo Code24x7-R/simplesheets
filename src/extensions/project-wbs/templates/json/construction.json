@@ -1,0 +1,101 @@
+{
+  "id": "construction",
+  "name": "Construction Project",
+  "description": "Full construction project from pre-construction through foundation, structure, MEP, finishing, and handover.",
+  "category": "Construction",
+  "startDate": "2027-01-01",
+  "endDate": "2027-03-28",
+  "tasks": [
+    {
+      "id": "precon",
+      "name": "Pre-Construction",
+      "startDate": "2027-01-01",
+      "endDate": "2027-01-16",
+      "children": [
+        { "id": "pre-1", "name": "Site survey", "startDate": "2027-01-01", "endDate": "2027-01-04" },
+        { "id": "pre-2", "name": "Architectural design", "startDate": "2027-01-04", "endDate": "2027-01-11" },
+        { "id": "pre-3", "name": "Permits & approvals", "startDate": "2027-01-11", "endDate": "2027-01-16" },
+        { "id": "pre-4", "name": "Permits approved", "startDate": "2027-01-16", "endDate": "2027-01-16", "isMilestone": true }
+      ]
+    },
+    {
+      "id": "foundation",
+      "name": "Foundation",
+      "startDate": "2027-01-17",
+      "endDate": "2027-01-29",
+      "children": [
+        { "id": "found-1", "name": "Excavation", "startDate": "2027-01-17", "endDate": "2027-01-21" },
+        { "id": "found-2", "name": "Foundation pouring", "startDate": "2027-01-21", "endDate": "2027-01-24" },
+        { "id": "found-3", "name": "Curing & inspection", "startDate": "2027-01-24", "endDate": "2027-01-29" },
+        { "id": "found-4", "name": "Foundation complete", "startDate": "2027-01-29", "endDate": "2027-01-29", "isMilestone": true }
+      ]
+    },
+    {
+      "id": "structure",
+      "name": "Structure",
+      "startDate": "2027-01-30",
+      "endDate": "2027-02-19",
+      "children": [
+        { "id": "struct-1", "name": "Framing", "startDate": "2027-01-30", "endDate": "2027-02-07" },
+        { "id": "struct-2", "name": "Roofing", "startDate": "2027-02-07", "endDate": "2027-02-13" },
+        { "id": "struct-3", "name": "Exterior walls", "startDate": "2027-02-13", "endDate": "2027-02-19" },
+        { "id": "struct-4", "name": "Structure complete", "startDate": "2027-02-19", "endDate": "2027-02-19", "isMilestone": true }
+      ]
+    },
+    {
+      "id": "mep",
+      "name": "MEP Installation",
+      "startDate": "2027-02-20",
+      "endDate": "2027-03-07",
+      "children": [
+        { "id": "mep-1", "name": "Electrical rough-in", "startDate": "2027-02-20", "endDate": "2027-02-25" },
+        { "id": "mep-2", "name": "Plumbing rough-in", "startDate": "2027-02-25", "endDate": "2027-03-02" },
+        { "id": "mep-3", "name": "HVAC installation", "startDate": "2027-03-02", "endDate": "2027-03-07" },
+        { "id": "mep-4", "name": "MEP inspection", "startDate": "2027-03-07", "endDate": "2027-03-08" }
+      ]
+    },
+    {
+      "id": "finishing",
+      "name": "Finishing",
+      "startDate": "2027-03-08",
+      "endDate": "2027-03-23",
+      "children": [
+        { "id": "fin-1", "name": "Interior drywall", "startDate": "2027-03-08", "endDate": "2027-03-13" },
+        { "id": "fin-2", "name": "Flooring", "startDate": "2027-03-13", "endDate": "2027-03-17" },
+        { "id": "fin-3", "name": "Painting", "startDate": "2027-03-17", "endDate": "2027-03-20" },
+        { "id": "fin-4", "name": "Fixture installation", "startDate": "2027-03-20", "endDate": "2027-03-23" }
+      ]
+    },
+    {
+      "id": "handover",
+      "name": "Handover",
+      "startDate": "2027-03-24",
+      "endDate": "2027-03-28",
+      "children": [
+        { "id": "hand-1", "name": "Final inspection", "startDate": "2027-03-24", "endDate": "2027-03-26" },
+        { "id": "hand-2", "name": "Punch list", "startDate": "2027-03-26", "endDate": "2027-03-28" },
+        { "id": "hand-3", "name": "Certificate of occupancy", "startDate": "2027-03-28", "endDate": "2027-03-29" }
+      ]
+    },
+    {
+      "id": "milestone-construction",
+      "name": "Construction Complete",
+      "startDate": "2027-03-28",
+      "endDate": "2027-03-28",
+      "isMilestone": true
+    }
+  ],
+  "risks": [
+    { "id": "r1", "title": "Weather delays", "category": "external", "probability": 4, "impact": 4, "status": "identified", "mitigationPlan": "Weather monitoring, indoor work alternatives", "identifiedDate": "2027-01-01", "reviewDate": "2027-03-01" },
+    { "id": "r2", "title": "Material delivery delays", "category": "schedule", "probability": 3, "impact": 4, "status": "identified", "mitigationPlan": "Order early, local suppliers as backup", "identifiedDate": "2027-01-01", "reviewDate": "2027-03-01" },
+    { "id": "r3", "title": "Safety incidents", "category": "other", "probability": 2, "impact": 5, "status": "identified", "mitigationPlan": "Safety training, daily safety briefings", "identifiedDate": "2027-01-01", "reviewDate": "2027-03-01" },
+    { "id": "r4", "title": "Budget overrun", "category": "cost", "probability": 3, "impact": 4, "status": "identified", "mitigationPlan": "Contingency budget, weekly cost tracking", "identifiedDate": "2027-01-01", "reviewDate": "2027-03-01" },
+    { "id": "r5", "title": "Regulatory changes", "category": "external", "probability": 2, "impact": 4, "status": "identified", "mitigationPlan": "Monitor regulatory updates, flexible design", "identifiedDate": "2027-01-01", "reviewDate": "2027-03-01" }
+  ],
+  "resources": [
+    { "id": "pm", "name": "Construction Manager", "role": "PM", "costRate": 160, "availability": 100, "color": "#3B82F6" },
+    { "id": "arch", "name": "Architect", "role": "Design", "costRate": 150, "availability": 50, "color": "#8B5CF6" },
+    { "id": "engineer", "name": "Structural Engineer", "role": "Engineering", "costRate": 160, "availability": 50, "color": "#10B981" },
+    { "id": "contractor", "name": "General Contractor", "role": "Construction", "costRate": 180, "availability": 100, "color": "#F59E0B" }
+  ]
+}

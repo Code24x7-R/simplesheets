@@ -1,0 +1,89 @@
+{
+  "id": "agile",
+  "name": "Agile/Sprint Planning",
+  "description": "Agile project with backlog refinement, three sprints, and release.",
+  "category": "Software",
+  "startDate": "2026-11-01",
+  "endDate": "2026-12-05",
+  "tasks": [
+    {
+      "id": "backlog",
+      "name": "Backlog Refinement",
+      "startDate": "2026-11-01",
+      "endDate": "2026-11-06",
+      "children": [
+        { "id": "back-1", "name": "User story creation", "startDate": "2026-11-01", "endDate": "2026-11-03" },
+        { "id": "back-2", "name": "Story point estimation", "startDate": "2026-11-03", "endDate": "2026-11-05" },
+        { "id": "back-3", "name": "Priority ranking", "startDate": "2026-11-05", "endDate": "2026-11-06" },
+        { "id": "back-4", "name": "Backlog ready", "startDate": "2026-11-06", "endDate": "2026-11-06", "isMilestone": true }
+      ]
+    },
+    {
+      "id": "sprint1",
+      "name": "Sprint 1",
+      "startDate": "2026-11-07",
+      "endDate": "2026-11-17",
+      "children": [
+        { "id": "s1-1", "name": "Sprint planning", "startDate": "2026-11-07", "endDate": "2026-11-08" },
+        { "id": "s1-2", "name": "Development", "startDate": "2026-11-08", "endDate": "2026-11-13" },
+        { "id": "s1-3", "name": "Testing & review", "startDate": "2026-11-13", "endDate": "2026-11-16" },
+        { "id": "s1-4", "name": "Sprint review & retro", "startDate": "2026-11-16", "endDate": "2026-11-17" }
+      ]
+    },
+    {
+      "id": "sprint2",
+      "name": "Sprint 2",
+      "startDate": "2026-11-17",
+      "endDate": "2026-11-25",
+      "children": [
+        { "id": "s2-1", "name": "Sprint planning", "startDate": "2026-11-17", "endDate": "2026-11-18" },
+        { "id": "s2-2", "name": "Development", "startDate": "2026-11-18", "endDate": "2026-11-23" },
+        { "id": "s2-3", "name": "Testing & review", "startDate": "2026-11-23", "endDate": "2026-11-24" },
+        { "id": "s2-4", "name": "Sprint review & retro", "startDate": "2026-11-24", "endDate": "2026-11-25" }
+      ]
+    },
+    {
+      "id": "sprint3",
+      "name": "Sprint 3",
+      "startDate": "2026-11-25",
+      "endDate": "2026-12-03",
+      "children": [
+        { "id": "s3-1", "name": "Sprint planning", "startDate": "2026-11-25", "endDate": "2026-11-26" },
+        { "id": "s3-2", "name": "Development", "startDate": "2026-11-26", "endDate": "2026-12-01" },
+        { "id": "s3-3", "name": "Testing & review", "startDate": "2026-12-01", "endDate": "2026-12-02" },
+        { "id": "s3-4", "name": "Sprint review & retro", "startDate": "2026-12-02", "endDate": "2026-12-03" }
+      ]
+    },
+    {
+      "id": "release",
+      "name": "Release",
+      "startDate": "2026-12-03",
+      "endDate": "2026-12-05",
+      "children": [
+        { "id": "rel-1", "name": "Final integration testing", "startDate": "2026-12-03", "endDate": "2026-12-04" },
+        { "id": "rel-2", "name": "Deployment", "startDate": "2026-12-04", "endDate": "2026-12-05" },
+        { "id": "rel-3", "name": "Project retrospective", "startDate": "2026-12-05", "endDate": "2026-12-06" }
+      ]
+    },
+    {
+      "id": "milestone-agile",
+      "name": "Project Complete",
+      "startDate": "2026-12-05",
+      "endDate": "2026-12-05",
+      "isMilestone": true
+    }
+  ],
+  "risks": [
+    { "id": "r1", "title": "Scope creep within sprints", "category": "scope", "probability": 4, "impact": 3, "status": "identified", "mitigationPlan": "Strict sprint goals, product owner prioritization", "identifiedDate": "2026-11-01", "reviewDate": "2026-12-01" },
+    { "id": "r2", "title": "Team member unavailability", "category": "resource", "probability": 3, "impact": 3, "status": "identified", "mitigationPlan": "Cross-training, documentation", "identifiedDate": "2026-11-01", "reviewDate": "2026-12-01" },
+    { "id": "r3", "title": "Technical debt accumulation", "category": "technical", "probability": 4, "impact": 3, "status": "identified", "mitigationPlan": "Refactoring time in each sprint, code reviews", "identifiedDate": "2026-11-01", "reviewDate": "2026-12-01" },
+    { "id": "r4", "title": "Stakeholder availability for reviews", "category": "resource", "probability": 3, "impact": 2, "status": "identified", "mitigationPlan": "Schedule reviews early, async feedback options", "identifiedDate": "2026-11-01", "reviewDate": "2026-12-01" }
+  ],
+  "resources": [
+    { "id": "po", "name": "Product Owner", "role": "PO", "costRate": 150, "availability": 100, "color": "#3B82F6" },
+    { "id": "sm", "name": "Scrum Master", "role": "SM", "costRate": 130, "availability": 100, "color": "#10B981" },
+    { "id": "dev1", "name": "Senior Developer", "role": "Dev", "costRate": 150, "availability": 100, "color": "#8B5CF6" },
+    { "id": "dev2", "name": "Developer", "role": "Dev", "costRate": 120, "availability": 100, "color": "#06B6D4" },
+    { "id": "qa", "name": "QA Engineer", "role": "QA", "costRate": 110, "availability": 75, "color": "#F59E0B" }
+  ]
+}

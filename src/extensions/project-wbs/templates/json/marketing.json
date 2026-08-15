@@ -1,0 +1,87 @@
+{
+  "id": "marketing",
+  "name": "Marketing Campaign",
+  "description": "End-to-end marketing campaign from research and strategy through content creation, distribution, launch, and analysis.",
+  "category": "Marketing",
+  "startDate": "2026-07-01",
+  "endDate": "2026-07-30",
+  "tasks": [
+    {
+      "id": "research",
+      "name": "Research & Strategy",
+      "startDate": "2026-07-01",
+      "endDate": "2026-07-08",
+      "children": [
+        { "id": "res-1", "name": "Market research", "startDate": "2026-07-01", "endDate": "2026-07-04" },
+        { "id": "res-2", "name": "Competitor analysis", "startDate": "2026-07-04", "endDate": "2026-07-06" },
+        { "id": "res-3", "name": "Target audience definition", "startDate": "2026-07-06", "endDate": "2026-07-08" },
+        { "id": "res-4", "name": "Campaign brief approved", "startDate": "2026-07-08", "endDate": "2026-07-08", "isMilestone": true }
+      ]
+    },
+    {
+      "id": "content",
+      "name": "Content Creation",
+      "startDate": "2026-07-09",
+      "endDate": "2026-07-19",
+      "children": [
+        { "id": "cont-1", "name": "Campaign messaging", "startDate": "2026-07-09", "endDate": "2026-07-12" },
+        { "id": "cont-2", "name": "Visual assets creation", "startDate": "2026-07-12", "endDate": "2026-07-16" },
+        { "id": "cont-3", "name": "Copywriting", "startDate": "2026-07-16", "endDate": "2026-07-19" },
+        { "id": "cont-4", "name": "Content approval", "startDate": "2026-07-19", "endDate": "2026-07-20" }
+      ]
+    },
+    {
+      "id": "distribution",
+      "name": "Distribution Setup",
+      "startDate": "2026-07-16",
+      "endDate": "2026-07-23",
+      "children": [
+        { "id": "dist-1", "name": "Channel selection", "startDate": "2026-07-16", "endDate": "2026-07-17" },
+        { "id": "dist-2", "name": "Ad platform setup", "startDate": "2026-07-17", "endDate": "2026-07-19" },
+        { "id": "dist-3", "name": "Email sequence setup", "startDate": "2026-07-19", "endDate": "2026-07-22" },
+        { "id": "dist-4", "name": "Scheduling & automation", "startDate": "2026-07-22", "endDate": "2026-07-24" }
+      ]
+    },
+    {
+      "id": "launch",
+      "name": "Campaign Launch",
+      "startDate": "2026-07-23",
+      "endDate": "2026-07-26",
+      "children": [
+        { "id": "launch-1", "name": "Soft launch testing", "startDate": "2026-07-23", "endDate": "2026-07-24" },
+        { "id": "launch-2", "name": "Full launch", "startDate": "2026-07-24", "endDate": "2026-07-25" },
+        { "id": "launch-3", "name": "Monitoring & adjustments", "startDate": "2026-07-25", "endDate": "2026-07-26" }
+      ]
+    },
+    {
+      "id": "analysis",
+      "name": "Analysis & Reporting",
+      "startDate": "2026-07-26",
+      "endDate": "2026-07-30",
+      "children": [
+        { "id": "anal-1", "name": "Data collection", "startDate": "2026-07-26", "endDate": "2026-07-28" },
+        { "id": "anal-2", "name": "Performance analysis", "startDate": "2026-07-28", "endDate": "2026-07-30" },
+        { "id": "anal-3", "name": "Final report", "startDate": "2026-07-30", "endDate": "2026-07-31" }
+      ]
+    },
+    {
+      "id": "milestone-campaign",
+      "name": "Campaign Complete",
+      "startDate": "2026-07-30",
+      "endDate": "2026-07-30",
+      "isMilestone": true
+    }
+  ],
+  "risks": [
+    { "id": "r1", "title": "Low engagement rates", "category": "other", "probability": 3, "impact": 4, "status": "identified", "mitigationPlan": "A/B testing, content optimization", "identifiedDate": "2026-07-01", "reviewDate": "2026-08-01" },
+    { "id": "r2", "title": "Budget overrun on ads", "category": "cost", "probability": 3, "impact": 3, "status": "identified", "mitigationPlan": "Daily budget caps, performance monitoring", "identifiedDate": "2026-07-01", "reviewDate": "2026-08-01" },
+    { "id": "r3", "title": "Competitor campaign launch", "category": "external", "probability": 2, "impact": 4, "status": "identified", "mitigationPlan": "Differentiate messaging, unique value proposition", "identifiedDate": "2026-07-01", "reviewDate": "2026-08-01" },
+    { "id": "r4", "title": "Content approval delays", "category": "schedule", "probability": 4, "impact": 3, "status": "identified", "mitigationPlan": "Early stakeholder involvement, clear review process", "identifiedDate": "2026-07-01", "reviewDate": "2026-08-01" }
+  ],
+  "resources": [
+    { "id": "pm", "name": "Marketing Manager", "role": "PM", "costRate": 140, "availability": 100, "color": "#3B82F6" },
+    { "id": "creative", "name": "Creative Director", "role": "Creative", "costRate": 150, "availability": 75, "color": "#8B5CF6" },
+    { "id": "content", "name": "Content Writer", "role": "Content", "costRate": 90, "availability": 100, "color": "#10B981" },
+    { "id": "analyst", "name": "Data Analyst", "role": "Analytics", "costRate": 120, "availability": 50, "color": "#F59E0B" }
+  ]
+}

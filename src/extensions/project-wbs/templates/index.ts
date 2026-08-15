@@ -16,6 +16,14 @@ import websiteJSON from './json/website.json';
 import softwareJSON from './json/software.json';
 import realestatePhotoJSON from './json/realestate-photo.json';
 import miningJSON from './json/mining.json';
+import renovationJSON from './json/renovation.json';
+import eventJSON from './json/event.json';
+import marketingJSON from './json/marketing.json';
+import businessJSON from './json/business.json';
+import productJSON from './json/product.json';
+import itMigrationJSON from './json/it-migration.json';
+import agileJSON from './json/agile.json';
+import constructionJSON from './json/construction.json';
 
 // Cast JSON imports to strongly-typed templates
 const simpleTemplate = simpleJSON as ProjectTemplateJSON;
@@ -23,19 +31,16 @@ const websiteTemplate = websiteJSON as ProjectTemplateJSON;
 const softwareTemplate = softwareJSON as ProjectTemplateJSON;
 const realestatePhotoTemplate = realestatePhotoJSON as ProjectTemplateJSON;
 const miningTemplate = miningJSON as ProjectTemplateJSON;
+const renovationTemplate = renovationJSON as ProjectTemplateJSON;
+const eventTemplate = eventJSON as ProjectTemplateJSON;
+const marketingTemplate = marketingJSON as ProjectTemplateJSON;
+const businessTemplate = businessJSON as ProjectTemplateJSON;
+const productTemplate = productJSON as ProjectTemplateJSON;
+const itMigrationTemplate = itMigrationJSON as ProjectTemplateJSON;
+const agileTemplate = agileJSON as ProjectTemplateJSON;
+const constructionTemplate = constructionJSON as ProjectTemplateJSON;
 
-// Import existing TypeScript templates (can be migrated to JSON over time)
-import { createSimpleWBS } from './simple';
-import { createWebsiteProject } from './website';
-import { createSoftwareProject } from './software';
-import { createRenovationProject } from './renovation';
-import { createEventPlanningProject } from './event';
-import { createMarketingCampaignProject } from './marketing';
-import { createBusinessProject } from './business';
-import { createProductLaunchProject } from './product';
-import { createITMigrationProject } from './it-migration';
-import { createAgileProject } from './agile';
-import { createConstructionProject } from './construction';
+// All templates migrated to JSON format
 
 /**
  * JSON-based templates (data-driven, easily maintainable)
@@ -76,95 +81,68 @@ const JSON_TEMPLATES: TemplateDefinition[] = [
     category: miningTemplate.category,
     create: () => templateToProject(miningTemplate),
   },
-];
-
-/**
- * TypeScript-based templates (code-driven, for complex logic)
- */
-const CODE_TEMPLATES: TemplateDefinition[] = [
   {
-    id: 'simple-wbs',
-    name: 'Simple WBS',
-    description: 'A minimal customizable WBS with planning, execution, and closure phases.',
-    category: 'Generic',
-    create: createSimpleWBS,
+    id: renovationTemplate.id,
+    name: renovationTemplate.name,
+    description: renovationTemplate.description,
+    category: renovationTemplate.category,
+    create: () => templateToProject(renovationTemplate),
   },
   {
-    id: 'website',
-    name: 'Website Project',
-    description: 'Complete website design and development from discovery to launch.',
-    category: 'Web/Dev',
-    create: createWebsiteProject,
+    id: eventTemplate.id,
+    name: eventTemplate.name,
+    description: eventTemplate.description,
+    category: eventTemplate.category,
+    create: () => templateToProject(eventTemplate),
   },
   {
-    id: 'software',
-    name: 'Software Development',
-    description: 'Full SDLC: requirements, design, development, QA, deployment.',
-    category: 'Software',
-    create: createSoftwareProject,
+    id: marketingTemplate.id,
+    name: marketingTemplate.name,
+    description: marketingTemplate.description,
+    category: marketingTemplate.category,
+    create: () => templateToProject(marketingTemplate),
   },
   {
-    id: 'renovation',
-    name: 'Home Renovation',
-    description: 'Complete home renovation from planning through finishing.',
-    category: 'Construction',
-    create: createRenovationProject,
+    id: businessTemplate.id,
+    name: businessTemplate.name,
+    description: businessTemplate.description,
+    category: businessTemplate.category,
+    create: () => templateToProject(businessTemplate),
   },
   {
-    id: 'event',
-    name: 'Event Planning',
-    description: 'Complete event planning from venue selection to day-of execution.',
-    category: 'Events',
-    create: createEventPlanningProject,
+    id: productTemplate.id,
+    name: productTemplate.name,
+    description: productTemplate.description,
+    category: productTemplate.category,
+    create: () => templateToProject(productTemplate),
   },
   {
-    id: 'marketing',
-    name: 'Marketing Campaign',
-    description: 'End-to-end marketing campaign from research to analysis.',
-    category: 'Marketing',
-    create: createMarketingCampaignProject,
+    id: itMigrationTemplate.id,
+    name: itMigrationTemplate.name,
+    description: itMigrationTemplate.description,
+    category: itMigrationTemplate.category,
+    create: () => templateToProject(itMigrationTemplate),
   },
   {
-    id: 'business',
-    name: 'Business Project',
-    description: 'Generic business project from feasibility to review.',
-    category: 'Business',
-    create: createBusinessProject,
+    id: agileTemplate.id,
+    name: agileTemplate.name,
+    description: agileTemplate.description,
+    category: agileTemplate.category,
+    create: () => templateToProject(agileTemplate),
   },
   {
-    id: 'product',
-    name: 'Product Launch',
-    description: 'Full product launch from development through post-launch.',
-    category: 'Business',
-    create: createProductLaunchProject,
-  },
-  {
-    id: 'it-migration',
-    name: 'IT Migration',
-    description: 'IT infrastructure migration from audit through cutover.',
-    category: 'IT',
-    create: createITMigrationProject,
-  },
-  {
-    id: 'agile',
-    name: 'Agile/Sprint Planning',
-    description: 'Agile project with backlog, sprints, review, and retro.',
-    category: 'Software',
-    create: createAgileProject,
-  },
-  {
-    id: 'construction',
-    name: 'Construction Project',
-    description: 'Full construction project from pre-construction through finishing.',
-    category: 'Construction',
-    create: createConstructionProject,
+    id: constructionTemplate.id,
+    name: constructionTemplate.name,
+    description: constructionTemplate.description,
+    category: constructionTemplate.category,
+    create: () => templateToProject(constructionTemplate),
   },
 ];
 
 /**
- * Combined template registry (JSON templates first, then code templates)
+ * Template registry - all templates in JSON format
  */
-export const TEMPLATES: TemplateDefinition[] = [...JSON_TEMPLATES, ...CODE_TEMPLATES];
+export const TEMPLATES: TemplateDefinition[] = [...JSON_TEMPLATES];
 
 export function getTemplateById(id: string): TemplateDefinition | undefined {
   return TEMPLATES.find((t) => t.id === id);

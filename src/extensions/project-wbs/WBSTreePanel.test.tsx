@@ -2,7 +2,10 @@
 // Copyright (c) 2026 Richard Robertson
 import { render, screen, fireEvent } from '@testing-library/react';
 import { WBSTreePanel } from './WBSTreePanel';
-import { createSimpleWBS } from './templates/simple';
+import simpleJSON from './templates/json/simple.json';
+import { templateToProject } from './templates/handler';
+import type { ProjectTemplateJSON } from './templates/types';
+const createSimpleWBS = () => templateToProject(simpleJSON as ProjectTemplateJSON);
 
 describe('WBSTreePanel', () => {
   const project = createSimpleWBS();

@@ -1,0 +1,101 @@
+{
+  "id": "renovation",
+  "name": "Home Renovation",
+  "description": "Complete home renovation from planning and permits through demolition, structural work, MEP, and finishing.",
+  "category": "Construction",
+  "startDate": "2026-04-01",
+  "endDate": "2026-05-21",
+  "tasks": [
+    {
+      "id": "planning",
+      "name": "Planning & Permits",
+      "startDate": "2026-04-01",
+      "endDate": "2026-04-11",
+      "children": [
+        { "id": "plan-1", "name": "Design & architectural plans", "startDate": "2026-04-01", "endDate": "2026-04-06" },
+        { "id": "plan-2", "name": "Permit applications", "startDate": "2026-04-06", "endDate": "2026-04-09" },
+        { "id": "plan-3", "name": "Material selection", "startDate": "2026-04-09", "endDate": "2026-04-12" },
+        { "id": "plan-4", "name": "Permits approved", "startDate": "2026-04-11", "endDate": "2026-04-11", "isMilestone": true }
+      ]
+    },
+    {
+      "id": "demo",
+      "name": "Demolition",
+      "startDate": "2026-04-12",
+      "endDate": "2026-04-17",
+      "children": [
+        { "id": "demo-1", "name": "Site protection", "startDate": "2026-04-12", "endDate": "2026-04-13" },
+        { "id": "demo-2", "name": "Interior demolition", "startDate": "2026-04-13", "endDate": "2026-04-16" },
+        { "id": "demo-3", "name": "Debris removal", "startDate": "2026-04-16", "endDate": "2026-04-17" }
+      ]
+    },
+    {
+      "id": "structural",
+      "name": "Structural Work",
+      "startDate": "2026-04-17",
+      "endDate": "2026-04-24",
+      "children": [
+        { "id": "struct-1", "name": "Foundation repairs", "startDate": "2026-04-17", "endDate": "2026-04-20" },
+        { "id": "struct-2", "name": "Wall modifications", "startDate": "2026-04-20", "endDate": "2026-04-23" },
+        { "id": "struct-3", "name": "Structural inspection", "startDate": "2026-04-23", "endDate": "2026-04-24" },
+        { "id": "struct-4", "name": "Inspection passed", "startDate": "2026-04-24", "endDate": "2026-04-24", "isMilestone": true }
+      ]
+    },
+    {
+      "id": "mechanical",
+      "name": "MEP Rough-in",
+      "startDate": "2026-04-25",
+      "endDate": "2026-05-05",
+      "children": [
+        { "id": "mep-1", "name": "Electrical rough-in", "startDate": "2026-04-25", "endDate": "2026-04-29" },
+        { "id": "mep-2", "name": "Plumbing rough-in", "startDate": "2026-04-29", "endDate": "2026-05-02" },
+        { "id": "mep-3", "name": "HVAC installation", "startDate": "2026-05-02", "endDate": "2026-05-05" },
+        { "id": "mep-4", "name": "MEP inspection", "startDate": "2026-05-05", "endDate": "2026-05-06" }
+      ]
+    },
+    {
+      "id": "finishing",
+      "name": "Finishing",
+      "startDate": "2026-05-06",
+      "endDate": "2026-05-19",
+      "children": [
+        { "id": "fin-1", "name": "Drywall & insulation", "startDate": "2026-05-06", "endDate": "2026-05-10" },
+        { "id": "fin-2", "name": "Flooring installation", "startDate": "2026-05-10", "endDate": "2026-05-13" },
+        { "id": "fin-3", "name": "Painting", "startDate": "2026-05-13", "endDate": "2026-05-16" },
+        { "id": "fin-4", "name": "Fixture installation", "startDate": "2026-05-16", "endDate": "2026-05-18" },
+        { "id": "fin-5", "name": "Final cleanup", "startDate": "2026-05-18", "endDate": "2026-05-19" }
+      ]
+    },
+    {
+      "id": "handover",
+      "name": "Handover",
+      "startDate": "2026-05-19",
+      "endDate": "2026-05-21",
+      "children": [
+        { "id": "hand-1", "name": "Final walkthrough", "startDate": "2026-05-19", "endDate": "2026-05-20" },
+        { "id": "hand-2", "name": "Punch list completion", "startDate": "2026-05-20", "endDate": "2026-05-21" },
+        { "id": "hand-3", "name": "Project sign-off", "startDate": "2026-05-21", "endDate": "2026-05-21", "isMilestone": true }
+      ]
+    },
+    {
+      "id": "milestone-complete",
+      "name": "Renovation Complete",
+      "startDate": "2026-05-21",
+      "endDate": "2026-05-21",
+      "isMilestone": true
+    }
+  ],
+  "risks": [
+    { "id": "r1", "title": "Permit delays", "category": "external", "probability": 4, "impact": 4, "status": "identified", "mitigationPlan": "Submit applications early, follow up regularly", "identifiedDate": "2026-04-01", "reviewDate": "2026-05-01" },
+    { "id": "r2", "title": "Hidden structural damage", "category": "technical", "probability": 3, "impact": 5, "status": "identified", "mitigationPlan": "Contingency budget, thorough inspection", "identifiedDate": "2026-04-01", "reviewDate": "2026-05-01" },
+    { "id": "r3", "title": "Material cost increases", "category": "cost", "probability": 3, "impact": 3, "status": "identified", "mitigationPlan": "Lock in prices early, bulk order", "identifiedDate": "2026-04-01", "reviewDate": "2026-05-01" },
+    { "id": "r4", "title": "Contractor availability", "category": "resource", "probability": 3, "impact": 4, "status": "identified", "mitigationPlan": "Book contractors early, have backups", "identifiedDate": "2026-04-01", "reviewDate": "2026-05-01" }
+  ],
+  "resources": [
+    { "id": "pm", "name": "Project Manager", "role": "PM", "costRate": 120, "availability": 100, "color": "#3B82F6" },
+    { "id": "contractor", "name": "General Contractor", "role": "Construction", "costRate": 150, "availability": 100, "color": "#F59E0B" },
+    { "id": "electrician", "name": "Electrician", "role": "Trade", "costRate": 100, "availability": 50, "color": "#EF4444" },
+    { "id": "plumber", "name": "Plumber", "role": "Trade", "costRate": 100, "availability": 50, "color": "#06B6D4" },
+    { "id": "painter", "name": "Painter", "role": "Trade", "costRate": 75, "availability": 100, "color": "#8B5CF6" }
+  ]
+}

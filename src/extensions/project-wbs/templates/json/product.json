@@ -1,0 +1,86 @@
+{
+  "id": "product",
+  "name": "Product Launch",
+  "description": "Full product launch from development through marketing preparation, launch execution, and post-launch analysis.",
+  "category": "Business",
+  "startDate": "2026-09-01",
+  "endDate": "2026-09-29",
+  "tasks": [
+    {
+      "id": "dev",
+      "name": "Development",
+      "startDate": "2026-09-01",
+      "endDate": "2026-09-13",
+      "children": [
+        { "id": "dev-1", "name": "Core feature development", "startDate": "2026-09-01", "endDate": "2026-09-07" },
+        { "id": "dev-2", "name": "Beta testing", "startDate": "2026-09-07", "endDate": "2026-09-10" },
+        { "id": "dev-3", "name": "Bug fixes & stabilization", "startDate": "2026-09-10", "endDate": "2026-09-13" },
+        { "id": "dev-4", "name": "Feature complete", "startDate": "2026-09-13", "endDate": "2026-09-13", "isMilestone": true }
+      ]
+    },
+    {
+      "id": "mkt-prep",
+      "name": "Marketing Preparation",
+      "startDate": "2026-09-07",
+      "endDate": "2026-09-18",
+      "children": [
+        { "id": "mkt-1", "name": "Launch campaign design", "startDate": "2026-09-07", "endDate": "2026-09-11" },
+        { "id": "mkt-2", "name": "Press kit & materials", "startDate": "2026-09-11", "endDate": "2026-09-14" },
+        { "id": "mkt-3", "name": "Influencer outreach", "startDate": "2026-09-14", "endDate": "2026-09-18" }
+      ]
+    },
+    {
+      "id": "readiness",
+      "name": "Launch Readiness",
+      "startDate": "2026-09-14",
+      "endDate": "2026-09-19",
+      "children": [
+        { "id": "read-1", "name": "Support team training", "startDate": "2026-09-14", "endDate": "2026-09-16" },
+        { "id": "read-2", "name": "Infrastructure scaling", "startDate": "2026-09-16", "endDate": "2026-09-18" },
+        { "id": "read-3", "name": "Go-live checklist", "startDate": "2026-09-18", "endDate": "2026-09-19" }
+      ]
+    },
+    {
+      "id": "launch",
+      "name": "Launch",
+      "startDate": "2026-09-19",
+      "endDate": "2026-09-22",
+      "children": [
+        { "id": "launch-1", "name": "Soft launch (beta users)", "startDate": "2026-09-19", "endDate": "2026-09-20" },
+        { "id": "launch-2", "name": "Public launch", "startDate": "2026-09-20", "endDate": "2026-09-21" },
+        { "id": "launch-3", "name": "Launch day monitoring", "startDate": "2026-09-21", "endDate": "2026-09-22" }
+      ]
+    },
+    {
+      "id": "post",
+      "name": "Post-Launch",
+      "startDate": "2026-09-22",
+      "endDate": "2026-09-29",
+      "children": [
+        { "id": "post-1", "name": "User feedback collection", "startDate": "2026-09-22", "endDate": "2026-09-25" },
+        { "id": "post-2", "name": "Hotfixes & patches", "startDate": "2026-09-25", "endDate": "2026-09-27" },
+        { "id": "post-3", "name": "Performance analysis", "startDate": "2026-09-27", "endDate": "2026-09-29" },
+        { "id": "post-4", "name": "Post-launch report", "startDate": "2026-09-29", "endDate": "2026-09-30" }
+      ]
+    },
+    {
+      "id": "milestone-launch",
+      "name": "Product Launched",
+      "startDate": "2026-09-20",
+      "endDate": "2026-09-20",
+      "isMilestone": true
+    }
+  ],
+  "risks": [
+    { "id": "r1", "title": "Launch date slip", "category": "schedule", "probability": 4, "impact": 4, "status": "identified", "mitigationPlan": "Buffer time in schedule, parallel work streams", "identifiedDate": "2026-09-01", "reviewDate": "2026-10-01" },
+    { "id": "r2", "title": "Critical bugs at launch", "category": "quality", "probability": 3, "impact": 5, "status": "identified", "mitigationPlan": "Thorough QA, staged rollout plan", "identifiedDate": "2026-09-01", "reviewDate": "2026-10-01" },
+    { "id": "r3", "title": "Competitor pre-launch", "category": "external", "probability": 2, "impact": 4, "status": "identified", "mitigationPlan": "Accelerate timeline, differentiate features", "identifiedDate": "2026-09-01", "reviewDate": "2026-10-01" },
+    { "id": "r4", "title": "Low market adoption", "category": "other", "probability": 3, "impact": 4, "status": "identified", "mitigationPlan": "Market validation, early adopter program", "identifiedDate": "2026-09-01", "reviewDate": "2026-10-01" }
+  ],
+  "resources": [
+    { "id": "pm", "name": "Product Manager", "role": "PM", "costRate": 150, "availability": 100, "color": "#3B82F6" },
+    { "id": "dev", "name": "Lead Developer", "role": "Development", "costRate": 160, "availability": 75, "color": "#10B981" },
+    { "id": "marketing", "name": "Marketing Lead", "role": "Marketing", "costRate": 140, "availability": 100, "color": "#F59E0B" },
+    { "id": "support", "name": "Support Lead", "role": "Support", "costRate": 100, "availability": 100, "color": "#8B5CF6" }
+  ]
+}

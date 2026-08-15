@@ -147,9 +147,11 @@ function parseFormatSymbols(format: string): { core: string; prefix: string; suf
   let core = format;
 
   // Handle currency symbol at start
-  if (core.startsWith('$')) {
-    prefix = '$';
-    core = core.slice(1);
+  // Matches $, £, €, ¥, and currency codes like USD, GBP, EUR
+  const currencyMatch = core.match(/^([A-Z]{3}|[^0-9#,._]+)/);
+  if (currencyMatch) {
+    prefix = currencyMatch[1];
+    core = core.slice(prefix.length);
   }
 
   // Handle percentage at end

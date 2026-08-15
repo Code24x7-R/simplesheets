@@ -1,0 +1,87 @@
+{
+  "id": "it-migration",
+  "name": "IT Migration",
+  "description": "IT infrastructure migration from audit through planning, execution, validation, and cutover.",
+  "category": "IT",
+  "startDate": "2026-10-01",
+  "endDate": "2026-11-06",
+  "tasks": [
+    {
+      "id": "audit",
+      "name": "Infrastructure Audit",
+      "startDate": "2026-10-01",
+      "endDate": "2026-10-09",
+      "children": [
+        { "id": "aud-1", "name": "Current state assessment", "startDate": "2026-10-01", "endDate": "2026-10-04" },
+        { "id": "aud-2", "name": "Application inventory", "startDate": "2026-10-04", "endDate": "2026-10-07" },
+        { "id": "aud-3", "name": "Dependency mapping", "startDate": "2026-10-07", "endDate": "2026-10-09" },
+        { "id": "aud-4", "name": "Audit report complete", "startDate": "2026-10-09", "endDate": "2026-10-09", "isMilestone": true }
+      ]
+    },
+    {
+      "id": "planning",
+      "name": "Migration Planning",
+      "startDate": "2026-10-10",
+      "endDate": "2026-10-17",
+      "children": [
+        { "id": "plan-1", "name": "Target architecture design", "startDate": "2026-10-10", "endDate": "2026-10-13" },
+        { "id": "plan-2", "name": "Migration strategy", "startDate": "2026-10-13", "endDate": "2026-10-15" },
+        { "id": "plan-3", "name": "Rollback planning", "startDate": "2026-10-15", "endDate": "2026-10-17" },
+        { "id": "plan-4", "name": "Plan sign-off", "startDate": "2026-10-17", "endDate": "2026-10-17", "isMilestone": true }
+      ]
+    },
+    {
+      "id": "migration",
+      "name": "Migration Execution",
+      "startDate": "2026-10-18",
+      "endDate": "2026-10-29",
+      "children": [
+        { "id": "mig-1", "name": "Non-production migration", "startDate": "2026-10-18", "endDate": "2026-10-22" },
+        { "id": "mig-2", "name": "User acceptance testing", "startDate": "2026-10-22", "endDate": "2026-10-25" },
+        { "id": "mig-3", "name": "Production migration", "startDate": "2026-10-25", "endDate": "2026-10-28" },
+        { "id": "mig-4", "name": "Data validation", "startDate": "2026-10-28", "endDate": "2026-10-29" }
+      ]
+    },
+    {
+      "id": "validation",
+      "name": "Validation",
+      "startDate": "2026-10-29",
+      "endDate": "2026-11-03",
+      "children": [
+        { "id": "val-1", "name": "Performance testing", "startDate": "2026-10-29", "endDate": "2026-10-31" },
+        { "id": "val-2", "name": "Security audit", "startDate": "2026-10-31", "endDate": "2026-11-02" },
+        { "id": "val-3", "name": "Compliance verification", "startDate": "2026-11-02", "endDate": "2026-11-03" }
+      ]
+    },
+    {
+      "id": "cutover",
+      "name": "Cutover & Decommission",
+      "startDate": "2026-11-03",
+      "endDate": "2026-11-06",
+      "children": [
+        { "id": "cut-1", "name": "DNS cutover", "startDate": "2026-11-03", "endDate": "2026-11-04" },
+        { "id": "cut-2", "name": "Legacy decommission", "startDate": "2026-11-04", "endDate": "2026-11-06" },
+        { "id": "cut-3", "name": "Project closure", "startDate": "2026-11-06", "endDate": "2026-11-07" }
+      ]
+    },
+    {
+      "id": "milestone-migration",
+      "name": "Migration Complete",
+      "startDate": "2026-11-06",
+      "endDate": "2026-11-06",
+      "isMilestone": true
+    }
+  ],
+  "risks": [
+    { "id": "r1", "title": "Data loss during migration", "category": "technical", "probability": 2, "impact": 5, "status": "identified", "mitigationPlan": "Backup validation, phased migration approach", "identifiedDate": "2026-10-01", "reviewDate": "2026-11-01" },
+    { "id": "r2", "title": "Extended downtime", "category": "schedule", "probability": 3, "impact": 5, "status": "identified", "mitigationPlan": "Rollback plan, off-peak migration windows", "identifiedDate": "2026-10-01", "reviewDate": "2026-11-01" },
+    { "id": "r3", "title": "Compatibility issues", "category": "technical", "probability": 4, "impact": 3, "status": "identified", "mitigationPlan": "Thorough testing, compatibility matrix", "identifiedDate": "2026-10-01", "reviewDate": "2026-11-01" },
+    { "id": "r4", "title": "Compliance violations", "category": "external", "probability": 2, "impact": 5, "status": "identified", "mitigationPlan": "Compliance review, audit trail maintenance", "identifiedDate": "2026-10-01", "reviewDate": "2026-11-01" }
+  ],
+  "resources": [
+    { "id": "pm", "name": "Migration Manager", "role": "PM", "costRate": 150, "availability": 100, "color": "#3B82F6" },
+    { "id": "arch", "name": "Solutions Architect", "role": "Architecture", "costRate": 170, "availability": 75, "color": "#8B5CF6" },
+    { "id": "engineer", "name": "Systems Engineer", "role": "Engineering", "costRate": 140, "availability": 100, "color": "#10B981" },
+    { "id": "security", "name": "Security Analyst", "role": "Security", "costRate": 130, "availability": 50, "color": "#EF4444" }
+  ]
+}
