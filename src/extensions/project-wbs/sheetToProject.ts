@@ -362,7 +362,8 @@ function parseResourceRow(sheet: Sheet, row: number): ResourceRow | null {
     role: getCellStringValue(sheet, row, 1),
     costRate: parseFloat(getCellStringValue(sheet, row, 2)) || 0,
     costCurrency: getCellStringValue(sheet, row, 3) || getDefaultCurrency(),
-    availability: parseInt(getCellStringValue(sheet, row, 4)) || 100,
+    // Availability stored as decimal (0-1) with percentage format, convert back to 0-100
+    availability: Math.round((parseFloat(getCellStringValue(sheet, row, 4)) || 1) * 100),
     color: getCellStringValue(sheet, row, 5) || '#3B82F6',
   };
 }
@@ -796,7 +797,12 @@ function createResourcesSheetFromModel(model: ProjectModel): Sheet {
     cells[`${row}:1`] = { rawValue: resource.role, computedValue: resource.role };
     cells[`${row}:2`] = { rawValue: String(resource.costRate), computedValue: String(resource.costRate) };
     cells[`${row}:3`] = { rawValue: resource.costCurrency, computedValue: resource.costCurrency };
-    cells[`${row}:4`] = { rawValue: String(resource.availability), computedValue: String(resource.availability) };
+    // Store availability as decimal (0-1) with percentage format for display
+    cells[`${row}:4`] = {
+      rawValue: String((resource.availability ?? 100) / 100),
+      computedValue: (resource.availability ?? 100) / 100,
+      style: { numberFormat: '0%' },
+    };
     cells[`${row}:5`] = { rawValue: resource.color, computedValue: resource.color };
   }
 
