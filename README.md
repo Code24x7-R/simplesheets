@@ -27,7 +27,7 @@ A lightweight, browser-based spreadsheet — fully client-side, reads and writes
 
 ## Architecture
 
-SimpleSheet is a client-side SPA with no backend. State lives in React Context + `useReducer`, with a formula engine operating on sparse cell maps.
+SimpleSheet is a client-side SPA with no backend. State lives in React Context + `useReducer`, with a formula engine operating on sparse cell maps. An extensions architecture provides project management capabilities.
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -49,6 +49,16 @@ SimpleSheet is a client-side SPA with no backend. State lives in React Context +
 │       ↑                          ↓                              │
 │  formulaAutocomplete.ts    evaluateWorkbook (multi-sheet)       │
 │  formulaWizardSchema.ts    formulaWizardCompiler.ts             │
+├─────────────────────────────────────────────────────────────────┤
+│                   Extensions Layer                                │
+│  ExtensionRegistry → Project/WBS Extension                      │
+│    ├─ GanttChart (pure SVG timeline with zoom/navigation)       │
+│    ├─ RiskMatrix (5×5 probability/impact dashboard)             │
+│    ├─ RiskRegister (CRUD risk management)                       │
+│    ├─ ResourceHeatmap (allocation calendar view)                │
+│    ├─ TaskEditorModal (task CRUD with dependency setup)         │
+│    ├─ ResourceEditorModal (resource CRUD)                       │
+│    └─ ResourceListModal (table-based resource management)       │
 ├─────────────────────────────────────────────────────────────────┤
 │                   Service Layer                                  │
 │  excelImport/Export │ csvService │ jsonService │ pdfExport      │
@@ -167,6 +177,42 @@ npm run build        # Full production build
 
 Current targets: **≥95% line coverage**, **≥85% branch coverage**, **0 lint errors**, **0 type errors**.
 
+**Current state:** **3,360 tests** across **140 suites**, all passing.
+
+---
+
+## Extensions Architecture
+
+The WBS/Project extension provides full project management capabilities:
+
+| Component | Purpose |
+|-----------|---------|
+| `ExtensionRegistry.ts` | Plugin system for registering extensions |
+| `WBSTreePanel.tsx` | Tree view of work breakdown structure |
+| `GanttChart.tsx` | Pure SVG Gantt with zoom, nav, dependencies |
+| `RiskMatrix.tsx` | 5×5 probability/impact dashboard with key risks |
+| `RiskRegister.tsx` | Full risk register with CRUD |
+| `ResourceHeatmap.tsx` | Calendar-based resource allocation view |
+| `TaskEditorModal.tsx` | Task editor with dependency configuration |
+| `ResourceListModal.tsx` | Table-based resource management |
+| `NotificationPanel.tsx` | Dependency status notifications |
+
+### Automation Workflows
+
+| Workflow | Description |
+|----------|-------------|
+| Status-driven triggers | Tasks auto-transition: waiting → ready when predecessors complete |
+| Dynamic auto-scheduling | Date changes cascade to all successors |
+| Assignee notifications | Alerts when tasks become unblocked |
+| Approval/gate automation | External approvals unblock next phase |
+| Template cascading | Pre-configured dependency networks from templates |
+
+See [DependencyManagement.md](./docs/DependencyManagement.md) for detailed rules and formulas.
+
+### Templates (16 total)
+
+Pre-built project templates across categories: Simple WBS, Website, Software, Agile, Construction, Renovation, Event Planning, Marketing Campaign, Business Project, Product Launch, IT Migration, Real Estate Photography, Mining Consulting.
+
 ---
 
 ## Project Structure
@@ -176,7 +222,7 @@ simplesheets/
 ├── src/
 │   ├── App.tsx                    # Root component, useReducer orchestration
 │   ├── main.tsx                   # React entry point
-│   ├── types.ts                   # Core data model (Workbook, Sheet, Cell, Selection)
+│   ├── types.ts                   # Core data model (Workbook, Sheet, Cell, Selection, WBSTask, Project)
 │   ├── vite-env.d.ts              # Build define declarations
 │   │
 │   ├── components/
@@ -248,14 +294,51 @@ simplesheets/
 │       ├── sheetSearch.ts         # Find implementation
 │       ├── highlightColors.ts     # Color assignment for formula refs
 │       ├── benchmark.ts           # Performance measurement utilities
+│       ├── currency.ts            # Browser-locale currency detection
 │       └── *.test.ts              # Utility tests (co-located)
+│
+│   └── extensions/
+│       ├── types.ts               # Extension contract interfaces
+│       ├── ExtensionRegistry.ts   # Plugin registration system
+│       ├── types.test.ts
+│       └── project-wbs/           # WBS/Project extension
+│           ├── GanttChart.tsx      # Pure SVG timeline with zoom/nav
+│           ├── RiskMatrix.tsx      # 5×5 probability/impact dashboard
+│           ├── RiskRegister.tsx    # Risk register with CRUD
+│           ├── ResourceHeatmap.tsx # Resource allocation calendar
+│           ├── WBSTreePanel.tsx    # WBS tree view
+│           ├── TaskEditorModal.tsx # Task editor with dependencies
+│           ├── ResourceEditorModal.tsx # Resource CRUD form
+│           ├── ResourceListModal.tsx  # Table-based resource management
+│           ├── NotificationPanel.tsx  # Dependency notifications
+│           ├── CalendarConfigModal.tsx # Working calendar config
+│           ├── ColumnMappingDialog.tsx # Sheet-to-project column mapping
+│           ├── dependencies.ts     # CPM, topological sort, cycle detection
+│           ├── dependencyWorkflows.ts # Automation workflows (5 types)
+│           ├── rollups.ts          # Summary task roll-up calculations
+│           ├── treeOps.ts          # Tree flatten/toggle/validate
+│           ├── risks.ts            # Risk scoring, matrix, CRUD
+│           ├── calendar.ts         # Working day calculations
+│           ├── currency.ts         # Project currency utilities
+│           ├── projectFormulas.ts  # Formula engine integration
+│           ├── sheetToProject.ts   # Sheet↔Project conversion
+│           ├── useProject.ts       # Project state hook
+│           ├── ProjectView.tsx     # Main project view container
+│           ├── templates/          # 16 JSON project templates
+│           │   ├── index.ts        # Template registry
+│           │   ├── handler.ts      # Template parsing/validation
+│           │   ├── types.ts        # Template type definitions
+│           │   └── json/           # 16 JSON template files
+│           └── *.test.ts           # Extension tests (co-located)
 │
 ├── docs/
 │   ├── PLAN.md            # Development roadmap (30+ phases)
 │   ├── BUGFIX.md          # Bug tracker
 │   ├── PROGRESS_LOG.md    # Change log
 │   ├── requirements.md    # Functional requirements
-│   └── feasibility.md     # Technical feasibility analysis
+│   ├── feasibility.md     # Technical feasibility analysis
+│   ├── EXTENSIONS_ARCHITECTURE.md  # Extension technical docs
+│   └── DependencyManagement.md     # Dependency rules & workflows
 │
 ├── scripts/
 │   ├── prepack-offline.mjs # Prepare package.json for offline pack

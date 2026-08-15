@@ -25,7 +25,8 @@
 19. [Fill Handle](#fill-handle)
 20. [Formula Wizard](#formula-wizard)
 21. [Formula Autocomplete](#formula-autocomplete)
-22. [Planned Features](#planned-features)
+22. [Project Management](#project-management)
+23. [Planned Features](#planned-features)
 
 ---
 
@@ -945,6 +946,150 @@ Each entry shows:
 
 ---
 
+## Project Management
+
+SimpleSheet includes a full project management extension with Gantt charts, task dependencies, resource allocation, and risk management. Access it via **Extensions → Project** or the **📊 Project** tab.
+
+### Creating a Project
+
+| Method | How |
+|--------|-----|
+| **From Template** | Extensions → Templates → Choose a template (16 available) |
+| **From Sheet** | Enter project data in a sheet → Extensions → New Project Sheet |
+| **Blank Project** | Extensions → New Project Sheet (creates Tasks/Risks/Resources sheets) |
+
+### Gantt Chart View
+
+The Gantt chart displays tasks as horizontal bars on a timeline:
+
+| Control | Action |
+|---------|--------|
+| **Zoom** | Day / Week / Month buttons adjust time scale |
+| **◀◀** | Scroll to previous month |
+| **◀** | Scroll to previous week |
+| **Today** | Jump to current date |
+| **▶** | Scroll to next week |
+| **▶▶** | Scroll to next month |
+
+#### Task Status Indicators
+
+| Icon | Status | Description |
+|------|--------|-------------|
+| ○ | Not Started | Task has not begun |
+| ● | Ready | All predecessors complete, ready to start |
+| ► | In Progress | Currently being worked on |
+| ⏳ | Waiting | Blocked by incomplete predecessor |
+| ⏸ | On Hold | Paused or blocked externally |
+| ✓ | Done | Completed (shown with strikethrough) |
+
+#### Resource Colors
+
+Tasks display the assigned resource's color on the Gantt bar. Hover over a bar to see:
+- Task name
+- Assigned resource
+- Progress percentage
+- Start and end dates
+
+### Task Dependencies
+
+Define relationships between tasks using four dependency types:
+
+| Type | Name | Description | Example |
+|------|------|-------------|---------|
+| **FS** | Finish-to-Start | B cannot start until A finishes | Design → Build |
+| **SS** | Start-to-Start | B cannot start until A starts | Testing → Documentation |
+| **FF** | Finish-to-Finish | B cannot finish until A finishes | Coding → Code Review |
+| **SF** | Start-to-Finish | B cannot finish until A starts | New Shift → Old Shift |
+
+#### Lead & Lag Time
+
+- **Lag**: Delay after predecessor ends (e.g., wait 2 days for concrete to dry)
+- **Lead**: Overlap with predecessor (e.g., start docs 3 days before build finishes)
+
+Set in the Task Editor's Dependency section.
+
+#### Critical Path
+
+The critical path is the longest sequence of dependent tasks that determines minimum project duration. Tasks on the critical path have **zero float** (no scheduling slack). Critical tasks are highlighted with a red border in the Gantt chart.
+
+### Resource Management
+
+Click **👥 Resources** in the Gantt view to open the resource manager:
+
+| Action | How |
+|--------|-----|
+| **Add Resource** | Click "Add Resource" button |
+| **Edit Resource** | Hover a row, click pencil icon |
+| **Delete Resource** | Hover a row, click trash icon |
+
+Resources have:
+- **Name**: Person or team name
+- **Role**: Job title or function
+- **Cost Rate**: Hourly/daily rate with currency
+- **Availability**: Percentage (0-100%)
+- **Color**: Visual identifier in Gantt chart
+
+### Risk Management
+
+#### Risk Matrix
+
+A 5×5 probability/impact grid showing risk distribution:
+
+| Level | Score Range | Color |
+|-------|-------------|-------|
+| Critical | 15-25 | Red |
+| High | 10-14 | Orange |
+| Medium | 5-9 | Yellow |
+| Low | 1-4 | Green |
+
+The RHS panel shows:
+- **Key Risks**: Top risks sorted by score (truncated if >8)
+- **Severity Legend**: Color swatches with counts
+
+#### Risk Register
+
+Full CRUD for risks with fields: title, category, probability, impact, status, mitigation plan, owner.
+
+### Approval Workflows
+
+Tasks can include approval gates that block progress until approved:
+
+| Gate Type | Description |
+|-----------|-------------|
+| Approval | Requires explicit approval |
+| Review | Requires review sign-off |
+| Sign Off | Formal sign-off required |
+| External | External dependency (client, vendor) |
+
+When all gates for a task are approved, dependent tasks are automatically unblocked.
+
+### Automation Features
+
+| Feature | Description |
+|---------|-------------|
+| Status-Driven Triggers | Tasks auto-transition from "waiting" to "ready" when predecessors complete |
+| Dynamic Auto-Scheduling | Date changes cascade to all downstream tasks |
+| Assignee Notifications | Alert assignees when tasks become unblocked |
+| Template Cascading | Pre-configured dependency networks from templates |
+
+### Templates
+
+16 pre-built project templates across categories:
+
+| Category | Templates |
+|----------|-----------|
+| Generic | Simple WBS |
+| Web/Dev | Website Project, Software Development, Agile/Sprint |
+| Construction | Home Renovation, Construction Project |
+| Events | Event Planning |
+| Marketing | Marketing Campaign |
+| Business | Business Project, Product Launch |
+| IT | IT Migration |
+| Real Estate | Real Estate Photography |
+| Mining | Mining Consulting |
+
+---
+
 ## Planned Features
 
 The following features are planned for future releases (Phase 22–23 in the development roadmap):
@@ -1016,6 +1161,11 @@ Restrict cell input to predefined criteria with custom error alerts:
 | Filter data | `Ctrl + Shift + L` or Data → Toggle Filter |
 | Format as currency | Toolbar `$` or Format → Number Format → Currency |
 | Set exact column width | Format → Column / Row Size… |
+| Create project | Extensions → Templates → Choose template |
+| Open Gantt view | Extensions → Project or 📊 Project tab |
+| Add task dependency | Task Editor → Dependencies → Add |
+| Manage resources | Gantt view → 👥 Resources |
+| View risk matrix | Project → Risk Matrix view |
 
 ---
 
@@ -1041,6 +1191,11 @@ Restrict cell input to predefined criteria with custom error alerts:
 18. **Text format** (`@`) preserves leading zeros in ZIP codes and ID numbers
 19. **Cross-sheet references** are clickable in the formula bar to navigate between sheets
 20. **Auto-save** keeps your work in localStorage — but download backups with Ctrl + S
+21. **Gantt navigation** — use ◀ ▶ buttons or Today to scroll the timeline
+22. **Task dependencies** — hover a Gantt bar to see resource and dates
+23. **Resource colors** — tasks show assigned resource's color in Gantt
+24. **Risk matrix** — click any risk in the RHS panel to edit it
+25. **Status icons** — ⏳ waiting, ► in progress, ✓ done, ⏸ on hold
 
 ---
 
