@@ -21,6 +21,13 @@ import { formatDate } from './calendar';
 import { rollUpRiskExposure } from './rollups';
 import { getRiskLevel } from './risks';
 
+// ─── Helper: Get resource name for a task ─────────────────────────────────
+function getResourceName(task: WBSTask, project: Project): string | null {
+  if (!task.responsibleResourceId) return null;
+  const resource = project.resources.find((r) => r.id === task.responsibleResourceId);
+  return resource?.name ?? null;
+}
+
 // ─── Constants ──────────────────────────────────────────────────────────────
 
 const MARGIN_LEFT = 160; // Width of task name column
@@ -173,6 +180,20 @@ export function GanttChart({
 
             return (
               <g key={task.id} onClick={() => onTaskSelect?.(task.id)} onDoubleClick={() => onTaskDoubleClick?.(task.id)} className="cursor-pointer">
+                {/* Tooltip with task info */}
+                {(() => {
+                  const resourceName = getResourceName(task, project);
+                  const tooltipText = [
+                    task.name,
+                    resourceName ? `Resource: ${resourceName}` : null,
+                    `Progress: ${task.progress}%`,
+                    `Dates: ${task.startDate} to ${task.endDate}`,
+                  ]
+                    .filter(Boolean)
+                    .join('\n');
+                  return <title>{tooltipText}</title>;
+                })()}
+
                 {/* Collapse/expand button for summary tasks */}
                 {task.isSummary && (
                   <g
