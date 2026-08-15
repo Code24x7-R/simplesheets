@@ -562,9 +562,11 @@ export const FormulaBar = forwardRef<FormulaBarHandle, FormulaBarProps>(function
   }, [onRawCaretMove, value.length]);
 
   // Build error display
+  // Only show actual errors (not incomplete) to avoid blocking sheet tabs while typing
+  const displayableErrors = validation.errors.filter((e) => e.severity === 'error');
   const errorDisplay = useMemo(() => {
-    if (isEditing && validation.errors.length > 0) {
-      const error = validation.errors[0];
+    if (isEditing && displayableErrors.length > 0) {
+      const error = displayableErrors[0];
       return (
         <div className="absolute left-0 right-0 -bottom-6 bg-red-50 border border-red-200 rounded px-2 py-0.5 text-xs text-red-600 z-10">
           {error.message}
@@ -579,7 +581,7 @@ export const FormulaBar = forwardRef<FormulaBarHandle, FormulaBarProps>(function
       );
     }
     return null;
-  }, [isEditing, validation]);
+  }, [isEditing, validation, displayableErrors]);
 
   // Only apply text-transparent when the overlay will actually render
   // segments. Without this guard, typing "=" alone would make the

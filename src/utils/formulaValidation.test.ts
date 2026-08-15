@@ -122,7 +122,9 @@ describe('validateFormula', () => {
 
     it('provides severity level', () => {
       const result = validateFormula('=SUM(A1:A10');
-      expect(result.errors[0].severity).toBe('error');
+      // Unclosed parentheses are now 'incomplete' severity (not blocking while typing)
+      expect(result.errors[0].severity).toBe('incomplete');
+      expect(result.isIncomplete).toBe(true);
     });
   });
 });

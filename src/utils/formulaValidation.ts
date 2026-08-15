@@ -18,7 +18,7 @@ export interface ValidationError {
   /** End position in the formula string. */
   endPos: number;
   /** Error severity. */
-  severity: 'error' | 'warning';
+  severity: 'error' | 'warning' | 'incomplete';
 }
 
 /** Result of validating a formula. */
@@ -63,7 +63,7 @@ function checkStructuralIssues(formula: string): ValidationError[] {
       message: `${depth} unclosed parenthesis${depth > 1 ? 'es' : ''}`,
       startPos: lastOpenParen,
       endPos: lastOpenParen + 1,
-      severity: 'error',
+      severity: 'incomplete',
     });
   }
 
@@ -146,7 +146,8 @@ export function validateFormula(formula: string): ValidationResult {
     }
   }
 
-  const isIncomplete = appearsIncomplete || (errors.length === 0 && structuralErrors.length > 0);
+  const hasIncompleteStructuralErrors = structuralErrors.some((e) => e.severity === 'incomplete');
+  const isIncomplete = appearsIncomplete || hasIncompleteStructuralErrors || (errors.length === 0 && structuralErrors.length > 0);
 
   return {
     isValid: errors.filter((e) => e.severity === 'error').length === 0,
