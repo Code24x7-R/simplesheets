@@ -12,9 +12,9 @@ import { createProductLaunchProject } from './product';
 import { createITMigrationProject } from './it-migration';
 import { createAgileProject } from './agile';
 import { createConstructionProject } from './construction';
-import { createMiningConsultingProject } from './mining';
 import { templateToProject } from './handler';
 import realestatePhotoJSON from './json/realestate-photo.json';
+import miningJSON from './json/mining.json';
 import type { ProjectTemplateJSON } from './types';
 import { validateTree } from '../treeOps';
 import { detectDependencyCycles } from '../dependencies';
@@ -263,17 +263,40 @@ describe('Templates', () => {
     });
   });
 
-  describe('Mining Consulting template', () => {
-    const project = createMiningConsultingProject();
+  describe('Mining Consulting template (JSON)', () => {
+    const project = templateToProject(miningJSON as ProjectTemplateJSON);
 
     it('has a valid WBS tree', () => {
       const errors = validateTree(project.wbs);
       expect(errors).toEqual([]);
     });
 
+    it('has no dependency cycles', () => {
+      const flat = flattenTasks(project.wbs);
+      expect(detectDependencyCycles(flat)).toEqual([]);
+    });
+
     it('has multiple phases', () => {
       const flat = flattenTasks(project.wbs);
-      expect(flat.length).toBeGreaterThan(8);
+      expect(flat.length).toBeGreaterThan(30);
+    });
+
+    it('has risks', () => {
+      expect(project.risks.length).toBeGreaterThanOrEqual(8);
+    });
+
+    it('has resources', () => {
+      expect(project.resources.length).toBeGreaterThanOrEqual(5);
+    });
+
+    it('has categorized risks', () => {
+      const categories = new Set(project.risks.map((r) => r.category));
+      expect(categories.size).toBeGreaterThanOrEqual(4);
+    });
+
+    it('has 6 phases (FEL 1-3, EPC, Commissioning, Brownfield)', () => {
+      // project.wbs is an array of root tasks (top-level phases)
+      expect(project.wbs.length).toBeGreaterThanOrEqual(6);
     });
   });
 

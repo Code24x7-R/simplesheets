@@ -15,12 +15,14 @@ import simpleJSON from './json/simple.json';
 import websiteJSON from './json/website.json';
 import softwareJSON from './json/software.json';
 import realestatePhotoJSON from './json/realestate-photo.json';
+import miningJSON from './json/mining.json';
 
 // Cast JSON imports to strongly-typed templates
 const simpleTemplate = simpleJSON as ProjectTemplateJSON;
 const websiteTemplate = websiteJSON as ProjectTemplateJSON;
 const softwareTemplate = softwareJSON as ProjectTemplateJSON;
 const realestatePhotoTemplate = realestatePhotoJSON as ProjectTemplateJSON;
+const miningTemplate = miningJSON as ProjectTemplateJSON;
 
 // Import existing TypeScript templates (can be migrated to JSON over time)
 import { createSimpleWBS } from './simple';
@@ -34,7 +36,6 @@ import { createProductLaunchProject } from './product';
 import { createITMigrationProject } from './it-migration';
 import { createAgileProject } from './agile';
 import { createConstructionProject } from './construction';
-import { createMiningConsultingProject } from './mining';
 
 /**
  * JSON-based templates (data-driven, easily maintainable)
@@ -67,6 +68,13 @@ const JSON_TEMPLATES: TemplateDefinition[] = [
     description: realestatePhotoTemplate.description,
     category: realestatePhotoTemplate.category,
     create: () => templateToProject(realestatePhotoTemplate),
+  },
+  {
+    id: miningTemplate.id,
+    name: miningTemplate.name,
+    description: miningTemplate.description,
+    category: miningTemplate.category,
+    create: () => templateToProject(miningTemplate),
   },
 ];
 
@@ -150,13 +158,6 @@ const CODE_TEMPLATES: TemplateDefinition[] = [
     description: 'Full construction project from pre-construction through finishing.',
     category: 'Construction',
     create: createConstructionProject,
-  },
-  {
-    id: 'mining',
-    name: 'Mining Consulting',
-    description: 'Mining consulting from scoping through presentation.',
-    category: 'Mining',
-    create: createMiningConsultingProject,
   },
 ];
 

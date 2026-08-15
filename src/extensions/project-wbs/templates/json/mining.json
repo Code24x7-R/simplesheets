@@ -1,0 +1,514 @@
+{
+  "id": "mining",
+  "name": "Mining Consulting Project",
+  "description": "Comprehensive mining consulting from scoping through detailed engineering, construction support, and brownfield maintenance. Covers FEL 1-3, EPC execution, commissioning, and sustaining capital projects.",
+  "category": "Mining",
+  "startDate": "2027-04-01",
+  "endDate": "2028-06-30",
+  "calendar": {
+    "workingDays": [1, 2, 3, 4, 5],
+    "holidays": [],
+    "hoursPerDay": 8
+  },
+  "tasks": [
+    {
+      "id": "fel1",
+      "name": "Phase 1: Scoping / Concept Study (FEL 1)",
+      "startDate": "2027-04-01",
+      "endDate": "2027-05-31",
+      "description": "Identify trade-offs, define broad mechanical options, and eliminate fatal flaws",
+      "children": [
+        {
+          "id": "fel1-1",
+          "name": "Project kickoff & objectives",
+          "startDate": "2027-04-01",
+          "endDate": "2027-04-04",
+          "description": "Stakeholder alignment, scope confirmation, success criteria"
+        },
+        {
+          "id": "fel1-2",
+          "name": "Draft Block Flow Diagrams (BFDs)",
+          "startDate": "2027-04-07",
+          "endDate": "2027-04-18",
+          "description": "Preliminary BFDs for ore handling and process routes"
+        },
+        {
+          "id": "fel1-3",
+          "name": "Major equipment sizing",
+          "startDate": "2027-04-07",
+          "endDate": "2027-04-25",
+          "description": "High-level sizing: primary crushers, SAG/Ball mills, flotation cells, tailings thickeners"
+        },
+        {
+          "id": "fel1-4",
+          "name": "Bulk material handling logistics",
+          "startDate": "2027-04-14",
+          "endDate": "2027-05-02",
+          "description": "Conveyor corridors, rail loadouts, port facilities assessment"
+        },
+        {
+          "id": "fel1-5",
+          "name": "Trade-off screening studies",
+          "startDate": "2027-04-21",
+          "endDate": "2027-05-09",
+          "description": "Eliminate fatal flaws, identify viable process routes"
+        },
+        {
+          "id": "fel1-6",
+          "name": "High-level CAPEX estimate",
+          "startDate": "2027-05-05",
+          "endDate": "2027-05-15",
+          "description": "±30% to ±50% mechanical CAPEX estimate"
+        },
+        {
+          "id": "fel1-7",
+          "name": "Concept study report",
+          "startDate": "2027-05-19",
+          "endDate": "2027-05-31",
+          "description": "Deliver concept study report for FEL 2 gate"
+        }
+      ]
+    },
+    {
+      "id": "fel2",
+      "name": "Phase 2: Pre-Feasibility Study (PFS / FEL 2)",
+      "startDate": "2027-06-01",
+      "endDate": "2027-09-30",
+      "description": "Evaluate options and select the single preferred mechanical configuration",
+      "children": [
+        {
+          "id": "fel2-1",
+          "name": "PFS kickoff & planning",
+          "startDate": "2027-06-01",
+          "endDate": "2027-06-05",
+          "description": "Team mobilization, work plan finalization"
+        },
+        {
+          "id": "fel2-2",
+          "name": "Process Flow Diagrams (PFDs)",
+          "startDate": "2027-06-01",
+          "endDate": "2027-06-28",
+          "description": "Develop PFDs for preferred and alternative routes"
+        },
+        {
+          "id": "fel2-3",
+          "name": "Mechanical mass/heat balances",
+          "startDate": "2027-06-08",
+          "endDate": "2027-07-13",
+          "description": "Establish mass and heat balances for all streams"
+        },
+        {
+          "id": "fel2-4",
+          "name": "Equipment datasheets (long-lead)",
+          "startDate": "2027-06-15",
+          "endDate": "2027-07-24",
+          "description": "Crushers, mills, slurry pumps, screens datasheets"
+        },
+        {
+          "id": "fel2-5",
+          "name": "Equipment trade-off studies",
+          "startDate": "2027-07-06",
+          "endDate": "2027-08-07",
+          "description": "SAG vs HPGR; Overland Conveyors vs Haulage; other key decisions"
+        },
+        {
+          "id": "fel2-6",
+          "name": "Plant general arrangement (GA)",
+          "startDate": "2027-07-20",
+          "endDate": "2027-08-21",
+          "description": "GA drawings and 3D site layout models"
+        },
+        {
+          "id": "fel2-7",
+          "name": "Refined CAPEX/OPEX estimates",
+          "startDate": "2027-08-10",
+          "endDate": "2027-09-04",
+          "description": "±15% to ±25% mechanical estimates"
+        },
+        {
+          "id": "fel2-8",
+          "name": "PFS report & gate review",
+          "startDate": "2027-09-07",
+          "endDate": "2027-09-30",
+          "description": "Deliver PFS report for FEL 3 gate"
+        }
+      ]
+    },
+    {
+      "id": "feed",
+      "name": "Phase 3: Front-End Engineering Design (FEED / FEL 3)",
+      "startDate": "2027-10-01",
+      "endDate": "2028-02-28",
+      "description": "Finalize baseline engineering package for Final Investment Decision (FID)",
+      "children": [
+        {
+          "id": "feed-1",
+          "name": "FEED kickoff & baseline",
+          "startDate": "2027-10-01",
+          "endDate": "2027-10-12",
+          "description": "Confirm design basis, standards, and project controls"
+        },
+        {
+          "id": "feed-2",
+          "name": "P&ID finalization",
+          "startDate": "2027-10-01",
+          "endDate": "2027-11-30",
+          "description": "Finalize Piping & Instrumentation Diagrams"
+        },
+        {
+          "id": "feed-3",
+          "name": "Mechanical equipment lists",
+          "startDate": "2027-10-08",
+          "endDate": "2027-11-09",
+          "description": "Complete mechanical equipment list with tag numbers"
+        },
+        {
+          "id": "feed-4",
+          "name": "RFQ preparation & issue",
+          "startDate": "2027-10-15",
+          "endDate": "2027-11-30",
+          "description": "Formal RFQs for major capital equipment"
+        },
+        {
+          "id": "feed-5",
+          "name": "FEA/CFD analysis",
+          "startDate": "2027-11-01",
+          "endDate": "2027-12-31",
+          "description": "Finite Element Analysis and CFD for critical structures, chutes, slurry pipelines"
+        },
+        {
+          "id": "feed-6",
+          "name": "HAZOP & design reviews",
+          "startDate": "2027-12-01",
+          "endDate": "2028-01-31",
+          "description": "Hazard and Operability Analysis, Constructability Reviews, Maintainability Audits"
+        },
+        {
+          "id": "feed-7",
+          "name": "FEED package delivery",
+          "startDate": "2028-01-15",
+          "endDate": "2028-02-28",
+          "description": "Complete FEED package for FID"
+        }
+      ]
+    },
+    {
+      "id": "epc",
+      "name": "Phase 4: Detailed Engineering & Procurement (EPC/EPCM)",
+      "startDate": "2028-03-01",
+      "endDate": "2028-09-30",
+      "description": "Produce construction-ready deliverables and procure mechanical packages",
+      "children": [
+        {
+          "id": "epc-1",
+          "name": "Detailed engineering kickoff",
+          "startDate": "2028-03-01",
+          "endDate": "2028-03-12",
+          "description": "Mobilize detailed engineering team"
+        },
+        {
+          "id": "epc-2",
+          "name": "Vendor GA drawing review",
+          "startDate": "2028-03-01",
+          "endDate": "2028-04-30",
+          "description": "Review vendor general arrangement drawings and technical bids"
+        },
+        {
+          "id": "epc-3",
+          "name": "Piping isometrics & stress",
+          "startDate": "2028-03-15",
+          "endDate": "2028-06-30",
+          "description": "Detailed piping isometric drawings, stress analyses, pipe support details"
+        },
+        {
+          "id": "epc-4",
+          "name": "Chute design & fabrication",
+          "startDate": "2028-04-01",
+          "endDate": "2028-06-30",
+          "description": "Detailed chute design, liner selection, platework fabrication drawings"
+        },
+        {
+          "id": "epc-5",
+          "name": "Mechanical procurement",
+          "startDate": "2028-03-01",
+          "endDate": "2028-08-31",
+          "description": "Procure all mechanical packages and equipment"
+        },
+        {
+          "id": "epc-6",
+          "name": "Factory Acceptance Testing",
+          "startDate": "2028-07-01",
+          "endDate": "2028-09-30",
+          "description": "FAT for overhead cranes, pump skids, thickeners, major packages"
+        }
+      ]
+    },
+    {
+      "id": "commission",
+      "name": "Phase 5: Construction Support & Commissioning",
+      "startDate": "2028-06-01",
+      "endDate": "2028-12-31",
+      "description": "Bring mechanical systems online safely and hand over to operations",
+      "children": [
+        {
+          "id": "com-1",
+          "name": "Construction support",
+          "startDate": "2028-06-01",
+          "endDate": "2028-09-30",
+          "description": "On-site mechanical engineering support during construction"
+        },
+        {
+          "id": "com-2",
+          "name": "Cold commissioning (No-Load)",
+          "startDate": "2028-08-01",
+          "endDate": "2028-10-31",
+          "description": "Uncoupled motor rotations, dry conveyors, hydrostatic testing, alignment checks"
+        },
+        {
+          "id": "com-3",
+          "name": "Hot commissioning (Load)",
+          "startDate": "2028-10-01",
+          "endDate": "2028-12-15",
+          "description": "Slurry testing, ore feed, crusher CSS tuning, vibration/temperature monitoring"
+        },
+        {
+          "id": "com-4",
+          "name": "Punch listing & handover",
+          "startDate": "2028-11-01",
+          "endDate": "2028-12-15",
+          "description": "Punch list, operational handover, As-Built drawing updates"
+        },
+        {
+          "id": "com-5",
+          "name": "Ramp-up support",
+          "startDate": "2028-12-01",
+          "endDate": "2028-12-31",
+          "description": "Production ramp-up support and performance testing",
+          "isMilestone": false
+        }
+      ]
+    },
+    {
+      "id": "brownfield",
+      "name": "Phase 6: Maintenance & Sustaining Capital (Brownfield)",
+      "startDate": "2028-07-01",
+      "endDate": "2029-06-30",
+      "description": "Asset integrity, debottlenecking, and planned shutdowns for operating plant",
+      "children": [
+        {
+          "id": "bf-1",
+          "name": "Condition assessment & audits",
+          "startDate": "2028-07-01",
+          "endDate": "2028-09-30",
+          "description": "NDT, vibration analysis, ultrasonic thickness, thermography audits"
+        },
+        {
+          "id": "bf-2",
+          "name": "Root Cause Failure Analysis",
+          "startDate": "2028-07-15",
+          "endDate": "2028-10-31",
+          "description": "RCFA for repeating failures: gearboxes, slurry pipes, chute plugging"
+        },
+        {
+          "id": "bf-3",
+          "name": "Debottlenecking studies",
+          "startDate": "2028-08-01",
+          "endDate": "2028-11-30",
+          "description": "Conveyor speed increases, pump impeller modifications, throughput studies"
+        },
+        {
+          "id": "bf-4",
+          "name": "3D laser scanning",
+          "startDate": "2028-10-01",
+          "endDate": "2028-12-31",
+          "description": "Scan existing brownfield geometry to avoid clashes"
+        },
+        {
+          "id": "bf-5",
+          "name": "Sustaining capital engineering",
+          "startDate": "2028-11-01",
+          "endDate": "2029-02-28",
+          "description": "Design retrofits: drop-in chutes, screen decks, conveyor pulleys"
+        },
+        {
+          "id": "bf-6",
+          "name": "Shutdown planning",
+          "startDate": "2029-01-01",
+          "endDate": "2029-03-31",
+          "description": "JSAs, lifting plans, work packs, spare parts procurement"
+        },
+        {
+          "id": "bf-7",
+          "name": "Shutdown execution",
+          "startDate": "2029-03-01",
+          "endDate": "2029-04-30",
+          "description": "Mill liners, crusher mantles, conveyor belts, shaft alignment, seal replacements"
+        },
+        {
+          "id": "bf-8",
+          "name": "Reliability engineering",
+          "startDate": "2029-04-01",
+          "endDate": "2029-06-30",
+          "description": "PM tasks, FMEA, spare optimization, Condition Monitoring Systems"
+        }
+      ]
+    }
+  ],
+  "risks": [
+    {
+      "id": "r1",
+      "title": "Site access restrictions",
+      "category": "external",
+      "probability": 3,
+      "impact": 4,
+      "status": "identified",
+      "mitigationPlan": "Early permit applications, community engagement, alternative access routes"
+    },
+    {
+      "id": "r2",
+      "title": "Data quality issues",
+      "category": "quality",
+      "probability": 3,
+      "impact": 3,
+      "status": "identified",
+      "mitigationPlan": "Data validation protocols, gap analysis, additional testwork"
+    },
+    {
+      "id": "r3",
+      "title": "Regulatory compliance gaps",
+      "category": "external",
+      "probability": 2,
+      "impact": 5,
+      "status": "identified",
+      "mitigationPlan": "Early regulator engagement, compliance audits, gap closure plans"
+    },
+    {
+      "id": "r4",
+      "title": "Client scope changes",
+      "category": "scope",
+      "probability": 4,
+      "impact": 3,
+      "status": "identified",
+      "mitigationPlan": "Change control process, clear scope boundaries, impact assessments"
+    },
+    {
+      "id": "r5",
+      "title": "Vendor delivery delays",
+      "category": "schedule",
+      "probability": 4,
+      "impact": 4,
+      "status": "identified",
+      "mitigationPlan": "Early procurement, long-lead identification, alternative vendors"
+    },
+    {
+      "id": "r6",
+      "title": "Brownfield fitment clashes",
+      "category": "technical",
+      "probability": 4,
+      "impact": 4,
+      "status": "mitigating",
+      "mitigationPlan": "3D laser scanning, clash detection, modular pre-assembly"
+    },
+    {
+      "id": "r7",
+      "title": "Shutdown critical path overrun",
+      "category": "schedule",
+      "probability": 3,
+      "impact": 5,
+      "status": "identified",
+      "mitigationPlan": "Detailed planning, 24/7 execution, contingency crews"
+    },
+    {
+      "id": "r8",
+      "title": "Repeated mechanical failures",
+      "category": "technical",
+      "probability": 3,
+      "impact": 4,
+      "status": "identified",
+      "mitigationPlan": "RCFA, OEM engagement, upgraded materials, condition monitoring"
+    },
+    {
+      "id": "r9",
+      "title": "Lifting plan failures",
+      "category": "quality",
+      "probability": 2,
+      "impact": 5,
+      "status": "identified",
+      "mitigationPlan": "Engineered lift plans, rigging inspections, exclusion zones"
+    },
+    {
+      "id": "r10",
+      "title": "Slurry pipeline erosion",
+      "category": "technical",
+      "probability": 4,
+      "impact": 3,
+      "status": "monitoring",
+      "mitigationPlan": "CFD modeling, wear-resistant materials, monitoring programs"
+    }
+  ],
+  "resources": [
+    {
+      "id": "partner",
+      "name": "Managing Partner",
+      "role": "Partner",
+      "costRate": 350,
+      "costCurrency": "USD",
+      "availability": 25,
+      "color": "#1E40AF"
+    },
+    {
+      "id": "mecheng",
+      "name": "Principal Mechanical Engineer",
+      "role": "Mechanical Engineering",
+      "costRate": 275,
+      "costCurrency": "USD",
+      "availability": 100,
+      "color": "#3B82F6"
+    },
+    {
+      "id": "process",
+      "name": "Process Engineer",
+      "role": "Process",
+      "costRate": 220,
+      "costCurrency": "USD",
+      "availability": 100,
+      "color": "#06B6D4"
+    },
+    {
+      "id": "fieldeng",
+      "name": "Field/Commissioning Engineer",
+      "role": "Fieldwork",
+      "costRate": 200,
+      "costCurrency": "USD",
+      "availability": 100,
+      "color": "#10B981"
+    },
+    {
+      "id": "analyst",
+      "name": "Mining Analyst",
+      "role": "Analysis",
+      "costRate": 150,
+      "costCurrency": "USD",
+      "availability": 100,
+      "color": "#F59E0B"
+    },
+    {
+      "id": "designer",
+      "name": "3D Designer / Modeler",
+      "role": "Design",
+      "costRate": 180,
+      "costCurrency": "USD",
+      "availability": 100,
+      "color": "#8B5CF6"
+    },
+    {
+      "id": "qa",
+      "name": "QA/Reliability Engineer",
+      "role": "Quality",
+      "costRate": 190,
+      "costCurrency": "USD",
+      "availability": 75,
+      "color": "#EC4899"
+    }
+  ]
+}
