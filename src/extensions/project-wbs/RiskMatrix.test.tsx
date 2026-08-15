@@ -70,4 +70,56 @@ describe('RiskMatrix', () => {
     const countLabels = screen.getAllByText('2');
     expect(countLabels.length).toBeGreaterThanOrEqual(1);
   });
+
+  it('shows popup with risk details on hover', () => {
+    const risks = [
+      createRisk({ id: 'r1', probability: 3, impact: 4, title: 'Scope Creep', category: 'scope' }),
+      createRisk({ id: 'r2', probability: 3, impact: 4, title: 'Resource Issue', category: 'resource' }),
+    ];
+    const { container } = render(<RiskMatrix risks={risks} width={400} height={400} />);
+
+    // Find the cell with probability=3 (x=170), impact=4 (y=90)
+    // Note: Y is flipped - impact=5 is at top (y=30), impact=4 is at y=90
+    const allG = container.querySelectorAll('g.cursor-pointer');
+    const targetCell = Array.from(allG).find((g) => {
+      const rect = g.querySelector('rect');
+      if (!rect) return false;
+      const x = parseFloat(rect.getAttribute('x') || '0');
+      const y = parseFloat(rect.getAttribute('y') || '0');
+      // probability=3 -> x=170, impact=4 -> y=90
+      return x === 170 && y === 90;
+    });
+    expect(targetCell).toBeTruthy();
+
+    // Hover over the cell
+    fireEvent.mouseEnter(targetCell!);
+
+    // Popup should show with risk titles
+    expect(screen.getByText('Scope Creep')).toBeInTheDocument();
+    expect(screen.getByText('Resource Issue')).toBeInTheDocument();
+  });
+
+  it('popup shows risk level and score in header', () => {
+    const risks = [
+      createRisk({ id: 'r1', probability: 4, impact: 5, title: 'Critical Risk' }),
+    ];
+    const { container } = render(<RiskMatrix risks={risks} width={400} height={400} />);
+
+    // Find the cell with probability=4 (x=230), impact=5 (y=30)
+    const allG = container.querySelectorAll('g.cursor-pointer');
+    const targetCell = Array.from(allG).find((g) => {
+      const rect = g.querySelector('rect');
+      if (!rect) return false;
+      const x = parseFloat(rect.getAttribute('x') || '0');
+      const y = parseFloat(rect.getAttribute('y') || '0');
+      // probability=4 -> x=230, impact=5 -> y=30
+      return x === 230 && y === 30;
+    });
+    expect(targetCell).toBeTruthy();
+
+    fireEvent.mouseEnter(targetCell!);
+
+    // Header shows score: 4 × 5 = 20
+    expect(screen.getByText(/4 × 5 = 20/)).toBeInTheDocument();
+  });
 });

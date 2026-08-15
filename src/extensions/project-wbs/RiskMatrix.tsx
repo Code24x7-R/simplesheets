@@ -6,12 +6,14 @@
  * 5×5 probability/impact grid with plotted risks.
  */
 
+import { useState } from 'react';
 import type { Risk, RiskLevel } from '../types';
 import { getRiskMatrix } from './risks';
 
 interface RiskMatrixProps {
   risks: Risk[];
   onCellClick?: (probability: number, impact: number) => void;
+  onRiskClick?: (riskId: string) => void;
   width?: number;
   height?: number;
 }
@@ -34,14 +36,21 @@ const LEVEL_BG_COLORS: Record<RiskLevel, string> = {
   low: '#DCFCE7',
 };
 
-export function RiskMatrix({ risks, onCellClick, width: _width = 350, height: _height = 300 }: RiskMatrixProps) {
+export function RiskMatrix({ risks, onCellClick, onRiskClick, width: _width = 350, height: _height = 300 }: RiskMatrixProps) {
   const matrix = getRiskMatrix(risks);
   const gridSize = 5 * CELL_SIZE;
   const svgWidth = LABEL_WIDTH + gridSize;
   const svgHeight = LABEL_HEIGHT + gridSize;
+  const [hoveredCell, setHoveredCell] = useState<{ prob: number; impact: number; x: number; y: number } | null>(null);
+
+  // Build a map of riskId -> Risk for quick lookup
+  const riskMap = new Map<string, Risk>();
+  for (const risk of risks) {
+    riskMap.set(risk.id, risk);
+  }
 
   return (
-    <div className="border border-gray-200 rounded bg-white p-3" data-testid="risk-matrix">
+    <div className="border border-gray-200 rounded bg-white p-3 relative" data-testid="risk-matrix">
       <h3 className="text-sm font-medium mb-2">Risk Matrix</h3>
       <svg width={svgWidth} height={svgHeight} className="select-none">
         {/* Impact labels (Y axis) */}
@@ -86,7 +95,13 @@ export function RiskMatrix({ risks, onCellClick, width: _width = 350, height: _h
             const level = cell.level;
 
             return (
-              <g key={`${probIdx}-${impactIdx}`} onClick={() => onCellClick?.(cell.probability, cell.impact)} className="cursor-pointer">
+              <g
+                key={`${probIdx}-${impactIdx}`}
+                onClick={() => onCellClick?.(cell.probability, cell.impact)}
+                onMouseEnter={() => cell.count > 0 && setHoveredCell({ prob: cell.probability, impact: cell.impact, x, y })}
+                onMouseLeave={() => setHoveredCell(null)}
+                className="cursor-pointer"
+              >
                 <rect
                   x={x}
                   y={y}
@@ -122,6 +137,66 @@ export function RiskMatrix({ risks, onCellClick, width: _width = 350, height: _h
           }),
         )}
       </svg>
+
+      {/* SVG Popup for risk details */}
+      {hoveredCell && (() => {
+        const cell = matrix.cells[hoveredCell.prob - 1][hoveredCell.impact - 1];
+        if (!cell || cell.count === 0) return null;
+
+        const risksInCell = cell.riskIds
+          .map((id) => riskMap.get(id))
+          .filter((r): r is Risk => r !== undefined);
+
+        const popupX = hoveredCell.x + CELL_SIZE + 8;
+        const popupY = hoveredCell.y;
+        const popupWidth = 200;
+
+        return (
+          <div
+            className="absolute bg-white border border-gray-300 rounded-lg shadow-lg z-10 pointer-events-auto overflow-hidden"
+            style={{
+              left: Math.min(popupX, svgWidth - popupWidth + LABEL_WIDTH),
+              top: Math.max(0, popupY - 10),
+              width: popupWidth,
+            }}
+          >
+            {/* Header */}
+            <div
+              className="px-3 py-1.5 text-xs font-medium text-white"
+              style={{ backgroundColor: LEVEL_COLORS[cell.level] }}
+            >
+              {cell.probability} × {cell.impact} = {cell.probability * cell.impact} ({cell.level})
+            </div>
+            {/* Risk list */}
+            <div className="divide-y divide-gray-100">
+              {risksInCell.map((risk) => (
+                <div
+                  key={risk.id}
+                  className="px-3 py-1.5 hover:bg-gray-50 cursor-pointer"
+                  onClick={() => onRiskClick?.(risk.id)}
+                  title={risk.description || risk.title}
+                >
+                  <div className="text-xs font-medium text-gray-900 truncate">
+                    {risk.title}
+                  </div>
+                  <div className="text-[10px] text-gray-500 flex items-center gap-2">
+                    <span className={`inline-block w-2 h-2 rounded-full ${
+                      risk.status === 'mitigating' ? 'bg-green-500' :
+                      risk.status === 'monitoring' ? 'bg-blue-500' :
+                      risk.status === 'closed' ? 'bg-gray-500' :
+                      risk.status === 'occurred' ? 'bg-red-500' :
+                      'bg-yellow-500'
+                    }`} />
+                    <span>{risk.category}</span>
+                    <span>•</span>
+                    <span>P{risk.probability} I{risk.impact}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
