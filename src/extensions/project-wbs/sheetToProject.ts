@@ -705,8 +705,16 @@ function createTasksSheet(model: ProjectModel, mapping: ColumnMapping): Sheet {
     const rowNum = row + 1;
 
     if (mapping.taskCol >= 0) cells[`${row}:${mapping.taskCol}`] = { rawValue: task.name, computedValue: task.name };
-    if (mapping.startDateCol >= 0) cells[`${row}:${mapping.startDateCol}`] = { rawValue: task.startDate, computedValue: task.startDate };
-    if (mapping.endDateCol >= 0) cells[`${row}:${mapping.endDateCol}`] = { rawValue: task.endDate, computedValue: task.endDate };
+    if (mapping.startDateCol >= 0) cells[`${row}:${mapping.startDateCol}`] = {
+      rawValue: task.startDate,
+      computedValue: task.startDate,
+      style: { numberFormat: 'yyyy-mm-dd' },
+    };
+    if (mapping.endDateCol >= 0) cells[`${row}:${mapping.endDateCol}`] = {
+      rawValue: task.endDate,
+      computedValue: task.endDate,
+      style: { numberFormat: 'yyyy-mm-dd' },
+    };
     if (mapping.durationCol !== null && mapping.durationCol >= 0) {
       const startCol = colToLetter(mapping.startDateCol);
       const endCol = colToLetter(mapping.endDateCol);
@@ -726,8 +734,23 @@ function createTasksSheet(model: ProjectModel, mapping: ColumnMapping): Sheet {
       }).filter(Boolean);
       cells[`${row}:${mapping.dependencyCol}`] = { rawValue: depRows.join(', '), computedValue: depRows.join(', ') };
     }
-    if (mapping.progressCol !== null && mapping.progressCol >= 0) cells[`${row}:${mapping.progressCol}`] = { rawValue: String(task.progress), computedValue: String(task.progress) };
-    if (mapping.resourceCol !== null && mapping.resourceCol >= 0) cells[`${row}:${mapping.resourceCol}`] = { rawValue: task.resourceId ?? '', computedValue: task.resourceId ?? '' };
+    if (mapping.progressCol !== null && mapping.progressCol >= 0) cells[`${row}:${mapping.progressCol}`] = {
+      rawValue: String(task.progress),
+      computedValue: String(task.progress),
+      style: { numberFormat: '0%' },
+    };
+    if (mapping.resourceCol !== null && mapping.resourceCol >= 0) {
+      // Write resource as formula referencing Resources sheet (e.g., =Resources!A2)
+      const resourceRowNum = task.resourceId ? findResourceRowNum(model.resources, task.resourceId) : null;
+      if (resourceRowNum !== null) {
+        cells[`${row}:${mapping.resourceCol}`] = {
+          rawValue: `=Resources!A${resourceRowNum}`,
+          computedValue: task.resourceId ?? '',
+        };
+      } else {
+        cells[`${row}:${mapping.resourceCol}`] = { rawValue: '', computedValue: '' };
+      }
+    }
     if (mapping.milestoneCol !== null && mapping.milestoneCol >= 0) cells[`${row}:${mapping.milestoneCol}`] = { rawValue: task.isMilestone ? 'yes' : 'no', computedValue: task.isMilestone ? 'yes' : 'no' };
     if (mapping.colorCol !== null && mapping.colorCol >= 0) cells[`${row}:${mapping.colorCol}`] = { rawValue: task.color, computedValue: task.color };
     if (mapping.notesCol !== null && mapping.notesCol >= 0) cells[`${row}:${mapping.notesCol}`] = { rawValue: task.notes, computedValue: task.notes };
@@ -747,6 +770,18 @@ function createTasksSheet(model: ProjectModel, mapping: ColumnMapping): Sheet {
     frozenRows: 1,
   };
 }
+
+/**
+ * Find the row number (1-based, including header) for a resource in the Resources sheet.
+ * Returns null if resource not found.
+ */
+function findResourceRowNum(resources: ResourceRow[], resourceId: string): number | null {
+  const index = resources.findIndex((r) => r.id === resourceId);
+  if (index === -1) return null;
+  return index + 2; // +1 for header row, +1 for 1-based indexing
+}
+
+// ─── End of legacy functions ───────────────────────────────────────────────
 
 /**
  * Create the risks sheet from a ProjectModel.
@@ -1457,6 +1492,80 @@ export function createBlankTasksSheet(): Sheet {
       style: { fontWeight: 'bold', backgroundColor: '#EFF6FF', color: '#1E40AF' },
     };
   }
+
+  // Add sample rows with accelerator features:
+  // - Date format in Start Date (col 1) and End Date (col 2)
+  // - =NETWORKDAYS(Bn:Cn) formula in Duration (col 3)
+  // - Percent format in Progress (col 6)
+  // - =Resources!An formula in Resource (col 7)
+  const today = new Date();
+  const formatDate = (d: Date) => d.toISOString().slice(0, 10);
+  const addDays = (d: Date, days: number) => {
+    const result = new Date(d);
+    result.setDate(result.getDate() + days);
+    return formatDate(result);
+  };
+
+  const sampleData: Array<{ row: number; task: string; start: string; end: string; parent?: string; dep?: string; resourceRow: number }> = [
+    { row: 1, task: 'Project Planning', start: formatDate(today), end: addDays(today, 10), resourceRow: 2 },
+    { row: 2, task: '  Research', start: formatDate(today), end: addDays(today, 5), parent: 'Project Planning', resourceRow: 3 },
+    { row: 3, task: '  Design', start: addDays(today, 6), end: addDays(today, 10), parent: 'Project Planning', dep: '2', resourceRow: 4 },
+    { row: 4, task: 'Development', start: addDays(today, 11), end: addDays(today, 30), dep: '3', resourceRow: 2 },
+    { row: 5, task: '  Implementation', start: addDays(today, 11), end: addDays(today, 25), parent: 'Development', resourceRow: 3 },
+    { row: 6, task: '  Testing', start: addDays(today, 21), end: addDays(today, 30), parent: 'Development', dep: '5', resourceRow: 4 },
+  ];
+
+  for (const sample of sampleData) {
+    const row = sample.row;
+    const rowStr = String(row + 1); // 1-based row reference for formulas (row 1 = Excel row 2)
+
+    // Task name
+    cells[`${row}:0`] = { rawValue: sample.task, computedValue: sample.task };
+
+    // Start Date (date format)
+    cells[`${row}:1`] = {
+      rawValue: sample.start,
+      computedValue: sample.start,
+      style: { numberFormat: 'yyyy-mm-dd' },
+    };
+
+    // End Date (date format)
+    cells[`${row}:2`] = {
+      rawValue: sample.end,
+      computedValue: sample.end,
+      style: { numberFormat: 'yyyy-mm-dd' },
+    };
+
+    // Duration (NETWORKDAYS formula)
+    cells[`${row}:3`] = {
+      rawValue: `=NETWORKDAYS(B${rowStr},C${rowStr})`,
+      computedValue: '5', // Will be recalculated by formula engine
+    };
+
+    // Parent
+    if (sample.parent) {
+      cells[`${row}:4`] = { rawValue: sample.parent, computedValue: sample.parent };
+    }
+
+    // Dependency
+    if (sample.dep) {
+      cells[`${row}:5`] = { rawValue: sample.dep, computedValue: sample.dep };
+    }
+
+    // Progress (percent format)
+    cells[`${row}:6`] = {
+      rawValue: '0',
+      computedValue: '0',
+      style: { numberFormat: '0%' },
+    };
+
+    // Resource (formula referencing Resources sheet)
+    cells[`${row}:7`] = {
+      rawValue: `=Resources!A${sample.resourceRow}`,
+      computedValue: '', // Will be resolved by formula engine
+    };
+  }
+
   return {
     id: `sheet-tasks-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     name: TASKS_SHEET_NAME,
