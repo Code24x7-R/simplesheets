@@ -382,7 +382,6 @@
       "name": "Lead Photographer",
       "role": "Photography",
       "costRate": 200,
-      "costCurrency": "USD",
       "availability": 100,
       "color": "#3B82F6"
     },
@@ -391,7 +390,6 @@
       "name": "Drone Pilot",
       "role": "Aerial",
       "costRate": 150,
-      "costCurrency": "USD",
       "availability": 50,
       "color": "#06B6D4"
     },
@@ -400,7 +398,6 @@
       "name": "Home Stager",
       "role": "Staging",
       "costRate": 100,
-      "costCurrency": "USD",
       "availability": 50,
       "color": "#F59E0B"
     },
@@ -409,7 +406,6 @@
       "name": "DTP / Social Media Designer",
       "role": "Design",
       "costRate": 120,
-      "costCurrency": "USD",
       "availability": 75,
       "color": "#8B5CF6"
     },
@@ -418,7 +414,6 @@
       "name": "Photo Assistant",
       "role": "Assistant",
       "costRate": 60,
-      "costCurrency": "USD",
       "availability": 100,
       "color": "#10B981"
     }

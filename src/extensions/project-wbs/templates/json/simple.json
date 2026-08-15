@@ -114,7 +114,6 @@
       "name": "Project Manager",
       "role": "PM",
       "costRate": 150,
-      "costCurrency": "USD",
       "availability": 100,
       "color": "#3B82F6"
     },
@@ -123,7 +122,6 @@
       "name": "Developer",
       "role": "Dev",
       "costRate": 120,
-      "costCurrency": "USD",
       "availability": 100,
       "color": "#10B981"
     }

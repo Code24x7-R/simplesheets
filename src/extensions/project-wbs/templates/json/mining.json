@@ -452,7 +452,6 @@
       "name": "Managing Partner",
       "role": "Partner",
       "costRate": 350,
-      "costCurrency": "USD",
       "availability": 25,
       "color": "#1E40AF"
     },
@@ -461,7 +460,6 @@
       "name": "Principal Mechanical Engineer",
       "role": "Mechanical Engineering",
       "costRate": 275,
-      "costCurrency": "USD",
       "availability": 100,
       "color": "#3B82F6"
     },
@@ -470,7 +468,6 @@
       "name": "Process Engineer",
       "role": "Process",
       "costRate": 220,
-      "costCurrency": "USD",
       "availability": 100,
       "color": "#06B6D4"
     },
@@ -479,7 +476,6 @@
       "name": "Field/Commissioning Engineer",
       "role": "Fieldwork",
       "costRate": 200,
-      "costCurrency": "USD",
       "availability": 100,
       "color": "#10B981"
     },
@@ -488,7 +484,6 @@
       "name": "Mining Analyst",
       "role": "Analysis",
       "costRate": 150,
-      "costCurrency": "USD",
       "availability": 100,
       "color": "#F59E0B"
     },
@@ -497,7 +492,6 @@
       "name": "3D Designer / Modeler",
       "role": "Design",
       "costRate": 180,
-      "costCurrency": "USD",
       "availability": 100,
       "color": "#8B5CF6"
     },
@@ -506,7 +500,6 @@
       "name": "QA/Reliability Engineer",
       "role": "Quality",
       "costRate": 190,
-      "costCurrency": "USD",
       "availability": 75,
       "color": "#EC4899"
     }
