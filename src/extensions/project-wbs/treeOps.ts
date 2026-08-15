@@ -7,7 +7,7 @@
  * All operations are immutable — they return new trees, never mutate inputs.
  */
 
-import type { WBSTask } from '../types';
+import type { WBSTask, Resource } from '../types';
 
 // ─── Lookup ─────────────────────────────────────────────────────────────────
 
@@ -458,4 +458,99 @@ export function updateTask(
  */
 export function toggleCollapse(tree: WBSTask[], id: string): WBSTask[] {
   return toggleCollapsed(tree, id);
+}
+
+// ─── Resource CRUD ──────────────────────────────────────────────────────────
+
+/**
+ * Add a resource to a project's resource list.
+ * Returns a new array with the resource added.
+ */
+export function addResource(resources: Resource[], resource: Resource): Resource[] {
+  return [...resources, resource];
+}
+
+/**
+ * Update a resource in a project's resource list.
+ * Returns a new array with the resource updated.
+ */
+export function updateResource(
+  resources: Resource[],
+  id: string,
+  changes: Partial<Resource>,
+): Resource[] {
+  return resources.map((r) => (r.id === id ? { ...r, ...changes } : r));
+}
+
+/**
+ * Remove a resource from a project's resource list.
+ * Returns a new array with the resource removed.
+ */
+export function removeResource(resources: Resource[], id: string): Resource[] {
+  return resources.filter((r) => r.id !== id);
+}
+
+/**
+ * Get a resource by ID.
+ */
+export function findResource(resources: Resource[], id: string): Resource | null {
+  return resources.find((r) => r.id === id) ?? null;
+}
+
+/**
+ * Get all tasks assigned to a specific resource.
+ */
+export function getTasksForResource(tree: WBSTask[], resourceId: string): WBSTask[] {
+  return getAllTasks(tree).filter((t) => t.responsibleResourceId === resourceId);
+}
+
+/**
+ * Calculate total effort assigned to a resource (sum of task durations).
+ */
+export function getResourceEffort(tree: WBSTask[], resourceId: string): number {
+  return getTasksForResource(tree, resourceId).reduce((sum, t) => sum + t.duration, 0);
+}
+
+/**
+ * Calculate utilization for a resource (total effort / available days in project range).
+ * Returns a percentage (0-100+).
+ */
+export function getResourceUtilization(
+  tree: WBSTask[],
+  resourceId: string,
+  projectDays: number,
+): number {
+  const totalEffort = getResourceEffort(tree, resourceId);
+  return projectDays > 0 ? (totalEffort / projectDays) * 100 : 0;
+}
+
+/**
+ * Get a unique color for a new resource.
+ * Cycles through a palette of distinct colors.
+ */
+export function getNextResourceColor(resources: Resource[]): string {
+  const palette = [
+    '#3B82F6', // blue
+    '#10B981', // green
+    '#F59E0B', // amber
+    '#EF4444', // red
+    '#8B5CF6', // purple
+    '#EC4899', // pink
+    '#06B6D4', // cyan
+    '#84CC16', // lime
+    '#F97316', // orange
+    '#6366F1', // indigo
+  ];
+  return palette[resources.length % palette.length];
+}
+
+/**
+ * Generate a unique resource ID.
+ */
+export function generateResourceId(resources: Resource[]): string {
+  const maxNum = resources.reduce((max, r) => {
+    const match = r.id.match(/r(\d+)/);
+    return match ? Math.max(max, parseInt(match[1], 10)) : max;
+  }, 0);
+  return `r${maxNum + 1}`;
 }

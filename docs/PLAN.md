@@ -2543,3 +2543,70 @@ Auto-detected from header row using keyword matching:
 ### Results
 - **3193 tests** passing (134 suites)
 - Lint clean, type-check clean, build clean
+
+---
+
+## Phase 37: Enhanced Project Functions — COMPLETE ✅
+
+**Goal**: Add comprehensive project management functions with full CRUD operations:
+- Parent/child task relationships (tree structure)
+- Milestones (zero-duration markers)
+- Dependency lines (FS/SS/FF/SF arrows in Gantt)
+- Collapsing WBS branches (hide/show subtasks)
+- Resource assignment (manage team members)
+
+### Data Model
+
+All features are already supported by the existing data model:
+- `WBSTask.parentId` / `children` — parent/child hierarchy
+- `WBSTask.isMilestone` — milestone flag
+- `WBSTask.dependencies[]` — dependency relationships
+- `WBSTask.collapsed` / `isSummary` — collapse/expand state
+- `WBSTask.responsibleResourceId` — resource assignment
+- `Project.resources[]` — resource list
+
+### Implementation
+
+#### Stage 37.1: Resource CRUD — COMPLETE ✅
+- [x] Add `addResource`, `updateResource`, `removeResource` to `treeOps.ts`
+- [x] Add `findResource`, `getTasksForResource`, `getResourceEffort`
+- [x] Add `getResourceUtilization`, `getNextResourceColor`, `generateResourceId`
+- [x] Create `ResourceEditorModal.tsx` for add/edit/delete resources
+- [x] 12 tests for ResourceEditorModal
+- [x] 17 tests for resource CRUD operations
+
+#### Stage 37.2: Dependency Lines in Gantt — COMPLETE ✅
+- [x] Add `showDependencies` prop to `GanttChart`
+- [x] Render dependency arrows (FS/SS/FF/SF) between task bars
+- [x] Add arrowhead marker for dependency direction
+
+#### Stage 37.3: Collapse/Expand in Gantt — COMPLETE ✅
+- [x] Add collapse/expand buttons next to summary tasks
+- [x] Filter out children of collapsed tasks from the flat list
+- [x] Add `onTaskToggleCollapse` callback prop
+
+#### Stage 37.4: Resource Management UI — COMPLETE ✅
+- [x] Add "Resources" button to ProjectView toolbar
+- [x] Wire `ResourceEditorModal` to ProjectView
+- [x] Add resource CRUD handlers (`handleResourceSave`, `handleResourceDelete`)
+- [x] Sync resource changes back to sheet via `syncProjectToSheet`
+
+### Files Created
+
+| File | Purpose |
+|------|--------|
+| `src/extensions/project-wbs/ResourceEditorModal.tsx` | Resource add/edit/delete modal |
+| `src/extensions/project-wbs/ResourceEditorModal.test.tsx` | 12 resource modal tests |
+
+### Files Modified
+
+| File | Changes |
+|------|--------|
+| `src/extensions/project-wbs/treeOps.ts` | Added resource CRUD + utilization functions |
+| `src/extensions/project-wbs/treeOps.test.ts` | 17 new resource tests |
+| `src/extensions/project-wbs/GanttChart.tsx` | Dependency lines, collapse buttons |
+| `src/extensions/project-wbs/ProjectView.tsx` | Resource management UI |
+
+### Results
+- **3227 tests** passing (135 suites)
+- Lint clean, type-check clean, build clean

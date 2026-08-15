@@ -8,6 +8,15 @@ import {
   getDescendants,
   findPath,
   flattenToRows,
+  addResource,
+  updateResource,
+  removeResource,
+  findResource,
+  getTasksForResource,
+  getResourceEffort,
+  getResourceUtilization,
+  getNextResourceColor,
+  generateResourceId,
   getAllTasks,
   addTask,
   removeTask,
@@ -22,7 +31,7 @@ import {
   countTasks,
   getTreeDepth,
 } from './treeOps';
-import type { WBSTask } from '../types';
+import type { WBSTask, Resource } from '../types';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -415,6 +424,138 @@ describe('treeOps', () => {
     it('returns 1 for flat tree', () => {
       const flat = [task('X'), task('Y')];
       expect(getTreeDepth(flat)).toBe(1);
+    });
+  });
+
+  // ─── Resource CRUD ─────────────────────────────────────────────────
+
+  describe('addResource', () => {
+    it('adds a resource to an empty list', () => {
+      const resource: Resource = { id: 'r1', name: 'Alice', role: 'Dev', costRate: 100, costCurrency: 'USD', availability: 100, color: '#3B82F6' };
+      const result = addResource([], resource);
+      expect(result).toHaveLength(1);
+      expect(result[0]).toEqual(resource);
+    });
+
+    it('appends to existing resources', () => {
+      const r1: Resource = { id: 'r1', name: 'Alice', role: 'Dev', costRate: 100, costCurrency: 'USD', availability: 100, color: '#3B82F6' };
+      const r2: Resource = { id: 'r2', name: 'Bob', role: 'QA', costRate: 80, costCurrency: 'USD', availability: 100, color: '#10B981' };
+      const result = addResource([r1], r2);
+      expect(result).toHaveLength(2);
+    });
+  });
+
+  describe('updateResource', () => {
+    it('updates resource properties', () => {
+      const r1: Resource = { id: 'r1', name: 'Alice', role: 'Dev', costRate: 100, costCurrency: 'USD', availability: 100, color: '#3B82F6' };
+      const result = updateResource([r1], 'r1', { name: 'Alice Smith', costRate: 120 });
+      expect(result[0].name).toBe('Alice Smith');
+      expect(result[0].costRate).toBe(120);
+      expect(result[0].role).toBe('Dev'); // unchanged
+    });
+
+    it('does not modify other resources', () => {
+      const r1: Resource = { id: 'r1', name: 'Alice', role: 'Dev', costRate: 100, costCurrency: 'USD', availability: 100, color: '#3B82F6' };
+      const r2: Resource = { id: 'r2', name: 'Bob', role: 'QA', costRate: 80, costCurrency: 'USD', availability: 100, color: '#10B981' };
+      const result = updateResource([r1, r2], 'r1', { name: 'Updated' });
+      expect(result[1].name).toBe('Bob');
+    });
+  });
+
+  describe('removeResource', () => {
+    it('removes a resource by ID', () => {
+      const r1: Resource = { id: 'r1', name: 'Alice', role: 'Dev', costRate: 100, costCurrency: 'USD', availability: 100, color: '#3B82F6' };
+      const r2: Resource = { id: 'r2', name: 'Bob', role: 'QA', costRate: 80, costCurrency: 'USD', availability: 100, color: '#10B981' };
+      const result = removeResource([r1, r2], 'r1');
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe('r2');
+    });
+
+    it('returns empty array when removing last resource', () => {
+      const r1: Resource = { id: 'r1', name: 'Alice', role: 'Dev', costRate: 100, costCurrency: 'USD', availability: 100, color: '#3B82F6' };
+      const result = removeResource([r1], 'r1');
+      expect(result).toHaveLength(0);
+    });
+  });
+
+  describe('findResource', () => {
+    it('finds a resource by ID', () => {
+      const r1: Resource = { id: 'r1', name: 'Alice', role: 'Dev', costRate: 100, costCurrency: 'USD', availability: 100, color: '#3B82F6' };
+      expect(findResource([r1], 'r1')).toEqual(r1);
+    });
+
+    it('returns null when not found', () => {
+      expect(findResource([], 'r99')).toBeNull();
+    });
+  });
+
+  describe('getTasksForResource', () => {
+    it('returns tasks assigned to a resource', () => {
+      const tree: WBSTask[] = [
+        { ...task('A'), responsibleResourceId: 'r1' },
+        { ...task('B'), responsibleResourceId: 'r2' },
+      ];
+      const result = getTasksForResource(tree, 'r1');
+      expect(result).toHaveLength(1);
+      expect(result[0].name).toBe('Task A');
+    });
+
+    it('returns empty array for unassigned resource', () => {
+      const tree: WBSTask[] = [task('A')];
+      expect(getTasksForResource(tree, 'r99')).toHaveLength(0);
+    });
+  });
+
+  describe('getResourceEffort', () => {
+    it('sums effort of assigned tasks', () => {
+      const tree: WBSTask[] = [
+        { ...task('A'), duration: 5, responsibleResourceId: 'r1' },
+        { ...task('B'), duration: 3, responsibleResourceId: 'r1' },
+        { ...task('C'), duration: 2, responsibleResourceId: 'r2' },
+      ];
+      expect(getResourceEffort(tree, 'r1')).toBe(8);
+      expect(getResourceEffort(tree, 'r2')).toBe(2);
+    });
+
+    it('returns 0 for unassigned resource', () => {
+      const tree: WBSTask[] = [task('A')];
+      expect(getResourceEffort(tree, 'r99')).toBe(0);
+    });
+  });
+
+  describe('getResourceUtilization', () => {
+    it('calculates utilization percentage', () => {
+      const tree: WBSTask[] = [
+        { ...task('A'), duration: 5, responsibleResourceId: 'r1' },
+      ];
+      expect(getResourceUtilization(tree, 'r1', 10)).toBe(50);
+    });
+
+    it('returns 0 for zero project days', () => {
+      expect(getResourceUtilization([], 'r1', 0)).toBe(0);
+    });
+  });
+
+  describe('getNextResourceColor', () => {
+    it('cycles through palette', () => {
+      const r1: Resource = { id: 'r1', name: 'A', role: '', costRate: 0, costCurrency: 'USD', availability: 100, color: '#3B82F6' };
+      const r2: Resource = { id: 'r2', name: 'B', role: '', costRate: 0, costCurrency: 'USD', availability: 100, color: '#10B981' };
+      expect(getNextResourceColor([])).toBe('#3B82F6');
+      expect(getNextResourceColor([r1])).toBe('#10B981');
+      expect(getNextResourceColor([r1, r2])).toBe('#F59E0B');
+    });
+  });
+
+  describe('generateResourceId', () => {
+    it('generates sequential IDs', () => {
+      const r1: Resource = { id: 'r1', name: 'A', role: '', costRate: 0, costCurrency: 'USD', availability: 100, color: '#3B82F6' };
+      expect(generateResourceId([])).toBe('r1');
+      expect(generateResourceId([r1])).toBe('r2');
+    });
+
+    it('handles non-sequential IDs', () => {
+      const r5: Resource = { id: 'r5', name: 'A', role: '', costRate: 0, costCurrency: 'USD', availability: 100, color: '#3B82F6' };
+      expect(generateResourceId([r5])).toBe('r6');
     });
   });
 });

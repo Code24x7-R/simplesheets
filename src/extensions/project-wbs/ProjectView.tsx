@@ -17,11 +17,12 @@ import { RiskMatrix } from './RiskMatrix';
 import { WBSTreePanel } from './WBSTreePanel';
 import { TaskEditorModal } from './TaskEditorModal';
 import { RiskEditorModal } from './RiskEditorModal';
+import { ResourceEditorModal } from './ResourceEditorModal';
 import { ColumnMappingDialog } from './ColumnMappingDialog';
 import { sheetToProject, projectModelToProject } from './sheetToProject';
-import { addTask, removeTask, updateTask, toggleCollapse, findTaskById, getAllTasks } from './treeOps';
+import { addTask, removeTask, updateTask, toggleCollapse, findTaskById, getAllTasks, addResource, updateResource, removeResource } from './treeOps';
 import { addRisk, updateRisk, removeRisk, getRiskSummary } from './risks';
-import type { Project, ViewMode, WBSTask, Risk } from '../types';
+import type { Project, ViewMode, WBSTask, Risk, Resource } from '../types';
 import type { Sheet, ColumnMapping, ProjectModel } from '../../types';
 
 interface ProjectViewProps {
@@ -52,6 +53,11 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
     open: boolean;
     risk: Risk | null;
   }>({ open: false, risk: null });
+
+  const [resourceModal, setResourceModal] = useState<{
+    open: boolean;
+    resource: Resource | null;
+  }>({ open: false, resource: null });
 
   // Derived values
   const riskSummary = useMemo(() => getRiskSummary(project), [project]);
@@ -217,6 +223,37 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
     });
   }, [syncProjectToSheet]);
 
+  // ─── Resource CRUD ───────────────────────────────────────────────────
+
+  function handleAddResource() {
+    setResourceModal({ open: true, resource: null });
+  }
+
+  function handleResourceSave(resource: Resource) {
+    setProject((prev) => {
+      let next: Project;
+      if (resourceModal.resource) {
+        // Edit existing
+        next = { ...prev, resources: updateResource(prev.resources, resourceModal.resource.id, resource) };
+      } else {
+        // Add new
+        next = { ...prev, resources: addResource(prev.resources, resource) };
+      }
+      syncProjectToSheet(next);
+      return next;
+    });
+    setResourceModal({ open: false, resource: null });
+  }
+
+  function handleResourceDelete(resourceId: string) {
+    setProject((prev) => {
+      const next = { ...prev, resources: removeResource(prev.resources, resourceId) };
+      syncProjectToSheet(next);
+      return next;
+    });
+    setResourceModal({ open: false, resource: null });
+  }
+
   // ─── Sheet-to-Project Conversion ─────────────────────────────────────
 
   function handleConvertSheet() {
@@ -354,6 +391,17 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
             </button>
           )}
 
+          {/* Manage Resources button */}
+          {viewMode === 'gantt' && (
+            <button
+              className="ml-2 px-3 py-1 text-sm text-purple-600 border border-purple-300 rounded hover:bg-purple-50"
+              onClick={handleAddResource}
+              title="Manage project resources"
+            >
+              👥 Resources ({project.resources.length})
+            </button>
+          )}
+
           {/* Convert Sheet button */}
           {activeSheet && (
             <button
@@ -409,10 +457,12 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
               criticalPath={[]}
               onTaskSelect={setSelectedTaskId}
               onTaskDoubleClick={handleEditTask}
+              onTaskToggleCollapse={handleToggleCollapse}
               showCriticalPath
               showProgress
               showRiskHeatmap={false}
               showTodayMarker
+              showDependencies
             />
           )}
           {viewMode === 'risk-register' && (
@@ -452,6 +502,16 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
           onClose={() => setRiskModal({ open: false, risk: null })}
           onSave={handleRiskSave}
           onDelete={riskModal.risk ? () => handleRiskDelete(riskModal.risk!.id) : undefined}
+        />
+      )}
+
+      {/* Resource Editor Modal */}
+      {resourceModal.open && (
+        <ResourceEditorModal
+          resource={resourceModal.resource}
+          onClose={() => setResourceModal({ open: false, resource: null })}
+          onSave={handleResourceSave}
+          onDelete={resourceModal.resource ? () => handleResourceDelete(resourceModal.resource!.id) : undefined}
         />
       )}
 

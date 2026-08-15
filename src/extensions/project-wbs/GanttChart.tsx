@@ -14,7 +14,7 @@
  * - Risk indicators and heatmap
  */
 
-import { useMemo } from 'react';
+import React, { useMemo } from 'react';
 import type { Project, WBSTask, GanttZoom, RiskLevel } from '../types';
 import { flattenToRows } from './treeOps';
 import { formatDate } from './calendar';
@@ -54,6 +54,7 @@ interface GanttChartProps {
   criticalPath?: string[];
   onTaskSelect?: (taskId: string) => void;
   onTaskDoubleClick?: (taskId: string) => void;
+  onTaskToggleCollapse?: (taskId: string) => void;
   width?: number;
   height?: number;
 }
@@ -72,17 +73,34 @@ export function GanttChart({
   zoom = 'week',
   showCriticalPath = true,
   showProgress = true,
-  showDependencies: _showDependencies = true,
+  showDependencies = true,
   showRiskHeatmap = false,
   showTodayMarker = true,
   selectedTaskId = null,
   criticalPath = [],
   onTaskSelect,
   onTaskDoubleClick,
+  onTaskToggleCollapse,
   width: _width = 900,
   height: _height = 500,
 }: GanttChartProps) {
-  const flatTasks = useMemo(() => flattenToRows(project.wbs), [project.wbs]);
+  const flatTasks = useMemo(() => {
+    const all = flattenToRows(project.wbs);
+    // Filter out children of collapsed summary tasks
+    const result: WBSTask[] = [];
+    let skipLevel = -1;
+    for (const task of all) {
+      if (skipLevel >= 0 && task.level > skipLevel) {
+        continue; // Skip children of collapsed task
+      }
+      skipLevel = -1;
+      result.push(task);
+      if (task.isSummary && task.collapsed) {
+        skipLevel = task.level;
+      }
+    }
+    return result;
+  }, [project.wbs]);
   const projectStart = project.startDate;
   const projectEnd = project.endDate;
 
@@ -106,6 +124,20 @@ export function GanttChart({
   return (
     <div className="overflow-auto border border-gray-200 rounded bg-white" data-testid="gantt-chart">
       <svg width={svgWidth} height={svgHeight} className="select-none">
+        {/* Arrowhead marker for dependency lines */}
+        <defs>
+          <marker
+            id="gantt-arrowhead"
+            markerWidth="8"
+            markerHeight="6"
+            refX="8"
+            refY="3"
+            orient="auto"
+          >
+            <polygon points="0 0, 8 3, 0 6" fill="#9CA3AF" />
+          </marker>
+        </defs>
+
         {/* Timeline header */}
         <g className="gantt-header">
           <rect x={0} y={0} width={svgWidth} height={MARGIN_TOP} fill="#f8f9fa" />
@@ -141,6 +173,37 @@ export function GanttChart({
 
             return (
               <g key={task.id} onClick={() => onTaskSelect?.(task.id)} onDoubleClick={() => onTaskDoubleClick?.(task.id)} className="cursor-pointer">
+                {/* Collapse/expand button for summary tasks */}
+                {task.isSummary && (
+                  <g
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onTaskToggleCollapse?.(task.id);
+                    }}
+                    className="cursor-pointer"
+                  >
+                    <rect
+                      x={2 + task.level * 12}
+                      y={MARGIN_TOP + index * ROW_HEIGHT + ROW_HEIGHT / 2 - 6}
+                      width={12}
+                      height={12}
+                      rx={2}
+                      fill="#e5e7eb"
+                      stroke="#9ca3af"
+                      strokeWidth={1}
+                    />
+                    <text
+                      x={8 + task.level * 12}
+                      y={MARGIN_TOP + index * ROW_HEIGHT + ROW_HEIGHT / 2 + 3}
+                      fontSize={10}
+                      fill="#374151"
+                      textAnchor="middle"
+                    >
+                      {task.collapsed ? '+' : '-'}
+                    </text>
+                  </g>
+                )}
+
                 {/* Task name */}
                 <text
                   x={8}
@@ -227,6 +290,13 @@ export function GanttChart({
             );
           })}
         </g>
+
+        {/* Dependency lines */}
+        {showDependencies && (
+          <g className="gantt-dependencies">
+            {renderDependencyLines(flatTasks, barLayouts, projectStart, dayWidth)}
+          </g>
+        )}
 
         {/* Today marker */}
         {todayX !== null && todayX >= 0 && todayX <= chartWidth && (
@@ -325,6 +395,85 @@ function computeTimelineTicks(projectStart: string, totalDays: number, dayWidth:
   }
 
   return ticks;
+}
+
+// ─── Dependency Line Rendering ────────────────────────────────────────────
+
+/**
+ * Render dependency lines between tasks.
+ * Draws arrows from predecessor to successor based on dependency type.
+ */
+function renderDependencyLines(
+  flatTasks: WBSTask[],
+  barLayouts: BarLayout[],
+  _projectStart: string,
+  _dayWidth: number,
+): React.ReactNode[] {
+  const lines: React.ReactNode[] = [];
+  const taskIndexMap = new Map<string, number>();
+  flatTasks.forEach((task, index) => taskIndexMap.set(task.id, index));
+
+  flatTasks.forEach((task, taskIdx) => {
+    task.dependencies.forEach((dep, depIdx) => {
+      const predIdx = taskIndexMap.get(dep.predecessorId);
+      if (predIdx === undefined) return;
+
+      const predLayout = barLayouts[predIdx];
+      const succLayout = barLayouts[taskIdx];
+      const predRowY = MARGIN_TOP + predIdx * ROW_HEIGHT + ROW_HEIGHT / 2;
+      const succRowY = MARGIN_TOP + taskIdx * ROW_HEIGHT + ROW_HEIGHT / 2;
+
+      // Calculate connection points based on dependency type
+      let x1: number, y1: number, x2: number, y2: number;
+
+      switch (dep.type) {
+        case 'FS': // Finish-to-Start
+          x1 = MARGIN_LEFT + predLayout.x + predLayout.width;
+          y1 = predRowY;
+          x2 = MARGIN_LEFT + succLayout.x;
+          y2 = succRowY;
+          break;
+        case 'SS': // Start-to-Start
+          x1 = MARGIN_LEFT + predLayout.x;
+          y1 = predRowY;
+          x2 = MARGIN_LEFT + succLayout.x;
+          y2 = succRowY;
+          break;
+        case 'FF': // Finish-to-Finish
+          x1 = MARGIN_LEFT + predLayout.x + predLayout.width;
+          y1 = predRowY;
+          x2 = MARGIN_LEFT + succLayout.x + succLayout.width;
+          y2 = succRowY;
+          break;
+        case 'SF': // Start-to-Finish
+          x1 = MARGIN_LEFT + predLayout.x;
+          y1 = predRowY;
+          x2 = MARGIN_LEFT + succLayout.x + succLayout.width;
+          y2 = succRowY;
+          break;
+        default:
+          return;
+      }
+
+      // Create path with elbow
+      const midX = Math.max(x1, x2) + 10;
+      const path = `M ${x1} ${y1} H ${midX} V ${y2} H ${x2}`;
+
+      lines.push(
+        <g key={`${task.id}-dep-${depIdx}`}>
+          <path
+            d={path}
+            fill="none"
+            stroke="#9CA3AF"
+            strokeWidth={1.5}
+            markerEnd="url(#gantt-arrowhead)"
+          />
+        </g>,
+      );
+    });
+  });
+
+  return lines;
 }
 
 // ─── Date helpers ───────────────────────────────────────────────────────────
