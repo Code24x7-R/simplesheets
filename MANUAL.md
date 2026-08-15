@@ -26,7 +26,10 @@
 20. [Formula Wizard](#formula-wizard)
 21. [Formula Autocomplete](#formula-autocomplete)
 22. [Project Management](#project-management)
-23. [Planned Features](#planned-features)
+23. [Cost Accounting](#cost-accounting)
+24. [EVM Performance Reporting](#evm-performance-reporting)
+25. [Material Management](#material-management)
+26. [Planned Features](#planned-features)
 
 ---
 
@@ -1090,6 +1093,120 @@ When all gates for a task are approved, dependent tasks are automatically unbloc
 
 ---
 
+## Cost Accounting
+
+SimpleSheet tracks project costs across four dimensions: Baseline, Allocated, Current Estimate, and Actual Spend. Access via **Project → Accounting** tab.
+
+### Cost Tables
+
+| Table | Purpose | Key Fields |
+|-------|---------|------------|
+| **Baseline** | Original approved plan | Task, Cost, Duration, Resource, Start, End |
+| **Allocated** | Budget approved per task | Task, Allocated Budget, vs Baseline variance |
+| **Estimate** | Rolling forecast (EAC) | Task, EAC, ETC, Cost Variance, Duration, Remaining |
+| **Actuals** | Real costs incurred | Task, Actual Spend, Allocated, Variance, Source |
+
+### Duration Tracking
+
+Each task tracks working days:
+- **Baseline Duration**: Original approved working days
+- **Current Duration**: Current estimate (updated by dependency changes)
+- **Actual Duration**: Elapsed working days (based on progress %)
+- **Remaining Duration**: Working days left to complete
+- **Duration Variance**: Difference between current and baseline
+
+### Key Metrics
+
+- **Cost Variance**: Current Estimate vs Baseline (negative = under budget)
+- **CPI (Cost Performance Index)**: Earned Value / Actual Cost
+- **SPI (Schedule Performance Index)**: Earned Value / Planned Value
+- **EAC (Estimate at Completion)**: BAC / CPI
+- **ETC (Estimate to Complete)**: EAC - Actual Cost
+
+---
+
+## EVM Performance Reporting
+
+Earned Value Management (EVM) provides standard cost performance metrics. Access via **Project → EVM Report** tab.
+
+### EVM Metrics
+
+| Metric | Formula | Interpretation |
+|--------|---------|----------------|
+| **CV (Cost Variance)** | EV - AC | Negative = over budget |
+| **VAC (Variance at Completion)** | BAC - EAC | Projected budget surplus/deficit |
+| **CPI (Cost Performance Index)** | EV / AC | < 1 = over budget |
+| **SPI (Schedule Performance Index)** | EV / PV | < 1 = behind schedule |
+| **EAC (Estimate at Completion)** | BAC / CPI | Forecasted final cost |
+| **ETC (Estimate to Complete)** | EAC - AC | Cost to finish remaining work |
+| **TCPI (To-Complete PI)** | (BAC-EV)/(BAC-AC) | Efficiency needed to finish on budget |
+
+### Available Reports
+
+| Report | Focus |
+|--------|-------|
+| **Cost Performance** | CV, CPI, EV, AC, BAC |
+| **Forecast at Completion** | EAC, ETC, VAC, TCPI |
+| **Schedule Performance** | SV, SPI, task completion counts |
+| **Executive Summary** | All key metrics at a glance |
+
+---
+
+## Material Management
+
+Track physical assets, equipment, and materials with proper financial classification. Access via **Project → Materials** tab.
+
+### Material Classifications
+
+| Type | Financial Treatment | When to Use |
+|------|-------------------|-------------|
+| **CapEx (Capital Expenditure)** | Capitalized on balance sheet, depreciated over useful life | Buying heavy machinery, IT servers, vehicles, real estate |
+| **OpEx (Operational Expenditure)** | Expensed directly on P&L in period incurred | Short-term rentals, cloud subscriptions, leases |
+| **Consumable (COGS)** | Expensed as consumed during production | Lumber, fuel, concrete, single-use supplies |
+
+### CapEx Depreciation
+
+Purchased assets are depreciated over their useful life:
+- **Straight-Line**: Equal monthly depreciation = (Cost - Salvage) / Useful Life
+- **Declining-Balance**: Accelerated depreciation (double-declining method)
+- **Book Value**: Acquisition cost minus accumulated depreciation
+- **Salvage Value**: Residual value at end of useful life
+
+### OpEx Billing Periods
+
+Rented/leased assets can be billed:
+- **Hourly**: Rate × 8 hours × days
+- **Daily**: Rate × days
+- **Weekly**: Rate × weeks
+- **Monthly**: Rate × months
+- **Fixed**: One-time cost regardless of duration
+
+### Consumable Tracking
+
+- **Unit Rate**: Cost per unit (each, kg, meters)
+- **Wastage Rate**: Expected waste percentage
+- **Carrying Cost**: Monthly storage/insurance per unit
+- **Total Cost**: (Consumed + Wasted) × Unit Cost
+
+### Key Metrics
+
+| Metric | Description |
+|--------|-------------|
+| **TCO (Total Cost of Ownership)** | Acquisition + Maintenance + Carrying - Salvage |
+| **Monthly OpEx Burn** | Sum of monthly recurring rental costs |
+| **Idle Time Cost** | Rental cost for unused equipment |
+| **Capitalization Threshold** | Cost above which items are classified as CapEx |
+
+### Material Dashboard
+
+The Materials tab shows:
+- **KPI Cards**: CapEx, OpEx, Consumables, Carrying costs
+- **Filter Tabs**: All | CapEx | OpEx | Consumable
+- **Material Table**: Name, Type badge, Quantity, Unit Cost, Total, Usage %, Status
+- **Usage Progress Bar**: Visual indicator of consumption
+
+---
+
 ## Planned Features
 
 The following features are planned for future releases (Phase 22–23 in the development roadmap):
@@ -1160,6 +1277,14 @@ Restrict cell input to predefined criteria with custom error alerts:
 | Sort data | Data → Sort A→Z or Z→A |
 | Filter data | `Ctrl + Shift + L` or Data → Toggle Filter |
 | Format as currency | Toolbar `$` or Format → Number Format → Currency |
+| Create project | Extensions → Templates → Choose template |
+| Open Gantt view | Extensions → Project or 📊 Project tab |
+| Add task dependency | Task Editor → Dependencies → Add |
+| Manage resources | Gantt view → 👥 Resources |
+| View risk matrix | Project → Risk Matrix view |
+| View cost accounting | Project → Accounting tab |
+| View EVM metrics | Project → EVM Report tab |
+| Manage materials | Project → Materials tab |
 | Set exact column width | Format → Column / Row Size… |
 | Create project | Extensions → Templates → Choose template |
 | Open Gantt view | Extensions → Project or 📊 Project tab |
@@ -1196,6 +1321,12 @@ Restrict cell input to predefined criteria with custom error alerts:
 23. **Resource colors** — tasks show assigned resource's color in Gantt
 24. **Risk matrix** — click any risk in the RHS panel to edit it
 25. **Status icons** — ⏳ waiting, ► in progress, ✓ done, ⏸ on hold
+26. **Dependency types** — FS (Finish-to-Start), SS (Start-to-Start), FF (Finish-to-Finish), SF (Start-to-Finish)
+27. **Cost tracking** — Project → Accounting shows Baseline, Allocated, Estimate, Actuals
+28. **EVM metrics** — Project → EVM Report shows CV, CPI, SPI, VAC with status indicators
+29. **Material types** — CapEx (depreciated), OpExp (expensed), Consumable (as used)
+30. **CapEx depreciation** — Straight-line or declining-balance over useful life
+31. **Material wastage** — Tracked as percentage of consumed quantity
 
 ---
 

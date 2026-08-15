@@ -58,7 +58,11 @@ SimpleSheet is a client-side SPA with no backend. State lives in React Context +
 │    ├─ ResourceHeatmap (allocation calendar view)                │
 │    ├─ TaskEditorModal (task CRUD with dependency setup)         │
 │    ├─ ResourceEditorModal (resource CRUD)                       │
-│    └─ ResourceListModal (table-based resource management)       │
+│    ├─ ResourceListModal (table-based resource management)       │
+│    ├─ DependencyDrawer (tree + slide-out dependency panel)      │
+│    ├─ AccountingDashboard (4-table cost tracking)               │
+│    ├─ EvmReport (earned value management metrics)              │
+│    └─ MaterialDashboard (CapEx/OpEx/consumable tracking)        │
 ├─────────────────────────────────────────────────────────────────┤
 │                   Service Layer                                  │
 │  excelImport/Export │ csvService │ jsonService │ pdfExport      │
@@ -177,7 +181,7 @@ npm run build        # Full production build
 
 Current targets: **≥95% line coverage**, **≥85% branch coverage**, **0 lint errors**, **0 type errors**.
 
-**Current state:** **3,360 tests** across **140 suites**, all passing.
+**Current state:** **3,514 tests** across **147 suites**, all passing.
 
 ---
 
@@ -196,6 +200,19 @@ The WBS/Project extension provides full project management capabilities:
 | `TaskEditorModal.tsx` | Task editor with dependency configuration |
 | `ResourceListModal.tsx` | Table-based resource management |
 | `NotificationPanel.tsx` | Dependency status notifications |
+| `DependencyDrawer.tsx` | Slide-out panel for managing dependencies |
+| `AccountingDashboard.tsx` | 4-table cost tracking with variance analysis |
+| `EvmReport.tsx` | Earned value management (CV, CPI, SPI, VAC) |
+| `MaterialDashboard.tsx` | CapEx/OpEx/consumable material tracking |
+| `ColumnMappingDialog.tsx` | Sheet-to-project column mapping |
+| `CalendarConfigModal.tsx` | Working calendar configuration |
+| `ResourceEditorModal.tsx` | Resource CRUD form |
+| `ResourceHeatmap.tsx` | Calendar-based resource allocation view |
+| `RiskMatrix.tsx` | 5×5 probability/impact dashboard |
+| `RiskRegister.tsx` | Full risk register with CRUD |
+| `RiskEditorModal.tsx` | Risk editor modal |
+| `WBSTreePanel.tsx` | WBS tree view sidebar |
+| `GanttChart.tsx` | Pure SVG timeline with zoom/nav/dependencies |
 
 ### Automation Workflows
 
@@ -208,6 +225,26 @@ The WBS/Project extension provides full project management capabilities:
 | Template cascading | Pre-configured dependency networks from templates |
 
 See [DependencyManagement.md](./docs/DependencyManagement.md) for detailed rules and formulas.
+
+### Accounting & Cost Management
+
+| Component | Purpose |
+|-----------|---------|
+| `projectAccounting.ts` | Earned value calculations (EV, PV, CPI, SPI, EAC, ETC) |
+| `evmEngine.ts` | EVM report generation with extensible registry |
+| `materialEngine.ts` | CapEx depreciation, OpEx billing, consumable tracking |
+| `AccountingDashboard.tsx` | 4-table view: Baseline, Allocated, Estimate, Actuals |
+| `EvmReport.tsx` | EVM metrics: CV, VAC, CPI, SPI with status indicators |
+| `MaterialDashboard.tsx` | Material registry with CapEx/OpEx/consumable classification |
+
+**Key Metrics:**
+- **Cost Variance (CV)** = EV - AC (negative = over budget)
+- **Variance at Completion (VAC)** = BAC - EAC
+- **CPI** = EV / AC (< 1 = over budget)
+- **SPI** = EV / PV (< 1 = behind schedule)
+- **CapEx**: Straight-line & declining-balance depreciation
+- **OpEx**: Hourly/daily/weekly/monthly/fixed billing
+- **Consumables**: Usage tracking with wastage calculation
 
 ### Templates (16 total)
 
