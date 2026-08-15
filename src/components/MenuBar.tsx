@@ -242,6 +242,7 @@ export function MenuBar(props: MenuBarProps) {
         'ext-project-product': () => props.onProjectNew?.('product'),
         'ext-project-it-migration': () => props.onProjectNew?.('it-migration'),
         'ext-project-mining': () => props.onProjectNew?.('mining'),
+        'ext-project-realestate-photo': () => props.onProjectNew?.('realestate-photo'),
         'ext-project-new-sheet': () => props.onProjectNewSheet?.(),
         // Help
         'help-about': props.onAbout,
@@ -441,7 +442,9 @@ export function MenuBar(props: MenuBarProps) {
         { id: 'ext-project-product', label: 'Product Launch', icon: FolderKanban },
         { id: 'sep-ext-5', label: '', separator: true },
         { id: 'ext-project-it-migration', label: 'IT Migration', icon: FolderKanban },
+        { id: 'sep-ext-6', label: '', separator: true },
         { id: 'ext-project-mining', label: 'Mining Consulting', icon: FolderKanban },
+        { id: 'ext-project-realestate-photo', label: 'Real Estate Photoshoot', icon: FolderKanban },
       ],
     },
   ];
