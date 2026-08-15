@@ -193,6 +193,10 @@ export interface Project {
   risks: Risk[];
   wbs: WBSTask[];           // Root-level tasks
   accounting?: ProjectAccounting; // Optional accounting data
+  materials?: Material[];   // Project materials/assets
+  materialAllocations?: MaterialAllocation[];
+  materialConsumptions?: MaterialConsumption[];
+  capitalizationConfig?: CapitalizationConfig;
 }
 
 // ─── Project Accounting ────────────────────────────────────────────────────
@@ -266,6 +270,134 @@ export interface ProjectAccounting {
   spendEntries: ActualSpendEntry[];
   changeLog: ChangeLogEntry[];
   currency: string;
+}
+
+// ─── Material Management ────────────────────────────────────────────────────
+
+/**
+ * Financial classification of a material/asset.
+ */
+export type MaterialClassification = 'capex' | 'opex' | 'consumable';
+
+/**
+ * CapEx depreciation method.
+ */
+export type DepreciationMethod = 'straight-line' | 'declining-balance' | 'none';
+
+/**
+ * OpEx rental/lease billing period.
+ */
+export type BillingPeriod = 'hourly' | 'daily' | 'weekly' | 'monthly' | 'fixed';
+
+/**
+ * A material, asset, or equipment item in the project.
+ */
+export interface Material {
+  id: string;
+  name: string;
+  description: string;
+  classification: MaterialClassification;
+  // Common fields
+  unit: string;                // e.g., 'each', 'kg', 'hours', 'meters'
+  unitCost: number;            // Cost per unit
+  quantity: number;            // Total quantity available/ordered
+  currency: string;
+  vendor: string | null;
+  // CapEx-specific fields
+  depreciationMethod: DepreciationMethod;
+  usefulLifeMonths: number;    // For CapEx depreciation
+  salvageValue: number;        // Residual value at end of life
+  acquisitionDate: string | null; // ISO date when purchased/installed
+  // OpEx-specific fields
+  billingPeriod: BillingPeriod;
+  rentalRate: number;          // Rate per billing period
+  leaseStartDate: string | null;
+  leaseEndDate: string | null;
+  // Consumable-specific fields
+  wastageRate: number;         // Expected wastage percentage (0-100)
+  reorderPoint: number;        // Quantity trigger for reorder
+  // Carrying costs (storage, insurance)
+  carryingCostPerUnit: number; // Monthly carrying cost per unit
+  // Tracking
+  allocatedQuantity: number;   // Quantity allocated to tasks
+  consumedQuantity: number;   // Quantity consumed
+  status: 'ordered' | 'delivered' | 'in-use' | 'returned' | 'disposed';
+}
+
+/**
+ * Links a material to a task with allocation details.
+ */
+export interface MaterialAllocation {
+  id: string;
+  materialId: string;
+  taskId: string;
+  allocatedQuantity: number;
+  consumedQuantity: number;
+  allocationDate: string;      // ISO date
+  expectedReturnDate: string | null; // For rented equipment
+  actualCost: number;          // Actual cost charged for this allocation
+  notes: string;
+}
+
+/**
+ * Consumption record for tracking material usage.
+ */
+export interface MaterialConsumption {
+  id: string;
+  materialId: string;
+  taskId: string;
+  date: string;                // ISO date
+  quantity: number;
+  wastageQuantity: number;     // Quantity wasted
+  unitCostAtConsumption: number;
+  notes: string;
+}
+
+/**
+ * Capitalization threshold configuration.
+ */
+export interface CapitalizationConfig {
+  threshold: number;           // Amount above which items are CapEx
+  currency: string;
+  defaultUsefulLifeMonths: number;
+  defaultDepreciationMethod: DepreciationMethod;
+  defaultSalvagePercent: number; // Percentage of cost
+}
+
+/**
+ * Calculated material costs for a task.
+ */
+export interface TaskMaterialCost {
+  taskId: string;
+  taskName: string;
+  capexCost: number;           // Depreciation allocated to this task
+  opexCost: number;            // Rental/lease costs
+  consumableCost: number;      // Materials consumed
+  carryingCost: number;        // Storage/insurance allocated
+  totalMaterialCost: number;
+}
+
+/**
+ * Material cost summary for the project.
+ */
+export interface MaterialCostSummary {
+  totalCapEx: number;
+  totalOpEx: number;
+  totalConsumables: number;
+  totalCarryingCosts: number;
+  totalMaterialCost: number;
+  // CapEx metrics
+  totalCapExTCO: number;       // Total Cost of Ownership
+  accumulatedDepreciation: number;
+  bookValue: number;           // Acquisition cost - depreciation
+  // OpEx metrics
+  monthlyOpExBurn: number;     // Monthly recurring OpEx
+  idleTimeCost: number;        // Cost of idle rented equipment
+  // Consumable metrics
+  totalWastageCost: number;    // Cost of wasted materials
+  wastagePercent: number;      // Overall wastage percentage
+  // Per-task breakdown
+  taskCosts: TaskMaterialCost[];
 }
 
 // ─── Risk Management ────────────────────────────────────────────────────────
@@ -356,7 +488,7 @@ export interface RiskSummary {
 
 export type GanttZoom = 'day' | 'week' | 'month';
 
-export type ViewMode = 'gantt' | 'wbs' | 'risk-register' | 'risk-matrix' | 'resource-heatmap' | 'accounting' | 'evm-report';
+export type ViewMode = 'gantt' | 'wbs' | 'risk-register' | 'risk-matrix' | 'resource-heatmap' | 'accounting' | 'evm-report' | 'materials';
 
 /**
  * Gantt rendering configuration.

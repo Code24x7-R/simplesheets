@@ -4,11 +4,12 @@
 Achieve a clean, clutter-free UI with standardized dropdown menus, formula wizard, formula bar, R1C1 reference format, and extensible project management capabilities.
 
 ## Current State
-- **3360 tests** across **140 suites**, All passing
+- **3457 tests** across **145 suites**, All passing
 - Lint clean (0 warnings), Type-check clean, Build clean
 - Phases 1-33 complete ✅ (see [HISTORY.md](./HISTORY.md))
 - Phases 34-39 complete ✅ (Extensions Architecture — see below)
-- Phases 40-41 in progress 🔄 (Accounting Dashboard & Dependency Workflow)
+- Phases 40-42 complete ✅ (Accounting, Dependency Workflow, EVM Reporting)
+- **Phase 43 complete ✅ (Material Management — CapEx/OpEx/Consumption)**
 - Phases 22-23 planned 📋 (Conditional Formatting, Data Validation)
 
 ---
@@ -28,7 +29,9 @@ The WBS/Project extension is actively being expanded. See [EXTENSIONS_ARCHITECTU
 | 38 | Normalized Schema & Complete Sync — all data persisted and synced | ✅ Complete |
 | 39 | Template Library Expansion — all 16 templates implemented | ✅ Complete |
 | 40 | Project Accounting Dashboard — baseline, allocation, estimate, actual spend | 🔄 In Progress |
-| 41 | Dependency Workflow Drawer — tree + right panel with impact preview | 📋 Planned |
+| 41 | Dependency Workflow Drawer — tree + right panel with impact preview | ✅ Complete |
+| 42 | EVM Cost Performance Reporting — CV, VAC, CPI, SPI, EAC, ETC | ✅ Complete |
+| 43 | Material Management — CapEx/OpEx, allocation, consumption | ✅ Complete |
 
 **Extension Features:**
 - WBS hierarchy (tree structure with parent-child relationships)
@@ -73,8 +76,26 @@ The WBS/Project extension is actively being expanded. See [EXTENSIONS_ARCHITECTU
 - SPI (Schedule Performance Index) = Earned Value / Planned Value
 - Change log for dependency-driven cost/timeline shifts
 
-### Phase 41: Dependency Workflow Drawer — PLANNED 📋
-*Hybrid tree + slide-out panel for managing dependencies with real-time impact preview.*
+### Phase 43: Material Management — IN PROGRESS 🔄
+*CapEx/OpEx classification, material allocation, consumption tracking.*
+
+**Material Categories:**
+| Category | Financial Treatment | Key Metrics |
+|----------|-------------------|-------------|
+| Purchased Assets (CapEx) | Capitalized & depreciated | TCO, Depreciation Rate, Salvage Value |
+| Rented/Leased (OpEx) | Expensed in period | Burn Rate, Rental Rate, Idle Time |
+| Raw Materials (COGS) | Expensed as consumed | Unit Rate, Wastage %, Carrying Cost |
+
+**Features:**
+- Material registry with classification (CapEx/OpEx/Consumption)
+- Allocation of materials to tasks/projects
+- Consumption tracking with wastage calculation
+- CapEx depreciation (straight-line) over useful life
+- OpEx recurring expense tracking (daily/weekly/monthly rates)
+- Capitalization threshold configuration
+- Total Cost of Ownership (TCO) calculations
+- Carrying/holding cost tracking (storage, insurance)
+- Integration with project accounting dashboard
 
 **UI Layout:**
 - WBS Tree on left (existing)
