@@ -125,5 +125,48 @@
       "availability": 100,
       "color": "#10B981"
     }
+  ],
+  "materials": [
+    {
+      "id": "mat-1",
+      "name": "Laptop",
+      "classification": "capex",
+      "unit": "each",
+      "unitCost": 2500,
+      "quantity": 2,
+      "vendor": "Dell",
+      "depreciationMethod": "straight-line",
+      "usefulLifeMonths": 36,
+      "salvageValue": 500,
+      "currency": "USD",
+      "status": "delivered"
+    },
+    {
+      "id": "mat-2",
+      "name": "Software Licenses",
+      "classification": "opex",
+      "unit": "each",
+      "unitCost": 0,
+      "quantity": 2,
+      "billingPeriod": "monthly",
+      "rentalRate": 150,
+      "leaseStartDate": "2026-01-05",
+      "leaseEndDate": "2026-12-31",
+      "currency": "USD",
+      "status": "in-use"
+    },
+    {
+      "id": "mat-3",
+      "name": "Office Supplies",
+      "classification": "consumable",
+      "unit": "box",
+      "unitCost": 50,
+      "quantity": 5,
+      "wastageRate": 5,
+      "reorderPoint": 2,
+      "carryingCostPerUnit": 1,
+      "currency": "USD",
+      "status": "delivered"
+    }
   ]
 }

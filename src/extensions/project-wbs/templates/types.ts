@@ -46,6 +46,8 @@ export interface ProjectTemplateJSON {
   risks?: RiskJSON[];
   /** Resource definitions */
   resources?: ResourceJSON[];
+  /** Material/asset definitions */
+  materials?: MaterialJSON[];
 }
 
 /** JSON task definition (supports nested children) */
@@ -116,4 +118,46 @@ export interface ResourceJSON {
   availability?: number;
   /** Color (hex) */
   color?: string;
+}
+
+/** JSON material definition */
+export interface MaterialJSON {
+  /** Unique material ID */
+  id: string;
+  /** Material name */
+  name: string;
+  /** Classification: 'capex', 'opex', or 'consumable' */
+  classification: string;
+  /** Unit of measure (each, kg, hours, etc.) */
+  unit?: string;
+  /** Cost per unit */
+  unitCost: number;
+  /** Quantity */
+  quantity?: number;
+  /** Vendor/supplier name */
+  vendor?: string | null;
+  /** Depreciation method (CapEx) */
+  depreciationMethod?: string;
+  /** Useful life in months (CapEx) */
+  usefulLifeMonths?: number;
+  /** Salvage value (CapEx) */
+  salvageValue?: number;
+  /** Billing period (OpEx) */
+  billingPeriod?: string;
+  /** Rental rate per billing period (OpEx) */
+  rentalRate?: number;
+  /** Lease start date (ISO) */
+  leaseStartDate?: string | null;
+  /** Lease end date (ISO) */
+  leaseEndDate?: string | null;
+  /** Wastage percentage (Consumable) */
+  wastageRate?: number;
+  /** Reorder point (Consumable) */
+  reorderPoint?: number;
+  /** Carrying cost per unit per month */
+  carryingCostPerUnit?: number;
+  /** Currency code */
+  currency?: string;
+  /** Status */
+  status?: string;
 }

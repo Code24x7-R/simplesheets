@@ -7,8 +7,8 @@
  * Makes templates maintainable as data files rather than code.
  */
 
-import type { Project, WBSTask, Resource, WorkingCalendar, Risk } from '../../types';
-import type { ProjectTemplateJSON, TaskJSON, RiskJSON, ResourceJSON } from './types';
+import type { Project, WBSTask, Resource, WorkingCalendar, Risk, Material } from '../../types';
+import type { ProjectTemplateJSON, TaskJSON, RiskJSON, ResourceJSON, MaterialJSON } from './types';
 import { createRisk } from '../risks';
 import { createDefaultCalendar } from '../calendar';
 import { getDefaultCurrency } from '../../../utils/currency';
@@ -151,6 +151,9 @@ export function templateToProject(template: ProjectTemplateJSON): Project {
   // Convert risks
   const risks: Risk[] = (template.risks ?? []).map((r) => jsonRiskToRisk(r, template.id, template.startDate));
 
+  // Convert materials
+  const materials: Material[] = (template.materials ?? []).map((m) => jsonMaterialToMaterial(m));
+
   return {
     id: template.id,
     name: template.name,
@@ -161,6 +164,7 @@ export function templateToProject(template: ProjectTemplateJSON): Project {
     resources,
     risks,
     wbs: roots,
+    materials,
   };
 }
 
@@ -256,6 +260,38 @@ function jsonRiskToRisk(json: RiskJSON, projectId: string, defaultDate: string):
     identifiedDate: json.identifiedDate ?? defaultDate,
     reviewDate: json.reviewDate ?? '',
   });
+}
+
+/**
+ * Convert JSON material to Material
+ */
+function jsonMaterialToMaterial(json: MaterialJSON): Material {
+  const currency = json.currency ?? getDefaultCurrency();
+  return {
+    id: json.id,
+    name: json.name,
+    description: '',
+    classification: json.classification as Material['classification'],
+    unit: json.unit ?? 'each',
+    unitCost: json.unitCost ?? 0,
+    quantity: json.quantity ?? 1,
+    currency,
+    vendor: json.vendor ?? null,
+    depreciationMethod: (json.depreciationMethod ?? 'straight-line') as Material['depreciationMethod'],
+    usefulLifeMonths: json.usefulLifeMonths ?? 36,
+    salvageValue: json.salvageValue ?? 0,
+    acquisitionDate: null,
+    billingPeriod: (json.billingPeriod ?? 'daily') as Material['billingPeriod'],
+    rentalRate: json.rentalRate ?? 0,
+    leaseStartDate: json.leaseStartDate ?? null,
+    leaseEndDate: json.leaseEndDate ?? null,
+    wastageRate: json.wastageRate ?? 0,
+    reorderPoint: json.reorderPoint ?? 0,
+    carryingCostPerUnit: json.carryingCostPerUnit ?? 0,
+    allocatedQuantity: 0,
+    consumedQuantity: 0,
+    status: (json.status ?? 'delivered') as Material['status'],
+  };
 }
 
 /**
