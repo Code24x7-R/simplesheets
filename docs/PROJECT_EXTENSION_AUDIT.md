@@ -1,14 +1,20 @@
 # Project/WBS Extension Audit Report
 
-**Date:** 2026-01-16
+**Date:** 2026-01-16 (Updated: 2026-01-16)
 **Scope:** Complete review of `src/extensions/project-wbs/`
-**Current Test Count:** 3,531 tests across 148 suites
+**Current Test Count:** 3,598 tests across 151 suites
 
 ---
 
 ## Executive Summary
 
-The Project/WBS extension has grown organically through 15+ phases. While functional, it has accumulated **duplications, logic errors, and workflow gaps** that need systematic attention. This audit identifies **12 issues** across 4 categories.
+The Project/WBS extension has grown organically through 15+ phases. While functional, it had accumulated **duplications, logic errors, and workflow gaps** that needed systematic attention. This audit identified **12 issues** across 4 categories.
+
+**Status:** ✅ Phase 1-3 complete (10 of 12 issues fixed)
+- Phase 1 (Logic Errors): 3/3 fixed
+- Phase 2 (Duplications): 3/3 fixed
+- Phase 3 (Workflow Gaps): 4/4 fixed
+- Phase 4 (Data Schema): 0/2 pending (low priority)
 
 ---
 
@@ -170,27 +176,37 @@ data change → handleProjectChange → syncProjectToSheet → onSaveProject →
 
 ---
 
-## Prioritized Fix Plan
+## Completed Fixes
 
-### Phase 1: Fix Logic Errors (Week 1)
-1. **A1:** Separate UI-only state from data mutations in `handleProjectChange`
-2. **A2:** Only call `onProjectChange` for data mutations
-3. **A3:** Fix template resource auto-assignment logic
+### Phase 1: Logic Errors ✅
+1. **A1:** ✅ Separate UI-only state from data mutations - `setProjectUI` for UI changes, `handleProjectChange` for data
+2. **A2:** ✅ `onProjectChange` only called for data mutations
+3. **A3:** ✅ Simplified template resource auto-assignment condition
 
-### Phase 2: Eliminate Duplications (Week 1-2)
-4. **B1:** Extract `projectToModel` to shared utility
-5. **B2:** Remove `handleSaveToSheet` duplication (or clarify its purpose)
-6. **B3:** Use shared utility in `createWorkbookFromTemplate`
+### Phase 2: Duplications ✅
+4. **B1:** ✅ Extracted `projectToModel` to `projectConverter.ts`
+5. **B2:** ✅ `handleSaveToSheet` delegates to `syncProjectToSheet`
+6. **B3:** ✅ `createWorkbookFromTemplate` uses shared `projectToModel`
 
-### Phase 3: Close Workflow Gaps (Week 2-3)
-7. **C1:** Add import/export project data as JSON files
-8. **C2:** Add blank project creation
-9. **C3:** Add UI for managing actuals
-10. **C4:** Add UI for material allocation/consumption
+### Phase 3: Workflow Gaps ✅
+7. **C1:** ✅ Added `exportProjectToJSON` and `importProjectFromJSON`
+8. **C2:** ✅ Added `createBlankProject` utility
+9. **C3:** ✅ Created `ActualsEditorModal` with full CRUD
+10. **C4:** ✅ Created `MaterialAllocationModal` for allocation/consumption tracking
 
-### Phase 4: Fix Data Schema (Week 3)
-11. **D1:** Make `ProjectModel.materials` and `ProjectModel.actuals` optional
-12. **D2:** Use UUID for sheet IDs
+### Phase 4: Data Schema (Pending - Low Priority)
+11. **D1:** ⏳ Make `ProjectModel.materials` and `ProjectModel.actuals` optional
+12. **D2:** ⏳ Use UUID for sheet IDs
+
+---
+
+## New Files Added
+
+| File | Purpose | Tests |
+|------|---------|-------|
+| `src/extensions/project-wbs/projectConverter.ts` | Shared Project ↔ Model conversion | 41 |
+| `src/extensions/project-wbs/ActualsEditorModal.tsx` | CRUD for actual spend entries | 14 |
+| `src/extensions/project-wbs/MaterialAllocationModal.tsx` | Track material allocation/consumption | 12 |
 
 ---
 
@@ -207,7 +223,7 @@ For each fix:
 
 ## Risk Assessment
 
-- **Phase 1:** Medium risk - changing state management could affect many tests
-- **Phase 2:** Low risk - refactoring to shared utilities
-- **Phase 3:** Low risk - adding new features
-- **Phase 4:** Low risk - type changes with proper defaults
+- **Phase 1:** Medium risk - changing state management could affect many tests ✅ Mitigated
+- **Phase 2:** Low risk - refactoring to shared utilities ✅ Complete
+- **Phase 3:** Low risk - adding new features ✅ Complete
+- **Phase 4:** Low risk - type changes with proper defaults ⏳ Pending
