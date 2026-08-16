@@ -64,7 +64,7 @@ export function DependencyDrawer({
   useMemo(() => {
     setEditedDeps(task.dependencies);
     setShowAddForm(false);
-  }, [task.id, task.dependencies]);
+  }, [task.dependencies]);
 
   // Get task map for lookups
   const taskMap = useMemo(() => new Map(allTasks.map((t) => [t.id, t])), [allTasks]);

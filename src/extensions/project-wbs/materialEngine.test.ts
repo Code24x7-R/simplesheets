@@ -95,7 +95,7 @@ function createProject(overrides: Partial<Project> = {}): Project {
     wbs: [],
     ...overrides,
   };
-};
+}
 
 describe('classifyMaterial', () => {
   it('classifies expensive items as CapEx', () => {

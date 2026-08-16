@@ -402,7 +402,7 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
       syncProjectToSheet(next);
       return next;
     });
-  }, [syncProjectToSheet]);
+  }, [syncProjectToSheet, handleProjectChange]);
 
   // ─── Resource CRUD ───────────────────────────────────────────────────
 

@@ -117,7 +117,10 @@ describe('EvmReport', () => {
     render(<EvmReport project={project} asOfDate="2026-01-15" />);
 
     // Should show status icons
-    const statusIcons = screen.getAllByText(/[✅❌⚠️ℹ️]/);
+    const hasStatusIcon = (content: string) =>
+      content.includes('✅') || content.includes('❌') ||
+      content.includes('⚠️') || content.includes('ℹ️');
+    const statusIcons = screen.getAllByText(hasStatusIcon);
     expect(statusIcons.length).toBeGreaterThan(0);
   });
 
