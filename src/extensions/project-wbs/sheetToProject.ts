@@ -17,6 +17,7 @@ import type { Project, WBSTask, Resource, Material } from '../types';
 import { getTemplateById } from './templates/index';
 import { getAllTasks } from './treeOps';
 import { getDefaultCurrency, getCurrencyFormatPattern } from '../../utils/currency';
+import { projectToModel } from './projectConverter';
 
 // ─── Sheet Name Constants ──────────────────────────────────────────────────
 
@@ -1656,79 +1657,13 @@ export function createWorkbookFromTemplate(templateId: string, projectName?: str
 
   const project = template.create();
 
-  // Convert project to model (serializable)
-  const allTasks = getAllTasks(project.wbs);
-  const model: ProjectModel = {
-    id: project.id,
-    name: projectName ?? project.name,
-    description: project.description,
-    startDate: project.startDate,
-    endDate: project.endDate,
-    tasks: allTasks.map((t) => ({
-      id: t.id,
-      name: t.name,
-      startDate: t.startDate,
-      endDate: t.endDate,
-      duration: t.duration,
-      parentId: t.parentId,
-      dependencies: t.dependencies.map((d) => d.predecessorId),
-      progress: t.progress,
-      resourceId: t.responsibleResourceId,
-      isMilestone: t.isMilestone,
-      color: t.color,
-      notes: t.description,
-    })),
-    risks: project.risks.map((r) => ({
-      id: r.id,
-      title: r.title,
-      category: r.category,
-      probability: r.probability,
-      impact: r.impact,
-      status: r.status,
-      ownerId: r.ownerId,
-      mitigationPlan: r.mitigationPlan,
-      notes: r.description,
-    })),
-    resources: project.resources.map((r) => ({
-      id: r.id,
-      name: r.name,
-      role: r.role,
-      costRate: r.costRate,
-      costCurrency: r.costCurrency,
-      availability: r.availability,
-      color: r.color,
-    })),
-    materials: (project.materials ?? []).map((m) => ({
-      id: m.id,
-      name: m.name,
-      classification: m.classification,
-      unit: m.unit,
-      unitCost: m.unitCost,
-      quantity: m.quantity,
-      vendor: m.vendor,
-      depreciationMethod: m.depreciationMethod,
-      usefulLifeMonths: m.usefulLifeMonths,
-      salvageValue: m.salvageValue,
-      billingPeriod: m.billingPeriod,
-      rentalRate: m.rentalRate,
-      leaseStartDate: m.leaseStartDate,
-      leaseEndDate: m.leaseEndDate,
-      wastageRate: m.wastageRate,
-      reorderPoint: m.reorderPoint,
-      carryingCostPerUnit: m.carryingCostPerUnit,
-      currency: m.currency,
-      status: m.status,
-    })),
-    actuals: (project.accounting?.spendEntries ?? []).map((a) => ({
-      id: a.id,
-      taskId: a.taskId,
-      date: a.date,
-      amount: a.amount,
-      currency: a.currency,
-      source: a.source,
-      notes: a.notes,
-    })),
-  };
+  // Convert project to model (serializable) using shared utility
+  const model = projectToModel(project);
+
+  // Override project name if provided
+  if (projectName) {
+    model.name = projectName;
+  }
 
   return projectModelToWorkbook(model);
 }

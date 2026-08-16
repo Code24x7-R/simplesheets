@@ -28,6 +28,7 @@ import { EvmReport } from './EvmReport';
 import { MaterialDashboard } from './MaterialDashboard';
 import { MaterialEditorModal } from './MaterialEditorModal';
 import { sheetToProject, projectModelToProject } from './sheetToProject';
+import { projectToModel } from './projectConverter';
 import { addTask, removeTask, updateTask, toggleCollapse, findTaskById, getAllTasks, addResource, updateResource, removeResource } from './treeOps';
 import { addRisk, updateRisk, removeRisk, getRiskSummary } from './risks';
 import { recomputeRollups } from './rollups';
@@ -47,14 +48,42 @@ interface ProjectViewProps {
 export function ProjectView({ project: initialProject, activeSheet, columnMapping, onSaveProject, onProjectChange, onClose }: ProjectViewProps) {
   const [project, setProject] = useState(initialProject);
 
-  // Notify parent of project changes (e.g., adding materials)
-  const handleProjectChange = useCallback((updater: Project | ((prev: Project) => Project)) => {
+  // ─── Sync to Sheet ──────────────────────────────────────────────────
+
+  /**
+   * Sync project data back to the source sheet.
+   * Converts the project model to sheet cells and calls onSaveProject.
+   */
+  const syncProjectToSheet = useCallback((projectState: Project) => {
+    const model = projectToModel(projectState);
+    onSaveProject(model, columnMapping, activeSheet?.id ?? null);
+  }, [onSaveProject, columnMapping, activeSheet]);
+
+  // ─── State Update Handlers ─────────────────────────────────────────
+
+  /**
+   * For UI-only changes (no save, no parent notify).
+   * Use for: collapse/expand, selection, zoom, etc.
+   */
+  function setProjectUI(updater: Project | ((prev: Project) => Project)) {
+    setProject((prev) => (typeof updater === 'function' ? updater(prev) : updater));
+  }
+
+  /**
+   * For data changes (save + parent notify).
+   * Use for: add/edit/delete tasks, risks, resources, materials, etc.
+   */
+  function handleProjectChange(updater: Project | ((prev: Project) => Project)) {
+    let nextProject: Project;
     setProject((prev) => {
-      const next = typeof updater === 'function' ? updater(prev) : updater;
-      onProjectChange?.(next);
-      return next;
+      nextProject = typeof updater === 'function' ? updater(prev) : updater;
+      onProjectChange?.(nextProject);
+      return nextProject;
     });
-  }, [onProjectChange]);
+    // Trigger save after state update
+    syncProjectToSheet(nextProject!);
+  }
+
   const [viewMode, setViewMode] = useState<ViewMode>('gantt');
   const [zoom, setZoom] = useState<'day' | 'week' | 'month'>('week');
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
@@ -120,8 +149,6 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
       }
       // Recompute rollups for summary tasks
       next = { ...next, wbs: recomputeRollups(next.wbs, next.risks) };
-      // Sync changes back to sheet
-      syncProjectToSheet(next);
       return next;
     });
     setTaskModal({ open: false, task: null, parentId: null, isChild: false });
@@ -141,7 +168,6 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
       const next = { ...prev, wbs: removeTask(prev.wbs, taskId) };
       // Recompute rollups for summary tasks
       const recomputed = { ...next, wbs: recomputeRollups(next.wbs, next.risks) };
-      syncProjectToSheet(recomputed);
       return recomputed;
     });
     if (selectedTaskId === taskId) setSelectedTaskId(null);
@@ -155,7 +181,8 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
   }
 
   function handleToggleCollapse(taskId: string) {
-    handleProjectChange((prev) => ({ ...prev, wbs: toggleCollapse(prev.wbs, taskId) }));
+    // UI-only change: collapse/expand does not need to persist to workbook
+    setProjectUI((prev) => ({ ...prev, wbs: toggleCollapse(prev.wbs, taskId) }));
   }
 
   // ─── Dependency Management ──────────────────────────────────────────
@@ -265,93 +292,6 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
     scrollGanttToDate(today);
   }
 
-  /**
-   * Sync project data back to the source sheet.
-   * Converts the project model to sheet cells and calls onSaveProject.
-   */
-  const syncProjectToSheet = useCallback((projectState: Project) => {
-    const model = projectToModel(projectState);
-    onSaveProject(model, columnMapping, activeSheet?.id ?? null);
-  }, [onSaveProject, columnMapping, activeSheet]);
-
-  /**
-   * Convert a runtime Project to a serializable ProjectModel.
-   */
-  function projectToModel(projectState: Project): ProjectModel {
-    const allTasks = getAllTasks(projectState.wbs);
-    return {
-      id: projectState.id,
-      name: projectState.name,
-      description: projectState.description,
-      startDate: projectState.startDate,
-      endDate: projectState.endDate,
-      tasks: allTasks.map((t) => ({
-        id: t.id,
-        name: t.name,
-        startDate: t.startDate,
-        endDate: t.endDate,
-        duration: t.duration,
-        parentId: t.parentId,
-        dependencies: t.dependencies.map((d) => d.predecessorId),
-        progress: t.progress,
-        resourceId: t.responsibleResourceId,
-        isMilestone: t.isMilestone,
-        color: t.color,
-        notes: t.description,
-      })),
-      risks: projectState.risks.map((r) => ({
-        id: r.id,
-        title: r.title,
-        category: r.category,
-        probability: r.probability,
-        impact: r.impact,
-        status: r.status,
-        ownerId: r.ownerId,
-        mitigationPlan: r.mitigationPlan,
-        notes: r.description,
-      })),
-      resources: projectState.resources.map((r) => ({
-        id: r.id,
-        name: r.name,
-        role: r.role,
-        costRate: r.costRate,
-        costCurrency: r.costCurrency,
-        availability: r.availability,
-        color: r.color,
-      })),
-      materials: (projectState.materials ?? []).map((m) => ({
-        id: m.id,
-        name: m.name,
-        classification: m.classification,
-        unit: m.unit,
-        unitCost: m.unitCost,
-        quantity: m.quantity,
-        vendor: m.vendor,
-        depreciationMethod: m.depreciationMethod,
-        usefulLifeMonths: m.usefulLifeMonths,
-        salvageValue: m.salvageValue,
-        billingPeriod: m.billingPeriod,
-        rentalRate: m.rentalRate,
-        leaseStartDate: m.leaseStartDate,
-        leaseEndDate: m.leaseEndDate,
-        wastageRate: m.wastageRate,
-        reorderPoint: m.reorderPoint,
-        carryingCostPerUnit: m.carryingCostPerUnit,
-        currency: m.currency,
-        status: m.status,
-      })),
-      actuals: (projectState.accounting?.spendEntries ?? []).map((a) => ({
-        id: a.id,
-        taskId: a.taskId,
-        date: a.date,
-        amount: a.amount,
-        currency: a.currency,
-        source: a.source,
-        notes: a.notes,
-      })),
-    };
-  }
-
   // ─── Risk CRUD ────────────────────────────────────────────────────────
 
   function handleAddRisk() {
@@ -376,7 +316,6 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
         const newRisk = { ...risk, projectId: prev.id };
         next = addRisk(prev, newRisk);
       }
-      syncProjectToSheet(next);
       return next;
     });
     setRiskModal({ open: false, risk: null });
@@ -385,7 +324,6 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
   function handleRiskDelete(riskId: string) {
     handleProjectChange((prev) => {
       const next = removeRisk(prev, riskId);
-      syncProjectToSheet(next);
       return next;
     });
     if (selectedRiskId === riskId) setSelectedRiskId(null);
@@ -399,10 +337,9 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
           r.id === riskId ? { ...r, status: 'closed' as const } : r,
         ),
       };
-      syncProjectToSheet(next);
       return next;
     });
-  }, [syncProjectToSheet, handleProjectChange]);
+  }, [handleProjectChange]);
 
   // ─── Resource CRUD ───────────────────────────────────────────────────
 
@@ -416,7 +353,6 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
         // Add new
         next = { ...prev, resources: addResource(prev.resources, resource) };
       }
-      syncProjectToSheet(next);
       return next;
     });
     setResourceModal({ open: false, resource: null });
@@ -425,7 +361,6 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
   function handleResourceDelete(resourceId: string) {
     handleProjectChange((prev) => {
       const next = { ...prev, resources: removeResource(prev.resources, resourceId) };
-      syncProjectToSheet(next);
       return next;
     });
     setResourceModal({ open: false, resource: null });
@@ -502,80 +437,8 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
   }
 
   function handleSaveToSheet() {
-    // Save current project state back to workbook
-    const model: ProjectModel = {
-      id: project.id,
-      name: project.name,
-      description: project.description,
-      startDate: project.startDate,
-      endDate: project.endDate,
-      tasks: allTasks.map((t) => ({
-        id: t.id,
-        name: t.name,
-        startDate: t.startDate,
-        endDate: t.endDate,
-        duration: t.duration,
-        parentId: t.parentId,
-        dependencies: t.dependencies.map((d) => d.predecessorId),
-        progress: t.progress,
-        resourceId: t.responsibleResourceId,
-        isMilestone: t.isMilestone,
-        color: t.color,
-        notes: t.description,
-      })),
-      risks: project.risks.map((r) => ({
-        id: r.id,
-        title: r.title,
-        category: r.category,
-        probability: r.probability,
-        impact: r.impact,
-        status: r.status,
-        ownerId: r.ownerId,
-        mitigationPlan: r.mitigationPlan,
-        notes: r.description,
-      })),
-      resources: project.resources.map((r) => ({
-        id: r.id,
-        name: r.name,
-        role: r.role,
-        costRate: r.costRate,
-        costCurrency: r.costCurrency,
-        availability: r.availability,
-        color: r.color,
-      })),
-      materials: (project.materials ?? []).map((m) => ({
-        id: m.id,
-        name: m.name,
-        classification: m.classification,
-        unit: m.unit,
-        unitCost: m.unitCost,
-        quantity: m.quantity,
-        vendor: m.vendor,
-        depreciationMethod: m.depreciationMethod,
-        usefulLifeMonths: m.usefulLifeMonths,
-        salvageValue: m.salvageValue,
-        billingPeriod: m.billingPeriod,
-        rentalRate: m.rentalRate,
-        leaseStartDate: m.leaseStartDate,
-        leaseEndDate: m.leaseEndDate,
-        wastageRate: m.wastageRate,
-        reorderPoint: m.reorderPoint,
-        carryingCostPerUnit: m.carryingCostPerUnit,
-        currency: m.currency,
-        status: m.status,
-      })),
-      actuals: (project.accounting?.spendEntries ?? []).map((a) => ({
-        id: a.id,
-        taskId: a.taskId,
-        date: a.date,
-        amount: a.amount,
-        currency: a.currency,
-        source: a.source,
-        notes: a.notes,
-      })),
-    };
-
-    onSaveProject(model, null, null);
+    // Save current project state back to workbook (uses same sync as automatic saves)
+    syncProjectToSheet(project);
   }
 
   // ─── Render ──────────────────────────────────────────────────────────

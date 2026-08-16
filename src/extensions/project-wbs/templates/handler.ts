@@ -138,7 +138,7 @@ export function templateToProject(template: ProjectTemplateJSON): Project {
   // This ensures Gantt chart shows resource colors for all templates
   if (resources.length > 0) {
     const tasksNeedingResources = allTasks.filter((t) => !t.responsibleResourceId && !t.isSummary && !t.isMilestone);
-    if (tasksNeedingResources.length > 0 && allTasks.some((t) => !t.responsibleResourceId)) {
+    if (tasksNeedingResources.length > 0) {
       // Assign resources round-robin to leaf tasks
       let resourceIndex = 0;
       for (const task of tasksNeedingResources) {
