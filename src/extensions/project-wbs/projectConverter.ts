@@ -11,6 +11,8 @@ import type { Project, WBSTask, Risk, Resource, Material } from '../types';
 import type { ProjectModel, TaskRow, RiskRow, ResourceRow, MaterialRow, ActualRow } from '../../types';
 import { getAllTasks } from './treeOps';
 import { projectModelToProject } from './sheetToProject';
+import { createDefaultCalendar } from './calendar';
+import type { WorkingCalendar } from '../types';
 
 /**
  * Flatten a task tree into a list of tasks with parentId set correctly.
@@ -212,4 +214,38 @@ export function importProjectFromJSON(json: string): Project {
 export function validateProjectJSON(json: string): boolean {
   importProjectFromJSON(json);
   return true;
+}
+
+// ─── Blank Project Creation ─────────────────────────────────────────────
+
+/**
+ * Create a blank project with default calendar and no tasks.
+ * Used when the user wants to start from scratch.
+ */
+export function createBlankProject(name = 'New Project', startDate?: string, endDate?: string): Project {
+  const today = startDate ?? new Date().toISOString().slice(0, 10);
+  const end = endDate ?? today;
+  return {
+    id: `proj-${Date.now()}`,
+    name,
+    description: '',
+    startDate: today,
+    endDate: end,
+    calendar: createDefaultCalendar(),
+    resources: [],
+    risks: [],
+    wbs: [],
+    materials: [],
+    accounting: {
+      baselineTotal: 0,
+      allocatedTotal: 0,
+      currentEstimateTotal: 0,
+      actualSpendTotal: 0,
+      etcTotal: 0,
+      taskAccounting: [],
+      spendEntries: [],
+      changeLog: [],
+      currency: 'USD',
+    },
+  };
 }

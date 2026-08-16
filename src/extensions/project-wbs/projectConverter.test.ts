@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
-import { exportProjectToJSON, importProjectFromJSON, validateProjectJSON, projectToModel } from './projectConverter';
+import { exportProjectToJSON, importProjectFromJSON, validateProjectJSON, projectToModel, createBlankProject } from './projectConverter';
 import { templateToProject } from './templates/handler';
 import simpleJSON from './templates/json/simple.json';
 import type { ProjectTemplateJSON } from './templates/types';
@@ -206,6 +206,79 @@ describe('projectConverter import/export', () => {
       const json = exportProjectToJSON(project);
       const imported = importProjectFromJSON(json);
       expect(imported.materials?.length).toBe(project.materials?.length);
+    });
+  });
+
+  describe('createBlankProject', () => {
+    it('creates a project with default name', () => {
+      const project = createBlankProject();
+      expect(project.name).toBe('New Project');
+    });
+
+    it('creates a project with custom name', () => {
+      const project = createBlankProject('My Custom Project');
+      expect(project.name).toBe('My Custom Project');
+    });
+
+    it('creates a project with no tasks', () => {
+      const project = createBlankProject();
+      expect(project.wbs).toEqual([]);
+    });
+
+    it('creates a project with no resources', () => {
+      const project = createBlankProject();
+      expect(project.resources).toEqual([]);
+    });
+
+    it('creates a project with no risks', () => {
+      const project = createBlankProject();
+      expect(project.risks).toEqual([]);
+    });
+
+    it('creates a project with no materials', () => {
+      const project = createBlankProject();
+      expect(project.materials).toEqual([]);
+    });
+
+    it('creates a project with default calendar', () => {
+      const project = createBlankProject();
+      expect(project.calendar.workingDays).toEqual(new Set([1, 2, 3, 4, 5]));
+      expect(project.calendar.holidays).toEqual(new Set());
+      expect(project.calendar.hoursPerDay).toBe(8);
+    });
+
+    it('creates a project with empty accounting', () => {
+      const project = createBlankProject();
+      expect(project.accounting).toBeDefined();
+      expect(project.accounting?.baselineTotal).toBe(0);
+      expect(project.accounting?.actualSpendTotal).toBe(0);
+      expect(project.accounting?.spendEntries).toEqual([]);
+    });
+
+    it('creates a project with today as default start date', () => {
+      const project = createBlankProject();
+      const today = new Date().toISOString().slice(0, 10);
+      expect(project.startDate).toBe(today);
+    });
+
+    it('creates a project with custom start date', () => {
+      const project = createBlankProject('Test', '2025-06-01');
+      expect(project.startDate).toBe('2025-06-01');
+    });
+
+    it('creates a project with custom end date', () => {
+      const project = createBlankProject('Test', '2025-06-01', '2025-12-31');
+      expect(project.endDate).toBe('2025-12-31');
+    });
+
+    it('creates a project with unique ID', () => {
+      let counter = 0;
+      const originalDateNow = Date.now;
+      Date.now = jest.fn(() => originalDateNow() + counter++);
+      const project1 = createBlankProject();
+      const project2 = createBlankProject();
+      Date.now = originalDateNow;
+      expect(project1.id).not.toBe(project2.id);
     });
   });
 });
