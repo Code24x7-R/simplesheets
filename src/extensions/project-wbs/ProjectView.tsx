@@ -73,7 +73,7 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
    * For data changes (save + parent notify).
    * Use for: add/edit/delete tasks, risks, resources, materials, etc.
    */
-  function handleProjectChange(updater: Project | ((prev: Project) => Project)) {
+  const handleProjectChange = useCallback((updater: Project | ((prev: Project) => Project)) => {
     let nextProject: Project;
     setProject((prev) => {
       nextProject = typeof updater === 'function' ? updater(prev) : updater;
@@ -82,7 +82,7 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
     });
     // Trigger save after state update
     syncProjectToSheet(nextProject!);
-  }
+  }, [onProjectChange, syncProjectToSheet]);
 
   const [viewMode, setViewMode] = useState<ViewMode>('gantt');
   const [zoom, setZoom] = useState<'day' | 'week' | 'month'>('week');
