@@ -13,7 +13,7 @@
 
 import type { Sheet, Workbook, ColumnMapping, ProjectModel, TaskRow, RiskRow, ResourceRow, MaterialRow, Cell } from '../../types';
 import { colToLetter } from '../../types';
-import type { Project, WBSTask, Resource } from '../types';
+import type { Project, WBSTask, Resource, Material } from '../types';
 import { getTemplateById } from './templates/index';
 import { getAllTasks } from './treeOps';
 import { getDefaultCurrency, getCurrencyFormatPattern } from '../../utils/currency';
@@ -696,6 +696,33 @@ export function projectModelToProject(model: ProjectModel): Project {
   // Convert resource rows to runtime resources
   const resources: Resource[] = model.resources.map((r) => rowToResource(r));
 
+  // Convert material rows to runtime materials
+  const materials: Material[] = (model.materials ?? []).map((m) => ({
+    id: m.id,
+    name: m.name,
+    description: '',
+    classification: m.classification as Material['classification'],
+    unit: m.unit,
+    unitCost: m.unitCost,
+    quantity: m.quantity,
+    currency: m.currency,
+    vendor: m.vendor,
+    depreciationMethod: m.depreciationMethod as Material['depreciationMethod'],
+    usefulLifeMonths: m.usefulLifeMonths,
+    salvageValue: m.salvageValue,
+    acquisitionDate: null,
+    billingPeriod: m.billingPeriod as Material['billingPeriod'],
+    rentalRate: m.rentalRate,
+    leaseStartDate: m.leaseStartDate,
+    leaseEndDate: m.leaseEndDate,
+    wastageRate: m.wastageRate,
+    reorderPoint: m.reorderPoint,
+    carryingCostPerUnit: m.carryingCostPerUnit,
+    allocatedQuantity: 0,
+    consumedQuantity: 0,
+    status: (m.status ?? 'delivered') as Material['status'],
+  }));
+
   return {
     id: model.id,
     name: model.name,
@@ -710,6 +737,7 @@ export function projectModelToProject(model: ProjectModel): Project {
     resources,
     risks,
     wbs: roots,
+    materials,
   };
 }
 
