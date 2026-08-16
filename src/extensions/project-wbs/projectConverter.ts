@@ -9,10 +9,8 @@
 
 import type { Project, WBSTask, Risk, Resource, Material } from '../types';
 import type { ProjectModel, TaskRow, RiskRow, ResourceRow, MaterialRow, ActualRow } from '../../types';
-import { getAllTasks } from './treeOps';
 import { projectModelToProject } from './sheetToProject';
 import { createDefaultCalendar } from './calendar';
-import type { WorkingCalendar } from '../types';
 
 /**
  * Flatten a task tree into a list of tasks with parentId set correctly.
