@@ -11,7 +11,7 @@
  * - Progress and date parsing
  */
 
-import type { Sheet, Workbook, ColumnMapping, ProjectModel, TaskRow, RiskRow, ResourceRow, MaterialRow, Cell } from '../../types';
+import type { Sheet, Workbook, ColumnMapping, ProjectModel, TaskRow, RiskRow, ResourceRow, MaterialRow, ActualRow, Cell } from '../../types';
 import { colToLetter } from '../../types';
 import type { Project, WBSTask, Resource, Material } from '../types';
 import { getTemplateById } from './templates/index';
@@ -24,12 +24,14 @@ export const TASKS_SHEET_NAME = 'Project Plan';
 export const RISKS_SHEET_NAME = 'Risks';
 export const RESOURCES_SHEET_NAME = 'Resources';
 export const MATERIALS_SHEET_NAME = 'Materials';
+export const ACTUALS_SHEET_NAME = 'Actuals';
 
 // ─── Risk & Resource Column Layouts ───────────────────────────────────────
 
 const RISK_HEADERS = ['Risk', 'Category', 'Probability', 'Impact', 'Status', 'Owner', 'Mitigation Plan', 'Notes'];
 const RESOURCE_HEADERS = ['Resource', 'Role', 'Cost Rate', 'Currency', 'Availability %', 'Color'];
 const MATERIAL_HEADERS = ['Material', 'Classification', 'Unit', 'Unit Cost', 'Quantity', 'Vendor', 'Depreciation', 'Useful Life', 'Salvage', 'Billing', 'Rental Rate', 'Lease Start', 'Lease End', 'Wastage %', 'Reorder Pt', 'Carrying Cost', 'Currency', 'Status'];
+const ACTUAL_HEADERS = ['Entry ID', 'Task ID', 'Date', 'Amount', 'Currency', 'Source', 'Notes'];
 
 // ─── Column Auto-Detection ──────────────────────────────────────────────────
 
@@ -180,6 +182,10 @@ export function workbookToProject(
   const materialsSheet = workbook.sheets.find((s) => s.name === MATERIALS_SHEET_NAME);
   const materials = materialsSheet ? parseAllMaterials(materialsSheet) : [];
 
+  // Parse actuals from the Actuals sheet
+  const actualsSheet = workbook.sheets.find((s) => s.name === ACTUALS_SHEET_NAME);
+  const actuals = actualsSheet ? parseAllActuals(actualsSheet) : [];
+
   // Build resource name-to-ID lookup map
   const resourceNameToId = new Map<string, string>();
   for (const r of resources) {
@@ -207,6 +213,7 @@ export function workbookToProject(
     risks,
     resources,
     materials,
+    actuals,
   };
 }
 
@@ -351,6 +358,7 @@ function sheetToProjectLegacy(sheet: Sheet, mapping: ColumnMapping, projectName?
     risks,
     resources,
     materials: [],
+    actuals: [],
   };
 }
 
@@ -448,6 +456,51 @@ function parseAllMaterials(sheet: Sheet): MaterialRow[] {
     }
   }
   return materials;
+}
+
+/**
+ * Parse a single actual spend row.
+ */
+function parseActualRow(sheet: Sheet, row: number): ActualRow | null {
+  const taskId = getCellStringValue(sheet, row, 1);
+  if (!taskId) return null;
+
+  return {
+    id: getCellStringValue(sheet, row, 0) || `act-${row}-${Date.now()}`,
+    taskId,
+    date: getCellStringValue(sheet, row, 2) || new Date().toISOString().split('T')[0],
+    amount: parseFloat(getCellStringValue(sheet, row, 3)) || 0,
+    currency: getCellStringValue(sheet, row, 4) || getDefaultCurrency(),
+    source: getCellStringValue(sheet, row, 5) || '',
+    notes: getCellStringValue(sheet, row, 6) || '',
+  };
+}
+
+/**
+ * Parse all actuals from an actuals sheet.
+ */
+function parseAllActuals(sheet: Sheet): ActualRow[] {
+  const actuals: ActualRow[] = [];
+
+  // Find header row
+  let headerRow = -1;
+  for (let row = 0; row < Math.min(5, sheet.rowCount); row++) {
+    const cell = sheet.cells[`${row}:0`];
+    const value = (cell?.rawValue ?? '').toString().trim().toLowerCase();
+    if (value === 'entry id' || value === 'id' || value === 'actual') {
+      headerRow = row;
+      break;
+    }
+  }
+  if (headerRow === -1) return actuals;
+
+  for (let row = headerRow + 1; row < sheet.rowCount; row++) {
+    const actual = parseActualRow(sheet, row);
+    if (actual) {
+      actuals.push(actual);
+    }
+  }
+  return actuals;
 }
 
 /**
@@ -723,6 +776,18 @@ export function projectModelToProject(model: ProjectModel): Project {
     status: (m.status ?? 'delivered') as Material['status'],
   }));
 
+  // Convert actual rows to runtime spend entries (stored in project.accounting)
+  // Actuals are used by the accounting engine to compute actual spend
+  const actuals = (model.actuals ?? []).map((a) => ({
+    id: a.id,
+    taskId: a.taskId,
+    date: a.date,
+    amount: a.amount,
+    currency: a.currency,
+    source: a.source,
+    notes: a.notes,
+  }));
+
   return {
     id: model.id,
     name: model.name,
@@ -738,6 +803,17 @@ export function projectModelToProject(model: ProjectModel): Project {
     risks,
     wbs: roots,
     materials,
+    accounting: {
+      baselineTotal: 0,
+      allocatedTotal: 0,
+      currentEstimateTotal: 0,
+      actualSpendTotal: actuals.reduce((sum, a) => sum + a.amount, 0),
+      etcTotal: 0,
+      taskAccounting: [],
+      spendEntries: actuals,
+      changeLog: [],
+      currency: 'USD',
+    },
   };
 }
 
@@ -765,6 +841,9 @@ export function projectModelToWorkbook(
 
   // ─── Materials Sheet ──────────────────────────────────────────────
   sheets.push(createMaterialsSheetFromModel(model));
+
+  // ─── Actuals Sheet ──────────────────────────────────────────────
+  sheets.push(createActualsSheetFromModel(model));
 
   return {
     id: `wb-${model.id}`,
@@ -1026,6 +1105,52 @@ function createMaterialsSheetFromModel(model: ProjectModel): Sheet {
     defaultColWidth: 110,
     defaultRowHeight: 24,
     columnWidths: { 0: 150 },
+    rowHeights: {},
+    columnCount: colCount,
+    rowCount: rowCount,
+    frozenColumns: 0,
+    frozenRows: 1,
+  };
+}
+
+/**
+ * Create the actuals sheet from a ProjectModel.
+ */
+function createActualsSheetFromModel(model: ProjectModel): Sheet {
+  const colCount = ACTUAL_HEADERS.length;
+  const rowCount = 1 + (model.actuals?.length ?? 0) + 2;
+  const cells: Record<string, Cell> = {};
+
+  // Headers
+  for (let col = 0; col < ACTUAL_HEADERS.length; col++) {
+    cells[`0:${col}`] = {
+      rawValue: ACTUAL_HEADERS[col],
+      computedValue: ACTUAL_HEADERS[col],
+      style: { fontWeight: 'bold', backgroundColor: '#DCFCE7', color: '#166534' },
+    };
+  }
+
+  // Data rows
+  const actuals = model.actuals ?? [];
+  for (let i = 0; i < actuals.length; i++) {
+    const actual = actuals[i];
+    const row = 1 + i;
+    cells[`${row}:0`] = { rawValue: actual.id, computedValue: actual.id };
+    cells[`${row}:1`] = { rawValue: actual.taskId, computedValue: actual.taskId };
+    cells[`${row}:2`] = { rawValue: actual.date, computedValue: actual.date };
+    cells[`${row}:3`] = { rawValue: String(actual.amount), computedValue: actual.amount };
+    cells[`${row}:4`] = { rawValue: actual.currency, computedValue: actual.currency };
+    cells[`${row}:5`] = { rawValue: actual.source, computedValue: actual.source };
+    cells[`${row}:6`] = { rawValue: actual.notes, computedValue: actual.notes };
+  }
+
+  return {
+    id: `sheet-actuals-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    name: ACTUALS_SHEET_NAME,
+    cells,
+    defaultColWidth: 110,
+    defaultRowHeight: 24,
+    columnWidths: { 0: 120, 1: 100 },
     rowHeights: {},
     columnCount: colCount,
     rowCount: rowCount,
@@ -1469,6 +1594,7 @@ export function createSheetFromTemplate(templateId: string, projectName?: string
       color: r.color,
     })),
     materials: [],
+    actuals: [],
   };
 
   // Use projectModelToSheetCells to generate cells
@@ -1593,6 +1719,15 @@ export function createWorkbookFromTemplate(templateId: string, projectName?: str
       currency: m.currency,
       status: m.status,
     })),
+    actuals: (project.accounting?.spendEntries ?? []).map((a) => ({
+      id: a.id,
+      taskId: a.taskId,
+      date: a.date,
+      amount: a.amount,
+      currency: a.currency,
+      source: a.source,
+      notes: a.notes,
+    })),
   };
 
   return projectModelToWorkbook(model);
@@ -1675,6 +1810,33 @@ export function createMaterialsSheet(): Sheet {
     columnWidths: { 0: 150 },
     rowHeights: {},
     columnCount: MATERIAL_HEADERS.length,
+    rowCount: 10,
+    frozenColumns: 0,
+    frozenRows: 1,
+  };
+}
+
+/**
+ * Create a blank actuals sheet with headers.
+ */
+export function createActualsSheet(): Sheet {
+  const cells: Record<string, Cell> = {};
+  for (let col = 0; col < ACTUAL_HEADERS.length; col++) {
+    cells[`0:${col}`] = {
+      rawValue: ACTUAL_HEADERS[col],
+      computedValue: ACTUAL_HEADERS[col],
+      style: { fontWeight: 'bold', backgroundColor: '#DCFCE7', color: '#166534' },
+    };
+  }
+  return {
+    id: `sheet-actuals-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    name: ACTUALS_SHEET_NAME,
+    cells,
+    defaultColWidth: 110,
+    defaultRowHeight: 24,
+    columnWidths: { 0: 120, 1: 100 },
+    rowHeights: {},
+    columnCount: ACTUAL_HEADERS.length,
     rowCount: 10,
     frozenColumns: 0,
     frozenRows: 1,

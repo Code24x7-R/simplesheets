@@ -182,6 +182,7 @@ export interface ProjectModel {
   risks: RiskRow[];
   resources: ResourceRow[];
   materials: MaterialRow[];
+  actuals: ActualRow[];
 }
 
 /**
@@ -224,6 +225,19 @@ export interface MaterialRow {
   // Common
   currency: string;
   status: string;
+}
+
+/**
+ * Serializable actual spend row (timesheet, invoice, expense).
+ */
+export interface ActualRow {
+  id: string;
+  taskId: string;
+  date: string;
+  amount: number;
+  currency: string;
+  source: string;
+  notes: string;
 }
 
 /**

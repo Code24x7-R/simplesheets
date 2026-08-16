@@ -280,6 +280,7 @@ describe('sheetToProject', () => {
         risks: [],
       resources: [],
             materials: [],
+            actuals: [],
       };
 
       const project = projectModelToProject(model);
@@ -304,6 +305,7 @@ describe('sheetToProject', () => {
         risks: [],
       resources: [],
             materials: [],
+            actuals: [],
       };
 
       const project = projectModelToProject(model);
@@ -324,6 +326,7 @@ describe('sheetToProject', () => {
         ],
         resources: [],
             materials: [],
+            actuals: [],
       };
 
       const project = projectModelToProject(model);
@@ -437,6 +440,7 @@ describe('sheetToProject', () => {
         risks: [],
       resources: [],
             materials: [],
+            actuals: [],
       };
 
       const cells = projectModelToSheetCells(model, mapping);
@@ -461,6 +465,7 @@ describe('sheetToProject', () => {
         risks: [],
       resources: [],
             materials: [],
+            actuals: [],
       };
 
       const cells = projectModelToSheetCells(model, mapping);
@@ -481,6 +486,7 @@ describe('sheetToProject', () => {
         risks: [],
       resources: [],
             materials: [],
+            actuals: [],
       };
 
       const cells = projectModelToSheetCells(model, mapping);
@@ -515,6 +521,7 @@ describe('sheetToProject', () => {
         risks: [],
       resources: [],
             materials: [],
+            actuals: [],
       };
 
       const cells = projectModelToSheetCells(model, partialMapping);
@@ -537,6 +544,7 @@ describe('sheetToProject', () => {
         risks: [],
       resources: [],
             materials: [],
+            actuals: [],
       };
 
       const cells = projectModelToSheetCells(model, mapping);
@@ -668,6 +676,7 @@ describe('sheetToProject', () => {
         ],
         resources: [],
             materials: [],
+            actuals: [],
       };
 
       const cells = projectModelToSheetCells(model, mapping);
@@ -692,6 +701,7 @@ describe('sheetToProject', () => {
           { id: 'r1', name: 'Alice', role: 'Dev', costRate: 100, costCurrency: 'USD', availability: 100, color: '#3B82F6' },
         ],
         materials: [],
+            actuals: [],
       };
 
       const cells = projectModelToSheetCells(model, mapping);
@@ -714,6 +724,7 @@ describe('sheetToProject', () => {
         risks: [],
         resources: [],
             materials: [],
+            actuals: [],
       };
 
       const cells = projectModelToSheetCells(model, mapping);

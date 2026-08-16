@@ -330,6 +330,15 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
         currency: m.currency,
         status: m.status,
       })),
+      actuals: (projectState.accounting?.spendEntries ?? []).map((a) => ({
+        id: a.id,
+        taskId: a.taskId,
+        date: a.date,
+        amount: a.amount,
+        currency: a.currency,
+        source: a.source,
+        notes: a.notes,
+      })),
     };
   }
 
@@ -544,6 +553,15 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
         carryingCostPerUnit: m.carryingCostPerUnit,
         currency: m.currency,
         status: m.status,
+      })),
+      actuals: (project.accounting?.spendEntries ?? []).map((a) => ({
+        id: a.id,
+        taskId: a.taskId,
+        date: a.date,
+        amount: a.amount,
+        currency: a.currency,
+        source: a.source,
+        notes: a.notes,
       })),
     };
 

@@ -146,6 +146,7 @@ describe('JSON Service', () => {
           { id: 'm1', name: 'Excavator', classification: 'capex', unit: 'each', unitCost: 50000, quantity: 1, vendor: 'Caterpillar', depreciationMethod: 'straight-line', usefulLifeMonths: 60, salvageValue: 5000, billingPeriod: 'daily', rentalRate: 0, leaseStartDate: null, leaseEndDate: null, wastageRate: 0, reorderPoint: 0, carryingCostPerUnit: 0, currency: 'USD', status: 'delivered' },
           { id: 'm2', name: 'Concrete', classification: 'consumable', unit: 'm³', unitCost: 180, quantity: 50, vendor: 'Acme', depreciationMethod: 'none', usefulLifeMonths: 0, salvageValue: 0, billingPeriod: 'daily', rentalRate: 0, leaseStartDate: null, leaseEndDate: null, wastageRate: 5, reorderPoint: 10, carryingCostPerUnit: 0, currency: 'USD', status: 'ordered' },
         ],
+        actuals: [],
       };
 
       const workbook = projectModelToWorkbook(model);
@@ -179,6 +180,7 @@ describe('JSON Service', () => {
         materials: [
           { id: 'm1', name: 'Steel', classification: 'consumable', unit: 'ton', unitCost: 2500, quantity: 12, vendor: 'Steel Corp', depreciationMethod: 'none', usefulLifeMonths: 0, salvageValue: 0, billingPeriod: 'daily', rentalRate: 0, leaseStartDate: null, leaseEndDate: null, wastageRate: 3, reorderPoint: 2, carryingCostPerUnit: 5, currency: 'USD', status: 'delivered' },
         ],
+        actuals: [],
       };
 
       const workbook = projectModelToWorkbook(model);
