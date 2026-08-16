@@ -2654,16 +2654,19 @@ function WorkbookView() {
         onDeleteSheet={handleDeleteSheet}
         onShowProjectView={() => {
           // Re-convert workbook to project to pick up any edits made in sheet view
-          const tasksSheet = workbook.sheets.find((s) => s.name === TASKS_SHEET_NAME);
-          if (tasksSheet) {
-            // Multi-sheet project format
-            const extData = workbook.extensions?.['project-wbs'];
-            const mapping = extData?.data
-              ? (extData.data as { columnMapping?: ColumnMapping }).columnMapping
-              : undefined;
-            const model = workbookToProject(workbook, TASKS_SHEET_NAME, mapping ?? undefined);
-            const project = projectModelToProject(model);
-            setCurrentProject(project);
+          // But preserve current project state if it exists (avoids discarding unsaved changes)
+          if (!currentProject) {
+            const tasksSheet = workbook.sheets.find((s) => s.name === TASKS_SHEET_NAME);
+            if (tasksSheet) {
+              // Multi-sheet project format
+              const extData = workbook.extensions?.['project-wbs'];
+              const mapping = extData?.data
+                ? (extData.data as { columnMapping?: ColumnMapping }).columnMapping
+                : undefined;
+              const model = workbookToProject(workbook, TASKS_SHEET_NAME, mapping ?? undefined);
+              const project = projectModelToProject(model);
+              setCurrentProject(project);
+            }
           }
           setShowProjectView(true);
         }}

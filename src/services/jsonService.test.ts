@@ -2,6 +2,8 @@
 // Copyright (c) 2026 Richard Robertson
 import { exportJson, importJson, downloadJson } from './jsonService';
 import type { Workbook } from '../types';
+import { projectModelToWorkbook } from '../extensions/project-wbs/sheetToProject';
+import type { ProjectModel } from '../types';
 
 describe('JSON Service', () => {
   const testWorkbook: Workbook = {
@@ -124,6 +126,70 @@ describe('JSON Service', () => {
       downloadJson(testWorkbook, 'custom-name');
 
       expect(URL.createObjectURL).toHaveBeenCalled();
+    });
+  });
+
+  describe('materials preservation', () => {
+    it('exports materials in the materials sheet', () => {
+      const model: ProjectModel = {
+        id: 'proj-1',
+        name: 'Test Project',
+        description: 'Test',
+        startDate: '2025-01-01',
+        endDate: '2025-01-31',
+        tasks: [
+          { id: 't1', name: 'Task 1', startDate: '2025-01-01', endDate: '2025-01-05', duration: 5, parentId: null, dependencies: [], progress: 0, resourceId: null, isMilestone: false, color: '#3B82F6', notes: '' },
+        ],
+        risks: [],
+        resources: [],
+        materials: [
+          { id: 'm1', name: 'Excavator', classification: 'capex', unit: 'each', unitCost: 50000, quantity: 1, vendor: 'Caterpillar', depreciationMethod: 'straight-line', usefulLifeMonths: 60, salvageValue: 5000, billingPeriod: 'daily', rentalRate: 0, leaseStartDate: null, leaseEndDate: null, wastageRate: 0, reorderPoint: 0, carryingCostPerUnit: 0, currency: 'USD', status: 'delivered' },
+          { id: 'm2', name: 'Concrete', classification: 'consumable', unit: 'm³', unitCost: 180, quantity: 50, vendor: 'Acme', depreciationMethod: 'none', usefulLifeMonths: 0, salvageValue: 0, billingPeriod: 'daily', rentalRate: 0, leaseStartDate: null, leaseEndDate: null, wastageRate: 5, reorderPoint: 10, carryingCostPerUnit: 0, currency: 'USD', status: 'ordered' },
+        ],
+      };
+
+      const workbook = projectModelToWorkbook(model);
+      const json = exportJson(workbook);
+      const parsed = JSON.parse(json);
+
+      // Find the materials sheet
+      const materialsSheet = parsed.sheets.find((s: { name: string }) => s.name === 'Materials');
+      expect(materialsSheet).toBeDefined();
+
+      // Verify material data is in the cells
+      const cells = materialsSheet.cells;
+      expect(cells['1:0']?.rawValue).toBe('Excavator');
+      expect(cells['1:1']?.rawValue).toBe('capex');
+      expect(cells['1:3']?.rawValue).toBe('50000');
+      expect(cells['2:0']?.rawValue).toBe('Concrete');
+      expect(cells['2:1']?.rawValue).toBe('consumable');
+      expect(cells['2:3']?.rawValue).toBe('180');
+    });
+
+    it('preserves materials through round-trip export/import', () => {
+      const model: ProjectModel = {
+        id: 'proj-1',
+        name: 'Test Project',
+        description: 'Test',
+        startDate: '2025-01-01',
+        endDate: '2025-01-31',
+        tasks: [],
+        risks: [],
+        resources: [],
+        materials: [
+          { id: 'm1', name: 'Steel', classification: 'consumable', unit: 'ton', unitCost: 2500, quantity: 12, vendor: 'Steel Corp', depreciationMethod: 'none', usefulLifeMonths: 0, salvageValue: 0, billingPeriod: 'daily', rentalRate: 0, leaseStartDate: null, leaseEndDate: null, wastageRate: 3, reorderPoint: 2, carryingCostPerUnit: 5, currency: 'USD', status: 'delivered' },
+        ],
+      };
+
+      const workbook = projectModelToWorkbook(model);
+      const json = exportJson(workbook);
+      const result = importJson(json);
+      expect(result.success).toBe(true);
+
+      const imported = result.workbook!;
+      const materialsSheet = imported.sheets.find((s) => s.name === 'Materials');
+      expect(materialsSheet).toBeDefined();
+      expect(materialsSheet!.cells['1:0']?.rawValue).toBe('Steel');
     });
   });
 
