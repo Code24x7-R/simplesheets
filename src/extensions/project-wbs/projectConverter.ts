@@ -10,13 +10,35 @@
 import type { Project, WBSTask, Risk, Resource, Material } from '../types';
 import type { ProjectModel, TaskRow, RiskRow, ResourceRow, MaterialRow, ActualRow } from '../../types';
 import { getAllTasks } from './treeOps';
+import { projectModelToProject } from './sheetToProject';
+
+/**
+ * Flatten a task tree into a list of tasks with parentId set correctly.
+ * Unlike getAllTasks, this ensures parentId is set for child tasks,
+ * which is needed for proper export/import round-tripping.
+ */
+function flattenTreeWithParentId(tree: WBSTask[]): WBSTask[] {
+  const result: WBSTask[] = [];
+  function traverse(tasks: WBSTask[], parentId: string | null) {
+    for (const task of tasks) {
+      // Create a copy with parentId set correctly
+      result.push({ ...task, parentId });
+      if (task.children.length > 0) {
+        traverse(task.children, task.id);
+      }
+    }
+  }
+  traverse(tree, null);
+  return result;
+}
 
 /**
  * Convert a runtime Project to a serializable ProjectModel.
  * This is the single source of truth for Project → ProjectModel conversion.
  */
 export function projectToModel(projectState: Project): ProjectModel {
-  const allTasks = getAllTasks(projectState.wbs);
+  // Use flattenTreeWithParentId to ensure parentId is set correctly for export/import
+  const allTasks = flattenTreeWithParentId(projectState.wbs);
   return {
     id: projectState.id,
     name: projectState.name,
@@ -131,4 +153,63 @@ export function actualToRow(actual: {
     source: actual.source,
     notes: actual.notes,
   };
+}
+
+// ─── Import/Export Project Data ────────────────────────────────────────
+
+/**
+ * Export a project to a JSON string for saving/sharing.
+ * Includes all project data: tasks, risks, resources, materials, actuals.
+ */
+export function exportProjectToJSON(projectState: Project): string {
+  const model = projectToModel(projectState);
+  return JSON.stringify({
+    format: 'simplesheets-project',
+    version: '1.0.0',
+    exportedAt: new Date().toISOString(),
+    project: model,
+  }, null, 2);
+}
+
+/**
+ * Import a project from a JSON string.
+ * Validates the JSON structure and converts to a runtime Project.
+ * @throws Error if JSON is invalid or has wrong format
+ */
+export function importProjectFromJSON(json: string): Project {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(json);
+  } catch {
+    throw new Error('Invalid JSON syntax');
+  }
+
+  if (!parsed || typeof parsed !== 'object') {
+    throw new Error('Project data must be an object');
+  }
+
+  const data = parsed as Record<string, unknown>;
+
+  // Validate format
+  if (data.format !== 'simplesheets-project') {
+    throw new Error('Invalid project file format. Expected "simplesheets-project"');
+  }
+
+  // Extract project model
+  const model = data.project as ProjectModel;
+  if (!model || !model.id || !model.name) {
+    throw new Error('Invalid project data: missing id or name');
+  }
+
+  // Convert to runtime Project using existing utility
+  return projectModelToProject(model);
+}
+
+/**
+ * Validate a project JSON string without importing it.
+ * Returns true if valid, throws Error if invalid.
+ */
+export function validateProjectJSON(json: string): boolean {
+  importProjectFromJSON(json);
+  return true;
 }
