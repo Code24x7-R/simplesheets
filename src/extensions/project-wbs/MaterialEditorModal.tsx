@@ -14,6 +14,7 @@
 import { useState, useEffect } from 'react';
 import type { Material, MaterialClassification, DepreciationMethod, BillingPeriod } from '../types';
 import { DEFAULT_CAPITALIZATION_CONFIG } from './materialEngine';
+import { NumericInput } from '../../components/NumericInput';
 
 interface MaterialEditorModalProps {
   material: Material | null; // null = create mode
@@ -236,10 +237,9 @@ export function MaterialEditorModal({
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Quantity <span className="text-red-500">*</span>
               </label>
-              <input
-                type="number"
+              <NumericInput
                 value={form.quantity}
-                onChange={(e) => updateField('quantity', Math.max(1, parseInt(e.target.value) || 1))}
+                onChange={(v) => updateField('quantity', Math.max(1, Math.round(v)))}
                 className={`w-full border rounded px-3 py-2 text-sm ${
                   errors.quantity ? 'border-red-500' : 'border-gray-300'
                 }`}
@@ -261,10 +261,9 @@ export function MaterialEditorModal({
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Unit Cost <span className="text-red-500">*</span>
               </label>
-              <input
-                type="number"
+              <NumericInput
                 value={form.unitCost}
-                onChange={(e) => updateField('unitCost', Math.max(0, parseFloat(e.target.value) || 0))}
+                onChange={(v) => updateField('unitCost', Math.max(0, v))}
                 className={`w-full border rounded px-3 py-2 text-sm ${
                   errors.unitCost ? 'border-red-500' : 'border-gray-300'
                 }`}
@@ -302,10 +301,9 @@ export function MaterialEditorModal({
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Useful Life (months) <span className="text-red-500">*</span>
                   </label>
-                  <input
-                    type="number"
+                  <NumericInput
                     value={form.usefulLifeMonths}
-                    onChange={(e) => updateField('usefulLifeMonths', Math.max(1, parseInt(e.target.value) || 1))}
+                    onChange={(v) => updateField('usefulLifeMonths', Math.max(1, Math.round(v)))}
                     className={`w-full border rounded px-3 py-2 text-sm ${
                       errors.usefulLifeMonths ? 'border-red-500' : 'border-gray-300'
                     }`}
@@ -317,10 +315,9 @@ export function MaterialEditorModal({
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Salvage Value ($)
                   </label>
-                  <input
-                    type="number"
+                  <NumericInput
                     value={form.salvageValue}
-                    onChange={(e) => updateField('salvageValue', Math.max(0, parseFloat(e.target.value) || 0))}
+                    onChange={(v) => updateField('salvageValue', Math.max(0, v))}
                     className={`w-full border rounded px-3 py-2 text-sm ${
                       errors.salvageValue ? 'border-red-500' : 'border-gray-300'
                     }`}
@@ -364,10 +361,9 @@ export function MaterialEditorModal({
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Rental Rate ($) <span className="text-red-500">*</span>
                   </label>
-                  <input
-                    type="number"
+                  <NumericInput
                     value={form.rentalRate}
-                    onChange={(e) => updateField('rentalRate', Math.max(0, parseFloat(e.target.value) || 0))}
+                    onChange={(v) => updateField('rentalRate', Math.max(0, v))}
                     className={`w-full border rounded px-3 py-2 text-sm ${
                       errors.rentalRate ? 'border-red-500' : 'border-gray-300'
                     }`}
@@ -422,10 +418,9 @@ export function MaterialEditorModal({
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Wastage Rate (%)
                   </label>
-                  <input
-                    type="number"
+                  <NumericInput
                     value={form.wastageRate}
-                    onChange={(e) => updateField('wastageRate', Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)))}
+                    onChange={(v) => updateField('wastageRate', Math.min(100, Math.max(0, v)))}
                     className={`w-full border rounded px-3 py-2 text-sm ${
                       errors.wastageRate ? 'border-red-500' : 'border-gray-300'
                     }`}
@@ -439,10 +434,9 @@ export function MaterialEditorModal({
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Carrying Cost ($/unit/mo)
                   </label>
-                  <input
-                    type="number"
+                  <NumericInput
                     value={form.carryingCostPerUnit}
-                    onChange={(e) => updateField('carryingCostPerUnit', Math.max(0, parseFloat(e.target.value) || 0))}
+                    onChange={(v) => updateField('carryingCostPerUnit', Math.max(0, v))}
                     className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
                     min={0}
                     step={0.01}
@@ -452,10 +446,9 @@ export function MaterialEditorModal({
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Reorder Point
                   </label>
-                  <input
-                    type="number"
+                  <NumericInput
                     value={form.reorderPoint}
-                    onChange={(e) => updateField('reorderPoint', Math.max(0, parseInt(e.target.value) || 0))}
+                    onChange={(v) => updateField('reorderPoint', Math.max(0, Math.round(v)))}
                     className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
                     min={0}
                   />

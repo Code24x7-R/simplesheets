@@ -87,9 +87,11 @@ describe('ResourceEditorModal', () => {
     fireEvent.change(screen.getByPlaceholderText('e.g., Alice Smith'), {
       target: { value: 'Test' },
     });
-    fireEvent.change(screen.getByLabelText(/availability/i), {
+    const availInput = screen.getByLabelText(/availability/i);
+    fireEvent.change(availInput, {
       target: { value: '-10' },
     });
+    fireEvent.blur(availInput);
     fireEvent.click(screen.getByRole('button', { name: 'Add Resource' }));
 
     expect(onSave).not.toHaveBeenCalled();

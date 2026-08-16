@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
 import { useState, useCallback } from 'react';
+import { NumericInput } from './NumericInput';
 
 interface ColumnRowSizeModalProps {
   /** Whether the modal is open. */
@@ -90,18 +91,6 @@ export function ColumnRowSizeModal({
     setSize(value);
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value;
-    if (raw === '') {
-      setSize(0);
-      return;
-    }
-    const parsed = parseInt(raw, 10);
-    if (!isNaN(parsed)) {
-      setSize(Math.min(MAX_SIZE, Math.max(0, parsed)));
-    }
-  };
-
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       e.preventDefault();
@@ -185,12 +174,11 @@ export function ColumnRowSizeModal({
         {/* Custom size input */}
         <div>
           <label htmlFor="size-input" className="block text-sm font-medium mb-1">{label} ({unit})</label>
-          <input
+          <NumericInput
             id="size-input"
-            type="number"
+            value={size}
+            onChange={(v) => setSize(v)}
             className="w-full border border-gray-200 rounded px-3 py-3 text-base min-h-[44px]"
-            value={size || ''}
-            onChange={handleInputChange}
             min={MIN_SIZE}
             max={MAX_SIZE}
             placeholder={String(type === 'col' ? defaultColWidth : defaultRowHeight)}

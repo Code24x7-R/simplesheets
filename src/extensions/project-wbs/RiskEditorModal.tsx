@@ -10,6 +10,7 @@
 
 import { useState, useEffect } from 'react';
 import type { Risk, RiskStatus, RiskCategory, Resource } from '../types';
+import { NumericInput } from '../../components/NumericInput';
 
 interface RiskEditorModalProps {
   risk: Risk | null; // null = create mode
@@ -353,10 +354,9 @@ export function RiskEditorModal({
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Mitigation Cost</label>
-              <input
-                type="number"
+              <NumericInput
                 value={form.mitigationCost}
-                onChange={(e) => updateField('mitigationCost', Math.max(0, parseFloat(e.target.value) || 0))}
+                onChange={(v) => updateField('mitigationCost', Math.max(0, v))}
                 className={`w-full border rounded px-3 py-2 text-sm ${
                   errors.mitigationCost ? 'border-red-500' : 'border-gray-300'
                 }`}

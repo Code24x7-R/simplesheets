@@ -10,6 +10,7 @@
 import { useState } from 'react';
 import type { Sheet, ColumnMapping } from '../../types';
 import { detectColumnMapping } from './sheetToProject';
+import { NumericInput } from '../../components/NumericInput';
 
 interface ColumnMappingDialogProps {
   sheet: Sheet;
@@ -101,10 +102,9 @@ export function ColumnMappingDialog({ sheet, onConfirm, onCancel }: ColumnMappin
           {/* Header row selector */}
           <div className="flex items-center gap-3">
             <label className="text-sm font-medium text-gray-700 w-32">Header Row:</label>
-            <input
-              type="number"
+            <NumericInput
               value={headerRow}
-              onChange={(e) => setHeaderRow(Math.max(0, parseInt(e.target.value) || 0))}
+              onChange={(v) => setHeaderRow(Math.max(0, Math.round(v)))}
               className="w-20 border border-gray-300 rounded px-2 py-1 text-sm"
               min={0}
               max={10}

@@ -10,6 +10,7 @@
 import { useState, useEffect } from 'react';
 import type { Resource } from '../types';
 import { getDefaultCurrency, SUPPORTED_CURRENCIES } from '../../utils/currency';
+import { NumericInput } from '../../components/NumericInput';
 
 interface ResourceEditorModalProps {
   resource: Resource | null; // null = create mode
@@ -161,11 +162,10 @@ export function ResourceEditorModal({
               <label htmlFor="resource-cost-rate" className="block text-sm font-medium text-gray-700 mb-1">
                 Cost Rate
               </label>
-              <input
+              <NumericInput
                 id="resource-cost-rate"
-                type="number"
                 value={form.costRate}
-                onChange={(e) => updateField('costRate', parseFloat(e.target.value) || 0)}
+                onChange={(v) => updateField('costRate', v)}
                 className={`w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                   errors.costRate ? 'border-red-500' : 'border-gray-300'
                 }`}
@@ -198,11 +198,10 @@ export function ResourceEditorModal({
             <label htmlFor="resource-availability" className="block text-sm font-medium text-gray-700 mb-1">
               Availability (%)
             </label>
-            <input
+            <NumericInput
               id="resource-availability"
-              type="number"
               value={form.availability}
-              onChange={(e) => updateField('availability', parseFloat(e.target.value) || 0)}
+              onChange={(v) => updateField('availability', v)}
               className={`w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                 errors.availability ? 'border-red-500' : 'border-gray-300'
               }`}

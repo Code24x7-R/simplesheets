@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
 import { usePrintSetup, type PageOrientation, type PageSize, type PrintScaling } from '../context/PrintSetupContext';
+import { NumericInput } from './NumericInput';
 
 interface PrintSetupModalProps {
   isOpen: boolean;
@@ -80,13 +81,12 @@ export function PrintSetupModal({ isOpen, onClose }: PrintSetupModalProps) {
             {(['top', 'bottom', 'left', 'right'] as const).map((side) => (
               <div key={side} className="flex items-center gap-1">
                 <label className="text-xs text-gray-500 w-12 capitalize">{side}</label>
-                <input
-                  type="number"
+                <NumericInput
                   min={0}
                   max={50}
                   className="flex-1 border border-gray-200 rounded px-2 py-1 text-sm w-16"
                   value={setup.margins[side]}
-                  onChange={(e) => updateMargins({ [side]: parseInt(e.target.value, 10) || /* istanbul ignore next */ 0 })}
+                  onChange={(v) => updateMargins({ [side]: Math.round(v) })}
                 />
               </div>
             ))}

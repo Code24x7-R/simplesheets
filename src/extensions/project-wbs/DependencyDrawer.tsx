@@ -17,6 +17,7 @@ import { useState, useMemo } from 'react';
 import type { WBSTask, Resource, DependencyType, TaskDependency } from '../types';
 import { calculateDependencyImpact, calculateScheduleShiftCost } from './projectAccounting';
 import { isTaskBlocked, isTaskReady } from './dependencyWorkflows';
+import { NumericInput } from '../../components/NumericInput';
 
 interface DependencyDrawerProps {
   task: WBSTask;
@@ -256,10 +257,9 @@ export function DependencyDrawer({
                   <option value="SF">SF - Start-to-Finish</option>
                 </select>
                 <div className="flex items-center gap-1">
-                  <input
-                    type="number"
+                  <NumericInput
                     value={dep.lag}
-                    onChange={(e) => handleUpdateDep(index, { lag: parseInt(e.target.value) || 0 })}
+                    onChange={(v) => handleUpdateDep(index, { lag: Math.round(v) })}
                     className="w-14 border border-gray-300 rounded px-2 py-1 text-xs text-right"
                     title="Lag days (negative = lead)"
                   />
@@ -312,10 +312,9 @@ export function DependencyDrawer({
                 <option value="FF">FF - Finish-to-Finish</option>
                 <option value="SF">SF - Start-to-Finish</option>
               </select>
-              <input
-                type="number"
+              <NumericInput
                 value={newDepLag}
-                onChange={(e) => setNewDepLag(parseInt(e.target.value) || 0)}
+                onChange={(v) => setNewDepLag(Math.round(v))}
                 className="w-16 border border-gray-300 rounded px-2 py-1 text-xs text-right"
                 placeholder="Lag"
                 title="Lag days (negative = lead)"

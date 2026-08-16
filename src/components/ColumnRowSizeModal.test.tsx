@@ -87,6 +87,7 @@ describe('ColumnRowSizeModal', () => {
     // Set a custom size
     const input = screen.getByLabelText('Column Width (px)') as HTMLInputElement;
     fireEvent.change(input, { target: { value: '120' } });
+    fireEvent.blur(input);
     fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
 
     expect(defaultProps.onApply).toHaveBeenCalledWith({
@@ -102,6 +103,7 @@ describe('ColumnRowSizeModal', () => {
     render(<ColumnRowSizeModal {...defaultProps} initialType="row" />);
     const input = screen.getByLabelText('Row Height (px)') as HTMLInputElement;
     fireEvent.change(input, { target: { value: '50' } });
+    fireEvent.blur(input);
     fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
 
     expect(defaultProps.onApply).toHaveBeenCalledWith({
@@ -139,6 +141,7 @@ describe('ColumnRowSizeModal', () => {
     render(<ColumnRowSizeModal {...defaultProps} />);
     const input = screen.getByLabelText('Column Width (px)') as HTMLInputElement;
     fireEvent.change(input, { target: { value: '2' } });
+    fireEvent.blur(input);
     fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
 
     expect(defaultProps.onApply).toHaveBeenCalledWith(
@@ -150,6 +153,7 @@ describe('ColumnRowSizeModal', () => {
     render(<ColumnRowSizeModal {...defaultProps} />);
     const input = screen.getByLabelText('Column Width (px)') as HTMLInputElement;
     fireEvent.change(input, { target: { value: '9999' } });
+    fireEvent.blur(input);
     fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
 
     expect(defaultProps.onApply).toHaveBeenCalledWith(
@@ -168,6 +172,7 @@ describe('ColumnRowSizeModal', () => {
     render(<ColumnRowSizeModal {...defaultProps} />);
     const input = screen.getByLabelText('Column Width (px)') as HTMLInputElement;
     fireEvent.change(input, { target: { value: '130' } });
+    fireEvent.blur(input);
     fireEvent.keyDown(input, { key: 'Enter' });
 
     expect(defaultProps.onApply).toHaveBeenCalledWith(

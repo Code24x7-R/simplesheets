@@ -245,6 +245,7 @@ describe('DependencyDrawer', () => {
     // Modify lag to create a change
     const lagInput = screen.getByTitle('Lag days (negative = lead)') as HTMLInputElement;
     fireEvent.change(lagInput, { target: { value: '2' } });
+    fireEvent.blur(lagInput);
 
     // Click Save
     fireEvent.click(screen.getByText('Save Changes'));
@@ -309,6 +310,7 @@ describe('DependencyDrawer', () => {
     // Modify the lag to create a change that triggers impact
     const lagInput = screen.getByTitle('Lag days (negative = lead)') as HTMLInputElement;
     fireEvent.change(lagInput, { target: { value: '3' } });
+    fireEvent.blur(lagInput);
 
     // Impact preview should appear when there are changes
     expect(screen.getByText('Impact Preview')).toBeTruthy();
@@ -333,6 +335,7 @@ describe('DependencyDrawer', () => {
     // Modify lag
     const lagInput = screen.getByTitle('Lag days (negative = lead)') as HTMLInputElement;
     fireEvent.change(lagInput, { target: { value: '5' } });
+    fireEvent.blur(lagInput);
     expect(lagInput.value).toBe('5');
 
     // Click Reset
