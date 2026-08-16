@@ -40,11 +40,21 @@ interface ProjectViewProps {
   activeSheet: Sheet | null;
   columnMapping: ColumnMapping | null;
   onSaveProject: (model: ProjectModel, mapping: ColumnMapping | null, sheetId: string | null) => void;
+  onProjectChange?: (project: Project) => void;
   onClose: () => void;
 }
 
-export function ProjectView({ project: initialProject, activeSheet, columnMapping, onSaveProject, onClose }: ProjectViewProps) {
+export function ProjectView({ project: initialProject, activeSheet, columnMapping, onSaveProject, onProjectChange, onClose }: ProjectViewProps) {
   const [project, setProject] = useState(initialProject);
+
+  // Notify parent of project changes (e.g., adding materials)
+  const handleProjectChange = useCallback((updater: Project | ((prev: Project) => Project)) => {
+    setProject((prev) => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      onProjectChange?.(next);
+      return next;
+    });
+  }, [onProjectChange]);
   const [viewMode, setViewMode] = useState<ViewMode>('gantt');
   const [zoom, setZoom] = useState<'day' | 'week' | 'month'>('week');
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
@@ -99,7 +109,7 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
   }
 
   function handleTaskSave(task: WBSTask) {
-    setProject((prev) => {
+    handleProjectChange((prev) => {
       let next: Project;
       if (taskModal.task) {
         // Edit existing
@@ -127,7 +137,7 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
       }
     }
 
-    setProject((prev) => {
+    handleProjectChange((prev) => {
       const next = { ...prev, wbs: removeTask(prev.wbs, taskId) };
       // Recompute rollups for summary tasks
       const recomputed = { ...next, wbs: recomputeRollups(next.wbs, next.risks) };
@@ -145,7 +155,7 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
   }
 
   function handleToggleCollapse(taskId: string) {
-    setProject((prev) => ({ ...prev, wbs: toggleCollapse(prev.wbs, taskId) }));
+    handleProjectChange((prev) => ({ ...prev, wbs: toggleCollapse(prev.wbs, taskId) }));
   }
 
   // ─── Dependency Management ──────────────────────────────────────────
@@ -164,7 +174,7 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
   }
 
   function handleSaveDependencies(taskId: string, dependencies: TaskDependency[]) {
-    setProject((prev) => {
+    handleProjectChange((prev) => {
       // Update the task's dependencies in the tree
       let next = { ...prev, wbs: updateTask(prev.wbs, taskId, (t) => ({ ...t, dependencies })) };
 
@@ -356,7 +366,7 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
   }
 
   function handleRiskSave(risk: Risk) {
-    setProject((prev) => {
+    handleProjectChange((prev) => {
       let next: Project;
       if (riskModal.risk) {
         // Edit existing - pass the full risk object as changes
@@ -373,7 +383,7 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
   }
 
   function handleRiskDelete(riskId: string) {
-    setProject((prev) => {
+    handleProjectChange((prev) => {
       const next = removeRisk(prev, riskId);
       syncProjectToSheet(next);
       return next;
@@ -382,7 +392,7 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
   }
 
   const handleRiskClose = useCallback((riskId: string) => {
-    setProject((prev) => {
+    handleProjectChange((prev) => {
       const next = {
         ...prev,
         risks: prev.risks.map((r) =>
@@ -397,7 +407,7 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
   // ─── Resource CRUD ───────────────────────────────────────────────────
 
   function handleResourceSave(resource: Resource) {
-    setProject((prev) => {
+    handleProjectChange((prev) => {
       let next: Project;
       if (resourceModal.resource) {
         // Edit existing
@@ -413,7 +423,7 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
   }
 
   function handleResourceDelete(resourceId: string) {
-    setProject((prev) => {
+    handleProjectChange((prev) => {
       const next = { ...prev, resources: removeResource(prev.resources, resourceId) };
       syncProjectToSheet(next);
       return next;
@@ -435,7 +445,7 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
     const model = sheetToProject(activeSheet, mapping, activeSheet.name);
     const newProject = projectModelToProject(model);
 
-    setProject(newProject);
+    handleProjectChange(newProject);
     setShowColumnMapping(false);
     setViewMode('gantt');
 
@@ -450,7 +460,7 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
   // ─── Calendar Configuration ─────────────────────────────────────────
 
   function handleCalendarSave(calendar: import('../types').WorkingCalendar) {
-    setProject((prev) => ({ ...prev, calendar }));
+    handleProjectChange((prev) => ({ ...prev, calendar }));
     setShowCalendarConfig(false);
   }
 
@@ -468,7 +478,7 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
   }
 
   function handleMaterialSave(material: import('../types').Material) {
-    setProject((prev) => {
+    handleProjectChange((prev) => {
       const materials = prev.materials ?? [];
       const existingIndex = materials.findIndex((m) => m.id === material.id);
       if (existingIndex >= 0) {
@@ -484,7 +494,7 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
   }
 
   function handleMaterialDelete(materialId: string) {
-    setProject((prev) => ({
+    handleProjectChange((prev) => ({
       ...prev,
       materials: (prev.materials ?? []).filter((m) => m.id !== materialId),
     }));

@@ -2681,6 +2681,7 @@ function WorkbookView() {
             activeSheet={sheet}
             columnMapping={getProjectColumnMapping()}
             onSaveProject={handleSaveProjectData}
+            onProjectChange={(project) => setCurrentProject(project)}
             onClose={() => setShowProjectView(false)}
           />
         </div>
