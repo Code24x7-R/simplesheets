@@ -403,13 +403,6 @@ export function getTreeDepth(tree: WBSTask[]): number {
 }
 
 /**
- * Alias for findTask (for consistency with other CRUD operations).
- */
-export function findTaskById(tree: WBSTask[], id: string): WBSTask | null {
-  return findTask(tree, id);
-}
-
-/**
  * Get all tasks in a flat array (depth-first).
  */
 export function getAllTasks(tree: WBSTask[]): WBSTask[] {
@@ -451,13 +444,6 @@ export function updateTask(
     return task;
   });
   return changed ? result : tree;
-}
-
-/**
- * Alias for toggleCollapsed (for consistency).
- */
-export function toggleCollapse(tree: WBSTask[], id: string): WBSTask[] {
-  return toggleCollapsed(tree, id);
 }
 
 // ─── Resource CRUD ──────────────────────────────────────────────────────────

@@ -9,6 +9,7 @@
 
 import { useState } from 'react';
 import type { Sheet, ColumnMapping } from '../../types';
+import { colToLetter } from '../../types';
 import { detectColumnMapping } from './sheetToProject';
 import { NumericInput } from '../../components/NumericInput';
 
@@ -31,19 +32,6 @@ const FIELD_LABELS: Record<string, string> = {
   colorCol: 'Color',
   notesCol: 'Notes',
 };
-
-/**
- * Get column letter from index (0 → A, 1 → B, etc).
- */
-function colToLetter(col: number): string {
-  let result = '';
-  let n = col;
-  while (n >= 0) {
-    result = String.fromCharCode((n % 26) + 65) + result;
-    n = Math.floor(n / 26) - 1;
-  }
-  return result;
-}
 
 export function ColumnMappingDialog({ sheet, onConfirm, onCancel }: ColumnMappingDialogProps) {
   const detected = detectColumnMapping(sheet);

@@ -10,7 +10,7 @@
  * Views: Table (the sheet itself), WBS (tree), Gantt (timeline)
  */
 
-import { useState, useMemo, useCallback, useRef } from 'react';
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { GanttChart } from './GanttChart';
 import { RiskRegister } from './RiskRegister';
 import { RiskMatrix } from './RiskMatrix';
@@ -27,12 +27,20 @@ import { DependencyDrawer } from './DependencyDrawer';
 import { EvmReport } from './EvmReport';
 import { MaterialDashboard } from './MaterialDashboard';
 import { MaterialEditorModal } from './MaterialEditorModal';
+import { ActualsEditorModal } from './ActualsEditorModal';
+import { MaterialAllocationModal } from './MaterialAllocationModal';
+import { NotificationPanel } from './NotificationPanel';
+import { NewProjectDialog } from './NewProjectDialog';
+import type { TaskNotification } from './dependencyWorkflows';
+import { generateStatusNotifications } from './dependencyWorkflows';
+import type { ActualSpendEntry, MaterialAllocation, MaterialConsumption } from '../types';
 import { sheetToProject, projectModelToProject } from './sheetToProject';
-import { projectToModel } from './projectConverter';
-import { addTask, removeTask, updateTask, toggleCollapse, findTaskById, getAllTasks, addResource, updateResource, removeResource } from './treeOps';
+import { projectToModel, createBlankProject, exportProjectToJSON, importProjectFromJSON } from './projectConverter';
+import { addTask, removeTask, updateTask, toggleCollapsed, findTask, getAllTasks, addResource, updateResource, removeResource } from './treeOps';
 import { addRisk, updateRisk, removeRisk, getRiskSummary } from './risks';
 import { recomputeRollups } from './rollups';
 import { autoScheduleSuccessors, updateTaskStatuses } from './dependencyWorkflows';
+import { getCriticalPath } from './dependencies';
 import type { Project, ViewMode, WBSTask, Risk, Resource, TaskDependency } from '../types';
 import type { Sheet, ColumnMapping, ProjectModel } from '../../types';
 
@@ -77,9 +85,10 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
     let nextProject: Project;
     setProject((prev) => {
       nextProject = typeof updater === 'function' ? updater(prev) : updater;
-      onProjectChange?.(nextProject);
       return nextProject;
     });
+    // Side effects outside the updater — React state updaters must be pure
+    onProjectChange?.(nextProject!);
     // Trigger save after state update
     syncProjectToSheet(nextProject!);
   }, [onProjectChange, syncProjectToSheet]);
@@ -116,13 +125,64 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
     material: import('../types').Material | null;
   }>({ open: false, material: null });
 
+  const [actualsModal, setActualsModal] = useState<{
+    open: boolean;
+    entry: ActualSpendEntry | null;
+  }>({ open: false, entry: null });
+
+  const [allocationModal, setAllocationModal] = useState<{
+    open: boolean;
+    materialId: string | null;
+  }>({ open: false, materialId: null });
+
+  const [notifications, setNotifications] = useState<TaskNotification[]>([]);
+
+  // New project dialog
+  const [showNewProjectDialog, setShowNewProjectDialog] = useState(false);
+
+  // Import/Export
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Save confirmation
+  const [saveConfirmation, setSaveConfirmation] = useState(false);
+  const saveConfirmationTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // Gantt chart scroll ref for calendar navigation
   const ganttContainerRef = useRef<HTMLDivElement>(null);
 
   // Derived values
   const riskSummary = useMemo(() => getRiskSummary(project), [project]);
-  const taskCount = project.wbs.reduce((sum, t) => sum + 1 + t.children.length, 0);
+  const taskCount = useMemo(() => getAllTasks(project.wbs).length, [project.wbs]);
   const allTasks = useMemo(() => getAllTasks(project.wbs), [project.wbs]);
+  const criticalPath = useMemo(
+    () => getCriticalPath(allTasks, project.calendar),
+    [allTasks, project.calendar],
+  );
+
+  // ─── Notifications ─────────────────────────────────────────────────
+
+  // Track previous task statuses to detect changes
+  const prevTasksRef = useRef<WBSTask[]>(allTasks);
+
+  useEffect(() => {
+    const prevTasks = prevTasksRef.current;
+    const newNotifications = generateStatusNotifications(prevTasks, allTasks, project.resources);
+    if (newNotifications.length > 0) {
+      setNotifications((prev) => [...prev, ...newNotifications]);
+    }
+    prevTasksRef.current = allTasks;
+  }, [allTasks, project.resources]);
+
+  function handleDismissNotification(index: number) {
+    setNotifications((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  function handleNotificationTaskClick(taskId: string) {
+    setViewMode('gantt');
+    setSelectedTaskId(taskId);
+    // Clear notifications for this task
+    setNotifications((prev) => prev.filter((n) => n.taskId !== taskId));
+  }
 
   // ─── Task CRUD ────────────────────────────────────────────────────────
 
@@ -131,7 +191,7 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
   }
 
   function handleEditTask(taskId: string) {
-    const task = findTaskById(project.wbs, taskId);
+    const task = findTask(project.wbs, taskId);
     if (task) {
       setTaskModal({ open: true, task, parentId: task.parentId, isChild: false });
     }
@@ -155,7 +215,7 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
   }
 
   function handleDeleteTask(taskId: string) {
-    const task = findTaskById(project.wbs, taskId);
+    const task = findTask(project.wbs, taskId);
     if (!task) return;
 
     if (task.children.length > 0) {
@@ -182,7 +242,7 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
 
   function handleToggleCollapse(taskId: string) {
     // UI-only change: collapse/expand does not need to persist to workbook
-    setProjectUI((prev) => ({ ...prev, wbs: toggleCollapse(prev.wbs, taskId) }));
+    setProjectUI((prev) => ({ ...prev, wbs: toggleCollapsed(prev.wbs, taskId) }));
   }
 
   // ─── Dependency Management ──────────────────────────────────────────
@@ -436,9 +496,156 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
     setMaterialModal({ open: false, material: null });
   }
 
+  // ─── Actuals CRUD ──────────────────────────────────────────────────
+
+  function handleOpenActualsModal(entry: ActualSpendEntry | null) {
+    setActualsModal({ open: true, entry });
+  }
+
+  function handleCloseActualsModal() {
+    setActualsModal({ open: false, entry: null });
+  }
+
+  function handleActualsSave(entry: ActualSpendEntry) {
+    handleProjectChange((prev) => {
+      const accounting = prev.accounting ?? {
+        baselineTotal: 0,
+        allocatedTotal: 0,
+        currentEstimateTotal: 0,
+        actualSpendTotal: 0,
+        etcTotal: 0,
+        taskAccounting: [],
+        spendEntries: [],
+        changeLog: [],
+        currency: 'USD',
+      };
+      const existingIndex = accounting.spendEntries.findIndex((e) => e.id === entry.id);
+      const updatedEntries = existingIndex >= 0
+        ? accounting.spendEntries.map((e) => (e.id === entry.id ? entry : e))
+        : [...accounting.spendEntries, entry];
+      return {
+        ...prev,
+        accounting: {
+          ...accounting,
+          spendEntries: updatedEntries,
+          actualSpendTotal: updatedEntries.reduce((sum, e) => sum + e.amount, 0),
+        },
+      };
+    });
+    setActualsModal({ open: false, entry: null });
+  }
+
+  function handleActualsDelete(entryId: string) {
+    handleProjectChange((prev) => {
+      const accounting = prev.accounting;
+      if (!accounting) return prev;
+      const updatedEntries = accounting.spendEntries.filter((e) => e.id !== entryId);
+      return {
+        ...prev,
+        accounting: {
+          ...accounting,
+          spendEntries: updatedEntries,
+          actualSpendTotal: updatedEntries.reduce((sum, e) => sum + e.amount, 0),
+        },
+      };
+    });
+    setActualsModal({ open: false, entry: null });
+  }
+
+  // ─── Material Allocation ────────────────────────────────────────────
+
+  function handleOpenAllocationModal(materialId: string | null) {
+    setAllocationModal({ open: true, materialId });
+  }
+
+  function handleCloseAllocationModal() {
+    setAllocationModal({ open: false, materialId: null });
+  }
+
+  function handleAllocationSave(allocation: MaterialAllocation) {
+    handleProjectChange((prev) => ({
+      ...prev,
+      materialAllocations: [
+        ...(prev.materialAllocations ?? []),
+        allocation,
+      ],
+    }));
+    setAllocationModal({ open: false, materialId: null });
+  }
+
+  function handleConsumptionSave(consumption: MaterialConsumption) {
+    handleProjectChange((prev) => ({
+      ...prev,
+      materialConsumptions: [
+        ...(prev.materialConsumptions ?? []),
+        consumption,
+      ],
+    }));
+    setAllocationModal({ open: false, materialId: null });
+  }
+
   function handleSaveToSheet() {
     // Save current project state back to workbook (uses same sync as automatic saves)
     syncProjectToSheet(project);
+    // Show transient confirmation
+    setSaveConfirmation(true);
+    if (saveConfirmationTimer.current) clearTimeout(saveConfirmationTimer.current);
+    saveConfirmationTimer.current = setTimeout(() => setSaveConfirmation(false), 2000);
+  }
+
+  // ─── New Project ──────────────────────────────────────────────────────
+
+  function handleOpenNewProjectDialog() {
+    setShowNewProjectDialog(true);
+  }
+
+  function handleCloseNewProjectDialog() {
+    setShowNewProjectDialog(false);
+  }
+
+  function handleNewProjectConfirm(name: string, startDate: string, endDate: string) {
+    const newProject = createBlankProject(name, startDate, endDate);
+    handleProjectChange(() => newProject);
+    setShowNewProjectDialog(false);
+  }
+
+  // ─── Import / Export ──────────────────────────────────────────────────
+
+  function handleExportProject() {
+    const json = exportProjectToJSON(project);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${project.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  function handleImportClick() {
+    fileInputRef.current?.click();
+  }
+
+  function handleImportFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const content = event.target?.result as string;
+      try {
+        const importedProject = importProjectFromJSON(content);
+        handleProjectChange(() => importedProject);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Unknown error';
+        window.alert(`Failed to import project: ${message}`);
+      }
+    };
+    reader.readAsText(file);
+    // Reset input so the same file can be re-imported
+    e.target.value = '';
   }
 
   // ─── Render ──────────────────────────────────────────────────────────
@@ -462,6 +669,16 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
               {riskSummary.byLevel.high} high
             </span>
           )}
+
+          {/* New Project button */}
+          <button
+            className="ml-2 px-3 py-1 text-sm text-green-600 border border-green-300 rounded hover:bg-green-50"
+            onClick={handleOpenNewProjectDialog}
+            title="Create a new blank project"
+            data-testid="new-project-btn"
+          >
+            + New Project
+          </button>
         </div>
 
         <div className="flex items-center gap-2">
@@ -491,20 +708,23 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
                   className="px-2 py-1 text-xs bg-white text-gray-700 hover:bg-gray-50 border-r border-gray-200"
                   onClick={() => navigateGantt('prev', 'month')}
                   title="Previous month"
+                  data-testid="gantt-nav-prev-month"
                 >
-                  ◀◀
+                  <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><polygon points="6,1 2,5 6,9" /><polygon points="9,1 5,5 9,9" /></svg>
                 </button>
                 <button
                   className="px-2 py-1 text-xs bg-white text-gray-700 hover:bg-gray-50 border-r border-gray-200"
                   onClick={() => navigateGantt('prev', 'week')}
                   title="Previous week"
+                  data-testid="gantt-nav-prev-week"
                 >
-                  ◀
+                  <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><polygon points="8,1 3,5 8,9" /></svg>
                 </button>
                 <button
                   className="px-2 py-1 text-xs bg-blue-50 text-blue-700 hover:bg-blue-100 font-medium"
                   onClick={jumpToToday}
                   title="Jump to today"
+                  data-testid="gantt-nav-today"
                 >
                   Today
                 </button>
@@ -512,15 +732,17 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
                   className="px-2 py-1 text-xs bg-white text-gray-700 hover:bg-gray-50 border-l border-gray-200"
                   onClick={() => navigateGantt('next', 'week')}
                   title="Next week"
+                  data-testid="gantt-nav-next-week"
                 >
-                  ▶
+                  <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><polygon points="2,1 7,5 2,9" /></svg>
                 </button>
                 <button
                   className="px-2 py-1 text-xs bg-white text-gray-700 hover:bg-gray-50 border-l border-gray-200"
                   onClick={() => navigateGantt('next', 'month')}
                   title="Next month"
+                  data-testid="gantt-nav-next-month"
                 >
-                  ▶▶
+                  <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><polygon points="1,1 5,5 1,9" /><polygon points="4,1 8,5 4,9" /></svg>
                 </button>
               </div>
 
@@ -588,12 +810,40 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
           )}
 
           {/* Save to Sheet */}
+          <div className="relative">
+            <button
+              className="ml-2 px-3 py-1 text-sm text-gray-600 border border-gray-300 rounded hover:bg-gray-50"
+              onClick={handleSaveToSheet}
+              title="Project auto-saves on change. Click to force-sync to workbook."
+            >
+              ↓ Save
+            </button>
+            {saveConfirmation && (
+              <span
+                className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-xs text-green-600 whitespace-nowrap"
+                data-testid="save-confirmation"
+              >
+                Saved!
+              </span>
+            )}
+          </div>
+
+          {/* Import / Export */}
           <button
             className="ml-2 px-3 py-1 text-sm text-gray-600 border border-gray-300 rounded hover:bg-gray-50"
-            onClick={handleSaveToSheet}
-            title="Save project data back to workbook"
+            onClick={handleImportClick}
+            title="Import project from JSON file"
+            data-testid="import-project-btn"
           >
-            ↓ Save
+            Import JSON
+          </button>
+          <button
+            className="ml-2 px-3 py-1 text-sm text-gray-600 border border-gray-300 rounded hover:bg-gray-50"
+            onClick={handleExportProject}
+            title="Export project to JSON file"
+            data-testid="export-project-btn"
+          >
+            Export JSON
           </button>
 
           {/* Close button */}
@@ -607,7 +857,14 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
       </div>
 
       {/* Main content area */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden relative">
+        {/* Notification Panel (overlay) */}
+        <NotificationPanel
+          notifications={notifications}
+          onDismiss={handleDismissNotification}
+          onTaskClick={handleNotificationTaskClick}
+        />
+
         {/* Left sidebar: WBS tree (only in gantt view) */}
         {viewMode === 'gantt' && (
           <WBSTreePanel
@@ -624,7 +881,7 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
 
         {/* Dependency Drawer (between tree and main content) */}
         {viewMode === 'gantt' && dependencyDrawerOpen && dependencyTaskId && (() => {
-          const depTask = findTaskById(project.wbs, dependencyTaskId);
+          const depTask = findTask(project.wbs, dependencyTaskId);
           if (!depTask) return null;
           return (
             <DependencyDrawer
@@ -641,22 +898,21 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
         {/* Main content */}
         <div className="flex-1 overflow-auto p-4">
           {viewMode === 'gantt' && (
-            <div ref={ganttContainerRef} className="flex-1 overflow-auto">
-              <GanttChart
-                project={project}
-                zoom={zoom}
-                selectedTaskId={selectedTaskId}
-                criticalPath={[]}
-                onTaskSelect={setSelectedTaskId}
-                onTaskDoubleClick={handleEditTask}
-                onTaskToggleCollapse={handleToggleCollapse}
-                showCriticalPath
-                showProgress
-                showRiskHeatmap={false}
-                showTodayMarker
-                showDependencies
-              />
-            </div>
+            <GanttChart
+              project={project}
+              zoom={zoom}
+              selectedTaskId={selectedTaskId}
+              criticalPath={criticalPath}
+              onTaskSelect={setSelectedTaskId}
+              onTaskDoubleClick={handleEditTask}
+              onTaskToggleCollapse={handleToggleCollapse}
+              showCriticalPath
+              showProgress
+              showRiskHeatmap={false}
+              showTodayMarker
+              showDependencies
+              containerRef={ganttContainerRef}
+            />
           )}
           {viewMode === 'risk-register' && (
             <RiskRegister
@@ -678,8 +934,25 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
             <AccountingDashboard
               project={project}
               onEditSpend={(taskId) => {
-                // TODO: Open spend editor modal
-                console.log('Edit spend for task:', taskId);
+                if (taskId) {
+                  const existing = project.accounting?.spendEntries.find((e) => e.taskId === taskId);
+                  if (existing) {
+                    handleOpenActualsModal(existing);
+                  } else {
+                    // Create a new entry pre-filled with this task
+                    handleOpenActualsModal({
+                      id: `act-${Date.now()}`,
+                      taskId,
+                      date: new Date().toISOString().slice(0, 10),
+                      amount: 0,
+                      currency: project.accounting?.currency ?? 'USD',
+                      source: '',
+                      notes: '',
+                    });
+                  }
+                } else {
+                  handleOpenActualsModal(null);
+                }
               }}
               onEditAllocation={(taskId) => {
                 // TODO: Open allocation editor modal
@@ -695,6 +968,7 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
               project={project}
               onAddMaterial={handleAddMaterial}
               onEditMaterial={handleEditMaterial}
+              onAllocateMaterial={handleOpenAllocationModal}
             />
           )}
         </div>
@@ -771,6 +1045,52 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
           onDelete={materialModal.material ? () => handleMaterialDelete(materialModal.material!.id) : undefined}
         />
       )}
+
+      {/* Actuals Editor Modal */}
+      {actualsModal.open && (
+        <ActualsEditorModal
+          entry={actualsModal.entry}
+          tasks={allTasks}
+          defaultCurrency={project.accounting?.currency ?? 'USD'}
+          onClose={handleCloseActualsModal}
+          onSave={handleActualsSave}
+          onDelete={actualsModal.entry ? () => handleActualsDelete(actualsModal.entry!.id) : undefined}
+        />
+      )}
+
+      {/* Material Allocation Modal */}
+      {allocationModal.open && allocationModal.materialId && (() => {
+        const material = project.materials?.find((m) => m.id === allocationModal.materialId);
+        if (!material) return null;
+        return (
+          <MaterialAllocationModal
+            material={material}
+            tasks={allTasks}
+            allocations={project.materialAllocations ?? []}
+            consumptions={project.materialConsumptions ?? []}
+            onClose={handleCloseAllocationModal}
+            onAllocate={handleAllocationSave}
+            onRecordConsumption={handleConsumptionSave}
+          />
+        );
+      })()}
+
+      {/* New Project Dialog */}
+      {showNewProjectDialog && (
+        <NewProjectDialog
+          onClose={handleCloseNewProjectDialog}
+          onConfirm={handleNewProjectConfirm}
+        />
+      )}
+
+      {/* Hidden file input for import */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".json,application/json"
+        className="hidden"
+        onChange={handleImportFile}
+      />
     </div>
   );
 }

@@ -259,12 +259,13 @@ export function computeTaskAccounting(
 export function computeProjectAccounting(project: Project): ProjectAccounting {
   const allTasks = getAllTasks(project.wbs);
   const resourceMap = new Map(project.resources.map((r) => [r.id, r]));
+  const spendEntries = project.accounting?.spendEntries ?? [];
 
   const taskAccounting: TaskAccounting[] = allTasks.map((task) => {
     const resource = task.responsibleResourceId ? resourceMap.get(task.responsibleResourceId) : null;
     const resourceCostRate = resource?.costRate ?? 0;
-    // For now, spend entries come from accounting data if present
-    const entries: ActualSpendEntry[] = [];
+    // Filter spend entries for this task
+    const entries = spendEntries.filter((e) => e.taskId === task.id);
     return computeTaskAccounting(task, entries, resourceCostRate);
   });
 
@@ -296,8 +297,8 @@ export function computeProjectAccounting(project: Project): ProjectAccounting {
     actualSpendTotal,
     etcTotal,
     taskAccounting,
-    spendEntries: [],
-    changeLog: [],
+    spendEntries,
+    changeLog: project.accounting?.changeLog ?? [],
     currency,
   };
 }

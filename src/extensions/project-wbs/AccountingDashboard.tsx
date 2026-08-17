@@ -35,6 +35,19 @@ export function AccountingDashboard({ project, onEditSpend, onEditAllocation }: 
   const accounting = useMemo(() => computeProjectAccounting(project), [project]);
   const currency = accounting.currency;
 
+  // Build task ID → name lookup for the actuals table
+  const taskNamesById = useMemo(() => {
+    const map = new Map<string, string>();
+    const collect = (tasks: { id: string; name: string; children: unknown[] }[]) => {
+      for (const t of tasks) {
+        map.set(t.id, t.name);
+        if (t.children.length > 0) collect(t.children as { id: string; name: string; children: unknown[] }[]);
+      }
+    };
+    collect(project.wbs);
+    return map;
+  }, [project.wbs]);
+
   // Project-level metrics
   const totalEarnedValue = accounting.taskAccounting.reduce(
     (sum, t) => sum + t.baselineCost * 0.5,
@@ -100,7 +113,7 @@ export function AccountingDashboard({ project, onEditSpend, onEditAllocation }: 
           <AllocationTable accounting={accounting} currency={currency} onEdit={onEditAllocation} />
         )}
         {activeTab === 'estimate' && <EstimateTable accounting={accounting} currency={currency} />}
-        {activeTab === 'actual' && <ActualsTable accounting={accounting} currency={currency} onEdit={onEditSpend} />}
+        {activeTab === 'actual' && <ActualsTable accounting={accounting} currency={currency} onEdit={onEditSpend} taskNamesById={taskNamesById} />}
       </div>
 
       {/* Footer totals */}
@@ -315,10 +328,12 @@ function ActualsTable({
   accounting,
   currency,
   onEdit,
+  taskNamesById,
 }: {
   accounting: ReturnType<typeof computeProjectAccounting>;
   currency: string;
   onEdit?: (taskId: string) => void;
+  taskNamesById: Map<string, string>;
 }) {
   const hasSpendEntries = accounting.spendEntries.length > 0;
 
@@ -339,54 +354,47 @@ function ActualsTable({
     );
   }
 
+  const totalActual = accounting.spendEntries.reduce((sum, e) => sum + e.amount, 0);
+
   return (
     <table className="w-full text-xs">
       <thead>
         <tr className="bg-gray-50 text-gray-600">
           <th className="px-3 py-2 text-left font-medium">Task</th>
-          <th className="px-3 py-2 text-right font-medium">Actual</th>
-          <th className="px-3 py-2 text-right font-medium">Allocated</th>
-          <th className="px-3 py-2 text-right font-medium">Variance</th>
+          <th className="px-3 py-2 text-right font-medium">Amount</th>
           <th className="px-3 py-2 text-left font-medium">Source</th>
           <th className="px-3 py-2 text-left font-medium">Date</th>
           <th className="px-3 py-2 text-center font-medium">Action</th>
         </tr>
       </thead>
       <tbody>
-        {accounting.taskAccounting.map((row) => {
-          const variance = row.actualSpend - row.allocatedBudget;
-          return (
-            <tr key={row.taskId} className="border-t border-gray-100 hover:bg-gray-50">
-              <td className="px-3 py-2 text-gray-800">{row.taskName}</td>
-              <td className="px-3 py-2 text-right font-mono">{currency} {row.actualSpend.toLocaleString()}</td>
-              <td className="px-3 py-2 text-right font-mono text-gray-500">{currency} {row.allocatedBudget.toLocaleString()}</td>
-              <td className={`px-3 py-2 text-right font-mono ${variance < 0 ? 'text-green-600' : variance > 0 ? 'text-red-600' : 'text-gray-400'}`}>
-                {formatVariance(variance, currency)}
-              </td>
-              <td className="px-3 py-2 text-gray-400">—</td>
-              <td className="px-3 py-2 text-gray-400">—</td>
-              <td className="px-3 py-2 text-center">
-                {onEdit && (
-                  <button
-                    onClick={() => onEdit(row.taskId)}
-                    className="text-blue-600 hover:text-blue-800 text-xs"
-                  >
-                    + Add
-                  </button>
-                )}
-              </td>
-            </tr>
-          );
-        })}
+        {accounting.spendEntries.map((entry) => (
+          <tr key={entry.id} className="border-t border-gray-100 hover:bg-gray-50">
+            <td className="px-3 py-2 text-gray-800">
+              {taskNamesById.get(entry.taskId) ?? entry.taskId}
+            </td>
+            <td className="px-3 py-2 text-right font-mono">
+              {currency} {entry.amount.toLocaleString()}
+            </td>
+            <td className="px-3 py-2 text-gray-600">{entry.source}</td>
+            <td className="px-3 py-2 text-gray-500">{entry.date}</td>
+            <td className="px-3 py-2 text-center">
+              {onEdit && (
+                <button
+                  onClick={() => onEdit(entry.taskId)}
+                  className="text-blue-600 hover:text-blue-800 text-xs"
+                >
+                  Edit
+                </button>
+              )}
+            </td>
+          </tr>
+        ))}
       </tbody>
       <tfoot>
         <tr className="border-t-2 border-gray-200 bg-gray-50 font-medium">
           <td className="px-3 py-2">Total</td>
-          <td className="px-3 py-2 text-right font-mono">{currency} {accounting.actualSpendTotal.toLocaleString()}</td>
-          <td className="px-3 py-2 text-right font-mono">{currency} {accounting.allocatedTotal.toLocaleString()}</td>
-          <td className={`px-3 py-2 text-right font-mono ${accounting.actualSpendTotal - accounting.allocatedTotal < 0 ? 'text-green-600' : 'text-red-600'}`}>
-            {formatVariance(accounting.actualSpendTotal - accounting.allocatedTotal, currency)}
-          </td>
+          <td className="px-3 py-2 text-right font-mono">{currency} {totalActual.toLocaleString()}</td>
           <td colSpan={3} className="px-3 py-2" />
         </tr>
       </tfoot>

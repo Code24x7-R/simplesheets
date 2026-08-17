@@ -1,8 +1,8 @@
 # Project/WBS Extension Audit Report
 
-**Date:** 2026-01-16 (Updated: 2026-01-16)
+**Date:** 2026-01-16 (Updated: 2026-08-17)
 **Scope:** Complete review of `src/extensions/project-wbs/`
-**Current Test Count:** 3,598 tests across 151 suites
+**Current Test Count:** 3,577 tests across 149 suites
 
 ---
 
@@ -10,11 +10,20 @@
 
 The Project/WBS extension has grown organically through 15+ phases. While functional, it had accumulated **duplications, logic errors, and workflow gaps** that needed systematic attention. This audit identified **12 issues** across 4 categories.
 
-**Status:** ✅ Phase 1-3 complete (10 of 12 issues fixed)
+**Status:** ✅ All phases complete
 - Phase 1 (Logic Errors): 3/3 fixed
 - Phase 2 (Duplications): 3/3 fixed
 - Phase 3 (Workflow Gaps): 4/4 fixed
 - Phase 4 (Data Schema): 0/2 pending (low priority)
+
+### 2026-08-17 Remediation (4 Phases)
+
+A follow-up remediation effort addressed additional gaps identified during a full walkthrough:
+
+- **Phase 1 (UI Wiring):** Wired `ActualsEditorModal`, `MaterialAllocationModal`, and `NotificationPanel` into `ProjectView`
+- **Phase 2 (Critical Fixes):** Passed real critical path to GanttChart, fixed `onProjectChange` side-effect inside `setProject` updater, fixed `taskCount` to count deep descendants
+- **Phase 3 (Dead Code Removal):** Deleted orphaned `useProject.ts` and `projectFormulas.ts`, removed duplicate `colToLetter`/`riskToRow`/`resourceToRow` definitions, removed `findTaskById`/`toggleCollapse` aliases
+- **Phase 4 (Missing Workflows):** Added `NewProjectDialog` for blank project creation, wired `exportProjectToJSON`/`importProjectFromJSON` to toolbar buttons, clarified save button with transient "Saved!" confirmation
 
 ---
 
@@ -200,6 +209,32 @@ data change → handleProjectChange → syncProjectToSheet → onSaveProject →
 
 ---
 
+## 2026-08-17 Remediation (Complete)
+
+A systematic 4-phase walkthrough remediation was performed to wire missing UI, fix critical bugs, remove dead code, and add missing workflows.
+
+### Phase 1: UI Wiring ✅
+1. **ActualsEditorModal** — Wired into `ProjectView` with state, handlers, and render; `onEditSpend` in `AccountingDashboard` now opens the modal pre-filled with task data
+2. **MaterialAllocationModal** — Wired into `ProjectView`; "Allocate" button on `MaterialDashboard` rows opens the modal; handles both allocation and consumption recording
+3. **NotificationPanel** — Wired into `ProjectView`; `generateStatusNotifications` detects task status changes and surfaces notifications; panel renders as overlay with dismiss/task-click actions
+
+### Phase 2: Critical Fixes ✅
+4. **GanttChart critical path** — Changed `criticalPath={[]}` (hardcoded empty) to `criticalPath={criticalPath}` using real `getCriticalPath(allTasks, project.calendar)` via `useMemo`
+5. **`onProjectChange` anti-pattern** — Moved `onProjectChange?.(nextProject)` outside the `setProject` updater function (React state updaters must be pure)
+6. **`taskCount` accuracy** — Changed from `project.wbs.reduce((sum, t) => sum + 1 + t.children.length, 0)` (shallow) to `getAllTasks(project.wbs).length` (deep descendants)
+
+### Phase 3: Dead Code Removal & Deduplication ✅
+7. **Deleted orphans** — Removed `useProject.ts` (+ test) and `projectFormulas.ts` (+ test) — never imported by any production code
+8. **Removed unused functions** — Deleted `instantiateTemplateDependencies`, `getBlockedTasksWithReasons`, `getNextActionableTasks` from `dependencyWorkflows.ts` (tests only, no production callers)
+9. **Deduplicated functions** — `colToLetter` (local → import), `riskToRow`/`resourceToRow` (consolidated to `projectConverter.ts`), `findTaskById`/`toggleCollapse` aliases (removed, callers use canonical names)
+
+### Phase 4: Missing Workflows ✅
+10. **New Project dialog** — Added `NewProjectDialog` with name + start/end date inputs; "+ New Project" button in toolbar; calls `createBlankProject`
+11. **Import/Export JSON** — Added "Import JSON" / "Export JSON" toolbar buttons; export uses `exportProjectToJSON` + Blob download; import uses file input + `importProjectFromJSON` with error handling
+12. **Clarified save** — Improved save button tooltip ("auto-saves on change, click to force-sync"); added transient "Saved!" confirmation (2s timeout)
+
+---
+
 ## New Files Added
 
 | File | Purpose | Tests |
@@ -207,6 +242,26 @@ data change → handleProjectChange → syncProjectToSheet → onSaveProject →
 | `src/extensions/project-wbs/projectConverter.ts` | Shared Project ↔ Model conversion | 41 |
 | `src/extensions/project-wbs/ActualsEditorModal.tsx` | CRUD for actual spend entries | 14 |
 | `src/extensions/project-wbs/MaterialAllocationModal.tsx` | Track material allocation/consumption | 12 |
+| `src/extensions/project-wbs/NewProjectDialog.tsx` | Blank project creation dialog | 3 |
+
+## Files Removed
+
+| File | Reason |
+|------|--------|
+| `src/extensions/project-wbs/useProject.ts` | Orphaned React hook — never imported by any component |
+| `src/extensions/project-wbs/useProject.test.ts` | Tests for orphaned hook |
+| `src/extensions/project-wbs/projectFormulas.ts` | Formula engine — never imported by any component |
+| `src/extensions/project-wbs/projectFormulas.test.ts` | Tests for unused formula engine |
+
+## Deduplicated
+
+| Before | After |
+|--------|-------|
+| `colToLetter` defined locally in `ColumnMappingDialog.tsx` | Now imports from `../../types` (canonical) |
+| `riskToRow`/`resourceToRow` in both `projectConverter.ts` and `sheetToProject.ts` | Bodies in `projectConverter.ts`; `sheetToProject.ts` re-exports |
+| `findTaskById` alias in `treeOps.ts` | Removed; callers use `findTask` |
+| `toggleCollapse` alias in `treeOps.ts` | Removed; callers use `toggleCollapsed` |
+| `TaskDependency` import in `dependencyWorkflows.ts` | Removed (only used by deleted `instantiateTemplateDependencies`) |
 
 ---
 

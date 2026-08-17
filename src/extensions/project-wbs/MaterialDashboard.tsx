@@ -19,11 +19,12 @@ interface MaterialDashboardProps {
   project: Project;
   onAddMaterial?: () => void;
   onEditMaterial?: (materialId: string) => void;
+  onAllocateMaterial?: (materialId: string) => void;
 }
 
 type MaterialFilter = 'all' | MaterialClassification;
 
-export function MaterialDashboard({ project, onAddMaterial, onEditMaterial }: MaterialDashboardProps) {
+export function MaterialDashboard({ project, onAddMaterial, onEditMaterial, onAllocateMaterial }: MaterialDashboardProps) {
   const [filter, setFilter] = useState<MaterialFilter>('all');
 
   const materials = project.materials ?? [];
@@ -118,7 +119,7 @@ export function MaterialDashboard({ project, onAddMaterial, onEditMaterial }: Ma
                 <th className="px-3 py-2 text-right font-medium">Total</th>
                 <th className="px-3 py-2 text-right font-medium">Used</th>
                 <th className="px-3 py-2 text-left font-medium">Status</th>
-                <th className="px-3 py-2 text-center font-medium">Action</th>
+                <th className="px-3 py-2 text-center font-medium">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -128,6 +129,7 @@ export function MaterialDashboard({ project, onAddMaterial, onEditMaterial }: Ma
                   material={material}
                   currency={currency}
                   onEdit={onEditMaterial}
+                  onAllocate={onAllocateMaterial}
                 />
               ))}
             </tbody>
@@ -173,10 +175,12 @@ function MaterialRow({
   material,
   currency,
   onEdit,
+  onAllocate,
 }: {
   material: Material;
   currency: string;
   onEdit?: (materialId: string) => void;
+  onAllocate?: (materialId: string) => void;
 }) {
   const classificationBadge = {
     capex: 'bg-purple-100 text-purple-700',
@@ -227,14 +231,25 @@ function MaterialRow({
         </span>
       </td>
       <td className="px-3 py-2 text-center">
-        {onEdit && (
-          <button
-            onClick={() => onEdit(material.id)}
-            className="text-blue-600 hover:text-blue-800 text-xs"
-          >
-            Edit
-          </button>
-        )}
+        <div className="flex items-center justify-center gap-2">
+          {onAllocate && (
+            <button
+              onClick={() => onAllocate(material.id)}
+              className="text-green-600 hover:text-green-800 text-xs"
+              title="Allocate to a task"
+            >
+              Allocate
+            </button>
+          )}
+          {onEdit && (
+            <button
+              onClick={() => onEdit(material.id)}
+              className="text-blue-600 hover:text-blue-800 text-xs"
+            >
+              Edit
+            </button>
+          )}
+        </div>
       </td>
     </tr>
   );

@@ -70,6 +70,7 @@ interface GanttChartProps {
   onTaskToggleCollapse?: (taskId: string) => void;
   width?: number;
   height?: number;
+  containerRef?: React.RefObject<HTMLDivElement>;
 }
 
 interface TimelineTick {
@@ -96,6 +97,7 @@ export function GanttChart({
   onTaskToggleCollapse,
   width: _width = 900,
   height: _height = 500,
+  containerRef,
 }: GanttChartProps) {
   const flatTasks = useMemo(() => {
     const all = flattenToRows(project.wbs);
@@ -135,7 +137,7 @@ export function GanttChart({
   const todayX = showTodayMarker ? computeTodayPosition(projectStart, new Date().toISOString().slice(0, 10), dayWidth) : null;
 
   return (
-    <div className="overflow-auto border border-gray-200 rounded bg-white" data-testid="gantt-chart">
+    <div ref={containerRef} className="overflow-auto border border-gray-200 rounded bg-white" data-testid="gantt-chart">
       <svg width={svgWidth} height={svgHeight} className="select-none">
         {/* Arrowhead marker for dependency lines */}
         <defs>

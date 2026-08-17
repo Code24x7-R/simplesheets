@@ -186,8 +186,8 @@ src/extensions/
     ├── dependencies.ts         # Topological sort, CPM, cycle detection
     ├── rollups.ts              # Summary task roll-up calculations
     ├── risks.ts                # Risk CRUD, scoring, matrix
+    ├── projectConverter.ts     # Shared Project ↔ Model conversion
     ├── sheetToProject.ts       # Sheet ↔ Project converter
-    ├── useProject.ts           # React hook for project state
     ├── GanttChart.tsx          # SVG Gantt renderer
     ├── RiskRegister.tsx        # Sortable/filterable risk table
     ├── RiskMatrix.tsx          # 5×5 SVG grid visualization
@@ -323,11 +323,10 @@ All tree operations are **immutable** — they return new trees, never mutate in
 | `addTask(tree, parentId, task)` | Add child under parent |
 | `removeTask(tree, id)` | Remove task + descendants |
 | `moveTask(tree, id, newParentId, index)` | Reparent and reorder |
-| `toggleCollapse(tree, id)` | Toggle collapse state |
+| `toggleCollapsed(tree, id)` | Toggle collapse state |
 | `flattenToRows(tree)` | Flat list for sheet display |
 | `detectCycles(tree)` | Detect circular dependencies |
 | `validateTree(tree)` | Detect orphans, cycle errors |
-| `findTaskById(tree, id)` | Alias for findTask |
 | `getAllTasks(tree)` | All tasks (flat) |
 | `updateTask(tree, id, fn)` | Apply update function |
 | `addResource(resources, resource)` | Add resource |

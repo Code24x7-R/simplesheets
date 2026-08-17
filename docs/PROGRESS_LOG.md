@@ -6,6 +6,43 @@
 
 ---
 
+### 2026-08-17 [FEATURE] Phase 4: Missing UI Workflows — New Project, Import/Export, Save Clarification
+- **What**: Added blank project creation dialog, JSON import/export, and clarified the save button behavior
+- **Implementation**:
+  - `NewProjectDialog.tsx`: Modal with name + start/end date inputs; "+ New Project" button in toolbar; calls `createBlankProject` and replaces current project
+  - Import/Export: "Import JSON" / "Export JSON" toolbar buttons; export uses `exportProjectToJSON` + Blob download; import uses hidden file input + `importProjectFromJSON` with `window.alert` error handling for invalid JSON
+  - Clarified save: tooltip explains auto-save + force-sync; transient "Saved!" confirmation (2s timeout) after clicking Save
+- **Files**: `NewProjectDialog.tsx` (new), `ProjectView.tsx` (buttons, handlers, render)
+- **Tests**: +4 new tests (new project dialog opens/closes/creates; export triggers download; import round-trip; invalid JSON alert)
+
+### 2026-08-17 [BUGFIX] Phase 3: Dead Code Removal & Deduplication
+- **What**: Removed orphaned files, unused functions, and duplicated code identified during walkthrough
+- **Implementation**:
+  - Deleted `useProject.ts` (+ test) and `projectFormulas.ts` (+ test) — never imported by any production code
+  - Removed `instantiateTemplateDependencies`, `getBlockedTasksWithReasons`, `getNextActionableTasks` from `dependencyWorkflows.ts` (tests only, no production callers)
+  - Deduplicated: `colToLetter` (local copy → import from `../../types`), `riskToRow`/`resourceToRow` (consolidated to `projectConverter.ts`), `findTaskById`/`toggleCollapse` aliases (removed, callers use canonical `findTask`/`toggleCollapsed`)
+- **Files**: `treeOps.ts`, `sheetToProject.ts`, `ColumnMappingDialog.tsx`, `dependencyWorkflows.ts`, `dependencyWorkflows.test.ts`
+- **Tests**: -41 tests (deleted test files for orphans)
+
+### 2026-08-17 [BUGFIX] Phase 2: Critical Wiring Fixes
+- **What**: Fixed hardcoded empty critical path, React anti-pattern in state updater, and shallow task count
+- **Implementation**:
+  - GanttChart: changed `criticalPath={[]}` to `criticalPath={criticalPath}` using real `getCriticalPath(allTasks, project.calendar)` via `useMemo`
+  - `handleProjectChange`: moved `onProjectChange?.(nextProject)` outside the `setProject` updater (React state updaters must be pure — no side effects)
+  - `taskCount`: changed from shallow `reduce((sum, t) => sum + 1 + t.children.length, 0)` to deep `getAllTasks(project.wbs).length`
+- **Files**: `ProjectView.tsx`
+- **Tests**: No new tests (behavior fixes verified by existing 25 tests)
+
+### 2026-08-17 [FEATURE] Phase 1: UI Wiring — Actuals, Materials, Notifications
+- **What**: Wired three existing but unrendered components into ProjectView
+- **Implementation**:
+  - `ActualsEditorModal`: Added state + handlers; `onEditSpend` in `AccountingDashboard` opens modal pre-filled with task data; `computeProjectAccounting` now reads from `project.accounting.spendEntries`
+  - `MaterialAllocationModal`: Added state + handlers; "Allocate" button on `MaterialDashboard` rows; handles allocation + consumption recording
+  - `NotificationPanel`: Added state + `useEffect` to detect status changes via `generateStatusNotifications`; renders as overlay with dismiss/task-click actions
+- **Files**: `ProjectView.tsx`, `AccountingDashboard.tsx`, `MaterialDashboard.tsx`, `projectAccounting.ts`
+- **Tests**: +7 new tests (actuals modal opens/saves/closes; allocation modal opens/closes; notifications render/status change)
+- **Result**: 3,577 tests across 149 suites
+
 ### 2026-08-14 [FEATURE] Phase 34-36 — Extensions Architecture & Sheet-to-Project Converter
 - **What**: Built complete Extensions system with tab-based Project View. User can convert any spreadsheet into a project plan (Gantt/WBS/Risk views) while retaining full sheet editing capability.
 - **Phase 34 — Extensions Architecture**: WBS tree data model, working calendar, dependency resolution (FS/SS/FF/SF), critical path method, roll-up calculations, risk scoring (1-25 scale), pure-SVG Gantt renderer, risk register/matrix, ExtensionRegistry singleton.

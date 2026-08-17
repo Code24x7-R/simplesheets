@@ -1183,21 +1183,6 @@ export function projectModelToSheetCells(
 }
 
 /**
- * Convert runtime Resource to serializable ResourceRow.
- */
-export function resourceToRow(resource: Resource): ResourceRow {
-  return {
-    id: resource.id,
-    name: resource.name,
-    role: resource.role,
-    costRate: resource.costRate,
-    costCurrency: resource.costCurrency,
-    availability: resource.availability,
-    color: resource.color,
-  };
-}
-
-/**
  * Convert ResourceRow to runtime Resource.
  */
 export function rowToResource(row: ResourceRow): Resource {
@@ -1241,22 +1226,9 @@ export function rowToRisk(row: RiskRow) {
   };
 }
 
-/**
- * Convert runtime Risk to serializable RiskRow.
- */
-export function riskToRow(risk: import('../types').Risk): RiskRow {
-  return {
-    id: risk.id,
-    title: risk.title,
-    category: risk.category,
-    probability: risk.probability,
-    impact: risk.impact,
-    status: risk.status,
-    ownerId: risk.ownerId,
-    mitigationPlan: risk.mitigationPlan,
-    notes: risk.description,
-  };
-}
+// ─── Re-exports from projectConverter (canonical location) ─────────────────
+
+export { resourceToRow, riskToRow } from './projectConverter';
 
 // ─── Utility Functions ──────────────────────────────────────────────────────
 

@@ -10,7 +10,7 @@
  * 4. Approval/Gate Automation: External approvals unblock phases
  */
 
-import type { Project, WBSTask, TaskDependency } from '../types';
+import type { Project, WBSTask } from '../types';
 import { topologicalSort } from './dependencies';
 import { addWorkingDays } from './calendar';
 
@@ -277,82 +277,4 @@ export function approveGate(
   return Array.from(taskMap.values());
 }
 
-// ─── Workflow 5: Template Cascading ────────────────────────────────────────
 
-/**
- * Instantiate a project from a template with pre-configured dependencies.
- */
-export function instantiateTemplateDependencies(
-  tasks: WBSTask[],
-  templateDependencies: Array<{
-    predecessorName: string;
-    successorName: string;
-    type: TaskDependency['type'];
-    lag: number;
-  }>,
-): WBSTask[] {
-  const taskMap = new Map(tasks.map((t) => [t.id, { ...t, dependencies: [...t.dependencies] }]));
-  const nameToId = new Map(tasks.map((t) => [t.name.toLowerCase(), t.id]));
-
-  for (const templateDep of templateDependencies) {
-    const predId = nameToId.get(templateDep.predecessorName.toLowerCase());
-    const succId = nameToId.get(templateDep.successorName.toLowerCase());
-
-    if (!predId || !succId) continue;
-
-    const successor = taskMap.get(succId)!;
-
-    // Check if dependency already exists
-    const existingDep = successor.dependencies.find((d) => d.predecessorId === predId);
-    if (!existingDep) {
-      successor.dependencies.push({
-        predecessorId: predId,
-        type: templateDep.type,
-        lag: templateDep.lag,
-      });
-      taskMap.set(succId, successor);
-    }
-  }
-
-  return Array.from(taskMap.values());
-}
-
-// ─── Helper Functions ──────────────────────────────────────────────────────
-
-/**
- * Get all blocked tasks with their blocking predecessors.
- */
-export function getBlockedTasksWithReasons(
-  tasks: WBSTask[],
-): Array<{ task: WBSTask; blockers: WBSTask[] }> {
-  const taskMap = new Map(tasks.map((t) => [t.id, t]));
-  const result: Array<{ task: WBSTask; blockers: WBSTask[] }> = [];
-
-  for (const task of tasks) {
-    if (task.status === 'done') continue;
-
-    const blockers: WBSTask[] = [];
-    for (const dep of task.dependencies) {
-      const predecessor = taskMap.get(dep.predecessorId);
-      if (predecessor && predecessor.status !== 'done') {
-        blockers.push(predecessor);
-      }
-    }
-
-    if (blockers.length > 0) {
-      result.push({ task, blockers });
-    }
-  }
-
-  return result;
-}
-
-/**
- * Calculate the next actionable tasks (ready to start).
- */
-export function getNextActionableTasks(tasks: WBSTask[]): WBSTask[] {
-  return tasks.filter((t) => {
-    if (t.status !== 'not_started' && t.status !== 'ready') return false;
-    return isTaskReady(t, tasks);
-  });
-}

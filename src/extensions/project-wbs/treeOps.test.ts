@@ -2,7 +2,6 @@
 // Copyright (c) 2026 Richard Robertson
 import {
   findTask,
-  findTaskById,
   findParent,
   getAncestors,
   getDescendants,
@@ -23,7 +22,6 @@ import {
   updateTask,
   moveTask,
   toggleCollapsed,
-  toggleCollapse,
   expandAll,
   collapseAll,
   detectCycles,
@@ -265,22 +263,6 @@ describe('treeOps', () => {
       expect(findTask(collapsed, 'A')!.collapsed).toBe(true);
       const expanded = toggleCollapsed(collapsed, 'A');
       expect(findTask(expanded, 'A')!.collapsed).toBe(false);
-    });
-  });
-
-  describe('toggleCollapse (alias)', () => {
-    it('behaves the same as toggleCollapsed', () => {
-      const tree = buildSampleTree();
-      const collapsed = toggleCollapse(tree, 'A');
-      expect(findTask(collapsed, 'A')!.collapsed).toBe(true);
-    });
-  });
-
-  describe('findTaskById (alias)', () => {
-    it('behaves the same as findTask', () => {
-      const tree = buildSampleTree();
-      expect(findTaskById(tree, 'A')).toEqual(findTask(tree, 'A'));
-      expect(findTaskById(tree, 'nonexistent')).toBeNull();
     });
   });
 

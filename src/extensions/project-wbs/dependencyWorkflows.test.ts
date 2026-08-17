@@ -7,8 +7,6 @@ import {
   isTaskReady,
   updateTaskStatuses,
   generateStatusNotifications,
-  getBlockedTasksWithReasons,
-  getNextActionableTasks,
 } from './dependencyWorkflows';
 
 function createTask(overrides: Partial<WBSTask> = {}): WBSTask {
@@ -148,32 +146,4 @@ describe('generateStatusNotifications', () => {
   });
 });
 
-describe('getBlockedTasksWithReasons', () => {
-  it('returns blocked tasks with their blocking predecessors', () => {
-    const pred = createTask({ id: 'pred-1', status: 'in_progress' });
-    const task = createTask({
-      id: 'task-1',
-      dependencies: [{ predecessorId: 'pred-1', type: 'FS', lag: 0 }],
-      status: 'waiting',
-    });
 
-    const result = getBlockedTasksWithReasons([pred, task]);
-    expect(result.length).toBe(1);
-    expect(result[0].task.id).toBe('task-1');
-    expect(result[0].blockers.length).toBe(1);
-    expect(result[0].blockers[0].id).toBe('pred-1');
-  });
-});
-
-describe('getNextActionableTasks', () => {
-  it('returns tasks that are ready to start', () => {
-    const task1 = createTask({ id: 'task-1', status: 'ready' });
-    const task2 = createTask({ id: 'task-2', status: 'waiting' });
-    const task3 = createTask({ id: 'task-3', status: 'not_started' });
-
-    const result = getNextActionableTasks([task1, task2, task3]);
-    expect(result.length).toBe(2);
-    expect(result.map((t) => t.id)).toContain('task-1');
-    expect(result.map((t) => t.id)).toContain('task-3');
-  });
-});
