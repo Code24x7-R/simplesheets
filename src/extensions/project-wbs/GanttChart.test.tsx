@@ -243,4 +243,13 @@ describe('GanttChart', () => {
     const taskTitle = Array.from(titleElements).find((t) => t.textContent?.includes('Resource: John Doe'));
     expect(taskTitle).toBeInTheDocument();
   });
+
+  it('constrains container width so it is scrollable', () => {
+    const project = createProject({ wbs: [createTask()] });
+    render(<GanttChart project={project} width={800} height={400} />);
+    const container = document.querySelector('[data-testid="gantt-chart"]');
+    expect(container).toBeInTheDocument();
+    // The container must have max-w-full to constrain its width and enable horizontal scrolling
+    expect(container?.classList.contains('max-w-full')).toBe(true);
+  });
 });

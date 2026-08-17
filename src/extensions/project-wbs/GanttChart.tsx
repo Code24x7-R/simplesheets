@@ -137,7 +137,7 @@ export function GanttChart({
   const todayX = showTodayMarker ? computeTodayPosition(projectStart, new Date().toISOString().slice(0, 10), dayWidth) : null;
 
   return (
-    <div ref={containerRef} className="overflow-auto border border-gray-200 rounded bg-white" data-testid="gantt-chart">
+    <div ref={containerRef} className="overflow-auto max-w-full border border-gray-200 rounded bg-white" data-testid="gantt-chart">
       <svg width={svgWidth} height={svgHeight} className="select-none">
         {/* Arrowhead marker for dependency lines */}
         <defs>
