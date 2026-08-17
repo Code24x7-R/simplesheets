@@ -252,4 +252,48 @@ describe('GanttChart', () => {
     // The container must have max-w-full to constrain its width and enable horizontal scrolling
     expect(container?.classList.contains('max-w-full')).toBe(true);
   });
+
+  it('shows resource popup on hover over a bar with assigned resource', () => {
+    const resource = { id: 'res-1', name: 'Jane Smith', role: 'Designer', costRate: 120, costCurrency: 'USD', availability: 100, color: '#10B981' };
+    const task = createTask({ responsibleResourceId: 'res-1', name: 'Design UI' });
+    const project = createProject({ wbs: [task], resources: [resource] });
+    render(<GanttChart project={project} width={800} height={400} />);
+
+    // Find the task bar group (has onClick handler)
+    const barGroup = document.querySelector('.gantt-rows g.cursor-pointer');
+    expect(barGroup).toBeInTheDocument();
+
+    // Popup should not be present before hover
+    expect(document.querySelector('.gantt-hover-popup')).not.toBeInTheDocument();
+
+    // Hover over the bar
+    fireEvent.mouseEnter(barGroup!);
+
+    // Popup should now be visible with resource info
+    const popup = document.querySelector('.gantt-hover-popup');
+    expect(popup).toBeInTheDocument();
+    expect(popup?.textContent).toContain('Design UI');
+    expect(popup?.textContent).toContain('Resource: Jane Smith');
+    expect(popup?.textContent).toContain('Progress: 50%');
+
+    // Mouse leave should hide the popup
+    fireEvent.mouseLeave(barGroup!);
+    expect(document.querySelector('.gantt-hover-popup')).not.toBeInTheDocument();
+  });
+
+  it('shows "No resource assigned" in popup when task has no resource', () => {
+    const task = createTask({ responsibleResourceId: null, name: 'Empty Task' });
+    const project = createProject({ wbs: [task], resources: [] });
+    render(<GanttChart project={project} width={800} height={400} />);
+
+    const barGroup = document.querySelector('.gantt-rows g.cursor-pointer');
+    expect(barGroup).toBeInTheDocument();
+
+    fireEvent.mouseEnter(barGroup!);
+
+    const popup = document.querySelector('.gantt-hover-popup');
+    expect(popup).toBeInTheDocument();
+    expect(popup?.textContent).toContain('Empty Task');
+    expect(popup?.textContent).toContain('No resource assigned');
+  });
 });

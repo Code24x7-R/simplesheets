@@ -14,7 +14,7 @@
  * - Risk indicators and heatmap
  */
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import type { Project, WBSTask, GanttZoom, RiskLevel } from '../types';
 import { flattenToRows } from './treeOps';
 import { formatDate } from './calendar';
@@ -136,6 +136,23 @@ export function GanttChart({
 
   const todayX = showTodayMarker ? computeTodayPosition(projectStart, new Date().toISOString().slice(0, 10), dayWidth) : null;
 
+  // Hover state for resource popup
+  const [hoveredBar, setHoveredBar] = useState<{
+    task: WBSTask;
+    x: number;
+    y: number;
+    resource: ResourceInfo | null;
+  } | null>(null);
+
+  const handleBarMouseEnter = useCallback((task: WBSTask, x: number, y: number) => {
+    const resource = getResourceInfo(task, project);
+    setHoveredBar({ task, x, y, resource });
+  }, [project]);
+
+  const handleBarMouseLeave = useCallback(() => {
+    setHoveredBar(null);
+  }, []);
+
   return (
     <div ref={containerRef} className="overflow-auto max-w-full border border-gray-200 rounded bg-white" data-testid="gantt-chart">
       <svg width={svgWidth} height={svgHeight} className="select-none">
@@ -185,9 +202,10 @@ export function GanttChart({
             const y = MARGIN_TOP + index * ROW_HEIGHT + (ROW_HEIGHT - BAR_HEIGHT) / 2;
             const isSelected = task.id === selectedTaskId;
             const isCritical = showCriticalPath && criticalPath.includes(task.id);
+            const barX = MARGIN_LEFT + layout.x;
 
             return (
-              <g key={task.id} onClick={() => onTaskSelect?.(task.id)} onDoubleClick={() => onTaskDoubleClick?.(task.id)} className="cursor-pointer">
+              <g key={task.id} onClick={() => onTaskSelect?.(task.id)} onDoubleClick={() => onTaskDoubleClick?.(task.id)} onMouseEnter={() => handleBarMouseEnter(task, barX, y)} onMouseLeave={handleBarMouseLeave} className="cursor-pointer">
                 {/* Tooltip with task info */}
                 {(() => {
                   const resourceInfo = getResourceInfo(task, project);
@@ -388,6 +406,47 @@ export function GanttChart({
 
         {/* Separator line */}
         <line x1={MARGIN_LEFT} y1={0} x2={MARGIN_LEFT} y2={svgHeight} stroke="#d1d5db" strokeWidth={1} />
+
+        {/* Hover popup showing resource info */}
+        {hoveredBar && (() => {
+          const lines = [hoveredBar.task.name];
+          if (hoveredBar.resource) {
+            lines.push(`Resource: ${hoveredBar.resource.name}`);
+          } else {
+            lines.push('No resource assigned');
+          }
+          lines.push(`Progress: ${hoveredBar.task.progress}%`);
+          lines.push(`${hoveredBar.task.startDate} → ${hoveredBar.task.endDate}`);
+
+          const popupWidth = 180;
+          const lineHeight = 14;
+          const padding = 6;
+          const popupHeight = lines.length * lineHeight + padding * 2;
+          const popupX = Math.min(Math.max(hoveredBar.x, 0), svgWidth - popupWidth);
+          const popupY = Math.max(hoveredBar.y - popupHeight - 4, 0);
+
+          return (
+            <g className="gantt-hover-popup" pointerEvents="none">
+              <rect x={popupX + 2} y={popupY + 2} width={popupWidth} height={popupHeight} rx={4} fill="rgba(0,0,0,0.15)" />
+              <rect x={popupX} y={popupY} width={popupWidth} height={popupHeight} rx={4} fill="#1f2937" stroke="#374151" strokeWidth={1} />
+              {lines.map((text, i) => (
+                <text
+                  key={i}
+                  x={popupX + padding}
+                  y={popupY + padding + (i + 1) * lineHeight - 3}
+                  fontSize={10}
+                  fill={i === 0 ? '#f9fafb' : '#d1d5db'}
+                  fontWeight={i === 0 ? 'bold' : 'normal'}
+                >
+                  {text}
+                </text>
+              ))}
+              {hoveredBar.resource && (
+                <circle cx={popupX + popupWidth - padding - 6} cy={popupY + padding + lineHeight - 3} r={4} fill={hoveredBar.resource.color} />
+              )}
+            </g>
+          );
+        })()}
       </svg>
     </div>
   );
