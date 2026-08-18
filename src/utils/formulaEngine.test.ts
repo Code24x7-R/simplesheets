@@ -3382,5 +3382,59 @@ describe('evaluateWorkbook - cross-sheet references', () => {
       const result = evaluateWorkbook(sheetToWorkbook(sheet), 0);
       expect(result.cells['3:0'].computedValue).toBe(40);
     });
+
+    it('SUBTOTAL(6, range) computes PRODUCT', () => {
+      const sheet = createSheet({
+        '0:0': '2',
+        '1:0': '3',
+        '2:0': '4',
+        '3:0': '=SUBTOTAL(6, A1:A3)',
+      });
+      const result = evaluateWorkbook(sheetToWorkbook(sheet), 0);
+      expect(result.cells['3:0'].computedValue).toBe(24); // 2*3*4
+    });
+
+    it('SUBTOTAL(7, range) computes STDEV', () => {
+      const sheet = createSheet({
+        '0:0': '2',
+        '1:0': '4',
+        '2:0': '4',
+        '3:0': '4',
+        '4:0': '5',
+        '5:0': '5',
+        '6:0': '7',
+        '7:0': '9',
+        '8:0': '=SUBTOTAL(7, A1:A8)',
+      });
+      const result = evaluateWorkbook(sheetToWorkbook(sheet), 0);
+      expect(result.cells['8:0'].computedValue).toBeCloseTo(2.138, 2);
+    });
+
+    it('SUBTOTAL(9, range) computes SUM', () => {
+      const sheet = createSheet({
+        '0:0': '10',
+        '1:0': '20',
+        '2:0': '30',
+        '3:0': '=SUBTOTAL(9, A1:A3)',
+      });
+      const result = evaluateWorkbook(sheetToWorkbook(sheet), 0);
+      expect(result.cells['3:0'].computedValue).toBe(60);
+    });
+
+    it('HLOOKUP with insufficient args returns #VALUE!', () => {
+      const sheet = createSheet({
+        '0:0': '=HLOOKUP("a")',
+      });
+      const result = evaluateWorkbook(sheetToWorkbook(sheet), 0);
+      expect(result.cells['0:0'].computedValue).toBe('#VALUE!');
+    });
+
+    it('INDIRECT with insufficient args returns #VALUE!', () => {
+      const sheet = createSheet({
+        '0:0': '=INDIRECT()',
+      });
+      const result = evaluateWorkbook(sheetToWorkbook(sheet), 0);
+      expect(result.cells['0:0'].computedValue).toBe('#VALUE!');
+    });
   });
 });
