@@ -6,6 +6,18 @@
 
 ---
 
+### 2026-08-18 [FEATURE] Phases 40 & 43 — Change Log, Material Cost Integration, Capitalization Config
+- **What**: Completed Project Accounting Dashboard (Phase 40) and Material Management (Phase 43) with change tracking and configuration UI
+- **Implementation**:
+  - **Change Log**: New "Change Log" tab in AccountingDashboard showing dependency-driven cost/timeline shifts with date, type, description, cost/schedule impact, and approver
+  - **Material Cost Integration**: Added `materialCostTotal` field to `ProjectAccounting` type; `computeProjectAccounting` now includes material costs via `calculateMaterialCostSummary`
+  - **Change Log Entries**: Added `createChangeLogEntry` helper for generating change log entries with unique IDs and timestamps
+  - **Capitalization Config Modal**: New `CapitalizationConfigModal` for setting threshold, default useful life, depreciation method, and salvage percentage
+  - **UI Wiring**: Capitalization config accessible from MaterialDashboard "⚙️ Settings" button; material costs shown in accounting header when present
+- **Files**: `AccountingDashboard.tsx` (change log tab, material KPI), `CapitalizationConfigModal.tsx` (new), `projectAccounting.ts` (material integration, change log helper), `MaterialDashboard.tsx` (settings button), `ProjectView.tsx` (capitalization config wiring), `types.ts` (materialCostTotal field), `projectConverter.ts`, `sheetToProject.ts` (accounting defaults)
+- **Tests**: +16 new tests (change log rendering, capitalization config modal, createChangeLogEntry, material cost integration)
+- **Results**: 3696 tests across 150 suites, lint clean, type-check clean, build clean
+
 ### 2026-08-17 [FEATURE] Phase 4: Missing UI Workflows — New Project, Import/Export, Save Clarification
 - **What**: Added blank project creation dialog, JSON import/export, and clarified the save button behavior
 - **Implementation**:

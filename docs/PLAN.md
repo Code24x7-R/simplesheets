@@ -28,10 +28,11 @@ The WBS/Project extension is actively being expanded. See [EXTENSIONS_ARCHITECTU
 | 37 | Enhanced Project Functions — resource CRUD, dependency lines, collapse/expand | ✅ Complete |
 | 38 | Normalized Schema & Complete Sync — all data persisted and synced | ✅ Complete |
 | 39 | Template Library Expansion — all 16 templates implemented | ✅ Complete |
-| 40 | Project Accounting Dashboard — baseline, allocation, estimate, actual spend | 🔄 In Progress |
+| 40 | Project Accounting Dashboard — baseline, allocation, estimate, actual spend | ✅ Complete |
 | 41 | Dependency Workflow Drawer — tree + right panel with impact preview | ✅ Complete |
 | 42 | EVM Cost Performance Reporting — CV, VAC, CPI, SPI, EAC, ETC | ✅ Complete |
 | 43 | Material Management — CapEx/OpEx, allocation, consumption | ✅ Complete |
+| 44 | Change Log & Material Cost Integration — dependency tracking, capitalization config | ✅ Complete |
 
 **Extension Features:**
 - WBS hierarchy (tree structure with parent-child relationships)
