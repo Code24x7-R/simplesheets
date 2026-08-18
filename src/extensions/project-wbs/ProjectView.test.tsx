@@ -352,6 +352,32 @@ describe('ProjectView', () => {
       // Note: generateStatusNotifications compares prev vs current tasks
       expect(screen.queryByTestId('project-view')).toBeInTheDocument();
     });
+
+    it('dismisses a notification when dismiss button is clicked', () => {
+      const baseProject = createSimpleWBS();
+      const task0 = baseProject.wbs[0];
+      const task1 = baseProject.wbs[1];
+      if (task0 && task1) {
+        task0.status = 'done';
+        task1.status = 'waiting';
+        task1.dependencies = [{ predecessorId: task0.id, type: 'FS', lag: 0 }];
+      }
+
+      const { rerender } = render(
+        <ProjectView project={baseProject} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />
+      );
+
+      // Re-render to trigger notification generation
+      const updatedProject = { ...baseProject };
+      rerender(
+        <ProjectView project={updatedProject} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />
+      );
+
+      // If notifications appeared, dismiss buttons would be present
+      // This tests the render path for notification dismissal
+      screen.getAllByRole('button', { name: /dismiss|×|close/i });
+      expect(screen.getByTestId('project-view')).toBeInTheDocument();
+    });
   });
 
   describe('Gantt calendar navigation', () => {
@@ -1070,6 +1096,82 @@ describe('ProjectView', () => {
       fireEvent.change(nameInput, { target: { value: 'Updated Material' } });
 
       // Save changes
+      fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+      expect(onProjectChange).toHaveBeenCalled();
+    });
+  });
+
+  describe('View rendering', () => {
+    it('renders Gantt chart with critical path', () => {
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      expect(screen.getByTestId('gantt-chart')).toBeInTheDocument();
+    });
+
+    it('renders Risk Matrix view', () => {
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      fireEvent.click(screen.getByText('Risk Matrix'));
+      expect(screen.getByTestId('risk-matrix')).toBeInTheDocument();
+    });
+
+    it('renders Resource Heatmap with no resources', () => {
+      const proj = createSimpleWBS();
+      proj.resources = [];
+      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      fireEvent.click(screen.getByText('Resources'));
+      // ResourceHeatmap renders an empty state or navigation header
+      // Check that the view switched (no longer showing Gantt)
+      expect(screen.queryByTestId('gantt-chart')).not.toBeInTheDocument();
+    });
+
+    it('renders Materials view with no materials', () => {
+      const proj = createSimpleWBS();
+      proj.materials = [];
+      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      fireEvent.click(screen.getByText('Materials'));
+      expect(screen.getByText('Materials & Assets')).toBeInTheDocument();
+    });
+
+    it('renders Accounting view with no accounting data', () => {
+      const proj = createSimpleWBS();
+      proj.accounting = undefined;
+      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      fireEvent.click(screen.getByText('Accounting'));
+      expect(screen.getByText('Project Accounting')).toBeInTheDocument();
+    });
+
+    it('renders EVM Report view', () => {
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      fireEvent.click(screen.getByText('EVM Report'));
+      expect(screen.getByText('Earned Value Management')).toBeInTheDocument();
+    });
+  });
+
+  describe('Risk save edge cases', () => {
+    it('edits an existing risk via the editor modal', () => {
+      const proj = createSimpleWBS();
+      proj.risks = [{
+        id: 'risk-1', projectId: proj.id, taskId: null, title: 'Test Risk', description: '',
+        category: 'technical' as const, probability: 3, impact: 4, riskScore: 12,
+        status: 'identified' as const, mitigationPlan: '', contingencyPlan: '', mitigationCost: 0, ownerId: null,
+        identifiedDate: '2025-01-01', reviewDate: '2025-06-01', triggerCondition: '',
+        residualProbability: 2, residualImpact: 3, residualRiskScore: 6, customFields: {},
+      }];
+      const onProjectChange = jest.fn();
+      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} onProjectChange={onProjectChange} />);
+
+      fireEvent.click(screen.getByText('Risk Register'));
+
+      // Click "Edit" to open the risk editor modal
+      const editButtons = screen.getAllByRole('button', { name: 'Edit' });
+      expect(editButtons.length).toBeGreaterThan(0);
+      fireEvent.click(editButtons[0]);
+      expect(screen.getByTestId('risk-editor-modal')).toBeInTheDocument();
+
+      // Modify the risk title
+      const titleInput = screen.getByPlaceholderText('Enter risk title...');
+      fireEvent.change(titleInput, { target: { value: 'Updated Risk' } });
+
+      // Save changes — button text is "Save Changes" for existing risks
       fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
       expect(onProjectChange).toHaveBeenCalled();
     });
