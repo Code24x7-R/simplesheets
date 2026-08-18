@@ -1302,6 +1302,102 @@ describe('ProjectView', () => {
     });
   });
 
+  describe('Remaining uncovered branches', () => {
+    it('handles resource save for existing resource', () => {
+      const proj = createSimpleWBS();
+      proj.resources = [{ id: 'res-1', name: 'Alice', role: 'Developer', costRate: 100, costCurrency: 'USD', availability: 100, color: '#3B82EF' }];
+      const onProjectChange = jest.fn();
+      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} onProjectChange={onProjectChange} />);
+
+      // Open resource list and edit existing resource
+      fireEvent.click(screen.getByText(/👥 Resources/));
+      const editButtons = screen.getAllByRole('button', { name: /edit/i });
+      if (editButtons.length > 0) {
+        fireEvent.click(editButtons[0]);
+        // The ResourceEditorModal opens with existing resource data
+        const nameInput = screen.getByLabelText('Name *');
+        fireEvent.change(nameInput, { target: { value: 'Updated Alice' } });
+        // Save changes (button text is "Update" for existing resources)
+        fireEvent.click(screen.getByRole('button', { name: 'Update' }));
+        expect(onProjectChange).toHaveBeenCalled();
+      }
+    });
+
+    it('handles sheet conversion with active sheet', () => {
+      const onProjectChange = jest.fn();
+      const onSaveProject = jest.fn();
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={onSaveProject} onClose={jest.fn()} onProjectChange={onProjectChange} />);
+
+      // Click convert sheet button
+      fireEvent.click(screen.getByText('↑ Convert Sheet'));
+      expect(screen.getByText('Confirm Column Mapping')).toBeInTheDocument();
+
+      // Confirm the mapping
+      fireEvent.click(screen.getByRole('button', { name: 'Convert to Project' }));
+
+      expect(onProjectChange).toHaveBeenCalled();
+      expect(onSaveProject).toHaveBeenCalled();
+    });
+
+    it('handles material save for existing material', () => {
+      const proj = createSimpleWBS();
+      proj.materials = [createTestMaterial()];
+      const onProjectChange = jest.fn();
+      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} onProjectChange={onProjectChange} />);
+
+      fireEvent.click(screen.getByText('Materials'));
+
+      // Edit existing material
+      const editButtons = screen.getAllByRole('button', { name: 'Edit' });
+      expect(editButtons.length).toBeGreaterThan(0);
+      fireEvent.click(editButtons[0]);
+      expect(screen.getByTestId('material-editor-modal')).toBeInTheDocument();
+
+      // Modify and save
+      const nameInput = screen.getByPlaceholderText('e.g., Excavator, Steel Beams, Fuel');
+      fireEvent.change(nameInput, { target: { value: 'Updated Material' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+      expect(onProjectChange).toHaveBeenCalled();
+    });
+
+    it('handles actuals modal with pre-filled task data', () => {
+      const proj = createSimpleWBS();
+      proj.accounting = {
+        baselineTotal: 10000,
+        allocatedTotal: 10000,
+        currentEstimateTotal: 10000,
+        actualSpendTotal: 500,
+        etcTotal: 9500,
+        taskAccounting: [],
+        spendEntries: [{ id: 'act-1', taskId: proj.wbs[0].id, date: '2025-01-15', amount: 500, currency: 'USD', source: 'Vendor A', notes: 'Initial payment' }],
+        changeLog: [],
+        currency: 'USD',
+      };
+      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+
+      fireEvent.click(screen.getByText('Accounting'));
+
+      // Find and click the Actuals tab button
+      const buttons = screen.getAllByRole('button');
+      const actualsButton = buttons.find((btn) => btn.textContent?.includes('Actuals'));
+      if (actualsButton) {
+        fireEvent.click(actualsButton);
+      }
+
+      // Click edit on existing entry
+      const editButtons = screen.getAllByRole('button', { name: 'Edit' });
+      expect(editButtons.length).toBeGreaterThan(0);
+      fireEvent.click(editButtons[0]);
+      expect(screen.getByTestId('actuals-editor-modal')).toBeInTheDocument();
+
+      // Modify and save
+      const amountInput = screen.getByPlaceholderText('0.00');
+      fireEvent.change(amountInput, { target: { value: '750' } });
+      fireEvent.blur(amountInput);
+      fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+    });
+  });
+
   describe('View rendering branches', () => {
     it('renders Gantt with task selection', () => {
       const onProjectChange = jest.fn();
