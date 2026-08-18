@@ -3304,4 +3304,83 @@ describe('evaluateWorkbook - cross-sheet references', () => {
       expect(result.cells['5:0'].computedValue).toBe(3);
     });
   });
+
+  describe('Uncovered branches', () => {
+    it('SUBTOTAL with empty range returns 0 (SUM of empty)', () => {
+      const sheet = createSheet({
+        '0:0': '=SUBTOTAL(9, B1:B3)', // B column is empty
+      });
+      const result = evaluateWorkbook(sheetToWorkbook(sheet), 0);
+      // SUM of empty range returns 0
+      expect(result.cells['0:0'].computedValue).toBe(0);
+    });
+
+    it('HLOOKUP with exact match', () => {
+      const sheet = createSheet({
+        '0:0': 'a', '0:1': 'b', '0:2': 'c',
+        '1:0': '10', '1:1': '20', '1:2': '30',
+        '2:0': '=HLOOKUP("b", A1:C2, 2, FALSE)',
+      });
+      const result = evaluateWorkbook(sheetToWorkbook(sheet), 0);
+      expect(result.cells['2:0'].computedValue).toBe(20);
+    });
+
+    it('OFFSET with no offset returns base value', () => {
+      const sheet = createSheet({
+        '0:0': '10',
+        '1:0': '=OFFSET(A1, 0, 0)',
+      });
+      const result = evaluateWorkbook(sheetToWorkbook(sheet), 0);
+      // OFFSET(A1, 0, 0) returns the base value = 10
+      expect(result.cells['1:0'].computedValue).toBe(10);
+    });
+
+    it('OFFSET with negative row offset returns #REF!', () => {
+      const sheet = createSheet({
+        '0:0': '10',
+        '1:0': '=OFFSET(A1, -1, 0)',
+      });
+      const result = evaluateWorkbook(sheetToWorkbook(sheet), 0);
+      expect(result.cells['1:0'].computedValue).toBe('#REF!');
+    });
+
+    it('INDIRECT with numeric text returns number', () => {
+      const sheet = createSheet({
+        '0:0': '=INDIRECT("100")',
+      });
+      const result = evaluateWorkbook(sheetToWorkbook(sheet), 0);
+      // INDIRECT with numeric text returns the number
+      expect(result.cells['0:0'].computedValue).toBe(100);
+    });
+
+    it('INDIRECT with empty text returns #REF!', () => {
+      const sheet = createSheet({
+        '0:0': '=INDIRECT("")',
+      });
+      const result = evaluateWorkbook(sheetToWorkbook(sheet), 0);
+      expect(result.cells['0:0'].computedValue).toBe('#REF!');
+    });
+
+    it('PERCENTILE with k=0 and k=1', () => {
+      const sheet = createSheet({
+        '0:0': '10', '1:0': '20', '2:0': '30',
+        '3:0': '=PERCENTILE(A1:A3, 0)',
+        '4:0': '=PERCENTILE(A1:A3, 1)',
+      });
+      const result = evaluateWorkbook(sheetToWorkbook(sheet), 0);
+      expect(result.cells['3:0'].computedValue).toBe(10);
+      expect(result.cells['4:0'].computedValue).toBe(30);
+    });
+
+    it('SUMIFS with multiple criteria', () => {
+      const sheet = createSheet({
+        '0:0': 'a', '0:1': '10',
+        '1:0': 'b', '1:1': '20',
+        '2:0': 'a', '2:1': '30',
+        '3:0': '=SUMIFS(B1:B3, A1:A3, "a")',
+      });
+      const result = evaluateWorkbook(sheetToWorkbook(sheet), 0);
+      expect(result.cells['3:0'].computedValue).toBe(40);
+    });
+  });
 });
