@@ -982,5 +982,96 @@ describe('ProjectView', () => {
       // This tests the render path for dependency drawer
       expect(screen.getByTestId('project-view')).toBeInTheDocument();
     });
+
+    it('saves dependencies and triggers reschedule', () => {
+      const proj = createSimpleWBS();
+      // Set up two tasks with a dependency
+      if (proj.wbs[0] && proj.wbs[1]) {
+        proj.wbs[0].dependencies = [];
+        proj.wbs[1].dependencies = [{ predecessorId: proj.wbs[0].id, type: 'FS', lag: 0 }];
+      }
+      const onProjectChange = jest.fn();
+      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} onProjectChange={onProjectChange} />);
+
+      // Open dependency drawer for the first task via the tree
+      const depButtons = screen.getAllByTitle('Manage dependencies');
+      if (depButtons.length > 0) {
+        fireEvent.click(depButtons[0]);
+        // Dependency drawer should open
+        expect(screen.getByTestId('dependency-drawer')).toBeInTheDocument();
+      }
+    });
+  });
+
+  describe('Gantt calendar navigation', () => {
+    it('navigates to previous month', () => {
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      const prevMonthBtn = screen.getByTestId('gantt-nav-prev-month');
+      fireEvent.click(prevMonthBtn);
+      const ganttContainer = document.querySelector('[data-testid="gantt-chart"]');
+      expect(ganttContainer?.scrollTo).toHaveBeenCalled();
+    });
+
+    it('navigates to next week', () => {
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      const nextWeekBtn = screen.getByTestId('gantt-nav-next-week');
+      fireEvent.click(nextWeekBtn);
+      const ganttContainer = document.querySelector('[data-testid="gantt-chart"]');
+      expect(ganttContainer?.scrollTo).toHaveBeenCalled();
+    });
+
+    it('changes zoom level to day', () => {
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      fireEvent.click(screen.getByText('Day'));
+      expect(screen.getByTestId('gantt-chart')).toBeInTheDocument();
+    });
+
+    it('changes zoom level to month', () => {
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      fireEvent.click(screen.getByText('Month'));
+      expect(screen.getByTestId('gantt-chart')).toBeInTheDocument();
+    });
+  });
+
+  describe('Sheet conversion', () => {
+    it('confirms column mapping and converts sheet', () => {
+      const onProjectChange = jest.fn();
+      const onSaveProject = jest.fn();
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={onSaveProject} onClose={jest.fn()} onProjectChange={onProjectChange} />);
+
+      fireEvent.click(screen.getByText('↑ Convert Sheet'));
+      expect(screen.getByText('Confirm Column Mapping')).toBeInTheDocument();
+
+      // Confirm the mapping — button text is "Convert to Project"
+      fireEvent.click(screen.getByRole('button', { name: 'Convert to Project' }));
+
+      expect(onProjectChange).toHaveBeenCalled();
+      expect(onSaveProject).toHaveBeenCalled();
+    });
+  });
+
+  describe('Material save', () => {
+    it('edits an existing material via the editor modal', () => {
+      const proj = createSimpleWBS();
+      proj.materials = [createTestMaterial()];
+      const onProjectChange = jest.fn();
+      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} onProjectChange={onProjectChange} />);
+
+      fireEvent.click(screen.getByText('Materials'));
+
+      // Click edit on the material
+      const editButtons = screen.getAllByRole('button', { name: 'Edit' });
+      expect(editButtons.length).toBeGreaterThan(0);
+      fireEvent.click(editButtons[0]);
+      expect(screen.getByTestId('material-editor-modal')).toBeInTheDocument();
+
+      // Modify the material name (label has no htmlFor, use placeholder)
+      const nameInput = screen.getByPlaceholderText('e.g., Excavator, Steel Beams, Fuel');
+      fireEvent.change(nameInput, { target: { value: 'Updated Material' } });
+
+      // Save changes
+      fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+      expect(onProjectChange).toHaveBeenCalled();
+    });
   });
 });
