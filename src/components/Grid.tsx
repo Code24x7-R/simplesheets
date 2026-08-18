@@ -14,6 +14,8 @@ import type { FunctionInfo } from '../utils/formulaAutocomplete';
 import { ResizeHandle } from './ResizeHandle';
 import { FilterDropdown } from './FilterDropdown';
 import { formatNumberValue, isNumberFormat, isNumericValue, isAccountingFormat, shouldRightAlign } from '../utils/numberFormat';
+import { evaluateConditionalFormats } from '../utils/conditionalFormatEngine';
+import type { ConditionalFormatRule } from '../types';
 import { isNumberStoredAsText } from '../utils/numberAsText';
 import { hasClipboardData } from '../utils/clipboard';
 import type { ColumnFilter } from '../utils/sheetFilter';
@@ -87,6 +89,8 @@ interface GridProps {
   onClearClipboard?: () => void;
   /** When true, display formulas instead of computed values (Ctrl + `). */
   showFormulas?: boolean;
+  /** Conditional formatting rules to apply. */
+  conditionalFormats?: ConditionalFormatRule[];
   /** The current editing session from the FSM. */
   session?: EditingSession;
   /** Start editing a cell (ENTER mode — replaces content with a character). */
@@ -154,7 +158,7 @@ export interface GridHandle {
  * Supports 10,000+ rows with smooth scrolling.
  */
 export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
-  { sheet, onCellChange, onCellsChange, onSelect, selectedCell, highlightedRanges = [], isPointMode = false, pointSelection = null, onCellPick, onHeaderSelect, onSelectionChange, onColumnResize, onRowResize, referenceFormat = 'A1', onInsertRowAbove, onInsertRowBelow, onDeleteRow, onInsertColLeft, onInsertColRight, onDeleteCol, clipboardRange, onClearClipboard, showFormulas = false, session, onStartEnter, onStartEdit, onRawKeyDown, onRawChange, onFillSeries, onMoveRange, filterState = null, onApplyFilter, autoComplete, onAcceptAutoComplete, onNavigateAutoComplete, onDismissAutoComplete, wizardPointMode = false, onWizardPointSelection },
+  { sheet, onCellChange, onCellsChange, onSelect, selectedCell, highlightedRanges = [], isPointMode = false, pointSelection = null, onCellPick, onHeaderSelect, onSelectionChange, onColumnResize, onRowResize, referenceFormat = 'A1', onInsertRowAbove, onInsertRowBelow, onDeleteRow, onInsertColLeft, onInsertColRight, onDeleteCol, clipboardRange, onClearClipboard, showFormulas = false, conditionalFormats = [], session, onStartEnter, onStartEdit, onRawKeyDown, onRawChange, onFillSeries, onMoveRange, filterState = null, onApplyFilter, autoComplete, onAcceptAutoComplete, onNavigateAutoComplete, onDismissAutoComplete, wizardPointMode = false, onWizardPointSelection },
   ref
 ) {
   const parentRef = useRef<HTMLDivElement>(null);
@@ -237,6 +241,41 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
   } | null>(null);
   // Force re-render during fill drag to update target range visual.
   const [, forceFillRender] = useState(0);
+
+  // ─── Conditional Format Evaluation ─────────────────────────────────
+  // Memoize all cell values for color scale / data bar calculations
+  const allCellValues = useMemo(() => {
+    const values: Array<string | number | boolean | null> = [];
+    for (const key in sheet.cells) {
+      const cell = sheet.cells[key];
+      values.push(cell.computedValue ?? cell.rawValue);
+    }
+    return values;
+  }, [sheet.cells]);
+
+  /** Compute conditional format style for a cell. */
+  function getConditionalFormatStyle(
+    row: number,
+    col: number,
+  ): { style: React.CSSProperties; dataBar?: { color: string; percent: number; showValue: boolean }; icon?: { iconSet: string; iconIndex: number; showValue: boolean } } | null {
+    if (!conditionalFormats || conditionalFormats.length === 0) return null;
+
+    const key = cellKey(row, col);
+    const cell = sheet.cells[key];
+    const cellValue = cell?.computedValue ?? cell?.rawValue ?? null;
+
+    const result = evaluateConditionalFormats(conditionalFormats, cellValue, allCellValues);
+    if (!result) return null;
+
+    const style: React.CSSProperties = {};
+    if (result.style.fontWeight) style.fontWeight = result.style.fontWeight as React.CSSProperties['fontWeight'];
+    if (result.style.fontStyle) style.fontStyle = result.style.fontStyle;
+    if (result.style.textDecoration) style.textDecoration = result.style.textDecoration;
+    if (result.style.color) style.color = result.style.color;
+    if (result.style.backgroundColor) style.backgroundColor = result.style.backgroundColor;
+
+    return { style, dataBar: result.dataBar, icon: result.icon };
+  }
 
   // ─── Drag-move state ───────────────────────────────────────────────
   // Tracks when the user is dragging a range to move it (drag handle on selection border).
@@ -1909,6 +1948,15 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
                     if (cell.style.backgroundColor) cellStyle.backgroundColor = cell.style.backgroundColor;
                     if (cell.style.textAlign) cellStyle.textAlign = cell.style.textAlign;
                   }
+                  // Apply conditional formatting for frozen cells
+                  const cfFrozen = getConditionalFormatStyle(row, col);
+                  if (cfFrozen) {
+                    if (cfFrozen.style.fontWeight) cellStyle.fontWeight = cfFrozen.style.fontWeight;
+                    if (cfFrozen.style.fontStyle) cellStyle.fontStyle = cfFrozen.style.fontStyle;
+                    if (cfFrozen.style.textDecoration) cellStyle.textDecoration = cfFrozen.style.textDecoration;
+                    if (cfFrozen.style.color) cellStyle.color = cfFrozen.style.color;
+                    if (cfFrozen.style.backgroundColor) cellStyle.backgroundColor = cfFrozen.style.backgroundColor;
+                  }
                   if (highlightIdx !== null) {
                     cellStyle.backgroundColor = HIGHLIGHT_COLORS[highlightIdx % HIGHLIGHT_COLORS.length];
                   }
@@ -2051,6 +2099,15 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
               if (cell?.style?.borderBottom) cellStyle.borderBottom = cell.style.borderBottom;
               if (cell?.style?.borderLeft) cellStyle.borderLeft = cell.style.borderLeft;
               if (cell?.style?.borderRight) cellStyle.borderRight = cell.style.borderRight;
+              // Apply conditional formatting
+              const cfResult = getConditionalFormatStyle(row, col);
+              if (cfResult) {
+                if (cfResult.style.fontWeight) cellStyle.fontWeight = cfResult.style.fontWeight;
+                if (cfResult.style.fontStyle) cellStyle.fontStyle = cfResult.style.fontStyle;
+                if (cfResult.style.textDecoration) cellStyle.textDecoration = cfResult.style.textDecoration;
+                if (cfResult.style.color) cellStyle.color = cfResult.style.color;
+                if (cfResult.style.backgroundColor) cellStyle.backgroundColor = cfResult.style.backgroundColor;
+              }
               // Apply freeze pane styling (sticky positioning for frozen rows/columns)
               if (isCellFrozen(row, col)) {
                 cellStyle.position = 'sticky';

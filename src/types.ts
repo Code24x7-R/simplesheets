@@ -50,6 +50,108 @@ export interface CellStyle {
 }
 
 /**
+ * Conditional formatting rule — applies visual formatting to cells
+ * when a condition is met.
+ */
+export interface ConditionalFormatRule {
+  /** Unique identifier for this rule. */
+  id: string;
+  /** Rule priority (lower number = higher priority). */
+  priority: number;
+  /** The type of condition. */
+  type: 'cellValue' | 'colorScale' | 'dataBar' | 'iconSet' | 'formula';
+  /** The operator for cellValue type. */
+  operator?: 'gt' | 'gte' | 'lt' | 'lte' | 'eq' | 'neq' | 'between' | 'notBetween';
+  /** First comparison value (string or number). */
+  value1?: string | number;
+  /** Second comparison value (for between/notBetween). */
+  value2?: string | number;
+  /** Formula expression for formula type (e.g., "=A1>B1"). */
+  formula?: string;
+  /** The formatting to apply when condition is met. */
+  format: ConditionalFormatStyle;
+  /** Color scale configuration. */
+  colorScale?: ColorScaleConfig;
+  /** Data bar configuration. */
+  dataBar?: DataBarConfig;
+  /** Icon set configuration. */
+  iconSet?: IconSetConfig;
+}
+
+/** Style to apply when conditional format condition is met. */
+export interface ConditionalFormatStyle {
+  fontWeight?: 'normal' | 'bold';
+  fontStyle?: 'normal' | 'italic';
+  textDecoration?: 'none' | 'underline' | 'line-through';
+  color?: string;
+  backgroundColor?: string;
+}
+
+/** Three-color or two-color scale configuration. */
+export interface ColorScaleConfig {
+  minType: 'min' | 'num' | 'percent' | 'percentile' | 'formula';
+  minValue?: number | string;
+  minColor: string;
+  midType?: 'num' | 'percent' | 'percentile' | 'formula';
+  midValue?: number | string;
+  midColor?: string;
+  maxType: 'max' | 'num' | 'percent' | 'percentile' | 'formula';
+  maxValue?: number | string;
+  maxColor: string;
+}
+
+/** Data bar configuration. */
+export interface DataBarConfig {
+  color: string;
+  showValue: boolean;
+  minType: 'min' | 'num' | 'percent' | 'percentile' | 'formula';
+  minValue?: number | string;
+  maxType: 'max' | 'num' | 'percent' | 'percentile' | 'formula';
+  maxValue?: number | string;
+}
+
+/** Icon set configuration. */
+export interface IconSetConfig {
+  iconSet: '3Arrows' | '3TrafficLights' | '3Flags' | '3Symbols' | '4Arrows' | '5Arrows';
+  showValue: boolean;
+  thresholds: number[];
+}
+
+/**
+ * Data validation rule — restricts what can be entered in cells.
+ */
+export interface DataValidationRule {
+  /** Unique identifier for this rule. */
+  id: string;
+  /** The type of validation. */
+  type: 'whole' | 'decimal' | 'list' | 'date' | 'textLength' | 'custom';
+  /** The comparison operator. */
+  operator: 'between' | 'notBetween' | 'eq' | 'neq' | 'gt' | 'gte' | 'lt' | 'lte';
+  /** First value for comparison. */
+  value1: string | number;
+  /** Second value for between/notBetween. */
+  value2?: string | number;
+  /** For list type: the source range or comma-separated values. */
+  listSource?: string;
+  /** Whether to show dropdown arrow for list type. */
+  showDropdown?: boolean;
+  /** Whether to allow blank values. */
+  allowBlank?: boolean;
+  /** Input message shown when cell is selected. */
+  inputMessage?: string;
+  /** Input message title. */
+  inputTitle?: string;
+  /** Error alert configuration. */
+  errorAlert?: {
+    style: 'stop' | 'warning' | 'information';
+    title: string;
+    message: string;
+  };
+  /** Whether to apply the validation (can be temporarily disabled). */
+  enabled: boolean;
+}
+
+/**
  * A single cell in the spreadsheet grid.
  * Cells are sparse — if a cell has no data, it simply doesn't exist in the map.
  */
@@ -112,6 +214,12 @@ export interface Sheet {
 
   /** Charts embedded in this sheet. */
   charts?: ChartConfig[];
+
+  /** Conditional formatting rules for this sheet. */
+  conditionalFormats?: ConditionalFormatRule[];
+
+  /** Data validation rules for this sheet. */
+  dataValidations?: DataValidationRule[];
 }
 
 /**

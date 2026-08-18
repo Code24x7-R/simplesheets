@@ -22,6 +22,9 @@ import { SearchReplaceModal } from './components/SearchReplaceModal';
 import { SheetTabs } from './components/SheetTabs';
 import { MenuBar } from './components/MenuBar';
 import { Toolbar } from './components/Toolbar';
+import { ConditionalFormatModal } from './components/ConditionalFormatModal';
+import { DataValidationModal } from './components/DataValidationModal';
+import type { ConditionalFormatRule, DataValidationRule } from './types';
 import { ImportExportBridge } from './components/ImportExportBridge';
 import { evaluateWorkbook, evaluateFormulaPreview, buildDependencyGraph } from './utils/formulaEngine';
 import { copyRange, cutRange as clipCutRange, getClipboard, clearClipboard, hasClipboardData, writeClipboardToSystem } from './utils/clipboard';
@@ -247,6 +250,8 @@ function WorkbookView() {
   } | null>(null);
   // Toggle formula view (Ctrl + `) - show formulas instead of values
   const [showFormulas, setShowFormulas] = useState(false);
+  const [showConditionalFormat, setShowConditionalFormat] = useState(false);
+  const [showDataValidation, setShowDataValidation] = useState(false);
   // Filename modal state for save/export operations
   const [filenameModal, setFilenameModal] = useState<{
     isOpen: boolean;
@@ -1889,6 +1894,50 @@ function WorkbookView() {
     [workbook, pushHistory],
   );
 
+  // ─── Conditional Formatting Handlers ────────────────────────────────
+
+  const handleOpenConditionalFormat = useCallback(() => {
+    setShowConditionalFormat(true);
+  }, []);
+
+  const handleCloseConditionalFormat = useCallback(() => {
+    setShowConditionalFormat(false);
+  }, []);
+
+  const handleConditionalFormatRulesChange = useCallback(
+    (rules: ConditionalFormatRule[]) => {
+      const sheet = workbook.sheets[workbook.activeSheetIndex];
+      const updatedSheet = { ...sheet, conditionalFormats: rules };
+      const updatedSheets = [...workbook.sheets];
+      updatedSheets[workbook.activeSheetIndex] = updatedSheet;
+      const newWorkbook = { ...workbook, sheets: updatedSheets, lastModified: Date.now() };
+      pushHistory(newWorkbook, 'Update conditional formatting', filterStateRef.current, gridSelectionRef.current);
+    },
+    [workbook, pushHistory],
+  );
+
+  // ─── Data Validation Handlers ───────────────────────────────────────
+
+  const handleOpenDataValidation = useCallback(() => {
+    setShowDataValidation(true);
+  }, []);
+
+  const handleCloseDataValidation = useCallback(() => {
+    setShowDataValidation(false);
+  }, []);
+
+  const handleDataValidationRulesChange = useCallback(
+    (rules: DataValidationRule[]) => {
+      const sheet = workbook.sheets[workbook.activeSheetIndex];
+      const updatedSheet = { ...sheet, dataValidations: rules };
+      const updatedSheets = [...workbook.sheets];
+      updatedSheets[workbook.activeSheetIndex] = updatedSheet;
+      const newWorkbook = { ...workbook, sheets: updatedSheets, lastModified: Date.now() };
+      pushHistory(newWorkbook, 'Update data validation', filterStateRef.current, gridSelectionRef.current);
+    },
+    [workbook, pushHistory],
+  );
+
   // ─── Chart Handlers ──────────────────────────────────────────────────
 
   const handleInsertChart = useCallback(() => {
@@ -2593,6 +2642,8 @@ function WorkbookView() {
         canUndo={canUndo}
         canRedo={canRedo}
         borderColor={borderColor}
+        onOpenConditionalFormat={handleOpenConditionalFormat}
+        onOpenDataValidation={handleOpenDataValidation}
       />
 
       {/* Formula Bar */}
@@ -2714,6 +2765,7 @@ function WorkbookView() {
           clipboardRange={clipboardRange}
           onClearClipboard={handleClearClipboard}
           showFormulas={showFormulas}
+          conditionalFormats={sheet.conditionalFormats}
           session={editingSession}
           onStartEnter={handleGridStartEnter}
           onStartEdit={handleGridStartEdit}
@@ -2908,6 +2960,18 @@ function WorkbookView() {
         initialSettings={chartSettings}
         onSettingsChange={updateChartSettings}
         workbook={workbook}
+      />
+      <ConditionalFormatModal
+        isOpen={showConditionalFormat}
+        onClose={handleCloseConditionalFormat}
+        rules={sheet.conditionalFormats ?? []}
+        onRulesChange={handleConditionalFormatRulesChange}
+      />
+      <DataValidationModal
+        isOpen={showDataValidation}
+        onClose={handleCloseDataValidation}
+        rules={sheet.dataValidations ?? []}
+        onRulesChange={handleDataValidationRulesChange}
       />
       <SheetLinkProvider workbook={workbook} />
     </div>

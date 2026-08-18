@@ -83,6 +83,10 @@ interface ToolbarProps {
   canUndo: boolean;
   canRedo: boolean;
   borderColor: string;
+  // ── Conditional Formatting ───────────────────────────────────────
+  onOpenConditionalFormat?: () => void;
+  // ── Data Validation ──────────────────────────────────────────────
+  onOpenDataValidation?: () => void;
 }
 
 /**
@@ -412,6 +416,26 @@ export function Toolbar(props: ToolbarProps) {
           title="Text format — preserves literal values (leading zeros, IDs)"
         >
           Abc
+        </button>
+      </div>
+
+      <div className="toolbar-divider" />
+
+      {/* ── Conditional Formatting ───────────────────────────────────── */}
+      <div className="toolbar-section flex items-center gap-0.5">
+        <button
+          className="toolbar-btn text-xs"
+          onClick={props.onOpenConditionalFormat}
+          title="Conditional Formatting — highlight cells based on conditions"
+        >
+          🎨
+        </button>
+        <button
+          className="toolbar-btn text-xs"
+          onClick={props.onOpenDataValidation}
+          title="Data Validation — restrict cell entries"
+        >
+          ✓
         </button>
       </div>
     </div>
