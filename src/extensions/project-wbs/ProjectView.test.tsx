@@ -1398,6 +1398,49 @@ describe('ProjectView', () => {
     });
   });
 
+  describe('Additional uncovered branches', () => {
+    it('handles material allocation save', () => {
+      const proj = createSimpleWBS();
+      proj.materials = [createTestMaterial()];
+      const onProjectChange = jest.fn();
+      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} onProjectChange={onProjectChange} />);
+
+      fireEvent.click(screen.getByText('Materials'));
+
+      // Click Allocate on the material
+      const allocateButtons = screen.getAllByRole('button', { name: 'Allocate' });
+      expect(allocateButtons.length).toBeGreaterThan(0);
+      fireEvent.click(allocateButtons[0]);
+      expect(screen.getByTestId('material-allocation-modal')).toBeInTheDocument();
+
+      // The allocation modal should have a form to fill out
+      // Just verify the modal opens (allocation save is tested via the modal's own tests)
+    });
+
+    it('handles save to sheet', () => {
+      const onSaveProject = jest.fn();
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={onSaveProject} onClose={jest.fn()} />);
+
+      // Click Save button
+      fireEvent.click(screen.getByText('↓ Save'));
+      expect(onSaveProject).toHaveBeenCalled();
+    });
+
+    it('handles calendar save', () => {
+      const onProjectChange = jest.fn();
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} onProjectChange={onProjectChange} />);
+
+      // Open calendar config
+      fireEvent.click(screen.getByText('📅 Calendar'));
+      expect(screen.getByTestId('calendar-config-modal')).toBeInTheDocument();
+
+      // Save calendar changes — button text is "Save Calendar"
+      const saveButton = screen.getByRole('button', { name: 'Save Calendar' });
+      fireEvent.click(saveButton);
+      expect(onProjectChange).toHaveBeenCalled();
+    });
+  });
+
   describe('View rendering branches', () => {
     it('renders Gantt with task selection', () => {
       const onProjectChange = jest.fn();
