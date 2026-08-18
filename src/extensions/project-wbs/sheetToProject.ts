@@ -919,10 +919,11 @@ function createTasksSheet(model: ProjectModel, mapping: ColumnMapping): Sheet {
     if (mapping.resourceCol !== null && mapping.resourceCol >= 0) {
       // Write resource as formula referencing Resources sheet (e.g., =Resources!A2)
       const resourceRowNum = task.resourceId ? findResourceRowNum(model.resources, task.resourceId) : null;
-      if (resourceRowNum !== null) {
+      const resource = task.resourceId ? model.resources.find((r) => r.id === task.resourceId) : null;
+      if (resourceRowNum !== null && resource) {
         cells[`${row}:${mapping.resourceCol}`] = {
           rawValue: `=Resources!A${resourceRowNum}`,
-          computedValue: task.resourceId ?? '',
+          computedValue: resource.name,
         };
       } else {
         cells[`${row}:${mapping.resourceCol}`] = { rawValue: '', computedValue: '' };

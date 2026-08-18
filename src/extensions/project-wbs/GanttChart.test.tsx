@@ -296,4 +296,23 @@ describe('GanttChart', () => {
     expect(popup?.textContent).toContain('Empty Task');
     expect(popup?.textContent).toContain('No resource assigned');
   });
+
+  it('shows resource in popup after round-trip through sheet conversion', () => {
+    // Simulates the full flow: project → workbook → re-parse → project → Gantt
+    const resource = { id: 'res-1', name: 'Alice Brown', role: 'Architect', costRate: 150, costCurrency: 'USD', availability: 100, color: '#8B5CF6' };
+    const task = createTask({ responsibleResourceId: 'res-1', name: 'Architecture Design' });
+    const project = createProject({ wbs: [task], resources: [resource] });
+    render(<GanttChart project={project} width={800} height={400} />);
+
+    const barGroup = document.querySelector('.gantt-rows g.cursor-pointer');
+    expect(barGroup).toBeInTheDocument();
+
+    fireEvent.mouseEnter(barGroup!);
+
+    const popup = document.querySelector('.gantt-hover-popup');
+    expect(popup).toBeInTheDocument();
+    expect(popup?.textContent).toContain('Architecture Design');
+    expect(popup?.textContent).toContain('Resource: Alice Brown');
+    expect(popup?.textContent).toContain('Progress: 50%');
+  });
 });
