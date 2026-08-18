@@ -129,6 +129,18 @@ describe('ProjectView', () => {
     expect(screen.queryByText(/critical/)).not.toBeInTheDocument();
   });
 
+  it('displays critical and high risk badges when risks exist', () => {
+    const proj = createSimpleWBS();
+    // Add a critical risk (score 20+) and a high risk (score 10-19)
+    proj.risks = [
+      { id: 'risk-1', projectId: proj.id, taskId: null, title: 'Critical Risk', description: '', category: 'technical' as const, probability: 5, impact: 5, riskScore: 25, status: 'identified' as const, mitigationPlan: '', contingencyPlan: '', mitigationCost: 0, ownerId: null, identifiedDate: '2025-01-01', reviewDate: '2025-06-01', triggerCondition: '', residualProbability: 3, residualImpact: 3, residualRiskScore: 9, customFields: {} },
+      { id: 'risk-2', projectId: proj.id, taskId: null, title: 'High Risk', description: '', category: 'schedule' as const, probability: 4, impact: 3, riskScore: 12, status: 'identified' as const, mitigationPlan: '', contingencyPlan: '', mitigationCost: 0, ownerId: null, identifiedDate: '2025-01-01', reviewDate: '2025-06-01', triggerCondition: '', residualProbability: 2, residualImpact: 2, residualRiskScore: 4, customFields: {} },
+    ];
+    render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+    expect(screen.getByText(/1 critical/)).toBeInTheDocument();
+    expect(screen.getByText(/1 high/)).toBeInTheDocument();
+  });
+
   describe('Materials flow', () => {
     it('shows material in dashboard after adding via dialog', () => {
       render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
@@ -597,6 +609,49 @@ describe('ProjectView', () => {
       expect(screen.getByTestId('task-editor-modal')).toBeInTheDocument();
     });
 
+    it('deletes a task from the tree with confirmation', () => {
+      const proj = createSimpleWBS();
+      // Ensure the first task HAS children (so confirmation dialog appears)
+      if (proj.wbs[0] && proj.wbs[0].children.length === 0) {
+        // If no children, create a synthetic child for testing
+        proj.wbs[0].children = [{ ...proj.wbs[0], id: 'child-1', name: 'Child Task', parentId: proj.wbs[0].id, children: [] }];
+      }
+      const onProjectChange = jest.fn();
+      // Mock window.confirm to return true
+      const confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(true);
+
+      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} onProjectChange={onProjectChange} />);
+
+      // Find and click the delete button (title="Delete task") in the tree
+      const deleteButtons = screen.getAllByTitle('Delete task');
+      expect(deleteButtons.length).toBeGreaterThan(0);
+      fireEvent.click(deleteButtons[0]);
+
+      expect(confirmSpy).toHaveBeenCalled();
+      expect(onProjectChange).toHaveBeenCalled();
+
+      confirmSpy.mockRestore();
+    });
+
+    it('deletes a task without confirmation when no children', () => {
+      const proj = createSimpleWBS();
+      // Ensure the first task has no children
+      if (proj.wbs[0]) {
+        proj.wbs[0].children = [];
+      }
+      const onProjectChange = jest.fn();
+
+      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} onProjectChange={onProjectChange} />);
+
+      // Find and click the delete button (title="Delete task") in the tree
+      const deleteButtons = screen.getAllByTitle('Delete task');
+      expect(deleteButtons.length).toBeGreaterThan(0);
+      fireEvent.click(deleteButtons[0]);
+
+      // No confirmation needed, directly deletes
+      expect(onProjectChange).toHaveBeenCalled();
+    });
+
     it('toggles task collapse from the tree', () => {
       // Create a project with a task that has children
       const proj = createSimpleWBS();
@@ -661,6 +716,31 @@ describe('ProjectView', () => {
         expect(onProjectChange).toHaveBeenCalled();
       }
     });
+
+    it('deletes a risk via the risk editor modal', () => {
+      const proj = createSimpleWBS();
+      proj.risks = [{
+        id: 'risk-1', projectId: proj.id, taskId: null, title: 'Test Risk', description: '',
+        category: 'technical' as const, probability: 3, impact: 4, riskScore: 12,
+        status: 'identified' as const, mitigationPlan: '', contingencyPlan: '', mitigationCost: 0, ownerId: null,
+        identifiedDate: '2025-01-01', reviewDate: '2025-06-01', triggerCondition: '',
+        residualProbability: 2, residualImpact: 3, residualRiskScore: 6, customFields: {},
+      }];
+      const onProjectChange = jest.fn();
+      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} onProjectChange={onProjectChange} />);
+
+      fireEvent.click(screen.getByText('Risk Register'));
+
+      // Click "Edit" to open the risk editor modal
+      const editButtons = screen.getAllByRole('button', { name: 'Edit' });
+      expect(editButtons.length).toBeGreaterThan(0);
+      fireEvent.click(editButtons[0]);
+      expect(screen.getByTestId('risk-editor-modal')).toBeInTheDocument();
+
+      // Click "Delete Risk" in the modal
+      fireEvent.click(screen.getByRole('button', { name: 'Delete Risk' }));
+      expect(onProjectChange).toHaveBeenCalled();
+    });
   });
 
   describe('Resource management', () => {
@@ -691,6 +771,28 @@ describe('ProjectView', () => {
       fireEvent.click(addButtons[addButtons.length - 1]);
 
       expect(onProjectChange).toHaveBeenCalled();
+    });
+
+    it('deletes a resource via the resource list modal', () => {
+      const proj = createSimpleWBS();
+      proj.resources = [{ id: 'res-1', name: 'Alice', role: 'Developer', costRate: 100, costCurrency: 'USD', availability: 100, color: '#3B82EF' }];
+      const onProjectChange = jest.fn();
+      const confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(true);
+
+      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} onProjectChange={onProjectChange} />);
+
+      fireEvent.click(screen.getByText(/👥 Resources/));
+      expect(screen.getByText('Manage Resources')).toBeInTheDocument();
+
+      // Click delete on the resource
+      const deleteButtons = screen.getAllByRole('button', { name: /delete/i });
+      expect(deleteButtons.length).toBeGreaterThan(0);
+      fireEvent.click(deleteButtons[0]);
+
+      expect(confirmSpy).toHaveBeenCalled();
+      expect(onProjectChange).toHaveBeenCalled();
+
+      confirmSpy.mockRestore();
     });
   });
 
