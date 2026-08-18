@@ -810,6 +810,7 @@ export function projectModelToProject(model: ProjectModel): Project {
       currentEstimateTotal: 0,
       actualSpendTotal: actuals.reduce((sum, a) => sum + a.amount, 0),
       etcTotal: 0,
+      materialCostTotal: 0,
       taskAccounting: [],
       spendEntries: actuals,
       changeLog: [],

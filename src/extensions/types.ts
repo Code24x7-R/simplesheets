@@ -266,6 +266,7 @@ export interface ProjectAccounting {
   currentEstimateTotal: number;
   actualSpendTotal: number;
   etcTotal: number;
+  materialCostTotal: number;   // Total material costs (CapEx + OpEx + Consumables)
   taskAccounting: TaskAccounting[];
   spendEntries: ActualSpendEntry[];
   changeLog: ChangeLogEntry[];

@@ -18,6 +18,7 @@ import {
   computeProjectAccounting,
   calculateScheduleShiftCost,
   calculateDependencyImpact,
+  createChangeLogEntry,
   formatVariance,
   formatPerformanceIndex,
   getCostRollupSummary,
@@ -416,5 +417,97 @@ describe('getCostRollupSummary', () => {
     const result = getCostRollupSummary(tree);
     expect(result[0].ownCost).toBe(100);
     expect(result[0].totalCost).toBe(1100); // 100 + 400 + 600
+  });
+});
+
+describe('createChangeLogEntry', () => {
+  it('creates a change log entry with required fields', () => {
+    const entry = createChangeLogEntry({
+      taskId: 'task-1',
+      changeType: 'dependency',
+      description: 'Predecessor delayed',
+      costImpact: 1500,
+      scheduleImpactDays: 3,
+    });
+
+    expect(entry.id).toBeTruthy();
+    expect(entry.date).toBeTruthy();
+    expect(entry.taskId).toBe('task-1');
+    expect(entry.changeType).toBe('dependency');
+    expect(entry.description).toBe('Predecessor delayed');
+    expect(entry.costImpact).toBe(1500);
+    expect(entry.scheduleImpactDays).toBe(3);
+    expect(entry.approvedBy).toBeNull();
+  });
+
+  it('creates a project-level entry when taskId is null', () => {
+    const entry = createChangeLogEntry({
+      changeType: 'scope',
+      description: 'Scope changed',
+      costImpact: 5000,
+      scheduleImpactDays: 0,
+    });
+
+    expect(entry.taskId).toBeNull();
+    expect(entry.changeType).toBe('scope');
+  });
+
+  it('includes optional approvedBy field', () => {
+    const entry = createChangeLogEntry({
+      changeType: 'schedule',
+      description: 'Schedule compressed',
+      costImpact: -2000,
+      scheduleImpactDays: -5,
+      approvedBy: 'Project Manager',
+    });
+
+    expect(entry.approvedBy).toBe('Project Manager');
+  });
+});
+
+describe('computeProjectAccounting material integration', () => {
+  it('includes material cost total in accounting', () => {
+    const project = createProject({
+      wbs: [createTask({ cost: 1000 })],
+      materials: [
+        {
+          id: 'mat-1',
+          name: 'Equipment',
+          description: '',
+          classification: 'capex',
+          unit: 'each',
+          unitCost: 10000,
+          quantity: 1,
+          currency: 'USD',
+          vendor: null,
+          depreciationMethod: 'straight-line',
+          usefulLifeMonths: 36,
+          salvageValue: 1000,
+          acquisitionDate: '2026-01-01',
+          billingPeriod: 'daily',
+          rentalRate: 0,
+          leaseStartDate: null,
+          leaseEndDate: null,
+          wastageRate: 0,
+          reorderPoint: 0,
+          carryingCostPerUnit: 0,
+          allocatedQuantity: 0,
+          consumedQuantity: 0,
+          status: 'delivered',
+        },
+      ],
+    });
+
+    const result = computeProjectAccounting(project);
+    expect(result.materialCostTotal).toBeGreaterThan(0);
+  });
+
+  it('returns 0 material cost total when no materials', () => {
+    const project = createProject({
+      wbs: [createTask({ cost: 1000 })],
+    });
+
+    const result = computeProjectAccounting(project);
+    expect(result.materialCostTotal).toBe(0);
   });
 });

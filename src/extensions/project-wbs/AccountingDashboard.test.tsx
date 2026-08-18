@@ -159,4 +159,85 @@ describe('AccountingDashboard', () => {
     const rows = screen.getAllByText(/Alpha|Beta|Gamma/);
     expect(rows.length).toBe(3);
   });
+
+  it('shows change log tab', () => {
+    const project = createProject({ wbs: [createTask()] });
+    render(<AccountingDashboard project={project} />);
+    expect(screen.getByText(/📝 Change Log/)).toBeTruthy();
+  });
+
+  it('displays empty state for change log when no entries', () => {
+    const project = createProject({ wbs: [createTask()] });
+    render(<AccountingDashboard project={project} />);
+    fireEvent.click(screen.getByText(/📝 Change Log/));
+    expect(screen.getByText(/No change log entries yet/)).toBeTruthy();
+  });
+
+  it('displays change log entries', () => {
+    const project = createProject({
+      wbs: [createTask()],
+      accounting: {
+        baselineTotal: 1000,
+        allocatedTotal: 1000,
+        currentEstimateTotal: 1000,
+        actualSpendTotal: 0,
+        etcTotal: 1000,
+        materialCostTotal: 0,
+        taskAccounting: [],
+        spendEntries: [],
+        changeLog: [
+          {
+            id: 'cl-1',
+            date: '2026-01-15',
+            taskId: 'task-1',
+            changeType: 'dependency',
+            description: 'Predecessor delayed by 3 days',
+            costImpact: 1500,
+            scheduleImpactDays: 3,
+            approvedBy: 'PM',
+          },
+        ],
+        currency: 'USD',
+      },
+    });
+    render(<AccountingDashboard project={project} />);
+    fireEvent.click(screen.getByText(/📝 Change Log/));
+    expect(screen.getByText('Predecessor delayed by 3 days')).toBeTruthy();
+    expect(screen.getByText('dependency')).toBeTruthy();
+  });
+
+  it('shows material cost in header when materials exist', () => {
+    const project = createProject({
+      wbs: [createTask()],
+      materials: [
+        {
+          id: 'mat-1',
+          name: 'Steel',
+          description: '',
+          classification: 'capex',
+          unit: 'kg',
+          unitCost: 5000,
+          quantity: 1,
+          currency: 'USD',
+          vendor: null,
+          depreciationMethod: 'straight-line',
+          usefulLifeMonths: 36,
+          salvageValue: 500,
+          acquisitionDate: '2026-01-01',
+          billingPeriod: 'daily',
+          rentalRate: 0,
+          leaseStartDate: null,
+          leaseEndDate: null,
+          wastageRate: 0,
+          reorderPoint: 0,
+          carryingCostPerUnit: 0,
+          allocatedQuantity: 0,
+          consumedQuantity: 0,
+          status: 'delivered',
+        },
+      ],
+    });
+    render(<AccountingDashboard project={project} />);
+    expect(screen.getByText(/Materials:/)).toBeTruthy();
+  });
 });

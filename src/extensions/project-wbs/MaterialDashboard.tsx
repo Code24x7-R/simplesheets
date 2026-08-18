@@ -20,11 +20,12 @@ interface MaterialDashboardProps {
   onAddMaterial?: () => void;
   onEditMaterial?: (materialId: string) => void;
   onAllocateMaterial?: (materialId: string) => void;
+  onConfig?: () => void;
 }
 
 type MaterialFilter = 'all' | MaterialClassification;
 
-export function MaterialDashboard({ project, onAddMaterial, onEditMaterial, onAllocateMaterial }: MaterialDashboardProps) {
+export function MaterialDashboard({ project, onAddMaterial, onEditMaterial, onAllocateMaterial, onConfig }: MaterialDashboardProps) {
   const [filter, setFilter] = useState<MaterialFilter>('all');
 
   const materials = project.materials ?? [];
@@ -42,14 +43,25 @@ export function MaterialDashboard({ project, onAddMaterial, onEditMaterial, onAl
       <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold text-gray-800">Materials & Assets</h3>
-          {onAddMaterial && (
-            <button
-              className="px-3 py-1 text-xs text-blue-600 border border-blue-300 rounded hover:bg-blue-50"
-              onClick={onAddMaterial}
-            >
-              + Add Material
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            {onConfig && (
+              <button
+                className="px-3 py-1 text-xs text-gray-600 border border-gray-300 rounded hover:bg-gray-50"
+                onClick={onConfig}
+                title="Configure capitalization threshold"
+              >
+                ⚙️ Settings
+              </button>
+            )}
+            {onAddMaterial && (
+              <button
+                className="px-3 py-1 text-xs text-blue-600 border border-blue-300 rounded hover:bg-blue-50"
+                onClick={onAddMaterial}
+              >
+                + Add Material
+              </button>
+            )}
+          </div>
         </div>
       </div>
 

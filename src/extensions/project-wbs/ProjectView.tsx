@@ -31,6 +31,8 @@ import { ActualsEditorModal } from './ActualsEditorModal';
 import { MaterialAllocationModal } from './MaterialAllocationModal';
 import { NotificationPanel } from './NotificationPanel';
 import { NewProjectDialog } from './NewProjectDialog';
+import { CapitalizationConfigModal } from './CapitalizationConfigModal';
+import type { CapitalizationConfig } from '../types';
 import type { TaskNotification } from './dependencyWorkflows';
 import { generateStatusNotifications } from './dependencyWorkflows';
 import type { ActualSpendEntry, MaterialAllocation, MaterialConsumption } from '../types';
@@ -136,6 +138,7 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
   }>({ open: false, materialId: null });
 
   const [notifications, setNotifications] = useState<TaskNotification[]>([]);
+  const [showCapitalizationConfig, setShowCapitalizationConfig] = useState(false);
 
   // New project dialog
   const [showNewProjectDialog, setShowNewProjectDialog] = useState(false);
@@ -514,6 +517,7 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
         currentEstimateTotal: 0,
         actualSpendTotal: 0,
         etcTotal: 0,
+        materialCostTotal: 0,
         taskAccounting: [],
         spendEntries: [],
         changeLog: [],
@@ -582,6 +586,24 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
       ],
     }));
     setAllocationModal({ open: false, materialId: null });
+  }
+
+  // ─── Capitalization Config ─────────────────────────────────────────
+
+  function handleOpenCapitalizationConfig() {
+    setShowCapitalizationConfig(true);
+  }
+
+  function handleCloseCapitalizationConfig() {
+    setShowCapitalizationConfig(false);
+  }
+
+  function handleCapitalizationConfigSave(config: CapitalizationConfig) {
+    handleProjectChange((prev) => ({
+      ...prev,
+      capitalizationConfig: config,
+    }));
+    setShowCapitalizationConfig(false);
   }
 
   function handleSaveToSheet() {
@@ -969,6 +991,7 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
               onAddMaterial={handleAddMaterial}
               onEditMaterial={handleEditMaterial}
               onAllocateMaterial={handleOpenAllocationModal}
+              onConfig={handleOpenCapitalizationConfig}
             />
           )}
         </div>
@@ -1074,6 +1097,21 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
           />
         );
       })()}
+
+      {/* Capitalization Config Modal */}
+      {showCapitalizationConfig && (
+        <CapitalizationConfigModal
+          config={project.capitalizationConfig ?? {
+            threshold: 1000,
+            currency: 'USD',
+            defaultUsefulLifeMonths: 36,
+            defaultDepreciationMethod: 'straight-line',
+            defaultSalvagePercent: 10,
+          }}
+          onClose={handleCloseCapitalizationConfig}
+          onSave={handleCapitalizationConfigSave}
+        />
+      )}
 
       {/* New Project Dialog */}
       {showNewProjectDialog && (

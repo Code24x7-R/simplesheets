@@ -23,9 +23,11 @@ import type {
   TaskAccounting,
   ActualSpendEntry,
   ProjectAccounting,
+  ChangeLogEntry,
 } from '../types';
 import { getAllTasks } from './treeOps';
 import { rollUpCost } from './rollups';
+import { calculateMaterialCostSummary } from './materialEngine';
 
 // ─── Earned Value Calculations ──────────────────────────────────────────────
 
@@ -290,12 +292,17 @@ export function computeProjectAccounting(project: Project): ProjectAccounting {
     }
   }
 
+  // Material cost integration
+  const materialSummary = calculateMaterialCostSummary(project);
+  const materialCostTotal = materialSummary.totalMaterialCost;
+
   return {
     baselineTotal,
     allocatedTotal,
     currentEstimateTotal,
     actualSpendTotal,
     etcTotal,
+    materialCostTotal,
     taskAccounting,
     spendEntries,
     changeLog: project.accounting?.changeLog ?? [],
@@ -410,6 +417,33 @@ function dateDiffWorkingDays(fromDate: string, toDate: string): number {
     cursor.setDate(cursor.getDate() + 1);
   }
   return days;
+}
+
+// ─── Change Log Entry Creation ──────────────────────────────────────────────
+
+/**
+ * Create a change log entry for a dependency-driven schedule/cost shift.
+ * @param params - Change log parameters
+ * @returns A new ChangeLogEntry
+ */
+export function createChangeLogEntry(params: {
+  taskId?: string | null;
+  changeType: ChangeLogEntry['changeType'];
+  description: string;
+  costImpact: number;
+  scheduleImpactDays: number;
+  approvedBy?: string | null;
+}): ChangeLogEntry {
+  return {
+    id: `cl-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    date: new Date().toISOString().slice(0, 10),
+    taskId: params.taskId ?? null,
+    changeType: params.changeType,
+    description: params.description,
+    costImpact: params.costImpact,
+    scheduleImpactDays: params.scheduleImpactDays,
+    approvedBy: params.approvedBy ?? null,
+  };
 }
 
 // ─── Formatting Helpers ──────────────────────────────────────────────────────

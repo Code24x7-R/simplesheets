@@ -240,6 +240,7 @@ export function createBlankProject(name = 'New Project', startDate?: string, end
       currentEstimateTotal: 0,
       actualSpendTotal: 0,
       etcTotal: 0,
+      materialCostTotal: 0,
       taskAccounting: [],
       spendEntries: [],
       changeLog: [],
