@@ -1519,5 +1519,35 @@ describe('ProjectView', () => {
       // Delete button should be present for existing risks
       expect(screen.getByRole('button', { name: 'Delete Risk' })).toBeInTheDocument();
     });
+
+    it('renders resource editor modal for new resource', () => {
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      fireEvent.click(screen.getByText(/👥 Resources/));
+      // Click add resource
+      fireEvent.click(screen.getByRole('button', { name: 'Add Resource' }));
+      // ResourceEditorModal should open
+      const nameInput = screen.getByLabelText('Name *');
+      expect(nameInput).toBeInTheDocument();
+    });
+
+    it('renders material editor modal for new material', () => {
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      fireEvent.click(screen.getByText('Materials'));
+      fireEvent.click(screen.getByText('+ Add Material'));
+      expect(screen.getByTestId('material-editor-modal')).toBeInTheDocument();
+    });
+
+    it('renders actuals editor modal for new entry', () => {
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      fireEvent.click(screen.getByText('Accounting'));
+      // Find and click the Actuals tab button
+      const buttons = screen.getAllByRole('button');
+      const actualsButton = buttons.find((btn) => btn.textContent?.includes('Actuals'));
+      if (actualsButton) {
+        fireEvent.click(actualsButton);
+      }
+      fireEvent.click(screen.getByText('+ Add Spend Entry'));
+      expect(screen.getByTestId('actuals-editor-modal')).toBeInTheDocument();
+    });
   });
 });
