@@ -3436,5 +3436,62 @@ describe('evaluateWorkbook - cross-sheet references', () => {
       const result = evaluateWorkbook(sheetToWorkbook(sheet), 0);
       expect(result.cells['0:0'].computedValue).toBe('#VALUE!');
     });
+
+    it('SUBTOTAL(8, range) computes STDEVP', () => {
+      const sheet = createSheet({
+        '0:0': '2',
+        '1:0': '4',
+        '2:0': '4',
+        '3:0': '4',
+        '4:0': '5',
+        '5:0': '5',
+        '6:0': '7',
+        '7:0': '9',
+        '8:0': '=SUBTOTAL(8, A1:A8)',
+      });
+      const result = evaluateWorkbook(sheetToWorkbook(sheet), 0);
+      expect(result.cells['8:0'].computedValue).toBeCloseTo(2.0, 1);
+    });
+
+    it('SUBTOTAL(10, range) computes VAR', () => {
+      const sheet = createSheet({
+        '0:0': '2',
+        '1:0': '4',
+        '2:0': '4',
+        '3:0': '4',
+        '4:0': '5',
+        '5:0': '5',
+        '6:0': '7',
+        '7:0': '9',
+        '8:0': '=SUBTOTAL(10, A1:A8)',
+      });
+      const result = evaluateWorkbook(sheetToWorkbook(sheet), 0);
+      expect(result.cells['8:0'].computedValue).toBeCloseTo(4.571, 2);
+    });
+
+    it('SUBTOTAL(11, range) computes VARP', () => {
+      const sheet = createSheet({
+        '0:0': '2',
+        '1:0': '4',
+        '2:0': '4',
+        '3:0': '4',
+        '4:0': '5',
+        '5:0': '5',
+        '6:0': '7',
+        '7:0': '9',
+        '8:0': '=SUBTOTAL(11, A1:A8)',
+      });
+      const result = evaluateWorkbook(sheetToWorkbook(sheet), 0);
+      expect(result.cells['8:0'].computedValue).toBeCloseTo(4.0, 1);
+    });
+
+    it('SUBTOTAL with single value returns #VALUE! for STDEV', () => {
+      const sheet = createSheet({
+        '0:0': '10',
+        '1:0': '=SUBTOTAL(7, A1:A1)',
+      });
+      const result = evaluateWorkbook(sheetToWorkbook(sheet), 0);
+      expect(result.cells['1:0'].computedValue).toBe('#VALUE!');
+    });
   });
 });
