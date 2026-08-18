@@ -114,7 +114,7 @@ The WBS/Project extension is actively being expanded. See [EXTENSIONS_ARCHITECTU
 
 ## Planned Phases
 
-### Phase 22: Conditional Formatting — PLANNED 📋
+### Phase 22: Conditional Formatting — ✅ Complete
 *Format cells based on their values or formulas.*
 
 **Scope:**
@@ -125,7 +125,7 @@ The WBS/Project extension is actively being expanded. See [EXTENSIONS_ARCHITECTU
 - Formula-based conditions (e.g., `=A1>B1`)
 - Rule management UI (add, edit, reorder, delete rules)
 
-### Phase 23: Data Validation — PLANNED 📋
+### Phase 23: Data Validation — ✅ Complete
 *Restrict what can be entered in cells.*
 
 **Scope:**

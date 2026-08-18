@@ -6,6 +6,20 @@
 
 ---
 
+### 2026-08-18 [FEATURE] Phases 22 & 23 — Conditional Formatting and Data Validation
+- **What**: Completed Conditional Formatting (Phase 22) and Data Validation (Phase 23) with full UI and engine support
+- **Implementation**:
+  - **Conditional Formatting Engine** (`conditionalFormatEngine.ts`): Rule evaluation for cellValue, colorScale, dataBar, iconSet, and formula types; color interpolation for scales; data bar percentage computation; icon indexing
+  - **Conditional Format Modal** (`ConditionalFormatModal.tsx`): Rule CRUD with priority ordering, format styling (font, colors), color scale/data bar/icon set configuration
+  - **Data Validation Engine** (`dataValidationEngine.ts`): Validation for whole numbers, decimals, lists, dates, text length, and custom formulas; comparison operators (between, not between, equal, not equal, greater/less than)
+  - **Data Validation Modal** (`DataValidationModal.tsx`): Rule CRUD with input messages, error alerts (stop/warning/information), list source configuration
+  - **Grid Integration**: Conditional formatting applied in real-time to cell styles (both frozen and non-frozen cells)
+  - **Toolbar Integration**: 🎨 and ✓ buttons for opening the modals
+  - **History Integration**: Changes to rules are undoable via `pushHistory`
+- **Types Added**: `ConditionalFormatRule`, `ConditionalFormatStyle`, `ColorScaleConfig`, `DataBarConfig`, `IconSetConfig`, `DataValidationRule`
+- **Tests**: +40 new tests (18 for conditionalFormatEngine, 21 for dataValidationEngine, 10 for modals)
+- **Results**: 3760 tests across 154 suites, lint clean, type-check clean, build clean
+
 ### 2026-08-18 [FEATURE] Phases 40 & 43 — Change Log, Material Cost Integration, Capitalization Config
 - **What**: Completed Project Accounting Dashboard (Phase 40) and Material Management (Phase 43) with change tracking and configuration UI
 - **Implementation**:
