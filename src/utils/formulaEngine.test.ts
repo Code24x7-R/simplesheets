@@ -3521,5 +3521,23 @@ describe('evaluateWorkbook - cross-sheet references', () => {
       const result = evaluateWorkbook(sheetToWorkbook(sheet), 0);
       expect(result.cells['0:0'].computedValue).toBe('hello');
     });
+
+    it('SUBTOTAL with invalid function code returns #VALUE!', () => {
+      const sheet = createSheet({
+        '0:0': '10',
+        '1:0': '20',
+        '2:0': '=SUBTOTAL(99, A1:A2)',
+      });
+      const result = evaluateWorkbook(sheetToWorkbook(sheet), 0);
+      expect(result.cells['2:0'].computedValue).toBe('#VALUE!');
+    });
+
+    it('HLOOKUP with empty table returns #N/A', () => {
+      const sheet = createSheet({
+        '0:0': '=HLOOKUP("a", B1:C2, 1)',
+      });
+      const result = evaluateWorkbook(sheetToWorkbook(sheet), 0);
+      expect(result.cells['0:0'].computedValue).toBe('#N/A');
+    });
   });
 });
