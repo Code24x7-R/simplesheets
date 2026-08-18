@@ -82,16 +82,16 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
    * Use for: add/edit/delete tasks, risks, resources, materials, etc.
    */
   const handleProjectChange = useCallback((updater: Project | ((prev: Project) => Project)) => {
-    let nextProject: Project;
-    setProject((prev) => {
-      nextProject = typeof updater === 'function' ? updater(prev) : updater;
-      return nextProject;
-    });
+    // Apply the updater to the current project to compute nextProject synchronously.
+    // This avoids the stale-closure bug where nextProject was assigned inside the
+    // setProject updater (which runs asynchronously) but used outside it.
+    const nextProject = typeof updater === 'function' ? updater(project) : updater;
+    setProject(nextProject);
     // Side effects outside the updater — React state updaters must be pure
-    onProjectChange?.(nextProject!);
+    onProjectChange?.(nextProject);
     // Trigger save after state update
-    syncProjectToSheet(nextProject!);
-  }, [onProjectChange, syncProjectToSheet]);
+    syncProjectToSheet(nextProject);
+  }, [onProjectChange, syncProjectToSheet, project]);
 
   const [viewMode, setViewMode] = useState<ViewMode>('gantt');
   const [zoom, setZoom] = useState<'day' | 'week' | 'month'>('week');
