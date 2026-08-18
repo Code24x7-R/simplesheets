@@ -3493,5 +3493,33 @@ describe('evaluateWorkbook - cross-sheet references', () => {
       const result = evaluateWorkbook(sheetToWorkbook(sheet), 0);
       expect(result.cells['1:0'].computedValue).toBe('#VALUE!');
     });
+
+    it('HLOOKUP with row index exceeding range returns #REF!', () => {
+      const sheet = createSheet({
+        '0:0': 'a', '0:1': 'b',
+        '1:0': '10', '1:1': '20',
+        '2:0': '=HLOOKUP("a", A1:B2, 3)',
+      });
+      const result = evaluateWorkbook(sheetToWorkbook(sheet), 0);
+      expect(result.cells['2:0'].computedValue).toBe('#REF!');
+    });
+
+    it('HLOOKUP with row index < 1 returns #VALUE!', () => {
+      const sheet = createSheet({
+        '0:0': 'a', '0:1': 'b',
+        '1:0': '10', '1:1': '20',
+        '2:0': '=HLOOKUP("a", A1:B2, 0)',
+      });
+      const result = evaluateWorkbook(sheetToWorkbook(sheet), 0);
+      expect(result.cells['2:0'].computedValue).toBe('#VALUE!');
+    });
+
+    it('INDIRECT with non-numeric text returns text', () => {
+      const sheet = createSheet({
+        '0:0': '=INDIRECT("hello")',
+      });
+      const result = evaluateWorkbook(sheetToWorkbook(sheet), 0);
+      expect(result.cells['0:0'].computedValue).toBe('hello');
+    });
   });
 });
