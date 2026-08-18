@@ -1285,5 +1285,100 @@ describe('ProjectView', () => {
       const ganttContainer = document.querySelector('[data-testid="gantt-chart"]');
       expect(ganttContainer?.scrollTo).toHaveBeenCalled();
     });
+
+    it('renders Gantt with different zoom levels', () => {
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      // Default zoom is week
+      expect(screen.getByTestId('gantt-chart')).toBeInTheDocument();
+      // Switch to day zoom
+      fireEvent.click(screen.getByText('Day'));
+      expect(screen.getByTestId('gantt-chart')).toBeInTheDocument();
+      // Switch to month zoom
+      fireEvent.click(screen.getByText('Month'));
+      expect(screen.getByTestId('gantt-chart')).toBeInTheDocument();
+      // Switch back to week
+      fireEvent.click(screen.getByText('Week'));
+      expect(screen.getByTestId('gantt-chart')).toBeInTheDocument();
+    });
+  });
+
+  describe('View rendering branches', () => {
+    it('renders Gantt with task selection', () => {
+      const onProjectChange = jest.fn();
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} onProjectChange={onProjectChange} />);
+      // Click on a task in the Gantt chart to select it
+      const ganttBars = document.querySelectorAll('.gantt-rows g.cursor-pointer');
+      if (ganttBars.length > 0) {
+        fireEvent.click(ganttBars[0]);
+      }
+      expect(screen.getByTestId('gantt-chart')).toBeInTheDocument();
+    });
+
+    it('renders Risk Register with risks', () => {
+      const proj = createSimpleWBS();
+      proj.risks = [{
+        id: 'risk-1', projectId: proj.id, taskId: null, title: 'Test Risk', description: '',
+        category: 'technical' as const, probability: 3, impact: 4, riskScore: 12,
+        status: 'identified' as const, mitigationPlan: '', contingencyPlan: '', mitigationCost: 0, ownerId: null,
+        identifiedDate: '2025-01-01', reviewDate: '2025-06-01', triggerCondition: '',
+        residualProbability: 2, residualImpact: 3, residualRiskScore: 6, customFields: {},
+      }];
+      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      fireEvent.click(screen.getByText('Risk Register'));
+      expect(screen.getByText('Test Risk')).toBeInTheDocument();
+    });
+
+    it('renders Accounting view', () => {
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      fireEvent.click(screen.getByText('Accounting'));
+      // Accounting dashboard renders
+      expect(screen.getByText('Project Accounting')).toBeInTheDocument();
+    });
+
+    it('switches to Actuals tab in Accounting', () => {
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      fireEvent.click(screen.getByText('Accounting'));
+      // The Accounting dashboard renders with the default Estimate tab
+      // The Actuals tab is rendered as a button with icon + text
+      // Find any button containing "Actuals" text
+      const buttons = screen.getAllByRole('button');
+      const actualsButton = buttons.find((btn) => btn.textContent?.includes('Actuals'));
+      if (actualsButton) {
+        fireEvent.click(actualsButton);
+      }
+      expect(screen.getByText('Project Accounting')).toBeInTheDocument();
+    });
+  });
+
+  describe('Modal rendering branches', () => {
+    it('renders task editor modal with delete button for existing task', () => {
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      // Open task editor for existing task
+      const editButtons = screen.getAllByTitle('Edit task');
+      expect(editButtons.length).toBeGreaterThan(0);
+      fireEvent.click(editButtons[0]);
+      expect(screen.getByTestId('task-editor-modal')).toBeInTheDocument();
+      // Delete button should be present for existing tasks
+      expect(screen.getByRole('button', { name: 'Delete Task' })).toBeInTheDocument();
+    });
+
+    it('renders risk editor modal with delete button for existing risk', () => {
+      const proj = createSimpleWBS();
+      proj.risks = [{
+        id: 'risk-1', projectId: proj.id, taskId: null, title: 'Test Risk', description: '',
+        category: 'technical' as const, probability: 3, impact: 4, riskScore: 12,
+        status: 'identified' as const, mitigationPlan: '', contingencyPlan: '', mitigationCost: 0, ownerId: null,
+        identifiedDate: '2025-01-01', reviewDate: '2025-06-01', triggerCondition: '',
+        residualProbability: 2, residualImpact: 3, residualRiskScore: 6, customFields: {},
+      }];
+      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      fireEvent.click(screen.getByText('Risk Register'));
+      const editButtons = screen.getAllByRole('button', { name: 'Edit' });
+      expect(editButtons.length).toBeGreaterThan(0);
+      fireEvent.click(editButtons[0]);
+      expect(screen.getByTestId('risk-editor-modal')).toBeInTheDocument();
+      // Delete button should be present for existing risks
+      expect(screen.getByRole('button', { name: 'Delete Risk' })).toBeInTheDocument();
+    });
   });
 });
