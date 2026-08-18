@@ -1776,4 +1776,76 @@ describe('ProjectView', () => {
       expect(screen.getByTestId('project-view')).toBeInTheDocument();
     });
   });
+
+  describe('Import/Export', () => {
+    // Mock FileReader — component assigns onload before calling readAsText,
+    // so we can invoke onload synchronously for deterministic testing.
+    interface MockReader {
+      readAsText: jest.Mock;
+      result: string | null;
+      onload: ((e: ProgressEvent<FileReader>) => void) | null;
+    }
+
+    function mockFileReader(content: string): MockReader {
+      const mockReader: MockReader = {
+        readAsText: jest.fn(() => {
+          mockReader.result = content;
+          if (mockReader.onload) {
+            mockReader.onload({ target: mockReader } as unknown as ProgressEvent<FileReader>);
+          }
+        }),
+        result: null,
+        onload: null,
+      };
+      return mockReader;
+    }
+
+    function createMockFile(content: string, name = 'project.json'): File {
+      return new File([content], name, { type: 'application/json' });
+    }
+
+    it('exports project to JSON', () => {
+      // Mock URL.createObjectURL and anchor click
+      const createObjectURL = jest.fn(() => 'blob:mock-url');
+      const revokeObjectURL = jest.fn();
+      URL.createObjectURL = createObjectURL;
+      URL.revokeObjectURL = revokeObjectURL;
+      const clickSpy = jest.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+
+      fireEvent.click(screen.getByTestId('export-project-btn'));
+
+      expect(createObjectURL).toHaveBeenCalledTimes(1);
+      expect(clickSpy).toHaveBeenCalledTimes(1);
+      expect(revokeObjectURL).toHaveBeenCalledWith('blob:mock-url');
+
+      clickSpy.mockRestore();
+    });
+
+    it('imports project from JSON file', () => {
+      const onProjectChange = jest.fn();
+      const projectToImport = createSimpleWBS();
+      projectToImport.name = 'Imported Project';
+      const jsonContent = exportProjectToJSON(projectToImport);
+
+      // Mock FileReader
+      const origFileReader = global.FileReader;
+      global.FileReader = jest.fn(() => mockFileReader(jsonContent)) as unknown as typeof FileReader;
+
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} onProjectChange={onProjectChange} />);
+
+      const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+      expect(input).toBeTruthy();
+
+      const file = createMockFile(jsonContent);
+      fireEvent.change(input, { target: { files: [file] } });
+
+      expect(onProjectChange).toHaveBeenCalledTimes(1);
+      const newProject = onProjectChange.mock.calls[0][0];
+      expect(newProject.name).toBe('Imported Project');
+
+      global.FileReader = origFileReader;
+    });
+  });
 });
