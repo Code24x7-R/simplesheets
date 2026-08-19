@@ -260,6 +260,49 @@ describe('sheetSort', () => {
     });
   });
 
+  describe('sortRange - date sorting', () => {
+    it('sorts ISO date strings chronologically (ascending)', () => {
+      const sheet = createTestSheet();
+      sheet.cells['1:0'] = makeCell('2026-03-15');
+      sheet.cells['2:0'] = makeCell('2025-01-01');
+      sheet.cells['3:0'] = makeCell('2026-01-01');
+
+      const result = sortRange(sheet, 1, 3, [{ column: 0, direction: 'asc' }]);
+
+      expect(result.cells['1:0']?.rawValue).toBe('2025-01-01');
+      expect(result.cells['2:0']?.rawValue).toBe('2026-01-01');
+      expect(result.cells['3:0']?.rawValue).toBe('2026-03-15');
+    });
+
+    it('sorts ISO date strings chronologically (descending)', () => {
+      const sheet = createTestSheet();
+      sheet.cells['1:0'] = makeCell('2025-01-01');
+      sheet.cells['2:0'] = makeCell('2026-03-15');
+      sheet.cells['3:0'] = makeCell('2026-01-01');
+
+      const result = sortRange(sheet, 1, 3, [{ column: 0, direction: 'desc' }]);
+
+      expect(result.cells['1:0']?.rawValue).toBe('2026-03-15');
+      expect(result.cells['2:0']?.rawValue).toBe('2026-01-01');
+      expect(result.cells['3:0']?.rawValue).toBe('2025-01-01');
+    });
+
+    it('sorts dates mixed with text and numbers correctly', () => {
+      const sheet = createTestSheet();
+      // Numbers sort before text; dates are ISO strings so they sort as text
+      sheet.cells['1:0'] = makeCell('2026-03-15'); // date (ISO string)
+      sheet.cells['2:0'] = makeCell('Apple');      // text
+      sheet.cells['3:0'] = makeCell('10');         // number
+
+      const result = sortRange(sheet, 1, 3, [{ column: 0, direction: 'asc' }]);
+
+      // Number first, then ISO date string, then text
+      expect(result.cells['1:0']?.rawValue).toBe('10');
+      expect(result.cells['2:0']?.rawValue).toBe('2026-03-15');
+      expect(result.cells['3:0']?.rawValue).toBe('Apple');
+    });
+  });
+
   describe('sortRange - header handling', () => {
     it('preserves header row position when hasHeader is true', () => {
       const sheet = createTestSheet();

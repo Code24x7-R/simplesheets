@@ -412,6 +412,8 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
   // has a numberFormat style and the value is numeric.
   // Strips leading single quote (text marker) per Excel behavior.
   // When showFormulas is true, displays the raw formula instead of computed value.
+  // Auto-formats ISO date strings (YYYY-MM-DD) as dd-mm-yyyy (Australian locale)
+  // when no explicit numberFormat is set.
   const getDisplayValue = useCallback(
     (cell: { rawValue: string; computedValue?: string | number | boolean | null; style?: { numberFormat?: string } } | undefined): string => {
       if (!cell) return '';
@@ -430,6 +432,13 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
       const format = cell.style?.numberFormat;
       if (format && format !== 'General' && isNumberFormat(format) && isNumericValue(cell.computedValue ?? cell.rawValue)) {
         return formatNumberValue(cell.computedValue ?? cell.rawValue, format);
+      }
+      // Auto-format ISO date strings as dd-mm-yyyy (Australian default)
+      // This applies when the cell has no explicit numberFormat and the value
+      // is a date in YYYY-MM-DD format (from autoDetectType or DATE/TODAY functions)
+      if (!format && /^\d{4}-\d{2}-\d{2}$/.test(rawDisplay)) {
+        const [yy, mm, dd] = rawDisplay.split('-');
+        return `${dd}-${mm}-${yy}`;
       }
       return rawDisplay;
     },

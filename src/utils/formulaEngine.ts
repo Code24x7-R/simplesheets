@@ -298,6 +298,67 @@ function evaluateCell(row: number, col: number, ctx: EvalContext, sheetIndex?: n
 }
 
 /**
+ * Parses a date string with flexible separators (/ \ - .) into ISO format YYYY-MM-DD.
+ * Supports: dd/mm/yyyy, mm/dd/yyyy, yyyy-mm-dd, dd-mm-yyyy, dd.mm.yyyy, dd\mm\yyyy, etc.
+ * Requires exactly 2 identical separators (2 dots, 2 slashes, 2 backslashes, or 2 dashes).
+ * Returns null if the string is not a valid date.
+ *
+ * Ambiguous cases (where day ≤ 12) are treated as dd/mm/yyyy (Australian locale).
+ */
+export function parseDateInput(raw: string): string | null {
+  const trimmed = raw.trim();
+
+  // Match date patterns with flexible separators: / \ - .
+  // Requires exactly 2 of the same separator (backreference \2 ensures consistency)
+  // Hyphen at start of character class to avoid being interpreted as a range
+  const match = trimmed.match(/^(\d{1,4})([-/\\.])(\d{1,4})\2(\d{1,4})$/);
+  if (!match) return null;
+
+  const part1 = match[1];
+  const part2 = match[3];
+  const part3 = match[4];
+
+  let year: number, month: number, day: number;
+
+  // Determine format based on part lengths
+  if (part1.length === 4) {
+    // yyyy-mm-dd or yyyy/mm/dd or yyyy.mm.dd
+    year = parseInt(part1, 10);
+    month = parseInt(part2, 10);
+    day = parseInt(part3, 10);
+  } else if (part3.length === 4) {
+    // dd/mm/yyyy or mm/dd/yyyy (ambiguous when day ≤ 12)
+    // Australian locale: treat as dd/mm/yyyy
+    day = parseInt(part1, 10);
+    month = parseInt(part2, 10);
+    year = parseInt(part3, 10);
+  } else if (part1.length <= 2 && part2.length <= 2 && part3.length === 2) {
+    // 2-digit year: dd/mm/yy or mm/dd/yy — assume dd/mm/yy (Australian)
+    day = parseInt(part1, 10);
+    month = parseInt(part2, 10);
+    year = parseInt(part3, 10);
+    // Pivot: years 0-49 → 2000s, 50-99 → 1900s
+    year = year <= 49 ? 2000 + year : 1900 + year;
+  } else {
+    return null;
+  }
+
+  // Validate ranges
+  if (month < 1 || month > 12) return null;
+  if (day < 1 || day > 31) return null;
+  if (year < 1900 || year > 9999) return null;
+
+  // Validate day against month/year
+  const daysInMonth = new Date(year, month, 0).getDate();
+  if (day > daysInMonth) return null;
+
+  // Return ISO format (sorts correctly as text)
+  const mm = String(month).padStart(2, '0');
+  const dd = String(day).padStart(2, '0');
+  return `${year}-${mm}-${dd}`;
+}
+
+/**
  * Auto-detects the type of a raw cell value.
  */
 function autoDetectType(raw: string): CellValue {
@@ -313,9 +374,10 @@ function autoDetectType(raw: string): CellValue {
     return parseFloat(trimmed);
   }
 
-  // Date (ISO format)
-  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
-    return trimmed;
+  // Date (flexible separators: dd/mm/yyyy, yyyy-mm-dd, dd-mm-yyyy, etc.)
+  const parsedDate = parseDateInput(trimmed);
+  if (parsedDate) {
+    return parsedDate;
   }
 
   // Default: string

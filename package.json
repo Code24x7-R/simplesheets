@@ -20,7 +20,13 @@
     "test:watch": "jest --watch",
     "prepack-offline": "node scripts/prepack-offline.mjs",
     "postpack": "node scripts/postpack-offline.mjs",
-    "release:offline": "npm run build && npm run prepack-offline && npm pack"
+    "release:offline": "npm run build && npm run prepack-offline && npm pack",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "eslint --fix --max-warnings 0"
+    ]
   },
   "dependencies": {
     "@tanstack/react-virtual": "^3.10.8",
@@ -44,8 +50,10 @@
     "autoprefixer": "^10.4.20",
     "eslint": "^8.57.1",
     "eslint-plugin-react-hooks": "^4.6.2",
+    "husky": "^9.1.7",
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^29.7.0",
+    "lint-staged": "^17.3.0",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.17",
     "ts-jest": "^29.2.5",
