@@ -7,7 +7,7 @@
  * name to an A1-style cell reference. Names can be scoped to the workbook
  * (visible everywhere) or to a specific sheet.
  */
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import type { NamedRange, Sheet } from '../types';
 import {
   validateName,
@@ -29,6 +29,10 @@ interface NamedRangesModalProps {
   sheets: Sheet[];
   /** ID of the currently active sheet (default scope selection). */
   activeSheetId: string;
+  /** Whether the grid is currently in point-selection mode for this modal's reference. */
+  isRangePickerActive: boolean;
+  /** Toggle grid point-selection mode for picking a range on the grid. */
+  onToggleRangePicker: () => void;
 }
 
 type Draft = {
@@ -51,6 +55,8 @@ export function NamedRangesModal({
   onNamedRangesChange,
   sheets,
   activeSheetId,
+  isRangePickerActive,
+  onToggleRangePicker,
 }: NamedRangesModalProps) {
   const [editing, setEditing] = useState<Draft | null>(null);
   const [errors, setErrors] = useState<{ name?: string; reference?: string }>({});
@@ -60,6 +66,26 @@ export function NamedRangesModal({
     () => [...namedRanges].sort((a, b) => a.name.localeCompare(b.name)),
     [namedRanges],
   );
+
+  // Track latest editing draft in a ref so the range-pick listener always
+  // sees the current value without needing it as a useEffect dependency
+  // (which would re-register the listener on every keystroke).
+  const editingRef = useRef(editing);
+  editingRef.current = editing;
+
+  // Listen for range selection events from the grid (point mode).
+  useEffect(() => {
+    const handleRangeSelected = (e: Event) => {
+      const customEvent = e as CustomEvent<{ range: string }>;
+      if (editingRef.current) {
+        setEditing((prev) =>
+          prev ? { ...prev, reference: customEvent.detail.range } : prev,
+        );
+      }
+    };
+    window.addEventListener('simplesheets:namedRangeSelected', handleRangeSelected);
+    return () => window.removeEventListener('simplesheets:namedRangeSelected', handleRangeSelected);
+  }, []);
 
   if (!isOpen) return null;
 
@@ -137,6 +163,28 @@ export function NamedRangesModal({
     setErrors({});
   }
 
+  // When range picker is active, minimize to a banner so the user can
+  // select a range on the grid without the modal blocking the view.
+  if (isRangePickerActive) {
+    return (
+      <div className="fixed top-2 left-1/2 -translate-x-1/2 z-[55] bg-white rounded-lg shadow-xl border border-blue-300 w-[480px]">
+        <div className="flex items-center justify-between px-4 py-2">
+          <span className="text-sm font-medium text-blue-700">📎 Select a range on the grid for the named range</span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-500">Press Enter to accept, Esc to cancel</span>
+            <button
+              onClick={onToggleRangePicker}
+              className="text-gray-400 hover:text-gray-600 text-sm"
+              aria-label="Cancel range selection"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={onClose}>
       <div
@@ -166,8 +214,11 @@ export function NamedRangesModal({
               onChange={setEditing}
               onSave={handleSave}
               onCancel={handleCancelEdit}
+              onDelete={handleDelete}
               errors={errors}
               sheets={sheets}
+              isRangePickerActive={isRangePickerActive}
+              onToggleRangePicker={onToggleRangePicker}
             />
           ) : (
             <>
@@ -268,15 +319,21 @@ function EditForm({
   onChange,
   onSave,
   onCancel,
+  onDelete,
   errors,
   sheets,
+  isRangePickerActive,
+  onToggleRangePicker,
 }: {
   draft: Draft;
   onChange: (d: Draft) => void;
   onSave: () => void;
   onCancel: () => void;
+  onDelete: (id: string) => void;
   errors: { name?: string; reference?: string };
   sheets: Sheet[];
+  isRangePickerActive: boolean;
+  onToggleRangePicker: () => void;
 }) {
   return (
     <div className="space-y-4">
@@ -303,16 +360,31 @@ function EditForm({
       {/* Reference */}
       <div>
         <label className="block text-xs font-medium text-gray-600 mb-1">Reference</label>
-        <input
-          type="text"
-          value={draft.reference}
-          onChange={(e) => onChange({ ...draft, reference: e.target.value })}
-          placeholder="e.g. Sheet1!$A$1:$D$10"
-          className={`w-full px-3 py-1.5 text-sm border rounded font-mono ${
-            errors.reference ? 'border-red-400' : 'border-gray-300'
-          } focus:outline-none focus:ring-1 focus:ring-blue-500`}
-          data-testid="named-range-reference-input"
-        />
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={draft.reference}
+            onChange={(e) => onChange({ ...draft, reference: e.target.value })}
+            placeholder="e.g. Sheet1!$A$1:$D$10"
+            className={`flex-1 px-3 py-1.5 text-sm border rounded font-mono ${
+              errors.reference ? 'border-red-400' : 'border-gray-300'
+            } focus:outline-none focus:ring-1 focus:ring-blue-500`}
+            data-testid="named-range-reference-input"
+          />
+          <button
+            type="button"
+            className={`px-3 py-1.5 rounded border text-sm whitespace-nowrap ${
+              isRangePickerActive
+                ? 'bg-blue-100 border-blue-500 text-blue-700'
+                : 'border-gray-200 hover:bg-gray-50 text-gray-600'
+            }`}
+            onClick={onToggleRangePicker}
+            title="Select range on grid"
+            data-testid="named-range-pick-range"
+          >
+            {isRangePickerActive ? '✓ Selecting...' : '📎 Pick Range'}
+          </button>
+        </div>
         {errors.reference && <p className="text-xs text-red-500 mt-1">{errors.reference}</p>}
       </div>
 
@@ -360,20 +432,33 @@ function EditForm({
       </div>
 
       {/* Actions */}
-      <div className="flex justify-end gap-2 pt-2">
-        <button
-          onClick={onCancel}
-          className="px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded"
-        >
-          Cancel
-        </button>
-        <button
-          onClick={onSave}
-          className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
-          data-testid="named-range-save"
-        >
-          {draft.id ? 'Save' : 'Add'}
-        </button>
+      <div className="flex items-center justify-between gap-2 pt-2">
+        <div>
+          {draft.id && (
+            <button
+              onClick={() => onDelete(draft.id)}
+              className="px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 rounded"
+              data-testid="named-range-delete"
+            >
+              Delete
+            </button>
+          )}
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={onCancel}
+            className="px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onSave}
+            className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
+            data-testid="named-range-save"
+          >
+            {draft.id ? 'Save' : 'Add'}
+          </button>
+        </div>
       </div>
     </div>
   );

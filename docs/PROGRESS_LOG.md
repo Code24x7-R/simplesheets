@@ -6,6 +6,15 @@
 
 ---
 
+### 2026-08-26 [FEATURE] Named Ranges dialog — range picker + delete in edit form
+- **What**: Improved the Named Ranges dialog workflow by adding a visual range picker (reusing the established point-mode pattern from ChartDialog/FormulaWizard) and a Delete button in the edit form.
+- **Changes**:
+  - **NamedRangesModal**: Added `isRangePickerActive` + `onToggleRangePicker` props. Added a "📎 Pick Range" button next to the reference input. When active, the modal minimizes to a banner so the user can select a range on the grid (POINT mode). Listens for `simplesheets:namedRangeSelected` custom event to populate the reference field. Added a Delete button in the edit form (previously only available in the list view).
+  - **App.tsx**: Added `namedRangePointMode` state and handlers (`handleToggleNamedRangeRangePicker`, `handleNamedRangePointSelection`). Wired into Grid's `wizardPointMode`/`onWizardPointSelection`. Cross-cancels with chart point mode on modal open/close.
+  - **Pattern**: Custom event (`window.dispatchEvent`) for grid→modal range transfer — same as ChartDialog's `simplesheets:chartRangeSelected`.
+- **Tests**: Refactored test file to use a `baseProps()` helper. Added 7 new tests covering range picker button, toggle callback, banner display, custom-event reference update, banner cancel, and delete in edit form.
+- **Results**: 3960 tests across 164 suites, lint clean, type-check clean, build clean.
+
 ### 2026-08-26 [REFACTOR] Menu simplification — remove redundant Open/Save, unify around cloud modal
 - **What**: Removed the standalone "Save" and "Open…" File menu items which overlapped with "Save to Cloud…" and "Open from Cloud…". The cloud modal is now the single entry point for all open/save operations (matching the proven SimpleDocs pattern).
 - **Changes**:

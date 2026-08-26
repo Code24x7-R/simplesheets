@@ -287,6 +287,7 @@ function WorkbookView() {
   const [editingChart, setEditingChart] = useState<ChartConfig | null>(null);
   const [selectedChartId, setSelectedChartId] = useState<string | null>(null);
   const [chartPointMode, setChartPointMode] = useState(false);
+  const [namedRangePointMode, setNamedRangePointMode] = useState(false);
   const { settings: chartSettings, updateSettings: updateChartSettings } = useChartSettings();
 
   // Sheet reference (needed by the editing hook and everywhere else)
@@ -1983,10 +1984,15 @@ function WorkbookView() {
 
   const handleOpenNamedRanges = useCallback(() => {
     setShowNamedRanges(true);
+    // Cancel any active chart range picker session.
+    setChartPointMode(false);
+    setNamedRangePointMode(false);
   }, []);
 
   const handleCloseNamedRanges = useCallback(() => {
     setShowNamedRanges(false);
+    // Cancel any active range picker session so the grid returns to normal.
+    setNamedRangePointMode(false);
   }, []);
 
   const handleNamedRangesChange = useCallback(
@@ -2114,6 +2120,24 @@ function WorkbookView() {
         detail: { range },
       }));
       setChartPointMode(false);
+    },
+    [],
+  );
+
+  // ─── Named Range Range Picker ─────────────────────────────────────
+
+  const handleToggleNamedRangeRangePicker = useCallback(() => {
+    setNamedRangePointMode((prev) => !prev);
+  }, []);
+
+  const handleNamedRangePointSelection = useCallback(
+    (range: string) => {
+      // Update the named range reference in the modal via a custom event
+      // The NamedRangesModal listens for this and updates its draft
+      window.dispatchEvent(new CustomEvent('simplesheets:namedRangeSelected', {
+        detail: { range },
+      }));
+      setNamedRangePointMode(false);
     },
     [],
   );
@@ -2842,8 +2866,14 @@ function WorkbookView() {
           onAcceptAutoComplete={acceptAutoComplete}
           onNavigateAutoComplete={navigateAutoComplete}
           onDismissAutoComplete={dismissAutoComplete}
-          wizardPointMode={isWizardPointMode || chartPointMode}
-          onWizardPointSelection={isWizardPointMode ? handleWizardPointSelection : handleChartPointSelection}
+          wizardPointMode={isWizardPointMode || chartPointMode || namedRangePointMode}
+          onWizardPointSelection={
+            isWizardPointMode
+              ? handleWizardPointSelection
+              : chartPointMode
+              ? handleChartPointSelection
+              : handleNamedRangePointSelection
+          }
         />
         <ChartOverlay
           sheet={updatedSheet}
@@ -3053,6 +3083,8 @@ function WorkbookView() {
         onNamedRangesChange={handleNamedRangesChange}
         sheets={workbook.sheets}
         activeSheetId={sheet.id}
+        isRangePickerActive={namedRangePointMode}
+        onToggleRangePicker={handleToggleNamedRangeRangePicker}
       />
       <SheetLinkProvider workbook={workbook} />
     </div>

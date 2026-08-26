@@ -12,24 +12,25 @@
 6. [The Formula Bar](#the-formula-bar)
 7. [Constructing Formulas](#constructing-formulas)
 8. [Working with Ranges](#working-with-ranges)
-9. [Keyboard Shortcuts](#keyboard-shortcuts)
-10. [Charts](#charts)
-11. [Sorting & Filtering](#sorting--filtering)
-12. [Multi-Sheet Workbooks](#multi-sheet-workbooks)
-13. [Find & Replace](#find--replace)
-14. [Formatting](#formatting)
-15. [Import & Export](#import--export)
-16. [Freeze Panes](#freeze-panes)
-17. [Column & Row Sizing](#column--row-sizing)
-18. [Paste Special](#paste-special)
-19. [Fill Handle](#fill-handle)
-20. [Formula Wizard](#formula-wizard)
-21. [Formula Autocomplete](#formula-autocomplete)
-22. [Project Management](#project-management)
-23. [Cost Accounting](#cost-accounting)
-24. [EVM Performance Reporting](#evm-performance-reporting)
-25. [Material Management](#material-management)
-26. [Planned Features](#planned-features)
+9. [Named Ranges](#named-ranges)
+10. [Keyboard Shortcuts](#keyboard-shortcuts)
+11. [Charts](#charts)
+12. [Sorting & Filtering](#sorting--filtering)
+13. [Multi-Sheet Workbooks](#multi-sheet-workbooks)
+14. [Find & Replace](#find--replace)
+15. [Formatting](#formatting)
+16. [Import & Export](#import--export)
+17. [Freeze Panes](#freeze-panes)
+18. [Column & Row Sizing](#column--row-sizing)
+19. [Paste Special](#paste-special)
+20. [Fill Handle](#fill-handle)
+21. [Formula Wizard](#formula-wizard)
+22. [Formula Autocomplete](#formula-autocomplete)
+23. [Project Management](#project-management)
+24. [Cost Accounting](#cost-accounting)
+25. [EVM Performance Reporting](#evm-performance-reporting)
+26. [Material Management](#material-management)
+27. [Planned Features](#planned-features)
 
 ---
 
@@ -356,6 +357,54 @@ Reference cells on other sheets:
 ```
 
 When you paste formulas that reference other sheets, the **sheet prefix is preserved** but the cell references are adjusted relative to the paste position.
+
+---
+
+## Named Ranges
+
+Named ranges let you assign a human-readable name to a cell or range, then use that name in formulas (e.g., `=SUM(SalesData)` instead of `=SUM(B2:B50)`).
+
+### Opening the Named Ranges Dialog
+
+Click the **🏷️ Named Ranges** button on the toolbar (or use the Data menu). The dialog lists all defined names sorted alphabetically.
+
+### Creating a Named Range
+
+1. Click **+ Add Named Range**.
+2. Enter a **Name** (e.g., `SalesData`). Names must start with a letter or underscore, contain only letters/digits/underscores/dots, and cannot look like a cell reference (e.g., `A1`).
+3. Enter a **Reference** — either type it in A1 notation (e.g., `Sheet1!$B$2:$B$50`) or use the range picker.
+4. Choose a **Scope** — `Workbook` (visible everywhere) or `Sheet` (visible only on the selected sheet).
+5. Optionally add a **Comment**.
+6. Click **Add**.
+
+### Picking a Range on the Grid
+
+Instead of typing a reference, you can select cells visually:
+1. In the add/edit form, click **📎 Pick Range** next to the reference field.
+2. The dialog minimizes to a banner — the grid is now in **POINT mode**.
+3. Click or drag on the grid to select the range.
+4. Press **Enter** to accept (or click the ✕ to cancel).
+5. The selected range (e.g., `B2:B50`) populates the reference field.
+
+### Editing a Named Range
+
+Click **Edit** on any row. The edit form pre-fills the existing values. You can change the name, reference, scope, or comment, then click **Save**.
+
+### Deleting a Named Range
+
+Click **Delete** on any row in the list — or open the edit form and click **Delete** there. The range is removed immediately.
+
+### Using Named Ranges in Formulas
+
+Once defined, use the name anywhere a range is expected:
+
+```
+=SUM(SalesData)              ← Workbook-scoped name
+=AVERAGE(Sheet1!LocalData)  ← Sheet-scoped (prefix with sheet name)
+=VLOOKUP(A1, Products, 2, FALSE)
+```
+
+Sheet-scoped names take priority over workbook-scoped names of the same name.
 
 ---
 

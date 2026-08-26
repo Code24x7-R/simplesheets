@@ -4,13 +4,13 @@
 Achieve a clean, clutter-free UI with standardized dropdown menus, formula wizard, formula bar, R1C1 reference format, and extensible project management capabilities.
 
 ## Current State
-- **3952 tests** across **164 suites**, All passing
+- **3960 tests** across **164 suites**, All passing
 - Lint clean (0 warnings), Type-check clean, Build clean
 - Phases 1-33 complete ✅ (see [HISTORY.md](./HISTORY.md))
 - Phases 34-39 complete ✅ (Extensions Architecture — see below)
 - Phases 40-42 complete ✅ (Accounting, Dependency Workflow, EVM Reporting)
 - **Phase 43 complete ✅ (Material Management — CapEx/OpEx/Consumption)**
-- **Named Ranges complete ✅ (single cell to matrix, full CRUD)**
+- **Named Ranges complete ✅ (single cell to matrix, full CRUD, range picker + delete in edit form)**
 - **Save to Cloud complete ✅ (Copy Link, Share File, Save/Open File, cloud provider scaffolding)**
 - **MRU File List complete ✅ (recent files with .ssjson + cloud source tracking)**
 - **Menu simplification complete ✅ (removed redundant Save/Open, unified around cloud modal)**
