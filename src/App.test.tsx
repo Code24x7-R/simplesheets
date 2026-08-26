@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
 import App from './App';
 // Mock pdfExport/excelExport to avoid ESM issues in tests
 jest.mock('./services/pdfExport', () => ({
@@ -308,35 +308,50 @@ describe('App - Global Keyboard Shortcuts', () => {
     expect(screen.getByText('Untitled')).toBeInTheDocument();
   });
 
-  it('Ctrl+S triggers save', () => {
+  it('Ctrl+S opens the cloud modal in save mode', async () => {
     URL.createObjectURL = jest.fn(() => 'blob:mock');
     URL.revokeObjectURL = jest.fn();
     render(<App />);
-    // Press Ctrl+S (shows filename modal)
+    // Press Ctrl+S → opens CloudStorageModal in 'save' mode
     fireGlobalKeyDown('s');
-    // Filename modal should appear
-    expect(screen.getByText('Save Workbook')).toBeInTheDocument();
-    // Confirm the save
-    fireEvent.click(screen.getByText('Save'));
-    // Verify download was triggered
-    expect(URL.createObjectURL).toHaveBeenCalled();
+    // Cloud modal should appear with the Save title
+    expect(screen.getByText('Save to Cloud')).toBeInTheDocument();
+    // Click Save to File to trigger download
+    fireEvent.click(screen.getByText('Save to File'));
+    // Verify download was triggered (async via dynamic import)
+    await waitFor(() => {
+      expect(URL.createObjectURL).toHaveBeenCalled();
+    });
     // Verify app still renders
     expect(screen.getByText('SimpleSheets')).toBeInTheDocument();
   });
 
-  it('Ctrl+O triggers load', () => {
+  it('Ctrl+O opens the cloud modal in open mode', () => {
     render(<App />);
-    const dispatchSpy = jest.spyOn(window, 'dispatchEvent');
-    // Press Ctrl+O (dispatches open event)
+    // Press Ctrl+O → opens CloudStorageModal in 'open' mode
     fireGlobalKeyDown('o');
-    // Verify open event was dispatched
-    const openCalls = dispatchSpy.mock.calls.filter(
-      ([e]) => e.type === 'simplesheets:open'
-    );
-    expect(openCalls.length).toBe(1);
-    dispatchSpy.mockRestore();
+    // Verify the cloud modal opened with the Open title
+    expect(screen.getByText('Open from Cloud')).toBeInTheDocument();
     // Verify app still renders
     expect(screen.getByText('SimpleSheets')).toBeInTheDocument();
+  });
+
+  it('Save to File records an MRU entry', async () => {
+    // Clear any pre-existing MRU entries
+    localStorage.removeItem('simplesheets:mru');
+    render(<App />);
+    // Open the cloud modal in save mode and click Save to File
+    fireGlobalKeyDown('s');
+    fireEvent.click(screen.getByText('Save to File'));
+    // Wait for the async download + MRU recording
+    await waitFor(() => {
+      const raw = localStorage.getItem('simplesheets:mru');
+      expect(raw).not.toBeNull();
+      const entries = JSON.parse(raw as string);
+      expect(entries.length).toBe(1);
+      expect(entries[0].name).toMatch(/\.ssjson$/);
+      expect(entries[0].source).toBe('local');
+    });
   });
 
   it('Ctrl+H opens Find & Replace', () => {

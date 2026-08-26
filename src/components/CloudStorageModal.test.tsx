@@ -347,6 +347,30 @@ describe('CloudStorageModal', () => {
       });
       expect(onClose).toHaveBeenCalledTimes(1);
     });
+
+    it('calls onSaveFile with filename and size after download', async () => {
+      const onSaveFile = jest.fn();
+      render(
+        <CloudStorageModal
+          isOpen={true}
+          onClose={jest.fn()}
+          mode="save"
+          workbook={makeWorkbook()}
+          onOpenDocument={jest.fn()}
+          onStatusMessage={jest.fn()}
+          onSaveFile={onSaveFile}
+        />,
+      );
+
+      fireEvent.click(screen.getByText('Save to File'));
+
+      await waitFor(() => {
+        expect(onSaveFile).toHaveBeenCalledTimes(1);
+      });
+      // First arg is the filename (string), second is size (number)
+      expect(onSaveFile.mock.calls[0][0]).toEqual(expect.any(String));
+      expect(onSaveFile.mock.calls[0][1]).toEqual(expect.any(Number));
+    });
   });
 
   describe('Open from File', () => {

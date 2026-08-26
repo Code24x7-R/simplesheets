@@ -5,8 +5,6 @@ import { getDefaultCurrency, getCurrencyFormatPattern } from '../utils/currency'
 import {
   FileSpreadsheet,
   FlaskConical,
-  Save,
-  FolderOpen,
   Download,
   Upload,
   FileUp,
@@ -71,8 +69,6 @@ interface MenuBarProps {
   // File menu
   onNew: () => void;
   onLoadDemo: () => void;
-  onSave: () => void;
-  onLoad: () => void;
   onImportExcel: () => void;
   onImportCsv: () => void;
   onImportJson: () => void;
@@ -166,8 +162,6 @@ export function MenuBar(props: MenuBarProps) {
         // File
         'file-new': props.onNew,
         'file-load-demo': props.onLoadDemo,
-        'file-save': props.onSave,
-        'file-load': props.onLoad,
         'file-import-excel': props.onImportExcel,
         'file-import-csv': props.onImportCsv,
         'file-import-json': props.onImportJson,
@@ -297,8 +291,6 @@ export function MenuBar(props: MenuBarProps) {
   const fileItems: MenuItem[] = [
     { id: 'file-new', label: 'New', shortcut: 'Ctrl+N', icon: FileSpreadsheet },
     { id: 'file-load-demo', label: 'Load Demo', icon: FlaskConical },
-    { id: 'file-save', label: 'Save', shortcut: 'Ctrl+S', icon: Save },
-    { id: 'file-load', label: 'Open…', shortcut: 'Ctrl+O', icon: FolderOpen },
     { id: 'sep-file-1', label: '', separator: true },
     {
       id: 'file-import',
@@ -322,8 +314,8 @@ export function MenuBar(props: MenuBarProps) {
       ],
     },
     { id: 'sep-file-2', label: '', separator: true },
-    { id: 'file-save-cloud', label: 'Save to Cloud…', icon: CloudUpload },
-    { id: 'file-open-cloud', label: 'Open from Cloud…', icon: CloudDownload },
+    { id: 'file-save-cloud', label: 'Save…', shortcut: 'Ctrl+S', icon: CloudUpload },
+    { id: 'file-open-cloud', label: 'Open…', shortcut: 'Ctrl+O', icon: CloudDownload },
     { id: 'sep-file-3', label: '', separator: true },
     ...recentFileItems,
     { id: 'file-page-setup', label: 'Page Setup…', icon: Ruler },

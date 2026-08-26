@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import App from './App';
 // Mock pdfExport/excelExport to avoid ESM issues in tests
 jest.mock('./services/pdfExport', () => ({
@@ -135,32 +135,30 @@ describe('App - Menu Handlers', () => {
     expect(unfreezeItem?.classList.contains('menu-item-disabled')).toBe(true);
   });
 
-  it('handles File > Save (shows filename modal)', () => {
+  it('handles File > Save… (opens cloud modal)', async () => {
     URL.createObjectURL = jest.fn(() => 'blob:mock');
     URL.revokeObjectURL = jest.fn();
     render(<App />);
     fireEvent.click(screen.getByText('File'));
-    fireEvent.click(screen.getByText('Save'));
-    // Filename modal should appear
-    expect(screen.getByText('Save Workbook')).toBeInTheDocument();
-    // Confirm the save
-    fireEvent.click(screen.getByText('Save'));
-    const statusBar = screen.getByTestId('status-message');
-    expect(statusBar?.textContent).toContain('Saved');
+    fireEvent.click(screen.getByText('Save…'));
+    // Cloud modal should appear with the Save title
+    expect(screen.getByText('Save to Cloud')).toBeInTheDocument();
+    // Click Save to File to trigger download
+    fireEvent.click(screen.getByText('Save to File'));
+    // Status message appears (async via dynamic import)
+    await waitFor(() => {
+      const statusBar = screen.getByTestId('status-message');
+      expect(statusBar?.textContent).toContain('Saved');
+    });
     expect(URL.createObjectURL).toHaveBeenCalled();
   });
 
-  it('handles File > Open (dispatches open event)', () => {
+  it('handles File > Open… (opens cloud modal)', () => {
     render(<App />);
-    const dispatchSpy = jest.spyOn(window, 'dispatchEvent');
     fireEvent.click(screen.getByText('File'));
     fireEvent.click(screen.getByText('Open…'));
-    // Should dispatch the open event (triggers file picker)
-    const openCalls = dispatchSpy.mock.calls.filter(
-      ([e]) => e.type === 'simplesheets:open'
-    );
-    expect(openCalls.length).toBe(1);
-    dispatchSpy.mockRestore();
+    // Should open the CloudStorageModal in 'open' mode
+    expect(screen.getByText('Open from Cloud')).toBeInTheDocument();
   });
 
   it('opens Page Setup modal from File menu', () => {

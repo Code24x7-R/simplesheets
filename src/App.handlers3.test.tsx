@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import App from './App';
 // Mock pdfExport/excelExport to avoid ESM issues in tests
 jest.mock('./services/pdfExport', () => ({
@@ -62,18 +62,21 @@ describe('App - Menu Handlers', () => {
     expect(screen.getByText('Ready')).toBeInTheDocument();
   });
 
-  it('File → Save shows filename modal and triggers download', () => {
+  it('File → Save… opens cloud modal and triggers download', async () => {
     URL.createObjectURL = jest.fn(() => 'blob:mock');
     URL.revokeObjectURL = jest.fn();
     render(<App />);
     fireEvent.click(screen.getByText('File'));
-    fireEvent.click(screen.getByText('Save'));
-    // Filename modal should appear
-    expect(screen.getByText('Save Workbook')).toBeInTheDocument();
-    // Confirm the save
-    fireEvent.click(screen.getByText('Save'));
-    const statusBar = screen.getByTestId('status-message');
-    expect(statusBar?.textContent).toContain('Saved');
+    fireEvent.click(screen.getByText('Save…'));
+    // Cloud modal should appear
+    expect(screen.getByText('Save to Cloud')).toBeInTheDocument();
+    // Click Save to File to trigger download
+    fireEvent.click(screen.getByText('Save to File'));
+    // Status message appears (async via dynamic import)
+    await waitFor(() => {
+      const statusBar = screen.getByTestId('status-message');
+      expect(statusBar?.textContent).toContain('Saved');
+    });
   });
 
   it('Format → Bold toggles bold formatting', () => {

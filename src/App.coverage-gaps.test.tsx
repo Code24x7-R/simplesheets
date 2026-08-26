@@ -173,19 +173,14 @@ describe('App - Search & Replace Apply', () => {
   });
 });
 
-describe('App - Load Menu Handler', () => {
-  it('dispatches open event when File > Open is selected', () => {
+describe('App - Open Menu Handler', () => {
+  it('opens the cloud modal when File > Open… is selected', () => {
     render(<App />);
-    const dispatchSpy = jest.spyOn(window, 'dispatchEvent');
     fireEvent.click(screen.getByText('File'));
     fireEvent.click(screen.getByText('Open…'));
 
-    // Should dispatch the open event (triggers file picker)
-    const openCalls = dispatchSpy.mock.calls.filter(
-      ([e]) => e.type === 'simplesheets:open'
-    );
-    expect(openCalls.length).toBe(1);
-    dispatchSpy.mockRestore();
+    // Should open the CloudStorageModal in 'open' mode
+    expect(screen.getByText('Open from Cloud')).toBeInTheDocument();
   });
 });
 

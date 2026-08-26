@@ -7,8 +7,6 @@ describe('App Extensions Integration', () => {
   const defaultProps = {
     onNew: jest.fn(),
     onLoadDemo: jest.fn(),
-    onSave: jest.fn(),
-    onLoad: jest.fn(),
     onImportExcel: jest.fn(),
     onImportCsv: jest.fn(),
     onImportJson: jest.fn(),

@@ -7,8 +7,6 @@ describe('MenuBar', () => {
   const defaultProps = {
     onNew: jest.fn(),
     onLoadDemo: jest.fn(),
-    onSave: jest.fn(),
-    onLoad: jest.fn(),
     onImportExcel: jest.fn(),
     onImportCsv: jest.fn(),
     onImportJson: jest.fn(),
@@ -93,11 +91,11 @@ describe('MenuBar', () => {
     expect(screen.getByText('Help')).toBeTruthy();
   });
 
-  it('File menu shows New, Save, Open items', () => {
+  it('File menu shows New, Save…, Open… items', () => {
     render(<MenuBar {...defaultProps} />);
     fireEvent.click(screen.getByText('File'));
     expect(screen.getByText('New')).toBeTruthy();
-    expect(screen.getByText('Save')).toBeTruthy();
+    expect(screen.getByText('Save…')).toBeTruthy();
     expect(screen.getByText('Open…')).toBeTruthy();
   });
 

@@ -6,6 +6,16 @@
 
 ---
 
+### 2026-08-26 [REFACTOR] Menu simplification — remove redundant Open/Save, unify around cloud modal
+- **What**: Removed the standalone "Save" and "Open…" File menu items which overlapped with "Save to Cloud…" and "Open from Cloud…". The cloud modal is now the single entry point for all open/save operations (matching the proven SimpleDocs pattern).
+- **Changes**:
+  - **MenuBar**: Removed `onSave`/`onLoad` props and "Save"/"Open…" items. Renamed "Save to Cloud…" → "Save…" and "Open from Cloud…" → "Open…". Moved Ctrl+S / Ctrl+O shortcuts to the cloud modal openers.
+  - **App.tsx**: Removed `handleSaveMenu` and `handleLoadMenu`. Added `handleSaveFile` callback (records MRU, updates workbook title, pushes history) — wired to the new `onSaveFile` prop on `CloudStorageModal`.
+  - **CloudStorageModal**: Added `onSaveFile?: (fileName: string, sizeBytes: number) => void` prop, called after `downloadDocument` in `handleSaveToFile`.
+  - **Keyboard shortcuts**: Ctrl+S now opens cloud modal in save mode, Ctrl+O opens it in open mode.
+- **Tests**: Updated 6 test files to reflect new menu structure. Added test for `onSaveFile` callback and MRU recording via Save to File.
+- **Results**: 3952 tests across 164 suites, lint clean, type-check clean, build clean.
+
 ### 2026-08-26 [FEATURE] Save to Cloud / Open from Cloud — zero-config sharing workflow
 - **What**: Users can share and save workbooks without accounts. Userland actions (Copy Link, Share File, Save/Open File) work instantly. Cloud providers (Google Drive, OneDrive, S3) are scaffolded behind an "Advanced" collapsible for future OAuth integration.
 - **Implementation**:

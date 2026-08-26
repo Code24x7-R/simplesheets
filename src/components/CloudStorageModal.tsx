@@ -57,6 +57,8 @@ interface CloudStorageModalProps {
   onOpenDocument: (workbook: Workbook, fileName: string) => void;
   /** Callback to show a status message in the host app. */
   onStatusMessage?: (msg: string) => void;
+  /** Callback after a file is saved locally (for MRU recording, title update, history). */
+  onSaveFile?: (fileName: string, sizeBytes: number) => void;
 }
 
 // ─── Constants ──────────────────────────────────────────────────────────────
@@ -77,6 +79,7 @@ export function CloudStorageModal({
   workbook,
   onOpenDocument,
   onStatusMessage,
+  onSaveFile,
 }: CloudStorageModalProps) {
   // View state
   const [provider, setProvider] = useState<CloudProvider | null>(null);
@@ -209,9 +212,11 @@ export function CloudStorageModal({
     import('../utils/webShare').then(({ downloadDocument }) => {
       downloadDocument(workbook, name);
       onStatusMessage?.(`Saved "${name}.ssjson" — download started`);
+      // Notify host app for MRU recording, title update, and history push
+      onSaveFile?.(name, JSON.stringify(workbook).length);
       onClose();
     });
-  }, [workbook, fileName, onClose, onStatusMessage]);
+  }, [workbook, fileName, onClose, onStatusMessage, onSaveFile]);
 
   const handleOpenFile = useCallback(() => {
     fileInputRef.current?.click();

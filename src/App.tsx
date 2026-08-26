@@ -843,24 +843,18 @@ function WorkbookView() {
     gridRef.current?.focus();
   }, []);
 
-  const handleSaveMenu = useCallback(() => {
-    const defaultName = workbook.title.replace(/[^a-zA-Z0-9-_]/g, '_') || 'Untitled';
-    openFilenameModal('Save Workbook', defaultName, 'json', (filename) => {
-      downloadJson(workbook, filename);
-      setStatusMessage(`Saved "${filename}.json" — download started`);
-      // Record in MRU: local file save
-      const sizeBytes = JSON.stringify(workbook).length;
-      recordSaveMRU(`${filename}.json`, sizeBytes, 'local');
-      // Update the workbook title to the saved filename (without extension)
+  /**
+   * Callback after CloudStorageModal saves a file locally.
+   * Records MRU, updates the workbook title, and pushes to history.
+   */
+  const handleSaveFile = useCallback(
+    (filename: string, sizeBytes: number) => {
+      recordSaveMRU(`${filename}.ssjson`, sizeBytes, 'local');
       const updatedWb: Workbook = { ...workbook, title: filename, lastModified: Date.now() };
       pushHistory(updatedWb, `Saved as "${filename}"`, filterStateRef.current, gridSelectionRef.current);
-      closeFilenameModal();
-    });
-  }, [workbook, pushHistory, openFilenameModal, closeFilenameModal, recordSaveMRU]);
-
-  const handleLoadMenu = useCallback(() => {
-    window.dispatchEvent(new CustomEvent('simplesheets:open'));
-  }, []);
+    },
+    [workbook, pushHistory, recordSaveMRU],
+  );
 
   // Import / Export triggers — dispatch events that the hidden import buttons listen for
   const handleImportExcelMenu = useCallback(() => {
@@ -2534,11 +2528,11 @@ function WorkbookView() {
               return;
             case 's':
               e.preventDefault();
-              handleSaveMenu();
+              handleSaveToCloud();
               return;
             case 'o':
               e.preventDefault();
-              handleLoadMenu();
+              handleOpenFromCloud();
               return;
             case 'h':
               e.preventDefault();
@@ -2596,7 +2590,7 @@ function WorkbookView() {
     };
     window.addEventListener('keydown', handleGlobalKeyDown);
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-  }, [handleUndo, handleRedo, handleNewSheet, handleSaveMenu, handleLoadMenu, handleSearchReplace, toggleBoldStyle, toggleItalicStyle, toggleUnderlineStyle, handleToggleFilter, handleFxClick, getActiveCellValue, handlePasteSpecial, activeCell]);
+  }, [handleUndo, handleRedo, handleNewSheet, handleSaveToCloud, handleOpenFromCloud, handleSearchReplace, toggleBoldStyle, toggleItalicStyle, toggleUnderlineStyle, handleToggleFilter, handleFxClick, getActiveCellValue, handlePasteSpecial, activeCell]);
 
   return (
     <div className="h-screen flex flex-col">
@@ -2606,8 +2600,6 @@ function WorkbookView() {
         <MenuBar
           onNew={() => handleNewSheet(createEmptyWorkbook())}
           onLoadDemo={() => handleNewSheet(createDemoWorkbook())}
-          onSave={handleSaveMenu}
-          onLoad={handleLoadMenu}
           onImportExcel={handleImportExcelMenu}
           onImportCsv={handleImportCsvMenu}
           onImportJson={handleImportJsonMenu}
@@ -2937,6 +2929,7 @@ function WorkbookView() {
         workbook={workbook}
         onOpenDocument={handleImport}
         onStatusMessage={setStatusMessage}
+        onSaveFile={handleSaveFile}
       />
       <FilenameModal
         isOpen={filenameModal.isOpen}
