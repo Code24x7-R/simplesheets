@@ -17,6 +17,8 @@ describe('MenuBar', () => {
     onExportJson: jest.fn(),
     onExportPdf: jest.fn(),
     onPageSetup: jest.fn(),
+    onSaveToCloud: jest.fn(),
+    onOpenFromCloud: jest.fn(),
     onUndo: jest.fn(),
     onRedo: jest.fn(),
     canUndo: true,
@@ -70,6 +72,10 @@ describe('MenuBar', () => {
     onSearchReplace: jest.fn(),
     onPasteSpecial: jest.fn(),
     onProjectNew: jest.fn(),
+    recentFiles: [],
+    onOpenRecent: jest.fn(),
+    onRemoveRecent: jest.fn(),
+    onClearRecent: jest.fn(),
   };
 
   beforeEach(() => {

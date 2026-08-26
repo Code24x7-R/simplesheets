@@ -20,7 +20,8 @@ export type ASTNode =
   | SheetRangeNode
   | BinaryOpNode
   | UnaryOpNode
-  | FunctionNode;
+  | FunctionNode
+  | NameRefNode;
 
 export interface NumberNode {
   type: 'number';
@@ -96,6 +97,16 @@ export interface FunctionNode {
   type: 'function';
   name: string;
   args: ASTNode[];
+}
+
+export interface NameRefNode {
+  type: 'name_ref';
+  /** The named range name (e.g., "SalesData"). */
+  name: string;
+  /** Start position in formula text (for highlighting). */
+  pos?: number;
+  /** End position in formula text (for highlighting). */
+  endPos?: number;
 }
 
 // ─── Token Types ─────────────────────────────────────────────────────────────
@@ -271,7 +282,10 @@ function tokenize(input: string): Token[] {
         i++;
       }
       let ref = '';
-      while (i < input.length && /[A-Za-z]/.test(input[i])) {
+      // Read letters and underscores (names like Sales_Data).
+      // Digits are NOT consumed here — they are handled separately below to distinguish
+      // cell refs (A1) from names (SalesData).
+      while (i < input.length && /[A-Za-z_]/.test(input[i])) {
         ref += input[i++];
       }
 
@@ -748,8 +762,15 @@ class Parser {
       }
 
       case 'FUNCTION': {
-        this.advance();
         const name = token.value;
+        // If not followed by '(', it's a named range reference, not a function call.
+        // Built-in function names (SUM, IF, etc.) are always followed by '(' when used as functions.
+        const nextToken = this.tokens[this.pos + 1];
+        if (!nextToken || nextToken.type !== 'LPAREN') {
+          this.advance();
+          return { type: 'name_ref', name, pos: token.pos, endPos: token.pos + name.length };
+        }
+        this.advance();
         this.expect('LPAREN');
         const args: ASTNode[] = [];
 
@@ -993,6 +1014,10 @@ export function extractCellRefs(node: ASTNode): SheetCellRef[] {
         break;
       case 'function':
         n.args.forEach(walk);
+        break;
+      case 'name_ref':
+        // Named range references are resolved at evaluation time.
+        // Their internal cell refs are not statically tracked in the dependency graph.
         break;
       case 'sheet_range': {
         // 3D range: add a ref for the cell on each sheet in the range

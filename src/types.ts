@@ -152,6 +152,25 @@ export interface DataValidationRule {
 }
 
 /**
+ * A named range — a human-readable name mapped to a cell or range reference.
+ * Names are case-insensitive and scoped to either the workbook or a specific sheet.
+ */
+export interface NamedRange {
+  /** Unique identifier for this named range. */
+  id: string;
+  /** The name (e.g., "SalesData", "Tax_Rate"). Case-insensitive. */
+  name: string;
+  /** A1-style reference string (e.g., "Sheet1!$A$1:$D$10", "B5"). */
+  reference: string;
+  /** Scope — workbook-level names are visible everywhere; sheet-level only on that sheet. */
+  scope: 'workbook' | 'sheet';
+  /** Sheet ID this name is scoped to (only when scope === 'sheet'). */
+  sheetId?: string;
+  /** Optional comment/description. */
+  comment?: string;
+}
+
+/**
  * A single cell in the spreadsheet grid.
  * Cells are sparse — if a cell has no data, it simply doesn't exist in the map.
  */
@@ -243,6 +262,9 @@ export interface Workbook {
 
   /** Extension data persisted with the workbook. Keyed by extension ID. */
   extensions?: Record<string, ExtensionData>;
+
+  /** Named ranges defined in this workbook. */
+  namedRanges?: NamedRange[];
 }
 
 /**

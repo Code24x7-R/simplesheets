@@ -87,6 +87,8 @@ interface ToolbarProps {
   onOpenConditionalFormat?: () => void;
   // ── Data Validation ──────────────────────────────────────────────
   onOpenDataValidation?: () => void;
+  // ── Named Ranges ────────────────────────────────────────────────
+  onOpenNamedRanges?: () => void;
 }
 
 /**
@@ -436,6 +438,13 @@ export function Toolbar(props: ToolbarProps) {
           title="Data Validation — restrict cell entries"
         >
           ✓
+        </button>
+        <button
+          className="toolbar-btn text-xs"
+          onClick={props.onOpenNamedRanges}
+          title="Named Ranges — define names for cells and ranges"
+        >
+          🏷️
         </button>
       </div>
     </div>

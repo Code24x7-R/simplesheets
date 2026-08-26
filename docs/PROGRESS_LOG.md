@@ -6,6 +6,43 @@
 
 ---
 
+### 2026-08-26 [FEATURE] Save to Cloud / Open from Cloud — zero-config sharing workflow
+- **What**: Users can share and save workbooks without accounts. Userland actions (Copy Link, Share File, Save/Open File) work instantly. Cloud providers (Google Drive, OneDrive, S3) are scaffolded behind an "Advanced" collapsible for future OAuth integration.
+- **Implementation**:
+  - **`cloud/types.ts`** (new): `CloudProvider`, `CloudFile`, `ShareResult` types.
+  - **`shareUrl.ts`** (new): URL fragment encoding via lz-string (`#doc=`). `encodeDocToUrl`, `decodeDocFromUrl`, `estimateShareSize`, `canShareViaUrl` (16KB threshold).
+  - **`webShare.ts`** (new): Web Share API wrapper with download fallback. `canShareFiles`, `shareDocument`, `downloadDocument`.
+  - **`fileIO.ts`** (new): File reading helpers — `readFileAsText`, `readWorkbookFile` (reuses `importJson` validator), `ACCEPTED_FILE_TYPES`.
+  - **`CloudStorageModal.tsx`** (new): Two-view modal (home + provider). Home: Copy Link (with size guard), Share File, Save to File, Open from File. Advanced collapsible: Google Drive, OneDrive, S3 buttons. Focus trap, error banner, loading states, accessibility.
+  - **MenuBar**: File → Save to Cloud… / Open from Cloud… menu items.
+  - **App.tsx**: Modal state, mode (save/open), `onOpenDocument` wired to `handleImport`.
+- **Tests**: +25 new tests for `CloudStorageModal`, +32 for utilities (`shareUrl`, `webShare`, `fileIO`).
+- **Results**: 3913 tests across 162 suites, lint clean, type-check clean, build clean.
+
+### 2026-08-26 [FEATURE] MRU File List — recent files with .ssjson + cloud source tracking
+- **What**: Most Recently Used file list tracks opened/saved workbooks. Handles the `.ssjson` cloud format and records whether files came from local disk, a cloud provider, or a share URL. Surfaced in the File menu for one-click reopen.
+- **Implementation**:
+  - **`mru.ts`** (new): Core MRU logic — `MRUEntry` type with `source` (`local`/`cloud`/`url`), `provider`, `cloudFileId`. localStorage persistence, dedup by name+source, 10-entry cap, validation. `addMRUEntry`, `removeMRUEntry`, `clearMRU`, `recordFileOpened`, `recordFileSaved`, `getMostRecent`.
+  - **`useMRU.ts`** (new): React hook with reactive state + cross-tab sync via `storage` event listener.
+  - **MenuBar**: Dynamic Recent Files section with source-indicating icons (local/cloud/url) and Clear All.
+  - **App.tsx**: `handleImport` records local opens, `handleSaveMenu` records local saves, `handleOpenRecent` routes by source (url → navigate, cloud → cloud modal, local → file picker).
+- **Bug fix**: Entries created in the same millisecond got identical IDs (`mru-${timestamp}`), breaking per-entry removal. Fixed with random suffix: `mru-${timestamp}-${random}`.
+- **Tests**: +25 for `mru.ts`, +12 for `useMRU.ts`.
+- **Results**: 3950 tests across 164 suites, lint clean, type-check clean, build clean.
+
+### 2026-08-19 [FEATURE] Named Ranges — single cell to matrix, full CRUD
+- **What**: Named ranges allow assigning a human-readable name to a cell or range, usable in formulas (e.g., `=SUM(SalesData)`). Supports single cells to matrices.
+- **Implementation**:
+  - **`NamedRange` type** (`types.ts`): `id`, `name`, `reference` (A1-style), `scope` (workbook/sheet), `sheetId`, `comment`. Added `Workbook.namedRanges`.
+  - **`namedRangeUtils.ts`** (new): `validateName` (Excel naming rules, rejects cell-ref-like names), `validateReference`, `parseNamedRangeRef` (reuses formula parser), `createNamedRange`, `buildNamedRangeMap` (case-insensitive lookup with sheet-scope prefixing), `resolveNameToAST`, `findNamedRangeForCell`.
+  - **Formula Parser** (`formulaParser.ts`): New `NameRefNode` AST type. Bare identifiers not followed by `(` are parsed as name references instead of failing. Tokenizer updated to allow underscores in names. `extractCellRefs` skips name_refs (resolved at eval time).
+  - **Formula Engine** (`formulaEngine.ts`): `name_ref` resolution in `evaluateNode` (returns `#NAME?` for unknown names, `#REF!` for range-as-scalar). Named ranges expand correctly as function arguments (SUM, VLOOKUP, etc.). Sheet-scoped names take priority over workbook-scoped. Threaded `namedRanges` map and `activeSheetId` through all `EvalContext` creations.
+  - **`NamedRangesModal.tsx`** (new): Full CRUD UI — list, add, edit, delete. Name/reference/scope/comment fields with live validation. Workbook or sheet scope with sheet picker.
+  - **Toolbar**: Added 🏷️ Named Ranges button.
+  - **App.tsx**: State, handlers (with undo via `pushHistory`), modal rendering, toolbar prop wiring.
+- **Tests**: +60 new tests (41 for `namedRangeUtils`, 6 for parser `name_ref`, 13 for `NamedRangesModal`, 7 engine integration tests for named range resolution).
+- **Results**: 3856 tests across 158 suites, lint clean, type-check clean, build clean
+
 ### 2026-08-18 [FEATURE] Phases 22 & 23 — Conditional Formatting and Data Validation
 - **What**: Completed Conditional Formatting (Phase 22) and Data Validation (Phase 23) with full UI and engine support
 - **Implementation**:

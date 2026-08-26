@@ -3541,3 +3541,114 @@ describe('evaluateWorkbook - cross-sheet references', () => {
     });
   });
 });
+
+describe('Named Ranges', () => {
+  function createWorkbookWithNamedRanges(
+    cells: Record<string, string>,
+    namedRanges: Workbook['namedRanges'],
+    sheetOverrides: Partial<Sheet> = {},
+  ): Workbook {
+    const sheet = createSheet(cells, sheetOverrides);
+    return {
+      id: 'test-wb',
+      title: 'Test',
+      sheets: [sheet],
+      activeSheetIndex: 0,
+      lastModified: Date.now(),
+      namedRanges,
+    };
+  }
+
+  it('resolves a single-cell named range', () => {
+    const wb = createWorkbookWithNamedRanges(
+      {
+        '0:0': '100',
+        '1:0': '=TaxRate',
+      },
+      [{ id: 'nr-1', name: 'TaxRate', reference: '$A$1', scope: 'workbook' }],
+    );
+    const result = evaluateWorkbook(wb, 0);
+    expect(result.cells['1:0'].computedValue).toBe(100);
+  });
+
+  it('resolves a range named range inside SUM', () => {
+    const wb = createWorkbookWithNamedRanges(
+      {
+        '0:0': '10',
+        '1:0': '20',
+        '2:0': '30',
+        '3:0': '=SUM(SalesData)',
+      },
+      [{ id: 'nr-1', name: 'SalesData', reference: '$A$1:$A$3', scope: 'workbook' }],
+    );
+    const result = evaluateWorkbook(wb, 0);
+    expect(result.cells['3:0'].computedValue).toBe(60);
+  });
+
+  it('resolves a multi-column range named range in VLOOKUP', () => {
+    const wb = createWorkbookWithNamedRanges(
+      {
+        '0:0': '1', '0:1': '10',
+        '1:0': '2', '1:1': '20',
+        '2:0': '3', '2:1': '30',
+        '3:0': '=VLOOKUP(2, LookupTable, 2)',
+      },
+      [{ id: 'nr-1', name: 'LookupTable', reference: '$A$1:$B$3', scope: 'workbook' }],
+    );
+    const result = evaluateWorkbook(wb, 0);
+    expect(result.cells['3:0'].computedValue).toBe(20);
+  });
+
+  it('returns #NAME! for an undefined name', () => {
+    const wb = createWorkbookWithNamedRanges(
+      {
+        '0:0': '=UnknownName',
+      },
+      [{ id: 'nr-1', name: 'Other', reference: '$A$1', scope: 'workbook' }],
+    );
+    const result = evaluateWorkbook(wb, 0);
+    expect(result.cells['0:0'].computedValue).toBe('#NAME?');
+  });
+
+  it('looks up names case-insensitively', () => {
+    const wb = createWorkbookWithNamedRanges(
+      {
+        '0:0': '42',
+        '1:0': '=salesdata',
+      },
+      [{ id: 'nr-1', name: 'SalesData', reference: '$A$1', scope: 'workbook' }],
+    );
+    const result = evaluateWorkbook(wb, 0);
+    expect(result.cells['1:0'].computedValue).toBe(42);
+  });
+
+  it('uses a name in arithmetic expression', () => {
+    const wb = createWorkbookWithNamedRanges(
+      {
+        '0:0': '10',
+        '1:0': '5',
+        '2:0': '=BaseRate+Increment',
+      },
+      [
+        { id: 'nr-1', name: 'BaseRate', reference: '$A$1', scope: 'workbook' },
+        { id: 'nr-2', name: 'Increment', reference: '$A$2', scope: 'workbook' },
+      ],
+    );
+    const result = evaluateWorkbook(wb, 0);
+    expect(result.cells['2:0'].computedValue).toBe(15);
+  });
+
+  it('resolves a name in a nested function', () => {
+    const wb = createWorkbookWithNamedRanges(
+      {
+        '0:0': '10',
+        '1:0': '20',
+        '2:0': '=AVERAGE(SalesData) + SUM(SalesData)',
+      },
+      [{ id: 'nr-1', name: 'SalesData', reference: '$A$1:$A$2', scope: 'workbook' }],
+    );
+    const result = evaluateWorkbook(wb, 0);
+    // AVERAGE = 15, SUM = 30, total = 45
+    expect(result.cells['2:0'].computedValue).toBe(45);
+  });
+});

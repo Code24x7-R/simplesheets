@@ -917,3 +917,61 @@ describe('Complex Formula Patterns', () => {
     });
   });
 });
+
+describe('NameRefNode (named ranges)', () => {
+  it('parses a bare identifier as a name_ref', () => {
+    const ast = parseFormula('SalesData');
+    expect(ast.type).toBe('name_ref');
+    if (ast.type === 'name_ref') {
+      expect(ast.name).toBe('SalesData');
+    }
+  });
+
+  it('parses a name_ref with underscores and dots', () => {
+    const ast = parseFormula('Sales_Data.Q1');
+    expect(ast.type).toBe('name_ref');
+    if (ast.type === 'name_ref') {
+      expect(ast.name).toBe('Sales_Data.Q1');
+    }
+  });
+
+  it('parses a name_ref used in binary expression', () => {
+    const ast = parseFormula('SalesData+1');
+    expect(ast.type).toBe('binary');
+    if (ast.type === 'binary') {
+      expect(ast.op).toBe('+');
+      expect(ast.left.type).toBe('name_ref');
+      if (ast.left.type === 'name_ref') {
+        expect(ast.left.name).toBe('SalesData');
+      }
+    }
+  });
+
+  it('parses a name_ref as a function argument', () => {
+    const ast = parseFormula('SUM(SalesData)');
+    expect(ast.type).toBe('function');
+    if (ast.type === 'function') {
+      expect(ast.name).toBe('SUM');
+      expect(ast.args).toHaveLength(1);
+      expect(ast.args[0].type).toBe('name_ref');
+    }
+  });
+
+  it('parses a function call normally (followed by parenthesis)', () => {
+    const ast = parseFormula('SUM(A1:A10)');
+    expect(ast.type).toBe('function');
+    if (ast.type === 'function') {
+      expect(ast.name).toBe('SUM');
+      expect(ast.args[0].type).toBe('range');
+    }
+  });
+
+  it('does not produce cell refs in extractCellRefs for a name_ref', () => {
+    const ast = parseFormula('SUM(SalesData, A1)');
+    const refs = extractCellRefs(ast);
+    // Only A1 should be extracted; SalesData is a name_ref (resolved at eval time).
+    expect(refs).toHaveLength(1);
+    expect(refs[0].row).toBe(0);
+    expect(refs[0].col).toBe(0);
+  });
+});

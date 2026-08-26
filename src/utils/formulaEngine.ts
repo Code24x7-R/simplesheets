@@ -10,6 +10,7 @@
 import type { Sheet, Cell } from '../types';
 import { cellKey } from '../types';
 import { parseFormula, extractCellRefs, type ASTNode } from './formulaParser';
+import { resolveNameToAST, buildNamedRangeMap } from './namedRangeUtils';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -47,6 +48,10 @@ interface EvalContext {
   colCount: number;
   /** Hidden rows for SUBTOTAL visibility filtering. */
   hiddenRows?: Set<number>;
+  /** Named ranges lookup map (case-insensitive name → NamedRange). */
+  namedRanges: Map<string, import('../types').NamedRange>;
+  /** Sheet ID of the currently evaluating sheet (for sheet-scoped names). */
+  activeSheetId: string;
 }
 
 // ─── Utility ─────────────────────────────────────────────────────────────────
@@ -227,6 +232,16 @@ function evaluateNode(node: ASTNode, ctx: EvalContext): CellValue {
     case 'function':
       return evaluateFunction(node, ctx);
 
+    case 'name_ref': {
+      // Resolve the named range to its underlying cell/range AST and evaluate that.
+      const resolved = resolveNameToAST(node.name, ctx.namedRanges, ctx.activeSheetId);
+      if (!resolved) return ERR_NAME;
+      // If the name refers to a range, return #REF! when used as a scalar
+      // (same behavior as a bare range reference). Functions handle ranges specially.
+      if (resolved.type === 'range') return ERR_REF;
+      return evaluateNode(resolved, ctx);
+    }
+
     /* istanbul ignore next - all AST node types handled above */
     default:
       return ERR_VALUE;
@@ -277,6 +292,7 @@ function evaluateCell(row: number, col: number, ctx: EvalContext, sheetIndex?: n
         rowCount: targetSheet.rowCount,
         colCount: targetSheet.columnCount,
         activeSheetIndex: targetIndex,
+        activeSheetId: targetSheet.id,
       };
       const result = evaluateNode(ast, subCtx);
       ctx.cache.set(cacheKey, result);
@@ -620,15 +636,28 @@ function evaluateFunction(node: Extract<ASTNode, { type: 'function' }>, ctx: Eva
   const argShapes: Array<RangeData | null> = [];
 
   for (const arg of node.args) {
-    if (arg.type === 'range') {
-      const shape = collectRangeValuesWithShape(arg as Extract<ASTNode, { type: 'range' }>, ctx);
+    // Resolve named range references to their underlying cell/range AST first,
+    // so they participate in range expansion just like direct range references.
+    let resolvedArg = arg;
+    if (arg.type === 'name_ref') {
+      const resolved = resolveNameToAST(arg.name, ctx.namedRanges, ctx.activeSheetId);
+      if (!resolved) {
+        argValues.push([ERR_NAME]);
+        argShapes.push(null);
+        continue;
+      }
+      resolvedArg = resolved;
+    }
+
+    if (resolvedArg.type === 'range') {
+      const shape = collectRangeValuesWithShape(resolvedArg as Extract<ASTNode, { type: 'range' }>, ctx);
       argValues.push(shape.values);
       argShapes.push(shape.rows > 0 && shape.cols > 0 ? shape : null);
-    } else if (arg.type === 'sheet_range') {
-      argValues.push(collectSheetRangeValues(arg as Extract<ASTNode, { type: 'sheet_range' }>, ctx));
+    } else if (resolvedArg.type === 'sheet_range') {
+      argValues.push(collectSheetRangeValues(resolvedArg as Extract<ASTNode, { type: 'sheet_range' }>, ctx));
       argShapes.push(null); // 3D ranges don't have simple shape
     } else {
-      argValues.push([evaluateNode(arg, ctx)]);
+      argValues.push([evaluateNode(resolvedArg, ctx)]);
       argShapes.push(null);
     }
   }
@@ -1731,6 +1760,9 @@ export function evaluateWorkbook(workbook: import('../types').Workbook, activeSh
     return { cells: {}, circularRefs: [], success: false };
   }
 
+  // Build named range lookup map once for the whole workbook.
+  const namedRanges = buildNamedRangeMap(workbook.namedRanges ?? []);
+
   // Shared evaluation context across all sheets
   // This allows cross-sheet references to read computed values from other sheets
   const sharedCache = new Map<string, CellValue>();
@@ -1756,6 +1788,8 @@ export function evaluateWorkbook(workbook: import('../types').Workbook, activeSh
       rowCount: sheet.rowCount,
       colCount: sheet.columnCount,
       hiddenRows,
+      namedRanges,
+      activeSheetId: sheet.id,
     };
 
     const { deps } = buildDependencyGraph(sheet);
@@ -1837,6 +1871,7 @@ export function evaluateFormulaPreview(
   if (activeSheetIndex < 0 || activeSheetIndex >= sheets.length) return null;
 
   const sharedCache = new Map<string, CellValue>();
+  const namedRanges = buildNamedRangeMap(workbook.namedRanges ?? []);
 
   // Evaluate all sheets so cross-sheet references resolve to computed values
   for (let i = 0; i < sheets.length; i++) {
@@ -1850,6 +1885,8 @@ export function evaluateFormulaPreview(
       rowCount: sheet.rowCount,
       colCount: sheet.columnCount,
       hiddenRows,
+      namedRanges,
+      activeSheetId: sheet.id,
     };
     const { deps } = buildDependencyGraph(sheet);
     const evaluationOrder = topologicalSort(deps, sheet.cells);
@@ -1881,6 +1918,8 @@ export function evaluateFormulaPreview(
     rowCount: activeSheet.rowCount,
     colCount: activeSheet.columnCount,
     hiddenRows,
+    namedRanges,
+    activeSheetId: activeSheet.id,
   };
 
   try {

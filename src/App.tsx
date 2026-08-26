@@ -17,6 +17,7 @@ import { PrintSetupModal } from './components/PrintSetupModal';
 import { ColumnRowSizeModal } from './components/ColumnRowSizeModal';
 import { ShortcutsModal } from './components/ShortcutsModal';
 import { AboutModal } from './components/AboutModal';
+import { CloudStorageModal } from './components/CloudStorageModal';
 import { FilenameModal } from './components/FilenameModal';
 import { SearchReplaceModal } from './components/SearchReplaceModal';
 import { SheetTabs } from './components/SheetTabs';
@@ -24,6 +25,7 @@ import { MenuBar } from './components/MenuBar';
 import { Toolbar } from './components/Toolbar';
 import { ConditionalFormatModal } from './components/ConditionalFormatModal';
 import { DataValidationModal } from './components/DataValidationModal';
+import { NamedRangesModal } from './components/NamedRangesModal';
 import type { ConditionalFormatRule, DataValidationRule } from './types';
 import { ImportExportBridge } from './components/ImportExportBridge';
 import { evaluateWorkbook, evaluateFormulaPreview, buildDependencyGraph } from './utils/formulaEngine';
@@ -34,13 +36,15 @@ import { useCellEditing } from './hooks/useCellEditing';
 import { useCellStyles } from './hooks/useCellStyles';
 import { useReferenceFormat } from './hooks/useReferenceFormat';
 import { useFormulaWizard } from './hooks/useFormulaWizard';
+import { useMRU } from './hooks/useMRU';
+import type { MRUEntry } from './utils/mru';
 import { FormulaWizard } from './components/FormulaWizard';
 import { loadAutosave } from './services/storageService';
 import { downloadJson } from './services/jsonService';
 import { downloadExcel } from './services/excelExport';
 import { downloadCsv } from './services/csvService';
 import { downloadPdf } from './services/pdfExport';
-import type { Cell, Selection, Sheet } from './types';
+import type { Cell, Selection, Sheet, NamedRange } from './types';
 import { insertRow, deleteRow, insertCol, deleteCol } from './utils/sheetOperations';
 import { computeFillSeries } from './utils/fillSeries';
 import { applyPasteOptions } from './utils/pasteSpecial';
@@ -127,10 +131,13 @@ function WorkbookView() {
   // Auto-save to localStorage on every workbook change (debounced)
   useAutosave(workbook);
   const { format: referenceFormat, toggle: toggleReferenceFormat } = useReferenceFormat();
+  const { entries: recentFiles, recordOpen: recordOpenMRU, recordSave: recordSaveMRU, remove: removeMRU, clear: clearMRU } = useMRU();
   const [showPrintSetup, setShowPrintSetup] = useState(false);
   const [showColumnRowSize, setShowColumnRowSize] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
+  const [showCloudModal, setShowCloudModal] = useState(false);
+  const [cloudModalMode, setCloudModalMode] = useState<'save' | 'open'>('save');
   const [showSearchReplace, setShowSearchReplace] = useState(false);
   const [showSortDialog, setShowSortDialog] = useState(false);
   const [pendingSortDirection, setPendingSortDirection] = useState<SortDirection>('asc');
@@ -252,6 +259,7 @@ function WorkbookView() {
   const [showFormulas, setShowFormulas] = useState(false);
   const [showConditionalFormat, setShowConditionalFormat] = useState(false);
   const [showDataValidation, setShowDataValidation] = useState(false);
+  const [showNamedRanges, setShowNamedRanges] = useState(false);
   // Filename modal state for save/export operations
   const [filenameModal, setFilenameModal] = useState<{
     isOpen: boolean;
@@ -774,6 +782,37 @@ function WorkbookView() {
     window.open('https://simpledocs.mouseclick.au', '_blank', 'noopener,noreferrer');
   }, []);
 
+  const handleSaveToCloud = useCallback(() => {
+    setCloudModalMode('save');
+    setShowCloudModal(true);
+  }, []);
+
+  const handleOpenFromCloud = useCallback(() => {
+    setCloudModalMode('open');
+    setShowCloudModal(true);
+  }, []);
+
+  const handleOpenRecent = useCallback(
+    (entry: MRUEntry) => {
+      if (entry.source === 'url' && entry.path) {
+        // URL-opened documents: load from the share link fragment
+        window.location.href = entry.path;
+        return;
+      }
+      if (entry.source === 'cloud') {
+        // Cloud files: open via the cloud modal in open mode
+        setCloudModalMode('open');
+        setShowCloudModal(true);
+        setStatusMessage(`Reopen "${entry.name}" from ${entry.provider ?? 'cloud'} — select the file in the cloud modal.`);
+        return;
+      }
+      // Local files: trigger the file picker (same as File → Open)
+      window.dispatchEvent(new CustomEvent('simplesheets:open'));
+      setStatusMessage(`Reopen "${entry.name}" — select the file in the picker.`);
+    },
+    [],
+  );
+
   const handleSearchReplace = useCallback(() => {
     setShowSearchReplace(true);
   }, []);
@@ -809,12 +848,15 @@ function WorkbookView() {
     openFilenameModal('Save Workbook', defaultName, 'json', (filename) => {
       downloadJson(workbook, filename);
       setStatusMessage(`Saved "${filename}.json" — download started`);
+      // Record in MRU: local file save
+      const sizeBytes = JSON.stringify(workbook).length;
+      recordSaveMRU(`${filename}.json`, sizeBytes, 'local');
       // Update the workbook title to the saved filename (without extension)
       const updatedWb: Workbook = { ...workbook, title: filename, lastModified: Date.now() };
       pushHistory(updatedWb, `Saved as "${filename}"`, filterStateRef.current, gridSelectionRef.current);
       closeFilenameModal();
     });
-  }, [workbook, pushHistory, openFilenameModal, closeFilenameModal]);
+  }, [workbook, pushHistory, openFilenameModal, closeFilenameModal, recordSaveMRU]);
 
   const handleLoadMenu = useCallback(() => {
     window.dispatchEvent(new CustomEvent('simplesheets:open'));
@@ -1048,6 +1090,11 @@ function WorkbookView() {
       pushHistory(wbWithTitle, 'Import file', filterStateRef.current, gridSelectionRef.current);
       setStatusMessage(`Imported "${title}" — ${wbWithTitle.sheets.length} sheet(s)`);
 
+      // Record in MRU: local file open
+      if (filename) {
+        recordOpenMRU(filename, importedWb.sheets.reduce((acc, s) => acc + Object.keys(s.cells).length, 0) * 50, 'local');
+      }
+
       // Check if imported workbook has project data and show project tab
       const hasProjectData = importedWb.extensions?.['project-wbs'] ||
         importedWb.sheets.some((s) => s.name === TASKS_SHEET_NAME);
@@ -1055,7 +1102,7 @@ function WorkbookView() {
         setShowProjectTab(true);
       }
     },
-    [pushHistory]
+    [pushHistory, recordOpenMRU]
   );
 
   const handleNewSheet = useCallback(
@@ -1938,6 +1985,24 @@ function WorkbookView() {
     [workbook, pushHistory],
   );
 
+  // ─── Named Ranges Handlers ──────────────────────────────────────────
+
+  const handleOpenNamedRanges = useCallback(() => {
+    setShowNamedRanges(true);
+  }, []);
+
+  const handleCloseNamedRanges = useCallback(() => {
+    setShowNamedRanges(false);
+  }, []);
+
+  const handleNamedRangesChange = useCallback(
+    (ranges: NamedRange[]) => {
+      const newWorkbook = { ...workbook, namedRanges: ranges, lastModified: Date.now() };
+      pushHistory(newWorkbook, 'Update named ranges', filterStateRef.current, gridSelectionRef.current);
+    },
+    [workbook, pushHistory],
+  );
+
   // ─── Chart Handlers ──────────────────────────────────────────────────
 
   const handleInsertChart = useCallback(() => {
@@ -2551,6 +2616,8 @@ function WorkbookView() {
           onExportJson={handleExportJsonMenu}
           onExportPdf={handleExportPdfMenu}
           onPageSetup={() => setShowPrintSetup(true)}
+          onSaveToCloud={handleSaveToCloud}
+          onOpenFromCloud={handleOpenFromCloud}
           onUndo={handleUndo}
           onRedo={handleRedo}
           canUndo={canUndo}
@@ -2605,6 +2672,10 @@ function WorkbookView() {
           onSearchReplace={handleSearchReplace}
           onProjectNew={handleProjectNew}
           onProjectNewSheet={handleProjectNewSheet}
+          recentFiles={recentFiles}
+          onOpenRecent={handleOpenRecent}
+          onRemoveRecent={removeMRU}
+          onClearRecent={clearMRU}
           onAfterMenuAction={() => gridRef.current?.focus()}
         />
         <span className="text-sm text-gray-500">{workbook.title}</span>
@@ -2644,6 +2715,7 @@ function WorkbookView() {
         borderColor={borderColor}
         onOpenConditionalFormat={handleOpenConditionalFormat}
         onOpenDataValidation={handleOpenDataValidation}
+        onOpenNamedRanges={handleOpenNamedRanges}
       />
 
       {/* Formula Bar */}
@@ -2858,6 +2930,14 @@ function WorkbookView() {
       />
       <ShortcutsModal isOpen={showShortcuts} onClose={() => { setShowShortcuts(false); gridRef.current?.focus(); }} />
       <AboutModal isOpen={showAbout} onClose={() => { setShowAbout(false); gridRef.current?.focus(); }} />
+      <CloudStorageModal
+        isOpen={showCloudModal}
+        onClose={() => { setShowCloudModal(false); gridRef.current?.focus(); }}
+        mode={cloudModalMode}
+        workbook={workbook}
+        onOpenDocument={handleImport}
+        onStatusMessage={setStatusMessage}
+      />
       <FilenameModal
         isOpen={filenameModal.isOpen}
         title={filenameModal.title}
@@ -2972,6 +3052,14 @@ function WorkbookView() {
         onClose={handleCloseDataValidation}
         rules={sheet.dataValidations ?? []}
         onRulesChange={handleDataValidationRulesChange}
+      />
+      <NamedRangesModal
+        isOpen={showNamedRanges}
+        onClose={handleCloseNamedRanges}
+        namedRanges={workbook.namedRanges ?? []}
+        onNamedRangesChange={handleNamedRangesChange}
+        sheets={workbook.sheets}
+        activeSheetId={sheet.id}
       />
       <SheetLinkProvider workbook={workbook} />
     </div>

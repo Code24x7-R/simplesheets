@@ -17,6 +17,8 @@ describe('App Extensions Integration', () => {
     onExportJson: jest.fn(),
     onExportPdf: jest.fn(),
     onPageSetup: jest.fn(),
+    onSaveToCloud: jest.fn(),
+    onOpenFromCloud: jest.fn(),
     onUndo: jest.fn(),
     onRedo: jest.fn(),
     canUndo: true,
@@ -71,6 +73,10 @@ describe('App Extensions Integration', () => {
     onPasteSpecial: jest.fn(),
     onProjectNew: jest.fn(),
     onProjectNewSheet: jest.fn(),
+    recentFiles: [],
+    onOpenRecent: jest.fn(),
+    onRemoveRecent: jest.fn(),
+    onClearRecent: jest.fn(),
   };
 
   it('renders Extensions menu in MenuBar', () => {

@@ -63,6 +63,8 @@ import {
   BorderRight,
   SimpleDocs,
 } from './icons/BorderIcons';
+import { CloudUpload, CloudDownload, FileClock } from 'lucide-react';
+import type { MRUEntry } from '../utils/mru';
 import { DropdownMenu, type MenuItem } from './DropdownMenu';
 
 interface MenuBarProps {
@@ -79,6 +81,9 @@ interface MenuBarProps {
   onExportJson: () => void;
   onExportPdf: () => void;
   onPageSetup: () => void;
+  // Cloud
+  onSaveToCloud: () => void;
+  onOpenFromCloud: () => void;
   // Edit menu
   onUndo: () => void;
   onRedo: () => void;
@@ -139,6 +144,11 @@ interface MenuBarProps {
   onProjectNew?: (templateId: string) => void;
   onProjectNewSheet?: () => void;
   onProjectOpen?: () => void;
+  // Recent files (MRU)
+  recentFiles: MRUEntry[];
+  onOpenRecent: (entry: MRUEntry) => void;
+  onRemoveRecent: (id: string) => void;
+  onClearRecent: () => void;
   // Help
   onAbout: () => void;
   onShortcuts: () => void;
@@ -166,6 +176,11 @@ export function MenuBar(props: MenuBarProps) {
         'file-export-json': props.onExportJson,
         'file-export-pdf': props.onExportPdf,
         'file-page-setup': props.onPageSetup,
+        // Cloud
+        'file-save-cloud': props.onSaveToCloud,
+        'file-open-cloud': props.onOpenFromCloud,
+        // Recent files
+        'file-clear-recent': props.onClearRecent,
         // Edit
         'edit-undo': props.onUndo,
         'edit-redo': props.onRedo,
@@ -249,12 +264,35 @@ export function MenuBar(props: MenuBarProps) {
         'help-shortcuts': props.onShortcuts,
         'help-simpledocs': props.onSimpleDocs,
       };
-      actions[id]?.();
+      // Handle dynamic recent-file items (id format: "recent-<mruId>")
+      if (id.startsWith('recent-')) {
+        const mruId = id.slice('recent-'.length);
+        const entry = props.recentFiles.find((e) => e.id === mruId);
+        if (entry) {
+          props.onOpenRecent(entry);
+        }
+      } else {
+        actions[id]?.();
+      }
       // Restore focus to grid after menu action so keyboard navigation works
       props.onAfterMenuAction?.();
     },
-    [props]
+    [props],
   );
+
+  // Build recent-files menu items dynamically from the MRU list.
+  // Each entry gets a source-indicating icon and a unique id for the handler.
+  const recentFileItems: MenuItem[] = props.recentFiles.length > 0
+    ? [
+        ...props.recentFiles.map((entry) => ({
+          id: `recent-${entry.id}`,
+          label: entry.name,
+          icon: entry.source === 'cloud' ? CloudUpload : entry.source === 'url' ? FileClock : FileSpreadsheet,
+        })),
+        { id: 'sep-recent', label: '', separator: true },
+        { id: 'file-clear-recent', label: 'Clear Recent', icon: X },
+      ]
+    : [];
 
   const fileItems: MenuItem[] = [
     { id: 'file-new', label: 'New', shortcut: 'Ctrl+N', icon: FileSpreadsheet },
@@ -284,6 +322,10 @@ export function MenuBar(props: MenuBarProps) {
       ],
     },
     { id: 'sep-file-2', label: '', separator: true },
+    { id: 'file-save-cloud', label: 'Save to Cloud…', icon: CloudUpload },
+    { id: 'file-open-cloud', label: 'Open from Cloud…', icon: CloudDownload },
+    { id: 'sep-file-3', label: '', separator: true },
+    ...recentFileItems,
     { id: 'file-page-setup', label: 'Page Setup…', icon: Ruler },
   ];
 
