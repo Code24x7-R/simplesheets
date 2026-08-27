@@ -27,11 +27,14 @@ interface AccountingDashboardProps {
   onDeleteSpend?: (entryId: string) => void;
   onEditAllocation?: (taskId: string) => void;
   onTaskClick?: (taskId: string) => void;
+  onAddChange?: () => void;
+  onEditChange?: (entryId: string) => void;
+  onDeleteChange?: (entryId: string) => void;
 }
 
 type AccountingTab = 'baseline' | 'allocation' | 'estimate' | 'actual' | 'changelog';
 
-export function AccountingDashboard({ project, onEditSpend, onDeleteSpend, onEditAllocation, onTaskClick }: AccountingDashboardProps) {
+export function AccountingDashboard({ project, onEditSpend, onDeleteSpend, onEditAllocation, onTaskClick, onAddChange, onEditChange, onDeleteChange }: AccountingDashboardProps) {
   const [activeTab, setActiveTab] = useState<AccountingTab>('estimate');
 
   const accounting = useMemo(() => computeProjectAccounting(project), [project]);
@@ -149,7 +152,15 @@ export function AccountingDashboard({ project, onEditSpend, onDeleteSpend, onEdi
         )}
         {activeTab === 'estimate' && <EstimateTable accounting={accounting} currency={currency} onTaskClick={onTaskClick} />}
         {activeTab === 'actual' && <ActualsTable accounting={accounting} currency={currency} onEdit={onEditSpend} onDelete={onDeleteSpend} taskNamesById={taskNamesById} />}
-        {activeTab === 'changelog' && <ChangeLogTable accounting={accounting} currency={currency} />}
+        {activeTab === 'changelog' && (
+          <ChangeLogTable
+            accounting={accounting}
+            currency={currency}
+            onAddChange={onAddChange}
+            onEditChange={onEditChange}
+            onDeleteChange={onDeleteChange}
+          />
+        )}
       </div>
 
       {/* Footer totals */}
@@ -503,49 +514,94 @@ const CHANGE_TYPE_ICONS: Record<string, string> = {
   other: '📝',
 };
 
-function ChangeLogTable({ accounting, currency }: { accounting: ReturnType<typeof computeProjectAccounting>; currency: string }) {
+function ChangeLogTable({
+  accounting,
+  currency,
+  onAddChange,
+  onEditChange,
+  onDeleteChange,
+}: {
+  accounting: ReturnType<typeof computeProjectAccounting>;
+  currency: string;
+  onAddChange?: () => void;
+  onEditChange?: (entryId: string) => void;
+  onDeleteChange?: (entryId: string) => void;
+}) {
   const entries = accounting.changeLog;
 
-  if (entries.length === 0) {
-    return (
-      <div className="text-center py-8 text-gray-400">
-        <p className="text-sm">No change log entries yet.</p>
-        <p className="text-xs mt-1">Changes from dependency shifts and scope adjustments will appear here.</p>
-      </div>
-    );
-  }
-
   return (
-    <table className="w-full text-xs">
-      <thead>
-        <tr className="bg-gray-50 text-gray-600">
-          <th className="px-3 py-2 text-left font-medium">Date</th>
-          <th className="px-3 py-2 text-left font-medium">Type</th>
-          <th className="px-3 py-2 text-left font-medium">Description</th>
-          <th className="px-3 py-2 text-right font-medium">Cost Impact</th>
-          <th className="px-3 py-2 text-right font-medium">Schedule</th>
-          <th className="px-3 py-2 text-left font-medium">Approved By</th>
-        </tr>
-      </thead>
-      <tbody>
-        {entries.map((entry) => (
-          <tr key={entry.id} className="border-t border-gray-100 hover:bg-gray-50">
-            <td className="px-3 py-2 text-gray-500">{entry.date}</td>
-            <td className="px-3 py-2">
-              <span className="mr-1">{CHANGE_TYPE_ICONS[entry.changeType] ?? '📝'}</span>
-              <span className="capitalize">{entry.changeType}</span>
-            </td>
-            <td className="px-3 py-2 text-gray-800">{entry.description}</td>
-            <td className={`px-3 py-2 text-right font-mono ${entry.costImpact < 0 ? 'text-green-600' : entry.costImpact > 0 ? 'text-red-600' : 'text-gray-400'}`}>
-              {formatVariance(entry.costImpact, currency)}
-            </td>
-            <td className={`px-3 py-2 text-right ${entry.scheduleImpactDays < 0 ? 'text-green-600' : entry.scheduleImpactDays > 0 ? 'text-red-600' : 'text-gray-400'}`}>
-              {entry.scheduleImpactDays === 0 ? '—' : `${entry.scheduleImpactDays > 0 ? '+' : ''}${entry.scheduleImpactDays}d`}
-            </td>
-            <td className="px-3 py-2 text-gray-500">{entry.approvedBy ?? '—'}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
+    <div>
+      {/* Header with Add button */}
+      <div className="flex items-center justify-between p-3 border-b border-gray-200 bg-gray-50">
+        <span className="text-sm text-gray-500">{entries.length} change(s)</span>
+        {onAddChange && (
+          <button
+            className="px-3 py-1 text-xs font-medium text-white bg-blue-600 rounded hover:bg-blue-700"
+            onClick={onAddChange}
+          >
+            + Add Change
+          </button>
+        )}
+      </div>
+
+      {/* Empty state */}
+      {entries.length === 0 ? (
+        <div className="text-center py-8 text-gray-400">
+          <p className="text-sm">No change log entries yet.</p>
+          <p className="text-xs mt-1">Changes from dependency shifts and scope adjustments will appear here.</p>
+        </div>
+      ) : (
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="bg-gray-50 text-gray-600">
+              <th className="px-3 py-2 text-left font-medium">Date</th>
+              <th className="px-3 py-2 text-left font-medium">Type</th>
+              <th className="px-3 py-2 text-left font-medium">Description</th>
+              <th className="px-3 py-2 text-right font-medium">Cost Impact</th>
+              <th className="px-3 py-2 text-right font-medium">Schedule</th>
+              <th className="px-3 py-2 text-left font-medium">Approved By</th>
+              <th className="px-3 py-2 text-center font-medium">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {entries.map((entry) => (
+              <tr key={entry.id} className="border-t border-gray-100 hover:bg-gray-50">
+                <td className="px-3 py-2 text-gray-500">{entry.date}</td>
+                <td className="px-3 py-2">
+                  <span className="mr-1">{CHANGE_TYPE_ICONS[entry.changeType] ?? '📝'}</span>
+                  <span className="capitalize">{entry.changeType}</span>
+                </td>
+                <td className="px-3 py-2 text-gray-800">{entry.description}</td>
+                <td className={`px-3 py-2 text-right font-mono ${entry.costImpact < 0 ? 'text-green-600' : entry.costImpact > 0 ? 'text-red-600' : 'text-gray-400'}`}>
+                  {formatVariance(entry.costImpact, currency)}
+                </td>
+                <td className={`px-3 py-2 text-right ${entry.scheduleImpactDays < 0 ? 'text-green-600' : entry.scheduleImpactDays > 0 ? 'text-red-600' : 'text-gray-400'}`}>
+                  {entry.scheduleImpactDays === 0 ? '—' : `${entry.scheduleImpactDays > 0 ? '+' : ''}${entry.scheduleImpactDays}d`}
+                </td>
+                <td className="px-3 py-2 text-gray-500">{entry.approvedBy ?? '—'}</td>
+                <td className="px-3 py-2 text-center">
+                  {onEditChange && (
+                    <button
+                      className="text-blue-600 hover:text-blue-800 text-xs mr-1"
+                      onClick={() => onEditChange(entry.id)}
+                    >
+                      Edit
+                    </button>
+                  )}
+                  {onDeleteChange && (
+                    <button
+                      className="text-red-500 hover:text-red-700 text-xs"
+                      onClick={() => onDeleteChange(entry.id)}
+                    >
+                      Delete
+                    </button>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
   );
 }

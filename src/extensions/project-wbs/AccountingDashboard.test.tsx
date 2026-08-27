@@ -206,6 +206,44 @@ describe('AccountingDashboard', () => {
     expect(screen.getByText('dependency')).toBeTruthy();
   });
 
+  // ─── Phase 3: Change Log entry creation tests ───────────────────
+
+  it('shows Add Change button on Change Log tab', () => {
+    const onAddChange = jest.fn();
+    const project = createProject({ wbs: [createTask()] });
+    render(<AccountingDashboard project={project} onAddChange={onAddChange} />);
+
+    // Switch to Change Log tab
+    fireEvent.click(screen.getByText(/📝 Change Log/));
+
+    // Should show Add Change button
+    expect(screen.getByText(/Add Change/)).toBeTruthy();
+  });
+
+  it('calls onAddChange when Add Change button is clicked', () => {
+    const onAddChange = jest.fn();
+    const project = createProject({ wbs: [createTask()] });
+    render(<AccountingDashboard project={project} onAddChange={onAddChange} />);
+
+    // Switch to Change Log tab
+    fireEvent.click(screen.getByText(/📝 Change Log/));
+
+    // Click Add Change
+    fireEvent.click(screen.getByText(/Add Change/));
+    expect(onAddChange).toHaveBeenCalled();
+  });
+
+  it('does not show Add Change button when onAddChange is not provided', () => {
+    const project = createProject({ wbs: [createTask()] });
+    render(<AccountingDashboard project={project} />);
+
+    // Switch to Change Log tab
+    fireEvent.click(screen.getByText(/📝 Change Log/));
+
+    // Should NOT show Add Change button
+    expect(screen.queryByText(/Add Change/)).toBeNull();
+  });
+
   // ─── Phase 2: Tab grouping tests ────────────────────────────────
 
   it('renders Planning and Execution section headers', () => {

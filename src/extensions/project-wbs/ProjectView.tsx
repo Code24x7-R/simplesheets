@@ -29,6 +29,7 @@ import { EvmReport } from './EvmReport';
 import { MaterialDashboard } from './MaterialDashboard';
 import { MaterialEditorModal } from './MaterialEditorModal';
 import { ActualsEditorModal } from './ActualsEditorModal';
+import { ChangeLogEditorModal } from './ChangeLogEditorModal';
 import { MaterialAllocationModal } from './MaterialAllocationModal';
 import { NotificationPanel } from './NotificationPanel';
 import { NewProjectDialog } from './NewProjectDialog';
@@ -36,7 +37,7 @@ import { CapitalizationConfigModal } from './CapitalizationConfigModal';
 import type { CapitalizationConfig } from '../types';
 import type { TaskNotification } from './dependencyWorkflows';
 import { generateStatusNotifications } from './dependencyWorkflows';
-import type { ActualSpendEntry, MaterialAllocation, MaterialConsumption } from '../types';
+import type { ActualSpendEntry, MaterialAllocation, MaterialConsumption, ChangeLogEntry } from '../types';
 import { sheetToProject, projectModelToProject } from './sheetToProject';
 import { projectToModel, createBlankProject, exportProjectToJSON, importProjectFromJSON } from './projectConverter';
 import { addTask, removeTask, updateTask, toggleCollapsed, findTask, getAllTasks, addResource, updateResource, removeResource, syncResourceCosts } from './treeOps';
@@ -132,6 +133,9 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
     open: boolean;
     entry: ActualSpendEntry | null;
   }>({ open: false, entry: null });
+
+  const [changeLogModalOpen, setChangeLogModalOpen] = useState(false);
+  const [changeLogModalEntry, setChangeLogModalEntry] = useState<ChangeLogEntry | null>(null);
 
   const [allocationModal, setAllocationModal] = useState<{
     open: boolean;
@@ -572,6 +576,49 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
     setActualsModal({ open: false, entry: null });
   }
 
+  // ─── Change Log ──────────────────────────────────────────────────
+
+  function handleChangeLogSave(entry: ChangeLogEntry) {
+    handleProjectChange((prev) => {
+      const accounting = prev.accounting;
+      if (!accounting) return prev;
+      const existing = accounting.changeLog.findIndex((e) => e.id === entry.id);
+      let updatedEntries: ChangeLogEntry[];
+      if (existing >= 0) {
+        updatedEntries = [...accounting.changeLog];
+        updatedEntries[existing] = entry;
+      } else {
+        updatedEntries = [...accounting.changeLog, entry];
+      }
+      return {
+        ...prev,
+        accounting: {
+          ...accounting,
+          changeLog: updatedEntries,
+        },
+      };
+    });
+    setChangeLogModalOpen(false);
+    setChangeLogModalEntry(null);
+  }
+
+  function handleChangeLogDelete(entryId: string) {
+    handleProjectChange((prev) => {
+      const accounting = prev.accounting;
+      if (!accounting) return prev;
+      const updatedEntries = accounting.changeLog.filter((e) => e.id !== entryId);
+      return {
+        ...prev,
+        accounting: {
+          ...accounting,
+          changeLog: updatedEntries,
+        },
+      };
+    });
+    setChangeLogModalOpen(false);
+    setChangeLogModalEntry(null);
+  }
+
   // ─── Material Allocation ────────────────────────────────────────────
 
   function handleOpenAllocationModal(materialId: string | null) {
@@ -1001,6 +1048,20 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
                 // TODO: Open allocation editor modal
                 console.log('Edit allocation for task:', taskId);
               }}
+              onAddChange={() => {
+                setChangeLogModalEntry(null);
+                setChangeLogModalOpen(true);
+              }}
+              onEditChange={(entryId) => {
+                const entry = project.accounting?.changeLog.find((e) => e.id === entryId);
+                if (entry) {
+                  setChangeLogModalEntry(entry);
+                  setChangeLogModalOpen(true);
+                }
+              }}
+              onDeleteChange={(entryId) => {
+                handleChangeLogDelete(entryId);
+              }}
             />
           )}
           {viewMode === 'evm-report' && (
@@ -1104,6 +1165,20 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
           onClose={handleCloseActualsModal}
           onSave={handleActualsSave}
           onDelete={actualsModal.entry ? () => handleActualsDelete(actualsModal.entry!.id) : undefined}
+        />
+      )}
+
+      {/* Change Log Editor Modal */}
+      {changeLogModalOpen && (
+        <ChangeLogEditorModal
+          entry={changeLogModalEntry}
+          tasks={allTasks}
+          onClose={() => {
+            setChangeLogModalOpen(false);
+            setChangeLogModalEntry(null);
+          }}
+          onSave={handleChangeLogSave}
+          onDelete={changeLogModalEntry ? () => handleChangeLogDelete(changeLogModalEntry!.id) : undefined}
         />
       )}
 
