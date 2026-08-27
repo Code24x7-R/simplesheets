@@ -98,4 +98,58 @@ describe('WBSTreePanel', () => {
     const statusDot = statusDots[0] as HTMLElement;
     expect(() => fireEvent.click(statusDot)).not.toThrow();
   });
+
+  // ─── Phase 3: Context menu tests ─────────────────────────────────
+
+  it('shows context menu on right-click with Edit and Delete actions', () => {
+    const onEditTask = jest.fn();
+    const onDeleteTask = jest.fn();
+    render(
+      <WBSTreePanel
+        {...defaultProps}
+        onEditTask={onEditTask}
+        onDeleteTask={onDeleteTask}
+      />,
+    );
+
+    // Find a task name and right-click it
+    const taskName = screen.getByText('Planning');
+    fireEvent.contextMenu(taskName);
+
+    // Context menu should appear with Edit and Delete
+    expect(screen.getByText('Edit')).toBeTruthy();
+    expect(screen.getByText('Delete')).toBeTruthy();
+  });
+
+  it('calls onEditTask when Edit is clicked in context menu', () => {
+    const onEditTask = jest.fn();
+    render(
+      <WBSTreePanel
+        {...defaultProps}
+        onEditTask={onEditTask}
+      />,
+    );
+
+    const taskName = screen.getByText('Planning');
+    fireEvent.contextMenu(taskName);
+
+    fireEvent.click(screen.getByText('Edit'));
+    expect(onEditTask).toHaveBeenCalled();
+  });
+
+  it('calls onDeleteTask when Delete is clicked in context menu', () => {
+    const onDeleteTask = jest.fn();
+    render(
+      <WBSTreePanel
+        {...defaultProps}
+        onDeleteTask={onDeleteTask}
+      />,
+    );
+
+    const taskName = screen.getByText('Planning');
+    fireEvent.contextMenu(taskName);
+
+    fireEvent.click(screen.getByText('Delete'));
+    expect(onDeleteTask).toHaveBeenCalled();
+  });
 });

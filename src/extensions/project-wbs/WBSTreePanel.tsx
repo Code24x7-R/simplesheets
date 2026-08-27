@@ -13,8 +13,9 @@
  * - Inline selection sync with Gantt chart
  */
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import type { WBSTask } from '../types';
+import { ContextMenu, type ContextMenuItem } from './ContextMenu';
 
 const STATUS_CYCLE: Record<string, WBSTask['status']> = {
   not_started: 'in_progress',
@@ -78,11 +79,82 @@ export function WBSTreePanel({
   onTaskStatusChange,
 }: WBSTreePanelProps) {
   const [collapsedSet, setCollapsedSet] = useState<Set<string>>(new Set());
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+    taskId: string;
+  } | null>(null);
 
   const rows = useMemo(
     () => flattenTasks(tasks, 0, collapsedSet),
     [tasks, collapsedSet],
   );
+
+  const handleContextMenu = useCallback(
+    (e: React.MouseEvent, taskId: string) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setContextMenu({ x: e.clientX, y: e.clientY, taskId });
+    },
+    [],
+  );
+
+  const closeContextMenu = useCallback(() => {
+    setContextMenu(null);
+  }, []);
+
+  const contextMenuItems = useMemo((): ContextMenuItem[] => {
+    if (!contextMenu) return [];
+    const task = rows.find((r) => r.task.id === contextMenu.taskId)?.task;
+    if (!task) return [];
+
+    const items: ContextMenuItem[] = [];
+
+    if (onEditTask) {
+      items.push({
+        label: 'Edit',
+        icon: '✏️',
+        onClick: () => onEditTask(task.id),
+      });
+    }
+
+    items.push({
+      label: 'Add Child',
+      icon: '➕',
+      onClick: () => onAddChild(task.id),
+    });
+
+    if (onOpenDependencies) {
+      items.push({
+        label: 'Dependencies',
+        icon: '🔗',
+        onClick: () => onOpenDependencies(task.id),
+      });
+    }
+
+    if (onTaskStatusChange) {
+      const currentStatus = task.status ?? 'not_started';
+      const nextStatus = STATUS_CYCLE[currentStatus] ?? 'in_progress';
+      if (nextStatus !== currentStatus) {
+        items.push({
+          label: `Mark ${STATUS_LABELS[nextStatus] ?? nextStatus}`,
+          icon: '✓',
+          onClick: () => onTaskStatusChange(task.id, nextStatus),
+        });
+      }
+    }
+
+    if (onDeleteTask) {
+      items.push({
+        label: 'Delete',
+        icon: '🗑️',
+        danger: true,
+        onClick: () => onDeleteTask(task.id),
+      });
+    }
+
+    return items;
+  }, [contextMenu, rows, onEditTask, onAddChild, onOpenDependencies, onTaskStatusChange, onDeleteTask]);
 
   function toggleCollapse(taskId: string) {
     setCollapsedSet((prev) => {
@@ -141,6 +213,7 @@ export function WBSTreePanel({
                 isSelected ? 'bg-blue-50 border-l-2 border-l-blue-600' : 'hover:bg-gray-50'
               }`}
               onClick={() => onTaskSelect(task.id)}
+              onContextMenu={(e) => handleContextMenu(e, task.id)}
             >
               {/* Indentation + Expand/Collapse */}
               <div className="flex items-center" style={{ paddingLeft: `${depth * 16}px` }}>
@@ -248,6 +321,16 @@ export function WBSTreePanel({
       <div className="px-3 py-2 border-t border-gray-200 bg-gray-50 text-xs text-gray-500">
         {tasks.reduce((sum, t) => sum + 1 + t.children.length, 0)} tasks total
       </div>
+
+      {/* Context Menu */}
+      {contextMenu && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          items={contextMenuItems}
+          onClose={closeContextMenu}
+        />
+      )}
     </div>
   );
 }
