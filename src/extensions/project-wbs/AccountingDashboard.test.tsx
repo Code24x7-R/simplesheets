@@ -206,6 +206,36 @@ describe('AccountingDashboard', () => {
     expect(screen.getByText('dependency')).toBeTruthy();
   });
 
+  // ─── Phase 2: Tab grouping tests ────────────────────────────────
+
+  it('renders Planning and Execution section headers', () => {
+    const project = createProject({ wbs: [createTask()] });
+    render(<AccountingDashboard project={project} />);
+
+    // Section headers should be visible
+    expect(screen.getByText('Planning')).toBeTruthy();
+    expect(screen.getByText('Execution')).toBeTruthy();
+  });
+
+  it('groups Baseline, Allocated, Estimate under Planning', () => {
+    const project = createProject({ wbs: [createTask()] });
+    render(<AccountingDashboard project={project} />);
+
+    // All planning tabs should be visible
+    expect(screen.getByText(/📋 Baseline/)).toBeTruthy();
+    expect(screen.getByText(/💰 Allocated/)).toBeTruthy();
+    expect(screen.getByText(/📊 Estimate/)).toBeTruthy();
+  });
+
+  it('groups Actuals, Change Log under Execution', () => {
+    const project = createProject({ wbs: [createTask()] });
+    render(<AccountingDashboard project={project} />);
+
+    // All execution tabs should be visible
+    expect(screen.getByText(/🧾 Actuals/)).toBeTruthy();
+    expect(screen.getByText(/📝 Change Log/)).toBeTruthy();
+  });
+
   // ─── Phase 2: Task drill-down tests ─────────────────────────────
 
   it('calls onTaskClick when task name is clicked in Baseline tab', () => {

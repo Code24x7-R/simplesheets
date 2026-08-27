@@ -6,7 +6,7 @@
  * Table view of all project risks with sorting and filtering.
  */
 
-import { useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import type { Risk, RiskStatus, RiskCategory } from '../types';
 import { getRiskLevel } from './risks';
 
@@ -20,6 +20,7 @@ interface RiskRegisterProps {
 }
 
 type SortField = 'title' | 'category' | 'probability' | 'impact' | 'riskScore' | 'status';
+type GroupBy = 'none' | 'category' | 'status' | 'level';
 
 const STATUS_LABELS: Record<RiskStatus, string> = {
   identified: 'Identified',
@@ -53,6 +54,8 @@ export function RiskRegister({ risks, onRiskSelect, onRiskClose, onRiskEdit, onR
   const [sortAsc, setSortAsc] = useState(false);
   const [filterStatus, setFilterStatus] = useState<RiskStatus | 'all'>('all');
   const [filterCategory, setFilterCategory] = useState<RiskCategory | 'all'>('all');
+  const [groupBy, setGroupBy] = useState<GroupBy>('none');
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
 
   const filteredRisks = useMemo(() => {
     let result = risks;
@@ -86,6 +89,56 @@ export function RiskRegister({ risks, onRiskSelect, onRiskClose, onRiskEdit, onR
     }
   }
 
+  function toggleGroup(groupKey: string) {
+    setCollapsedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(groupKey)) {
+        next.delete(groupKey);
+      } else {
+        next.add(groupKey);
+      }
+      return next;
+    });
+  }
+
+  // Group risks when groupBy is set
+  const groupedRisks = useMemo(() => {
+    if (groupBy === 'none') return null;
+    const groups = new Map<string, { label: string; risks: Risk[] }>();
+    for (const risk of sortedRisks) {
+      let key: string;
+      let label: string;
+      switch (groupBy) {
+        case 'category':
+          key = risk.category;
+          label = CATEGORY_LABELS[risk.category];
+          break;
+        case 'status':
+          key = risk.status;
+          label = STATUS_LABELS[risk.status];
+          break;
+        case 'level': {
+          const level = getRiskLevel(risk.riskScore);
+          key = level;
+          label = level.charAt(0).toUpperCase() + level.slice(1);
+          break;
+        }
+        default:
+          continue;
+      }
+      if (!groups.has(key)) {
+        groups.set(key, { label, risks: [] });
+      }
+      groups.get(key)!.risks.push(risk);
+    }
+    return Array.from(groups.entries()).map(([key, { label, risks: groupRisks }]) => ({
+      key,
+      label,
+      risks: groupRisks,
+      count: groupRisks.length,
+    }));
+  }, [sortedRisks, groupBy]);
+
   return (
     <div className="border border-gray-200 rounded bg-white" data-testid="risk-register">
       {/* Filters */}
@@ -116,9 +169,22 @@ export function RiskRegister({ risks, onRiskSelect, onRiskClose, onRiskEdit, onR
             ))}
           </select>
         </label>
-        <span className="text-sm text-gray-500 ml-auto">
-          {sortedRisks.length} risk(s)
-        </span>
+        <div className="flex items-center gap-2 ml-auto">
+          <span className="text-sm text-gray-500">Group by:</span>
+          {(['none', 'category', 'status', 'level'] as GroupBy[]).map((g) => (
+            <button
+              key={g}
+              onClick={() => setGroupBy(g)}
+              className={`px-2 py-0.5 text-xs rounded ${
+                groupBy === g
+                  ? 'bg-blue-100 text-blue-700 font-medium'
+                  : 'text-gray-500 hover:bg-gray-100'
+              }`}
+            >
+              {g === 'none' ? 'None' : g.charAt(0).toUpperCase() + g.slice(1)}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Table */}
@@ -158,26 +224,93 @@ export function RiskRegister({ risks, onRiskSelect, onRiskClose, onRiskEdit, onR
             </tr>
           </thead>
           <tbody>
-            {sortedRisks.map((risk) => {
-              const level = getRiskLevel(risk.riskScore);
-              const isSelected = risk.id === selectedRiskId;
-              return (
-                <tr
-                  key={risk.id}
-                  className={`border-b border-gray-100 hover:bg-blue-50 cursor-pointer ${isSelected ? 'bg-blue-100' : ''}`}
-                  onClick={() => onRiskSelect?.(risk.id)}
-                >
-                  <td className="px-3 py-2 font-medium">{risk.title}</td>
-                  <td className="px-3 py-2">{CATEGORY_LABELS[risk.category]}</td>
-                  <td className="px-3 py-2 text-center">{risk.probability}</td>
-                  <td className="px-3 py-2 text-center">{risk.impact}</td>
-                  <td className="px-3 py-2 text-center">
-                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${LEVEL_COLORS[level]}`}>
-                      {risk.riskScore}
-                    </span>
-                  </td>
-                  <td className="px-3 py-2">{STATUS_LABELS[risk.status]}</td>
-                  <td className="px-3 py-2 text-center">
+            {groupedRisks
+              ? groupedRisks.map((group) => {
+                  const isCollapsed = collapsedGroups.has(group.key);
+                  return (
+                    <React.Fragment key={group.key}>
+                      {/* Group header */}
+                      <tr
+                        className="bg-gray-50 cursor-pointer"
+                        onClick={() => toggleGroup(group.key)}
+                      >
+                        <td colSpan={7} className="px-3 py-1.5 text-xs font-medium text-gray-600">
+                          <span className="mr-1">{isCollapsed ? '▶' : '▼'}</span>
+                          {group.label}
+                          <span className="ml-2 text-gray-400">({group.count} risk{group.count !== 1 ? 's' : ''})</span>
+                        </td>
+                      </tr>
+                      {/* Group rows */}
+                      {!isCollapsed &&
+                        group.risks.map((risk) => {
+                          const level = getRiskLevel(risk.riskScore);
+                          const isSelected = risk.id === selectedRiskId;
+                          return (
+                            <tr
+                              key={risk.id}
+                              className={`border-b border-gray-100 hover:bg-blue-50 cursor-pointer ${isSelected ? 'bg-blue-100' : ''}`}
+                              onClick={() => onRiskSelect?.(risk.id)}
+                            >
+                              <td className="px-3 py-2 font-medium pl-6">{risk.title}</td>
+                              <td className="px-3 py-2">{CATEGORY_LABELS[risk.category]}</td>
+                              <td className="px-3 py-2 text-center">{risk.probability}</td>
+                              <td className="px-3 py-2 text-center">{risk.impact}</td>
+                              <td className="px-3 py-2 text-center">
+                                <span className={`px-2 py-0.5 rounded text-xs font-medium ${LEVEL_COLORS[level]}`}>
+                                  {risk.riskScore}
+                                </span>
+                              </td>
+                              <td className="px-3 py-2">{STATUS_LABELS[risk.status]}</td>
+                              <td className="px-3 py-2 text-center">
+                                {onRiskEdit && (
+                                  <button
+                                    className="text-blue-600 hover:text-blue-800 text-xs mr-1"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      onRiskEdit(risk.id);
+                                    }}
+                                  >
+                                    Edit
+                                  </button>
+                                )}
+                                {onRiskClose && risk.status !== 'closed' && (
+                                  <button
+                                    className="text-gray-500 hover:text-gray-700 text-xs"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      onRiskClose(risk.id);
+                                    }}
+                                  >
+                                    Close
+                                  </button>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                    </React.Fragment>
+                  );
+                })
+              : sortedRisks.map((risk) => {
+                  const level = getRiskLevel(risk.riskScore);
+                  const isSelected = risk.id === selectedRiskId;
+                  return (
+                    <tr
+                      key={risk.id}
+                      className={`border-b border-gray-100 hover:bg-blue-50 cursor-pointer ${isSelected ? 'bg-blue-100' : ''}`}
+                      onClick={() => onRiskSelect?.(risk.id)}
+                    >
+                      <td className="px-3 py-2 font-medium">{risk.title}</td>
+                      <td className="px-3 py-2">{CATEGORY_LABELS[risk.category]}</td>
+                      <td className="px-3 py-2 text-center">{risk.probability}</td>
+                      <td className="px-3 py-2 text-center">{risk.impact}</td>
+                      <td className="px-3 py-2 text-center">
+                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${LEVEL_COLORS[level]}`}>
+                          {risk.riskScore}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2">{STATUS_LABELS[risk.status]}</td>
+                      <td className="px-3 py-2 text-center">
                     <div className="flex items-center justify-center gap-2">
                       {onRiskEdit && (
                         <button

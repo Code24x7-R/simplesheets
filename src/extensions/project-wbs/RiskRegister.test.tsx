@@ -99,4 +99,51 @@ describe('RiskRegister', () => {
     // Row 0 is header, Row 1 should be Scope Creep (highest score)
     expect(rows[1]).toHaveTextContent('Scope Creep');
   });
+
+  // ─── Phase 2: Grouping tests ──────────────────────────────────────
+
+  it('renders grouping selector', () => {
+    render(<RiskRegister risks={risks} />);
+    expect(screen.getByText('Group by:')).toBeTruthy();
+  });
+
+  it('groups risks by category', () => {
+    render(<RiskRegister risks={risks} />);
+
+    // Select category grouping (click the button in the filter area)
+    const groupButtons = screen.getAllByText('Category');
+    fireEvent.click(groupButtons[0]);
+
+    // Should show group headers for each category (in table body)
+    // Use getAllByText since labels may appear in both selector and header
+    expect(screen.getAllByText('Cost').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('Resource').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('Scope').length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('groups risks by status', () => {
+    render(<RiskRegister risks={risks} />);
+
+    // Select status grouping (click the button in the filter area)
+    const groupButtons = screen.getAllByText('Status');
+    fireEvent.click(groupButtons[0]);
+
+    // Should show group headers for each status
+    expect(screen.getAllByText('Identified').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('Mitigating').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('Closed').length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('shows risk count per group', () => {
+    render(<RiskRegister risks={risks} />);
+
+    // Select category grouping (click the button in the filter area)
+    const groupButtons = screen.getAllByText('Category');
+    fireEvent.click(groupButtons[0]);
+
+    // Each group should show count (all have 1 risk each)
+    // The count is shown as "(1 risk)" in the group header
+    const counts = screen.getAllByText(/\d+ risk/);
+    expect(counts.length).toBe(3); // 3 categories with 1 risk each
+  });
 });
