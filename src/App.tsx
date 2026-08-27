@@ -2655,6 +2655,7 @@ function WorkbookView() {
           onInsertColRight={handleInsertColRight}
           onFormulaWizard={() => handleFxClick(getActiveCellValue())}
           onChart={handleInsertChart}
+          onOpenNamedRanges={handleOpenNamedRanges}
           onToggleBold={toggleBoldStyle}
           onToggleItalic={toggleItalicStyle}
           onToggleUnderline={toggleUnderlineStyle}
@@ -2755,6 +2756,8 @@ function WorkbookView() {
         onCrossSheetRefChange={handleCrossSheetRefChange}
         onFxClick={handleFxClick}
         onCrossSheetClick={handleNavigateToCrossSheet}
+        namedRanges={workbook.namedRanges}
+        activeSheetId={sheet.id}
       />
 
       {/* Cross-sheet navigation tip */}

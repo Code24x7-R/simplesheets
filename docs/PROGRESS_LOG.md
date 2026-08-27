@@ -6,6 +6,15 @@
 
 ---
 
+### 2026-08-27 [FEATURE] Named Ranges — Insert menu item + formula highlight
+- **What**: Added a "Named Ranges…" item to the Insert menu (with Tag icon) so the dialog is reachable from both the toolbar and the menu bar. Also extended formula range highlighting to resolve named range references — when editing a formula that references a named range (e.g. `=SUM(SalesData)`), the cells the name points to are highlighted on the grid in the same manner as regular A1 range references.
+- **Changes**:
+  - **MenuBar**: Added `onOpenNamedRanges?: () => void` prop and a `Tag` icon import. Added `'insert-named-ranges'` to the actions map and a menu item in `insertItems`.
+  - **App.tsx**: Wired `onOpenNamedRanges={handleOpenNamedRanges}` to MenuBar. Passed `namedRanges={workbook.namedRanges}` and `activeSheetId={sheet.id}` to FormulaBar.
+  - **FormulaBar**: Added `namedRanges` and `activeSheetId` props. Extended `walkAstForHighlights` to handle `name_ref` nodes — resolves each name via `resolveNameToAST` (respecting scope and case-insensitivity) and emits a `HighlightedRange` for same-sheet resolutions. Cross-sheet named-range refs are skipped (matching regular cross-sheet behavior). Stabilized the `namedRanges` dependency with a JSON serialization key to avoid infinite render loops.
+  - **Tests**: Added 9 new `extractHighlights` named-range cases (workbook/sheet-scoped, mixed formula, unknown name, cross-sheet, case-insensitive, no-ranges). Added a MenuBar test asserting the Insert menu item opens the dialog.
+- **Results**: All App/FormulaBar/MenuBar/NamedRangesModal suites green, lint clean, type-check clean.
+
 ### 2026-08-26 [FEATURE] Named Ranges dialog — range picker + delete in edit form
 - **What**: Improved the Named Ranges dialog workflow by adding a visual range picker (reusing the established point-mode pattern from ChartDialog/FormulaWizard) and a Delete button in the edit form.
 - **Changes**:

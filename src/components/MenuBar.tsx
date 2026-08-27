@@ -51,6 +51,7 @@ import {
   Keyboard,
   Info,
   FolderKanban,
+  Tag,
 } from 'lucide-react';
 import {
   BorderAll,
@@ -107,6 +108,7 @@ interface MenuBarProps {
   onInsertColRight: () => void;
   onFormulaWizard: () => void;
   onChart: () => void;
+  onOpenNamedRanges?: () => void;
   // Format menu
   onToggleBold: () => void;
   onToggleItalic: () => void;
@@ -197,6 +199,7 @@ export function MenuBar(props: MenuBarProps) {
         'insert-col-right': props.onInsertColRight,
         'insert-formula-wizard': props.onFormulaWizard,
         'insert-chart': props.onChart,
+        'insert-named-ranges': () => props.onOpenNamedRanges?.(),
         // Format
 
         'format-bold': props.onToggleBold,
@@ -358,6 +361,7 @@ export function MenuBar(props: MenuBarProps) {
     { id: 'sep-insert-2', label: '', separator: true },
     { id: 'insert-formula-wizard', label: 'Formula Wizard…', icon: Wand2, shortcut: 'Ctrl+Shift+F' },
     { id: 'insert-chart', label: 'Chart…', icon: BarChart3 },
+    { id: 'insert-named-ranges', label: 'Named Ranges…', icon: Tag },
   ];
 
   const formatItems: MenuItem[] = [

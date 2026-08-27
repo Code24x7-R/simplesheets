@@ -9,6 +9,8 @@ import type { ReferenceFormat } from '../hooks/useReferenceFormat';
 import { colToLetter } from '../types';
 import { FormulaHighlightOverlay, computeHighlightSegments } from './FormulaHighlightOverlay';
 import { HIGHLIGHT_COLORS } from '../utils/highlightColors';
+import type { NamedRange } from '../types';
+import { buildNamedRangeMap, resolveNameToAST } from '../utils/namedRangeUtils';
 
 /** Represents a highlighted range with a color index. */
 export interface HighlightedRange {
@@ -73,6 +75,10 @@ export interface FormulaBarProps {
   onFxClick?: (currentValue: string) => void;
   /** Callback when a cross-sheet reference is clicked in the formula bar. */
   onCrossSheetClick?: (sheetName: string, cellRef: string) => void;
+  /** Named range definitions — used to resolve name_ref nodes to ranges for highlighting. */
+  namedRanges?: NamedRange[];
+  /** ID of the currently active sheet (for sheet-scoped named range resolution). */
+  activeSheetId?: string;
 }
 
 /**
@@ -80,8 +86,16 @@ export interface FormulaBarProps {
  * Cross-sheet references (those with a sheetName) are skipped — they
  * reference cells on a different sheet and should not be highlighted
  * on the current sheet.
+ * Named range references (name_ref) are resolved via the provided map
+ * and highlighted if they resolve to a same-sheet range.
  */
-function walkAstForHighlights(node: ASTNode, ranges: HighlightedRange[], colorIndex: { value: number }): void {
+function walkAstForHighlights(
+  node: ASTNode,
+  ranges: HighlightedRange[],
+  colorIndex: { value: number },
+  namedRangeMap: Map<string, NamedRange>,
+  activeSheetId?: string,
+): void {
   switch (node.type) {
     case 'cell':
       if (node.sheetName) break; // cross-sheet ref — don't highlight on current sheet
@@ -109,15 +123,45 @@ function walkAstForHighlights(node: ASTNode, ranges: HighlightedRange[], colorIn
       });
       colorIndex.value++;
       break;
+    case 'name_ref': {
+      // Resolve the named range to its underlying cell/range AST.
+      const resolved = resolveNameToAST(node.name, namedRangeMap, activeSheetId);
+      // Only highlight if it resolves to a same-sheet cell/range (skip cross-sheet).
+      if (resolved?.type === 'cell' && !resolved.sheetName) {
+        ranges.push({
+          startRow: resolved.row,
+          startCol: resolved.col,
+          endRow: resolved.row,
+          endCol: resolved.col,
+          colorIndex: colorIndex.value % HIGHLIGHT_COLORS.length,
+          startPos: node.pos,
+          endPos: node.endPos,
+        });
+        colorIndex.value++;
+      } else if (resolved?.type === 'range' && !resolved.sheetName) {
+        ranges.push({
+          startRow: Math.min(resolved.start.row, resolved.end.row),
+          startCol: Math.min(resolved.start.col, resolved.end.col),
+          endRow: Math.max(resolved.start.row, resolved.end.row),
+          endCol: Math.max(resolved.start.col, resolved.end.col),
+          colorIndex: colorIndex.value % HIGHLIGHT_COLORS.length,
+          startPos: node.pos,
+          endPos: node.endPos,
+        });
+        colorIndex.value++;
+      }
+      // If the name is unresolved or resolves to a cross-sheet ref, skip it.
+      break;
+    }
     case 'binary':
-      walkAstForHighlights(node.left, ranges, colorIndex);
-      walkAstForHighlights(node.right, ranges, colorIndex);
+      walkAstForHighlights(node.left, ranges, colorIndex, namedRangeMap, activeSheetId);
+      walkAstForHighlights(node.right, ranges, colorIndex, namedRangeMap, activeSheetId);
       break;
     case 'unary':
-      walkAstForHighlights(node.operand, ranges, colorIndex);
+      walkAstForHighlights(node.operand, ranges, colorIndex, namedRangeMap, activeSheetId);
       break;
     case 'function':
-      node.args.forEach(arg => walkAstForHighlights(arg, ranges, colorIndex));
+      node.args.forEach(arg => walkAstForHighlights(arg, ranges, colorIndex, namedRangeMap, activeSheetId));
       break;
   }
 }
@@ -176,14 +220,25 @@ export function findCrossSheetRefAtCursor(formula: string, cursorPos: number): {
  * Extracts ranges from a formula string for highlighting.
  * Cross-sheet references (with sheetName) are excluded — they should not
  * be highlighted on the current sheet.
+ * Named range references (name_ref) are resolved via the provided map
+ * and highlighted if they resolve to a same-sheet range.
+ *
+ * @param formula - The formula string (e.g., "=SUM(SalesData)+A1").
+ * @param namedRanges - Array of NamedRange definitions (defaults to []).
+ * @param activeSheetId - ID of the currently active sheet (for scope resolution).
  */
-export function extractHighlights(formula: string): HighlightedRange[] {
+export function extractHighlights(
+  formula: string,
+  namedRanges: NamedRange[] = [],
+  activeSheetId?: string,
+): HighlightedRange[] {
   if (!formula || !formula.startsWith('=')) return [];
 
   try {
     const ast = parseFormula(formula.slice(1));
     const ranges: HighlightedRange[] = [];
-    walkAstForHighlights(ast, ranges, { value: 0 });
+    const namedRangeMap = buildNamedRangeMap(namedRanges);
+    walkAstForHighlights(ast, ranges, { value: 0 }, namedRangeMap, activeSheetId);
     return ranges;
   } catch {
     return [];
@@ -266,6 +321,8 @@ export const FormulaBar = forwardRef<FormulaBarHandle, FormulaBarProps>(function
   onCrossSheetRefChange,
   onFxClick,
   onCrossSheetClick,
+  namedRanges = [],
+  activeSheetId,
 }, ref) {
   const [expanded, setExpanded] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -301,13 +358,27 @@ export const FormulaBar = forwardRef<FormulaBarHandle, FormulaBarProps>(function
     onRawChange(newValue, caretPos);
   }, [onRawChange]);
 
+  // Stabilize the namedRanges dependency: the parent passes a new array
+  // reference on every render (derived from workbook.namedRanges), which
+  // would cause this memo to recompute every time — and the effect below
+  // would call setHighlightedRanges → re-render → infinite loop.
+  // Serializing the *content* gives us a stable key when nothing changed.
+  const namedRangesKey = useMemo(
+    () =>
+      JSON.stringify(
+        namedRanges.map(nr => ({ n: nr.name, r: nr.reference, s: nr.scope, id: nr.sheetId })),
+      ),
+    [namedRanges],
+  );
+
   // Compute highlights when formula changes
   const highlights = useMemo(() => {
     if (value && isEditing) {
-      return extractHighlights(value);
+      return extractHighlights(value, namedRanges, activeSheetId);
     }
     return [];
-  }, [value, isEditing]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value, isEditing, namedRangesKey, activeSheetId]);
 
   // Detect cross-sheet reference under cursor
   const crossSheetRef = useMemo(() => {

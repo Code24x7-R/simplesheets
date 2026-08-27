@@ -1,5 +1,20 @@
 import { extractHighlights, findCrossSheetRefAtCursor } from './FormulaBar';
 import { computeHighlightSegments } from './FormulaHighlightOverlay';
+import type { NamedRange } from '../types';
+
+// Test fixtures for named ranges.
+const salesRange: NamedRange = {
+  id: 'nr-1',
+  name: 'SalesData',
+  reference: 'A1:B5',
+  scope: 'workbook',
+};
+const taxRate: NamedRange = {
+  id: 'nr-2',
+  name: 'Tax_Rate',
+  reference: 'C10',
+  scope: 'workbook',
+};
 
 describe('extractHighlights — cross-sheet reference handling (B-020)', () => {
   it('returns ranges for same-sheet formula', () => {
@@ -158,5 +173,100 @@ describe('computeHighlightSegments — character coverage (B-022)', () => {
 
   it('returns null for non-formula', () => {
     expect(computeHighlightSegments('hello', true)).toBeNull();
+  });
+});
+
+describe('extractHighlights — named range references (B-024)', () => {
+  it('resolves a workbook-scoped named range to its range', () => {
+    const highlights = extractHighlights('=SUM(SalesData)', [salesRange]);
+    expect(highlights.length).toBe(1);
+    expect(highlights[0]).toEqual(expect.objectContaining({
+      startRow: 0,
+      startCol: 0,
+      endRow: 4,
+      endCol: 1,
+      colorIndex: 0,
+    }));
+  });
+
+  it('resolves a named range that points to a single cell', () => {
+    const highlights = extractHighlights('=Tax_Rate*2', [taxRate]);
+    expect(highlights.length).toBe(1);
+    expect(highlights[0]).toEqual(expect.objectContaining({
+      startRow: 9,
+      startCol: 2,
+      endRow: 9,
+      endCol: 2,
+      colorIndex: 0,
+    }));
+  });
+
+  it('highlights both named ranges and regular ranges in a mixed formula', () => {
+    const highlights = extractHighlights('=SUM(SalesData)+A1', [salesRange]);
+    expect(highlights.length).toBe(2);
+    // First: SalesData range (A1:B5)
+    expect(highlights[0]).toEqual(expect.objectContaining({
+      startRow: 0, startCol: 0, endRow: 4, endCol: 1, colorIndex: 0,
+    }));
+    // Second: A1 cell
+    expect(highlights[1]).toEqual(expect.objectContaining({
+      startRow: 0, startCol: 0, endRow: 0, endCol: 0, colorIndex: 1,
+    }));
+  });
+
+  it('does NOT highlight an unknown name', () => {
+    const highlights = extractHighlights('=SUM(Nothing)', [salesRange]);
+    expect(highlights.length).toBe(0);
+  });
+
+  it('does NOT highlight a cross-sheet named range reference', () => {
+    const crossSheet: NamedRange = {
+      id: 'nr-cross',
+      name: 'RemoteData',
+      reference: 'Sheet2!A1:B5',
+      scope: 'workbook',
+    };
+    const highlights = extractHighlights('=SUM(RemoteData)', [crossSheet]);
+    expect(highlights.length).toBe(0);
+  });
+
+  it('resolves sheet-scoped name when active sheet matches', () => {
+    const sheetScoped: NamedRange = {
+      id: 'nr-sheet',
+      name: 'LocalData',
+      reference: 'D1:D10',
+      scope: 'sheet',
+      sheetId: 'sheet-1',
+    };
+    const highlights = extractHighlights('=SUM(LocalData)', [sheetScoped], 'sheet-1');
+    expect(highlights.length).toBe(1);
+    expect(highlights[0]).toEqual(expect.objectContaining({
+      startRow: 0, startCol: 3, endRow: 9, endCol: 3,
+    }));
+  });
+
+  it('does NOT resolve sheet-scoped name when active sheet does not match', () => {
+    const sheetScoped: NamedRange = {
+      id: 'nr-sheet',
+      name: 'LocalData',
+      reference: 'D1:D10',
+      scope: 'sheet',
+      sheetId: 'sheet-1',
+    };
+    const highlights = extractHighlights('=SUM(LocalData)', [sheetScoped], 'sheet-2');
+    expect(highlights.length).toBe(0);
+  });
+
+  it('is case-insensitive for named range lookup', () => {
+    const highlights = extractHighlights('=SUM(salesdata)', [salesRange]);
+    expect(highlights.length).toBe(1);
+    expect(highlights[0]).toEqual(expect.objectContaining({
+      startRow: 0, startCol: 0, endRow: 4, endCol: 1,
+    }));
+  });
+
+  it('returns empty when no named ranges are provided', () => {
+    const highlights = extractHighlights('=SUM(SalesData)');
+    expect(highlights.length).toBe(0);
   });
 });

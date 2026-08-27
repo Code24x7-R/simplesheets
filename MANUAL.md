@@ -406,6 +406,14 @@ Once defined, use the name anywhere a range is expected:
 
 Sheet-scoped names take priority over workbook-scoped names of the same name.
 
+### Highlighted References While Editing
+
+When you edit a formula that references a named range (in the formula bar), the
+cells the name points to are highlighted on the grid — just like regular A1 range
+references. Each reference gets a colored box so you can see exactly which cells
+are included. Cross-sheet named ranges are not highlighted (matching the behavior
+of cross-sheet A1 references).
+
 ---
 
 ## Keyboard Shortcuts

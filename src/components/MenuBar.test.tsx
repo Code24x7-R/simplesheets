@@ -37,6 +37,7 @@ describe('MenuBar', () => {
     onInsertColRight: jest.fn(),
     onFormulaWizard: jest.fn(),
     onChart: jest.fn(),
+    onOpenNamedRanges: jest.fn(),
     onToggleBold: jest.fn(),
     onToggleItalic: jest.fn(),
     onToggleUnderline: jest.fn(),
@@ -193,6 +194,16 @@ describe('MenuBar', () => {
     expect(chartItem).toBeTruthy();
     fireEvent.click(chartItem);
     expect(onChart).toHaveBeenCalledTimes(1);
+  });
+
+  it('Insert menu shows Named Ranges option', () => {
+    const onOpenNamedRanges = jest.fn();
+    render(<MenuBar {...defaultProps} onOpenNamedRanges={onOpenNamedRanges} />);
+    fireEvent.click(screen.getByText('Insert'));
+    const namedRangesItem = screen.getByText('Named Ranges…');
+    expect(namedRangesItem).toBeTruthy();
+    fireEvent.click(namedRangesItem);
+    expect(onOpenNamedRanges).toHaveBeenCalledTimes(1);
   });
 
   it('Format menu shows Bold, Italic, Underline items', () => {
