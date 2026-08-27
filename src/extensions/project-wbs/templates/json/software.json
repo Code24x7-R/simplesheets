@@ -1,20 +1,73 @@
 {
   "id": "software",
   "name": "Software Development",
-  "description": "Full software development lifecycle from requirements to deployment.",
+  "description": "Full software development lifecycle from requirements to deployment. Demonstrates sprints, code reviews, and technical risk tracking.",
   "category": "Software",
   "startDate": "2026-03-01",
   "endDate": "2026-04-13",
+  "calendar": {
+    "workingDays": [1, 2, 3, 4, 5],
+    "holidays": [],
+    "hoursPerDay": 8
+  },
   "tasks": [
     {
       "id": "req",
       "name": "Requirements",
       "startDate": "2026-03-01",
       "endDate": "2026-03-06",
+      "description": "Gather and document requirements",
+      "progress": 100,
+      "status": "done",
+      "cost": 15000,
       "children": [
-        { "id": "req-1", "name": "Stakeholder analysis", "startDate": "2026-03-01", "endDate": "2026-03-02" },
-        { "id": "req-2", "name": "User stories", "startDate": "2026-03-03", "endDate": "2026-03-05" },
-        { "id": "req-3", "name": "Requirements sign-off", "startDate": "2026-03-06", "endDate": "2026-03-06", "isMilestone": true }
+        {
+          "id": "req-1",
+          "name": "Stakeholder analysis",
+          "startDate": "2026-03-01",
+          "endDate": "2026-03-02",
+          "description": "Identify and interview stakeholders",
+          "progress": 100,
+          "status": "done",
+          "resourceId": "pm",
+          "cost": 4000,
+          "effort": 16,
+          "effortUnit": "hours"
+        },
+        {
+          "id": "req-2",
+          "name": "User stories",
+          "startDate": "2026-03-03",
+          "endDate": "2026-03-05",
+          "description": "Write user stories and acceptance criteria",
+          "progress": 100,
+          "status": "done",
+          "resourceId": "pm",
+          "cost": 6000,
+          "effort": 24,
+          "effortUnit": "hours",
+          "dependencies": ["req-1"]
+        },
+        {
+          "id": "req-3",
+          "name": "Requirements sign-off",
+          "startDate": "2026-03-06",
+          "endDate": "2026-03-06",
+          "description": "Stakeholder approval of requirements",
+          "isMilestone": true,
+          "progress": 100,
+          "status": "done",
+          "dependencies": ["req-2"],
+          "approvalGates": [
+            {
+              "gateType": "approval",
+              "approved": true,
+              "approvedBy": "Product Owner",
+              "approvedDate": "2026-03-06",
+              "notes": "All requirements approved"
+            }
+          ]
+        }
       ]
     },
     {
@@ -22,11 +75,64 @@
       "name": "Design",
       "startDate": "2026-03-07",
       "endDate": "2026-03-12",
+      "description": "System and UI design",
+      "progress": 100,
+      "status": "done",
+      "cost": 22000,
       "children": [
-        { "id": "des-1", "name": "System architecture", "startDate": "2026-03-07", "endDate": "2026-03-09" },
-        { "id": "des-2", "name": "UI/UX design", "startDate": "2026-03-07", "endDate": "2026-03-10" },
-        { "id": "des-3", "name": "Database design", "startDate": "2026-03-10", "endDate": "2026-03-11" },
-        { "id": "des-4", "name": "Design review", "startDate": "2026-03-12", "endDate": "2026-03-12", "isMilestone": true }
+        {
+          "id": "des-1",
+          "name": "System architecture",
+          "startDate": "2026-03-07",
+          "endDate": "2026-03-09",
+          "description": "Design system architecture and APIs",
+          "progress": 100,
+          "status": "done",
+          "resourceId": "arch",
+          "cost": 8000,
+          "effort": 24,
+          "effortUnit": "hours",
+          "dependencies": ["req-3"]
+        },
+        {
+          "id": "des-2",
+          "name": "UI/UX design",
+          "startDate": "2026-03-07",
+          "endDate": "2026-03-10",
+          "description": "Create wireframes and mockups",
+          "progress": 100,
+          "status": "done",
+          "resourceId": "dev1",
+          "cost": 6000,
+          "effort": 24,
+          "effortUnit": "hours",
+          "dependencies": ["req-3"]
+        },
+        {
+          "id": "des-3",
+          "name": "Database design",
+          "startDate": "2026-03-10",
+          "endDate": "2026-03-11",
+          "description": "Design database schema",
+          "progress": 100,
+          "status": "done",
+          "resourceId": "arch",
+          "cost": 5000,
+          "effort": 16,
+          "effortUnit": "hours",
+          "dependencies": ["des-1"]
+        },
+        {
+          "id": "des-4",
+          "name": "Design review",
+          "startDate": "2026-03-12",
+          "endDate": "2026-03-12",
+          "description": "Team design review and approval",
+          "isMilestone": true,
+          "progress": 100,
+          "status": "done",
+          "dependencies": ["des-2", "des-3"]
+        }
       ]
     },
     {
@@ -34,10 +140,53 @@
       "name": "Development",
       "startDate": "2026-03-13",
       "endDate": "2026-03-27",
+      "description": "Sprint-based development",
+      "progress": 70,
+      "status": "in_progress",
+      "cost": 45000,
       "children": [
-        { "id": "code-1", "name": "Sprint 1: Core features", "startDate": "2026-03-13", "endDate": "2026-03-17" },
-        { "id": "code-2", "name": "Sprint 2: API layer", "startDate": "2026-03-18", "endDate": "2026-03-22" },
-        { "id": "code-3", "name": "Sprint 3: UI polish", "startDate": "2026-03-23", "endDate": "2026-03-27" }
+        {
+          "id": "code-1",
+          "name": "Sprint 1: Core features",
+          "startDate": "2026-03-13",
+          "endDate": "2026-03-17",
+          "description": "Implement core business logic",
+          "progress": 100,
+          "status": "done",
+          "resourceId": "dev1",
+          "cost": 15000,
+          "effort": 40,
+          "effortUnit": "hours",
+          "dependencies": ["des-4"]
+        },
+        {
+          "id": "code-2",
+          "name": "Sprint 2: API layer",
+          "startDate": "2026-03-18",
+          "endDate": "2026-03-22",
+          "description": "Build REST API and integrations",
+          "progress": 80,
+          "status": "in_progress",
+          "resourceId": "dev2",
+          "cost": 15000,
+          "effort": 40,
+          "effortUnit": "hours",
+          "dependencies": ["code-1"]
+        },
+        {
+          "id": "code-3",
+          "name": "Sprint 3: UI polish",
+          "startDate": "2026-03-23",
+          "endDate": "2026-03-27",
+          "description": "Frontend refinement and bug fixes",
+          "progress": 20,
+          "status": "in_progress",
+          "resourceId": "dev1",
+          "cost": 15000,
+          "effort": 40,
+          "effortUnit": "hours",
+          "dependencies": ["code-2"]
+        }
       ]
     },
     {
@@ -45,10 +194,53 @@
       "name": "QA & Testing",
       "startDate": "2026-04-03",
       "endDate": "2026-04-09",
+      "description": "Quality assurance and user acceptance",
+      "progress": 0,
+      "status": "not_started",
+      "cost": 12000,
       "children": [
-        { "id": "qa-1", "name": "Unit testing", "startDate": "2026-04-03", "endDate": "2026-04-05" },
-        { "id": "qa-2", "name": "Integration testing", "startDate": "2026-04-06", "endDate": "2026-04-07" },
-        { "id": "qa-3", "name": "UAT", "startDate": "2026-04-08", "endDate": "2026-04-09" }
+        {
+          "id": "qa-1",
+          "name": "Unit testing",
+          "startDate": "2026-04-03",
+          "endDate": "2026-04-05",
+          "description": "Write and run unit tests",
+          "progress": 0,
+          "status": "not_started",
+          "resourceId": "qa",
+          "cost": 4000,
+          "effort": 24,
+          "effortUnit": "hours",
+          "dependencies": ["code-3"]
+        },
+        {
+          "id": "qa-2",
+          "name": "Integration testing",
+          "startDate": "2026-04-06",
+          "endDate": "2026-04-07",
+          "description": "Test API integrations and workflows",
+          "progress": 0,
+          "status": "not_started",
+          "resourceId": "qa",
+          "cost": 4000,
+          "effort": 16,
+          "effortUnit": "hours",
+          "dependencies": ["qa-1"]
+        },
+        {
+          "id": "qa-3",
+          "name": "UAT",
+          "startDate": "2026-04-08",
+          "endDate": "2026-04-09",
+          "description": "User acceptance testing with stakeholders",
+          "progress": 0,
+          "status": "not_started",
+          "resourceId": "pm",
+          "cost": 4000,
+          "effort": 16,
+          "effortUnit": "hours",
+          "dependencies": ["qa-2"]
+        }
       ]
     },
     {
@@ -56,10 +248,53 @@
       "name": "Deployment",
       "startDate": "2026-04-10",
       "endDate": "2026-04-13",
+      "description": "Production deployment and monitoring",
+      "progress": 0,
+      "status": "not_started",
+      "cost": 8000,
       "children": [
-        { "id": "dep-1", "name": "Staging deployment", "startDate": "2026-04-10", "endDate": "2026-04-10" },
-        { "id": "dep-2", "name": "Production cutover", "startDate": "2026-04-11", "endDate": "2026-04-11" },
-        { "id": "dep-3", "name": "Post-launch monitoring", "startDate": "2026-04-12", "endDate": "2026-04-13" }
+        {
+          "id": "dep-1",
+          "name": "Staging deployment",
+          "startDate": "2026-04-10",
+          "endDate": "2026-04-10",
+          "description": "Deploy to staging environment",
+          "progress": 0,
+          "status": "not_started",
+          "resourceId": "arch",
+          "cost": 2000,
+          "effort": 8,
+          "effortUnit": "hours",
+          "dependencies": ["qa-3"]
+        },
+        {
+          "id": "dep-2",
+          "name": "Production cutover",
+          "startDate": "2026-04-11",
+          "endDate": "2026-04-11",
+          "description": "Deploy to production",
+          "progress": 0,
+          "status": "not_started",
+          "resourceId": "arch",
+          "cost": 3000,
+          "effort": 8,
+          "effortUnit": "hours",
+          "dependencies": ["dep-1"]
+        },
+        {
+          "id": "dep-3",
+          "name": "Post-launch monitoring",
+          "startDate": "2026-04-12",
+          "endDate": "2026-04-13",
+          "description": "Monitor production for issues",
+          "progress": 0,
+          "status": "not_started",
+          "resourceId": "dev1",
+          "cost": 3000,
+          "effort": 16,
+          "effortUnit": "hours",
+          "dependencies": ["dep-2"]
+        }
       ]
     },
     {
@@ -67,7 +302,11 @@
       "name": "v1.0 Release",
       "startDate": "2026-04-13",
       "endDate": "2026-04-13",
-      "isMilestone": true
+      "description": "Production release milestone",
+      "isMilestone": true,
+      "progress": 0,
+      "status": "not_started",
+      "dependencies": ["dep-3"]
     }
   ],
   "risks": [
@@ -77,7 +316,17 @@
       "category": "technical",
       "probability": 4,
       "impact": 3,
-      "mitigationPlan": "Regular code reviews and refactoring sprints"
+      "status": "mitigating",
+      "ownerId": "arch",
+      "taskId": "coding",
+      "mitigationPlan": "Regular code reviews and refactoring sprints",
+      "contingencyPlan": "Allocate 20% of sprint capacity to debt reduction",
+      "mitigationCost": 3000,
+      "triggerCondition": "Code complexity metrics exceed threshold",
+      "residualProbability": 2,
+      "residualImpact": 2,
+      "identifiedDate": "2026-03-01",
+      "reviewDate": "2026-03-15"
     },
     {
       "id": "r2",
@@ -85,7 +334,17 @@
       "category": "resource",
       "probability": 2,
       "impact": 5,
-      "mitigationPlan": "Cross-train team, maintain documentation"
+      "status": "monitoring",
+      "ownerId": "pm",
+      "taskId": "coding",
+      "mitigationPlan": "Cross-train team, maintain documentation",
+      "contingencyPlan": "Engage contractor from approved vendor list",
+      "mitigationCost": 5000,
+      "triggerCondition": "Developer gives notice or is absent >5 days",
+      "residualProbability": 1,
+      "residualImpact": 4,
+      "identifiedDate": "2026-03-01",
+      "reviewDate": "2026-03-15"
     },
     {
       "id": "r3",
@@ -93,14 +352,529 @@
       "category": "technical",
       "probability": 3,
       "impact": 4,
-      "mitigationPlan": "Continuous integration, early testing"
+      "status": "mitigating",
+      "ownerId": "arch",
+      "taskId": "qa-sdlc",
+      "mitigationPlan": "Continuous integration, early testing",
+      "contingencyPlan": "Rollback plan and manual workaround procedures",
+      "mitigationCost": 2000,
+      "triggerCondition": "Integration test failure rate >10%",
+      "residualProbability": 2,
+      "residualImpact": 3,
+      "identifiedDate": "2026-03-01",
+      "reviewDate": "2026-03-15"
     }
   ],
   "resources": [
-    { "id": "pm", "name": "Project Manager", "role": "PM", "costRate": 150, "color": "#3B82F6" },
-    { "id": "arch", "name": "Tech Lead", "role": "Architecture", "costRate": 170, "color": "#8B5CF6" },
-    { "id": "dev1", "name": "Senior Dev", "role": "Dev", "costRate": 150, "color": "#10B981" },
-    { "id": "dev2", "name": "Junior Dev", "role": "Dev", "costRate": 100, "color": "#06B6D4" },
-    { "id": "qa", "name": "QA Engineer", "role": "QA", "costRate": 110, "color": "#F59E0B" }
+    {
+      "id": "pm",
+      "name": "Project Manager",
+      "role": "PM",
+      "costRate": 150,
+      "costCurrency": "USD",
+      "availability": 100,
+      "color": "#3B82F6"
+    },
+    {
+      "id": "arch",
+      "name": "Tech Lead",
+      "role": "Architecture",
+      "costRate": 170,
+      "costCurrency": "USD",
+      "availability": 100,
+      "color": "#8B5CF6"
+    },
+    {
+      "id": "dev1",
+      "name": "Senior Dev",
+      "role": "Dev",
+      "costRate": 150,
+      "costCurrency": "USD",
+      "availability": 100,
+      "color": "#10B981"
+    },
+    {
+      "id": "dev2",
+      "name": "Junior Dev",
+      "role": "Dev",
+      "costRate": 100,
+      "costCurrency": "USD",
+      "availability": 100,
+      "color": "#06B6D4"
+    },
+    {
+      "id": "qa",
+      "name": "QA Engineer",
+      "role": "QA",
+      "costRate": 110,
+      "costCurrency": "USD",
+      "availability": 100,
+      "color": "#F59E0B"
+    }
+  ],
+  "materials": [
+    {
+      "id": "mat-1",
+      "name": "Cloud Infrastructure",
+      "classification": "opex",
+      "unit": "month",
+      "unitCost": 0,
+      "quantity": 1,
+      "vendor": "AWS",
+      "billingPeriod": "monthly",
+      "rentalRate": 500,
+      "leaseStartDate": "2026-03-01",
+      "leaseEndDate": "2026-06-30",
+      "currency": "USD",
+      "status": "in-use"
+    },
+    {
+      "id": "mat-2",
+      "name": "Development Laptops",
+      "classification": "capex",
+      "unit": "each",
+      "unitCost": 2500,
+      "quantity": 4,
+      "vendor": "Apple",
+      "depreciationMethod": "straight-line",
+      "usefulLifeMonths": 36,
+      "salvageValue": 500,
+      "currency": "USD",
+      "status": "delivered"
+    },
+    {
+      "id": "mat-3",
+      "name": "Software Licenses",
+      "classification": "opex",
+      "unit": "each",
+      "unitCost": 0,
+      "quantity": 5,
+      "vendor": "JetBrains",
+      "billingPeriod": "monthly",
+      "rentalRate": 50,
+      "leaseStartDate": "2026-03-01",
+      "leaseEndDate": "2026-12-31",
+      "currency": "USD",
+      "status": "in-use"
+    }
+  ],
+  "accounting": {
+    "baselineTotal": 102000,
+    "allocatedTotal": 105000,
+    "currentEstimateTotal": 104500,
+    "actualSpendTotal": 62000,
+    "etcTotal": 42500,
+    "materialCostTotal": 3200,
+    "currency": "USD",
+    "taskAccounting": [
+      {
+        "taskId": "req-1",
+        "taskName": "Stakeholder analysis",
+        "progress": 100,
+        "baselineCost": 4000,
+        "allocatedBudget": 4000,
+        "materialCost": 0,
+        "currentEstimate": 4000,
+        "actualSpend": 4000,
+        "etc": 0,
+        "baselineDuration": 2,
+        "currentDuration": 2,
+        "actualDuration": 2,
+        "remainingDuration": 0,
+        "responsibleResourceId": "pm",
+        "resourceCostRate": 150
+      },
+      {
+        "taskId": "req-2",
+        "taskName": "User stories",
+        "progress": 100,
+        "baselineCost": 6000,
+        "allocatedBudget": 6000,
+        "materialCost": 0,
+        "currentEstimate": 6000,
+        "actualSpend": 6000,
+        "etc": 0,
+        "baselineDuration": 3,
+        "currentDuration": 3,
+        "actualDuration": 3,
+        "remainingDuration": 0,
+        "responsibleResourceId": "pm",
+        "resourceCostRate": 150
+      },
+      {
+        "taskId": "des-1",
+        "taskName": "System architecture",
+        "progress": 100,
+        "baselineCost": 8000,
+        "allocatedBudget": 8000,
+        "materialCost": 0,
+        "currentEstimate": 8000,
+        "actualSpend": 8000,
+        "etc": 0,
+        "baselineDuration": 3,
+        "currentDuration": 3,
+        "actualDuration": 3,
+        "remainingDuration": 0,
+        "responsibleResourceId": "arch",
+        "resourceCostRate": 170
+      },
+      {
+        "taskId": "des-2",
+        "taskName": "UI/UX design",
+        "progress": 100,
+        "baselineCost": 6000,
+        "allocatedBudget": 6000,
+        "materialCost": 0,
+        "currentEstimate": 6000,
+        "actualSpend": 6000,
+        "etc": 0,
+        "baselineDuration": 4,
+        "currentDuration": 4,
+        "actualDuration": 4,
+        "remainingDuration": 0,
+        "responsibleResourceId": "dev1",
+        "resourceCostRate": 150
+      },
+      {
+        "taskId": "des-3",
+        "taskName": "Database design",
+        "progress": 100,
+        "baselineCost": 5000,
+        "allocatedBudget": 5000,
+        "materialCost": 0,
+        "currentEstimate": 5000,
+        "actualSpend": 5000,
+        "etc": 0,
+        "baselineDuration": 2,
+        "currentDuration": 2,
+        "actualDuration": 2,
+        "remainingDuration": 0,
+        "responsibleResourceId": "arch",
+        "resourceCostRate": 170
+      },
+      {
+        "taskId": "code-1",
+        "taskName": "Sprint 1: Core features",
+        "progress": 100,
+        "baselineCost": 15000,
+        "allocatedBudget": 15000,
+        "materialCost": 0,
+        "currentEstimate": 15000,
+        "actualSpend": 15000,
+        "etc": 0,
+        "baselineDuration": 5,
+        "currentDuration": 5,
+        "actualDuration": 5,
+        "remainingDuration": 0,
+        "responsibleResourceId": "dev1",
+        "resourceCostRate": 150
+      },
+      {
+        "taskId": "code-2",
+        "taskName": "Sprint 2: API layer",
+        "progress": 80,
+        "baselineCost": 15000,
+        "allocatedBudget": 15000,
+        "materialCost": 0,
+        "currentEstimate": 15500,
+        "actualSpend": 12500,
+        "etc": 3000,
+        "baselineDuration": 5,
+        "currentDuration": 5,
+        "actualDuration": 4,
+        "remainingDuration": 1,
+        "responsibleResourceId": "dev2",
+        "resourceCostRate": 100
+      },
+      {
+        "taskId": "code-3",
+        "taskName": "Sprint 3: UI polish",
+        "progress": 20,
+        "baselineCost": 15000,
+        "allocatedBudget": 16000,
+        "materialCost": 0,
+        "currentEstimate": 16000,
+        "actualSpend": 3000,
+        "etc": 13000,
+        "baselineDuration": 5,
+        "currentDuration": 5,
+        "actualDuration": 1,
+        "remainingDuration": 4,
+        "responsibleResourceId": "dev1",
+        "resourceCostRate": 150
+      },
+      {
+        "taskId": "qa-1",
+        "taskName": "Unit testing",
+        "progress": 0,
+        "baselineCost": 4000,
+        "allocatedBudget": 4000,
+        "materialCost": 0,
+        "currentEstimate": 4000,
+        "actualSpend": 0,
+        "etc": 4000,
+        "baselineDuration": 3,
+        "currentDuration": 3,
+        "actualDuration": 0,
+        "remainingDuration": 3,
+        "responsibleResourceId": "qa",
+        "resourceCostRate": 110
+      },
+      {
+        "taskId": "qa-2",
+        "taskName": "Integration testing",
+        "progress": 0,
+        "baselineCost": 4000,
+        "allocatedBudget": 4000,
+        "materialCost": 0,
+        "currentEstimate": 4000,
+        "actualSpend": 0,
+        "etc": 4000,
+        "baselineDuration": 2,
+        "currentDuration": 2,
+        "actualDuration": 0,
+        "remainingDuration": 2,
+        "responsibleResourceId": "qa",
+        "resourceCostRate": 110
+      },
+      {
+        "taskId": "qa-3",
+        "taskName": "UAT",
+        "progress": 0,
+        "baselineCost": 4000,
+        "allocatedBudget": 4000,
+        "materialCost": 0,
+        "currentEstimate": 4000,
+        "actualSpend": 0,
+        "etc": 4000,
+        "baselineDuration": 2,
+        "currentDuration": 2,
+        "actualDuration": 0,
+        "remainingDuration": 2,
+        "responsibleResourceId": "pm",
+        "resourceCostRate": 150
+      },
+      {
+        "taskId": "dep-1",
+        "taskName": "Staging deployment",
+        "progress": 0,
+        "baselineCost": 2000,
+        "allocatedBudget": 2000,
+        "materialCost": 0,
+        "currentEstimate": 2000,
+        "actualSpend": 0,
+        "etc": 2000,
+        "baselineDuration": 1,
+        "currentDuration": 1,
+        "actualDuration": 0,
+        "remainingDuration": 1,
+        "responsibleResourceId": "arch",
+        "resourceCostRate": 170
+      },
+      {
+        "taskId": "dep-2",
+        "taskName": "Production cutover",
+        "progress": 0,
+        "baselineCost": 3000,
+        "allocatedBudget": 3000,
+        "materialCost": 0,
+        "currentEstimate": 3000,
+        "actualSpend": 0,
+        "etc": 3000,
+        "baselineDuration": 1,
+        "currentDuration": 1,
+        "actualDuration": 0,
+        "remainingDuration": 1,
+        "responsibleResourceId": "arch",
+        "resourceCostRate": 170
+      },
+      {
+        "taskId": "dep-3",
+        "taskName": "Post-launch monitoring",
+        "progress": 0,
+        "baselineCost": 3000,
+        "allocatedBudget": 3000,
+        "materialCost": 0,
+        "currentEstimate": 3000,
+        "actualSpend": 0,
+        "etc": 3000,
+        "baselineDuration": 2,
+        "currentDuration": 2,
+        "actualDuration": 0,
+        "remainingDuration": 2,
+        "responsibleResourceId": "dev1",
+        "resourceCostRate": 150
+      }
+    ],
+    "spendEntries": [
+      {
+        "id": "spend-1",
+        "taskId": "req-1",
+        "date": "2026-03-02",
+        "amount": 4000,
+        "currency": "USD",
+        "source": "Project Manager",
+        "notes": "Stakeholder interviews"
+      },
+      {
+        "id": "spend-2",
+        "taskId": "req-2",
+        "date": "2026-03-05",
+        "amount": 6000,
+        "currency": "USD",
+        "source": "Project Manager",
+        "notes": "User stories documentation"
+      },
+      {
+        "id": "spend-3",
+        "taskId": "des-1",
+        "date": "2026-03-09",
+        "amount": 8000,
+        "currency": "USD",
+        "source": "Tech Lead",
+        "notes": "Architecture design"
+      },
+      {
+        "id": "spend-4",
+        "taskId": "des-2",
+        "date": "2026-03-10",
+        "amount": 6000,
+        "currency": "USD",
+        "source": "Senior Dev",
+        "notes": "UI/UX design"
+      },
+      {
+        "id": "spend-5",
+        "taskId": "des-3",
+        "date": "2026-03-11",
+        "amount": 5000,
+        "currency": "USD",
+        "source": "Tech Lead",
+        "notes": "Database schema"
+      },
+      {
+        "id": "spend-6",
+        "taskId": "code-1",
+        "date": "2026-03-17",
+        "amount": 15000,
+        "currency": "USD",
+        "source": "Senior Dev",
+        "notes": "Sprint 1 delivery"
+      },
+      {
+        "id": "spend-7",
+        "taskId": "code-2",
+        "date": "2026-03-22",
+        "amount": 12500,
+        "currency": "USD",
+        "source": "Junior Dev",
+        "notes": "Sprint 2 partial"
+      },
+      {
+        "id": "spend-8",
+        "taskId": "code-3",
+        "date": "2026-03-27",
+        "amount": 3000,
+        "currency": "USD",
+        "source": "Senior Dev",
+        "notes": "Sprint 3 start"
+      }
+    ]
+  },
+  "allocations": [
+    {
+      "id": "alloc-1",
+      "materialId": "mat-1",
+      "taskId": "code-1",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2026-03-01",
+      "expectedReturnDate": "2026-06-30",
+      "actualCost": 500,
+      "notes": "AWS infrastructure for development"
+    },
+    {
+      "id": "alloc-2",
+      "materialId": "mat-2",
+      "taskId": "code-1",
+      "allocatedQuantity": 4,
+      "consumedQuantity": 4,
+      "allocationDate": "2026-03-01",
+      "expectedReturnDate": null,
+      "actualCost": 10000,
+      "notes": "MacBook Pros for dev team"
+    },
+    {
+      "id": "alloc-3",
+      "materialId": "mat-3",
+      "taskId": "code-1",
+      "allocatedQuantity": 5,
+      "consumedQuantity": 1,
+      "allocationDate": "2026-03-01",
+      "expectedReturnDate": "2026-12-31",
+      "actualCost": 50,
+      "notes": "JetBrains licenses"
+    }
+  ],
+  "consumptions": [
+    {
+      "id": "cons-1",
+      "materialId": "mat-1",
+      "taskId": "code-1",
+      "date": "2026-03-01",
+      "quantity": 1,
+      "wastageQuantity": 0,
+      "unitCostAtConsumption": 500,
+      "notes": "First month AWS"
+    },
+    {
+      "id": "cons-2",
+      "materialId": "mat-2",
+      "taskId": "code-1",
+      "date": "2026-03-01",
+      "quantity": 4,
+      "wastageQuantity": 0,
+      "unitCostAtConsumption": 2500,
+      "notes": "Laptops issued"
+    },
+    {
+      "id": "cons-3",
+      "materialId": "mat-3",
+      "taskId": "code-1",
+      "date": "2026-03-01",
+      "quantity": 1,
+      "wastageQuantity": 0,
+      "unitCostAtConsumption": 50,
+      "notes": "First month licenses"
+    }
+  ],
+  "capitalizationConfig": {
+    "threshold": 1000,
+    "currency": "USD",
+    "defaultUsefulLifeMonths": 36,
+    "defaultDepreciationMethod": "straight-line",
+    "defaultSalvagePercent": 10
+  },
+  "changeLog": [
+    {
+      "id": "cl-1",
+      "date": "2026-03-15",
+      "taskId": "code-2",
+      "changeType": "scope",
+      "description": "Added OAuth2 authentication requirement",
+      "costImpact": 3000,
+      "scheduleImpactDays": 3,
+      "approvedBy": "Product Owner"
+    },
+    {
+      "id": "cl-2",
+      "date": "2026-03-20",
+      "taskId": "code-3",
+      "changeType": "technical",
+      "description": "Switched from REST to GraphQL for API layer",
+      "costImpact": 2000,
+      "scheduleImpactDays": 2,
+      "approvedBy": "Tech Lead"
+    }
   ]
 }

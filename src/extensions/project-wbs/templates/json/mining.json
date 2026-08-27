@@ -6,7 +6,13 @@
   "startDate": "2027-04-01",
   "endDate": "2028-06-30",
   "calendar": {
-    "workingDays": [1, 2, 3, 4, 5],
+    "workingDays": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
     "holidays": [],
     "hoursPerDay": 8
   },
@@ -23,51 +29,107 @@
           "name": "Project kickoff & objectives",
           "startDate": "2027-04-01",
           "endDate": "2027-04-04",
-          "description": "Stakeholder alignment, scope confirmation, success criteria"
+          "description": "Stakeholder alignment, scope confirmation, success criteria",
+          "progress": 100,
+          "status": "done",
+          "cost": 8000,
+          "effort": 16,
+          "effortUnit": "hours"
         },
         {
           "id": "fel1-2",
           "name": "Draft Block Flow Diagrams (BFDs)",
           "startDate": "2027-04-07",
           "endDate": "2027-04-18",
-          "description": "Preliminary BFDs for ore handling and process routes"
+          "description": "Preliminary BFDs for ore handling and process routes",
+          "progress": 100,
+          "status": "done",
+          "cost": 9000,
+          "effort": 20,
+          "effortUnit": "hours",
+          "dependencies": [
+            "fel1-1"
+          ]
         },
         {
           "id": "fel1-3",
           "name": "Major equipment sizing",
           "startDate": "2027-04-07",
           "endDate": "2027-04-25",
-          "description": "High-level sizing: primary crushers, SAG/Ball mills, flotation cells, tailings thickeners"
+          "description": "High-level sizing: primary crushers, SAG/Ball mills, flotation cells, tailings thickeners",
+          "progress": 100,
+          "status": "done",
+          "cost": 10000,
+          "effort": 24,
+          "effortUnit": "hours",
+          "dependencies": [
+            "fel1-2"
+          ]
         },
         {
           "id": "fel1-4",
           "name": "Bulk material handling logistics",
           "startDate": "2027-04-14",
           "endDate": "2027-05-02",
-          "description": "Conveyor corridors, rail loadouts, port facilities assessment"
+          "description": "Conveyor corridors, rail loadouts, port facilities assessment",
+          "progress": 100,
+          "status": "done",
+          "cost": 11000,
+          "effort": 28,
+          "effortUnit": "hours",
+          "dependencies": [
+            "fel1-3"
+          ]
         },
         {
           "id": "fel1-5",
           "name": "Trade-off screening studies",
           "startDate": "2027-04-21",
           "endDate": "2027-05-09",
-          "description": "Eliminate fatal flaws, identify viable process routes"
+          "description": "Eliminate fatal flaws, identify viable process routes",
+          "progress": 100,
+          "status": "done",
+          "cost": 12000,
+          "effort": 32,
+          "effortUnit": "hours",
+          "dependencies": [
+            "fel1-4"
+          ]
         },
         {
           "id": "fel1-6",
           "name": "High-level CAPEX estimate",
           "startDate": "2027-05-05",
           "endDate": "2027-05-15",
-          "description": "±30% to ±50% mechanical CAPEX estimate"
+          "description": "\u00c2\u00b130% to \u00c2\u00b150% mechanical CAPEX estimate",
+          "progress": 100,
+          "status": "done",
+          "cost": 13000,
+          "effort": 36,
+          "effortUnit": "hours",
+          "dependencies": [
+            "fel1-5"
+          ]
         },
         {
           "id": "fel1-7",
           "name": "Concept study report",
           "startDate": "2027-05-19",
           "endDate": "2027-05-31",
-          "description": "Deliver concept study report for FEL 2 gate"
+          "description": "Deliver concept study report for FEL 2 gate",
+          "progress": 100,
+          "status": "done",
+          "cost": 14000,
+          "effort": 40,
+          "effortUnit": "hours",
+          "dependencies": [
+            "fel1-6"
+          ]
         }
-      ]
+      ],
+      "progress": 100,
+      "status": "done",
+      "cost": 105000
     },
     {
       "id": "fel2",
@@ -81,58 +143,122 @@
           "name": "PFS kickoff & planning",
           "startDate": "2027-06-01",
           "endDate": "2027-06-05",
-          "description": "Team mobilization, work plan finalization"
+          "description": "Team mobilization, work plan finalization",
+          "progress": 80,
+          "status": "in_progress",
+          "cost": 8000,
+          "effort": 16,
+          "effortUnit": "hours"
         },
         {
           "id": "fel2-2",
           "name": "Process Flow Diagrams (PFDs)",
           "startDate": "2027-06-01",
           "endDate": "2027-06-28",
-          "description": "Develop PFDs for preferred and alternative routes"
+          "description": "Develop PFDs for preferred and alternative routes",
+          "progress": 80,
+          "status": "in_progress",
+          "cost": 9000,
+          "effort": 20,
+          "effortUnit": "hours",
+          "dependencies": [
+            "fel2-1"
+          ]
         },
         {
           "id": "fel2-3",
           "name": "Mechanical mass/heat balances",
           "startDate": "2027-06-08",
           "endDate": "2027-07-13",
-          "description": "Establish mass and heat balances for all streams"
+          "description": "Establish mass and heat balances for all streams",
+          "progress": 80,
+          "status": "in_progress",
+          "cost": 10000,
+          "effort": 24,
+          "effortUnit": "hours",
+          "dependencies": [
+            "fel2-2"
+          ]
         },
         {
           "id": "fel2-4",
           "name": "Equipment datasheets (long-lead)",
           "startDate": "2027-06-15",
           "endDate": "2027-07-24",
-          "description": "Crushers, mills, slurry pumps, screens datasheets"
+          "description": "Crushers, mills, slurry pumps, screens datasheets",
+          "progress": 80,
+          "status": "in_progress",
+          "cost": 11000,
+          "effort": 28,
+          "effortUnit": "hours",
+          "dependencies": [
+            "fel2-3"
+          ]
         },
         {
           "id": "fel2-5",
           "name": "Equipment trade-off studies",
           "startDate": "2027-07-06",
           "endDate": "2027-08-07",
-          "description": "SAG vs HPGR; Overland Conveyors vs Haulage; other key decisions"
+          "description": "SAG vs HPGR; Overland Conveyors vs Haulage; other key decisions",
+          "progress": 80,
+          "status": "in_progress",
+          "cost": 12000,
+          "effort": 32,
+          "effortUnit": "hours",
+          "dependencies": [
+            "fel2-4"
+          ]
         },
         {
           "id": "fel2-6",
           "name": "Plant general arrangement (GA)",
           "startDate": "2027-07-20",
           "endDate": "2027-08-21",
-          "description": "GA drawings and 3D site layout models"
+          "description": "GA drawings and 3D site layout models",
+          "progress": 80,
+          "status": "in_progress",
+          "cost": 13000,
+          "effort": 36,
+          "effortUnit": "hours",
+          "dependencies": [
+            "fel2-5"
+          ]
         },
         {
           "id": "fel2-7",
           "name": "Refined CAPEX/OPEX estimates",
           "startDate": "2027-08-10",
           "endDate": "2027-09-04",
-          "description": "±15% to ±25% mechanical estimates"
+          "description": "\u00c2\u00b115% to \u00c2\u00b125% mechanical estimates",
+          "progress": 80,
+          "status": "in_progress",
+          "cost": 14000,
+          "effort": 40,
+          "effortUnit": "hours",
+          "dependencies": [
+            "fel2-6"
+          ]
         },
         {
           "id": "fel2-8",
           "name": "PFS report & gate review",
           "startDate": "2027-09-07",
           "endDate": "2027-09-30",
-          "description": "Deliver PFS report for FEL 3 gate"
+          "description": "Deliver PFS report for FEL 3 gate",
+          "progress": 80,
+          "status": "in_progress",
+          "cost": 15000,
+          "effort": 44,
+          "effortUnit": "hours",
+          "dependencies": [
+            "fel2-7"
+          ]
         }
-      ]
+      ],
+      "progress": 80,
+      "status": "in_progress",
+      "cost": 120000
     },
     {
       "id": "feed",
@@ -146,51 +272,107 @@
           "name": "FEED kickoff & baseline",
           "startDate": "2027-10-01",
           "endDate": "2027-10-12",
-          "description": "Confirm design basis, standards, and project controls"
+          "description": "Confirm design basis, standards, and project controls",
+          "progress": 60,
+          "status": "in_progress",
+          "cost": 8000,
+          "effort": 16,
+          "effortUnit": "hours"
         },
         {
           "id": "feed-2",
           "name": "P&ID finalization",
           "startDate": "2027-10-01",
           "endDate": "2027-11-30",
-          "description": "Finalize Piping & Instrumentation Diagrams"
+          "description": "Finalize Piping & Instrumentation Diagrams",
+          "progress": 60,
+          "status": "in_progress",
+          "cost": 9000,
+          "effort": 20,
+          "effortUnit": "hours",
+          "dependencies": [
+            "feed-1"
+          ]
         },
         {
           "id": "feed-3",
           "name": "Mechanical equipment lists",
           "startDate": "2027-10-08",
           "endDate": "2027-11-09",
-          "description": "Complete mechanical equipment list with tag numbers"
+          "description": "Complete mechanical equipment list with tag numbers",
+          "progress": 60,
+          "status": "in_progress",
+          "cost": 10000,
+          "effort": 24,
+          "effortUnit": "hours",
+          "dependencies": [
+            "feed-2"
+          ]
         },
         {
           "id": "feed-4",
           "name": "RFQ preparation & issue",
           "startDate": "2027-10-15",
           "endDate": "2027-11-30",
-          "description": "Formal RFQs for major capital equipment"
+          "description": "Formal RFQs for major capital equipment",
+          "progress": 60,
+          "status": "in_progress",
+          "cost": 11000,
+          "effort": 28,
+          "effortUnit": "hours",
+          "dependencies": [
+            "feed-3"
+          ]
         },
         {
           "id": "feed-5",
           "name": "FEA/CFD analysis",
           "startDate": "2027-11-01",
           "endDate": "2027-12-31",
-          "description": "Finite Element Analysis and CFD for critical structures, chutes, slurry pipelines"
+          "description": "Finite Element Analysis and CFD for critical structures, chutes, slurry pipelines",
+          "progress": 60,
+          "status": "in_progress",
+          "cost": 12000,
+          "effort": 32,
+          "effortUnit": "hours",
+          "dependencies": [
+            "feed-4"
+          ]
         },
         {
           "id": "feed-6",
           "name": "HAZOP & design reviews",
           "startDate": "2027-12-01",
           "endDate": "2028-01-31",
-          "description": "Hazard and Operability Analysis, Constructability Reviews, Maintainability Audits"
+          "description": "Hazard and Operability Analysis, Constructability Reviews, Maintainability Audits",
+          "progress": 60,
+          "status": "in_progress",
+          "cost": 13000,
+          "effort": 36,
+          "effortUnit": "hours",
+          "dependencies": [
+            "feed-5"
+          ]
         },
         {
           "id": "feed-7",
           "name": "FEED package delivery",
           "startDate": "2028-01-15",
           "endDate": "2028-02-28",
-          "description": "Complete FEED package for FID"
+          "description": "Complete FEED package for FID",
+          "progress": 60,
+          "status": "in_progress",
+          "cost": 14000,
+          "effort": 40,
+          "effortUnit": "hours",
+          "dependencies": [
+            "feed-6"
+          ]
         }
-      ]
+      ],
+      "progress": 60,
+      "status": "in_progress",
+      "cost": 105000
     },
     {
       "id": "epc",
@@ -204,44 +386,92 @@
           "name": "Detailed engineering kickoff",
           "startDate": "2028-03-01",
           "endDate": "2028-03-12",
-          "description": "Mobilize detailed engineering team"
+          "description": "Mobilize detailed engineering team",
+          "progress": 40,
+          "status": "in_progress",
+          "cost": 8000,
+          "effort": 16,
+          "effortUnit": "hours"
         },
         {
           "id": "epc-2",
           "name": "Vendor GA drawing review",
           "startDate": "2028-03-01",
           "endDate": "2028-04-30",
-          "description": "Review vendor general arrangement drawings and technical bids"
+          "description": "Review vendor general arrangement drawings and technical bids",
+          "progress": 40,
+          "status": "in_progress",
+          "cost": 9000,
+          "effort": 20,
+          "effortUnit": "hours",
+          "dependencies": [
+            "epc-1"
+          ]
         },
         {
           "id": "epc-3",
           "name": "Piping isometrics & stress",
           "startDate": "2028-03-15",
           "endDate": "2028-06-30",
-          "description": "Detailed piping isometric drawings, stress analyses, pipe support details"
+          "description": "Detailed piping isometric drawings, stress analyses, pipe support details",
+          "progress": 40,
+          "status": "in_progress",
+          "cost": 10000,
+          "effort": 24,
+          "effortUnit": "hours",
+          "dependencies": [
+            "epc-2"
+          ]
         },
         {
           "id": "epc-4",
           "name": "Chute design & fabrication",
           "startDate": "2028-04-01",
           "endDate": "2028-06-30",
-          "description": "Detailed chute design, liner selection, platework fabrication drawings"
+          "description": "Detailed chute design, liner selection, platework fabrication drawings",
+          "progress": 40,
+          "status": "in_progress",
+          "cost": 11000,
+          "effort": 28,
+          "effortUnit": "hours",
+          "dependencies": [
+            "epc-3"
+          ]
         },
         {
           "id": "epc-5",
           "name": "Mechanical procurement",
           "startDate": "2028-03-01",
           "endDate": "2028-08-31",
-          "description": "Procure all mechanical packages and equipment"
+          "description": "Procure all mechanical packages and equipment",
+          "progress": 40,
+          "status": "in_progress",
+          "cost": 12000,
+          "effort": 32,
+          "effortUnit": "hours",
+          "dependencies": [
+            "epc-4"
+          ]
         },
         {
           "id": "epc-6",
           "name": "Factory Acceptance Testing",
           "startDate": "2028-07-01",
           "endDate": "2028-09-30",
-          "description": "FAT for overhead cranes, pump skids, thickeners, major packages"
+          "description": "FAT for overhead cranes, pump skids, thickeners, major packages",
+          "progress": 40,
+          "status": "in_progress",
+          "cost": 13000,
+          "effort": 36,
+          "effortUnit": "hours",
+          "dependencies": [
+            "epc-5"
+          ]
         }
-      ]
+      ],
+      "progress": 40,
+      "status": "in_progress",
+      "cost": 90000
     },
     {
       "id": "commission",
@@ -255,28 +485,57 @@
           "name": "Construction support",
           "startDate": "2028-06-01",
           "endDate": "2028-09-30",
-          "description": "On-site mechanical engineering support during construction"
+          "description": "On-site mechanical engineering support during construction",
+          "progress": 20,
+          "status": "in_progress",
+          "cost": 8000,
+          "effort": 16,
+          "effortUnit": "hours"
         },
         {
           "id": "com-2",
           "name": "Cold commissioning (No-Load)",
           "startDate": "2028-08-01",
           "endDate": "2028-10-31",
-          "description": "Uncoupled motor rotations, dry conveyors, hydrostatic testing, alignment checks"
+          "description": "Uncoupled motor rotations, dry conveyors, hydrostatic testing, alignment checks",
+          "progress": 20,
+          "status": "in_progress",
+          "cost": 9000,
+          "effort": 20,
+          "effortUnit": "hours",
+          "dependencies": [
+            "com-1"
+          ]
         },
         {
           "id": "com-3",
           "name": "Hot commissioning (Load)",
           "startDate": "2028-10-01",
           "endDate": "2028-12-15",
-          "description": "Slurry testing, ore feed, crusher CSS tuning, vibration/temperature monitoring"
+          "description": "Slurry testing, ore feed, crusher CSS tuning, vibration/temperature monitoring",
+          "progress": 20,
+          "status": "in_progress",
+          "cost": 10000,
+          "effort": 24,
+          "effortUnit": "hours",
+          "dependencies": [
+            "com-2"
+          ]
         },
         {
           "id": "com-4",
           "name": "Punch listing & handover",
           "startDate": "2028-11-01",
           "endDate": "2028-12-15",
-          "description": "Punch list, operational handover, As-Built drawing updates"
+          "description": "Punch list, operational handover, As-Built drawing updates",
+          "progress": 20,
+          "status": "in_progress",
+          "cost": 11000,
+          "effort": 28,
+          "effortUnit": "hours",
+          "dependencies": [
+            "com-3"
+          ]
         },
         {
           "id": "com-5",
@@ -284,9 +543,20 @@
           "startDate": "2028-12-01",
           "endDate": "2028-12-31",
           "description": "Production ramp-up support and performance testing",
-          "isMilestone": false
+          "isMilestone": false,
+          "progress": 20,
+          "status": "in_progress",
+          "cost": 12000,
+          "effort": 32,
+          "effortUnit": "hours",
+          "dependencies": [
+            "com-4"
+          ]
         }
-      ]
+      ],
+      "progress": 20,
+      "status": "in_progress",
+      "cost": 75000
     },
     {
       "id": "brownfield",
@@ -300,58 +570,122 @@
           "name": "Condition assessment & audits",
           "startDate": "2028-07-01",
           "endDate": "2028-09-30",
-          "description": "NDT, vibration analysis, ultrasonic thickness, thermography audits"
+          "description": "NDT, vibration analysis, ultrasonic thickness, thermography audits",
+          "progress": 0,
+          "status": "in_progress",
+          "cost": 8000,
+          "effort": 16,
+          "effortUnit": "hours"
         },
         {
           "id": "bf-2",
           "name": "Root Cause Failure Analysis",
           "startDate": "2028-07-15",
           "endDate": "2028-10-31",
-          "description": "RCFA for repeating failures: gearboxes, slurry pipes, chute plugging"
+          "description": "RCFA for repeating failures: gearboxes, slurry pipes, chute plugging",
+          "progress": 0,
+          "status": "in_progress",
+          "cost": 9000,
+          "effort": 20,
+          "effortUnit": "hours",
+          "dependencies": [
+            "bf-1"
+          ]
         },
         {
           "id": "bf-3",
           "name": "Debottlenecking studies",
           "startDate": "2028-08-01",
           "endDate": "2028-11-30",
-          "description": "Conveyor speed increases, pump impeller modifications, throughput studies"
+          "description": "Conveyor speed increases, pump impeller modifications, throughput studies",
+          "progress": 0,
+          "status": "in_progress",
+          "cost": 10000,
+          "effort": 24,
+          "effortUnit": "hours",
+          "dependencies": [
+            "bf-2"
+          ]
         },
         {
           "id": "bf-4",
           "name": "3D laser scanning",
           "startDate": "2028-10-01",
           "endDate": "2028-12-31",
-          "description": "Scan existing brownfield geometry to avoid clashes"
+          "description": "Scan existing brownfield geometry to avoid clashes",
+          "progress": 0,
+          "status": "in_progress",
+          "cost": 11000,
+          "effort": 28,
+          "effortUnit": "hours",
+          "dependencies": [
+            "bf-3"
+          ]
         },
         {
           "id": "bf-5",
           "name": "Sustaining capital engineering",
           "startDate": "2028-11-01",
           "endDate": "2029-02-28",
-          "description": "Design retrofits: drop-in chutes, screen decks, conveyor pulleys"
+          "description": "Design retrofits: drop-in chutes, screen decks, conveyor pulleys",
+          "progress": 0,
+          "status": "in_progress",
+          "cost": 12000,
+          "effort": 32,
+          "effortUnit": "hours",
+          "dependencies": [
+            "bf-4"
+          ]
         },
         {
           "id": "bf-6",
           "name": "Shutdown planning",
           "startDate": "2029-01-01",
           "endDate": "2029-03-31",
-          "description": "JSAs, lifting plans, work packs, spare parts procurement"
+          "description": "JSAs, lifting plans, work packs, spare parts procurement",
+          "progress": 0,
+          "status": "in_progress",
+          "cost": 13000,
+          "effort": 36,
+          "effortUnit": "hours",
+          "dependencies": [
+            "bf-5"
+          ]
         },
         {
           "id": "bf-7",
           "name": "Shutdown execution",
           "startDate": "2029-03-01",
           "endDate": "2029-04-30",
-          "description": "Mill liners, crusher mantles, conveyor belts, shaft alignment, seal replacements"
+          "description": "Mill liners, crusher mantles, conveyor belts, shaft alignment, seal replacements",
+          "progress": 0,
+          "status": "in_progress",
+          "cost": 14000,
+          "effort": 40,
+          "effortUnit": "hours",
+          "dependencies": [
+            "bf-6"
+          ]
         },
         {
           "id": "bf-8",
           "name": "Reliability engineering",
           "startDate": "2029-04-01",
           "endDate": "2029-06-30",
-          "description": "PM tasks, FMEA, spare optimization, Condition Monitoring Systems"
+          "description": "PM tasks, FMEA, spare optimization, Condition Monitoring Systems",
+          "progress": 0,
+          "status": "in_progress",
+          "cost": 15000,
+          "effort": 44,
+          "effortUnit": "hours",
+          "dependencies": [
+            "bf-7"
+          ]
         }
-      ]
+      ],
+      "progress": 0,
+      "status": "not_started",
+      "cost": 120000
     }
   ],
   "risks": [
@@ -362,7 +696,14 @@
       "probability": 3,
       "impact": 4,
       "status": "identified",
-      "mitigationPlan": "Early permit applications, community engagement, alternative access routes"
+      "mitigationPlan": "Early permit applications, community engagement, alternative access routes",
+      "taskId": null,
+      "ownerId": "partner",
+      "contingencyPlan": "Activate contingency budget and notify stakeholders",
+      "mitigationCost": 5000,
+      "triggerCondition": "Risk event occurs as described",
+      "residualProbability": 2,
+      "residualImpact": 3
     },
     {
       "id": "r2",
@@ -371,7 +712,14 @@
       "probability": 3,
       "impact": 3,
       "status": "identified",
-      "mitigationPlan": "Data validation protocols, gap analysis, additional testwork"
+      "mitigationPlan": "Data validation protocols, gap analysis, additional testwork",
+      "taskId": null,
+      "ownerId": "partner",
+      "contingencyPlan": "Activate contingency budget and notify stakeholders",
+      "mitigationCost": 5000,
+      "triggerCondition": "Risk event occurs as described",
+      "residualProbability": 2,
+      "residualImpact": 2
     },
     {
       "id": "r3",
@@ -380,7 +728,14 @@
       "probability": 2,
       "impact": 5,
       "status": "identified",
-      "mitigationPlan": "Early regulator engagement, compliance audits, gap closure plans"
+      "mitigationPlan": "Early regulator engagement, compliance audits, gap closure plans",
+      "taskId": null,
+      "ownerId": "partner",
+      "contingencyPlan": "Activate contingency budget and notify stakeholders",
+      "mitigationCost": 5000,
+      "triggerCondition": "Risk event occurs as described",
+      "residualProbability": 1,
+      "residualImpact": 4
     },
     {
       "id": "r4",
@@ -389,7 +744,14 @@
       "probability": 4,
       "impact": 3,
       "status": "identified",
-      "mitigationPlan": "Change control process, clear scope boundaries, impact assessments"
+      "mitigationPlan": "Change control process, clear scope boundaries, impact assessments",
+      "taskId": null,
+      "ownerId": "partner",
+      "contingencyPlan": "Activate contingency budget and notify stakeholders",
+      "mitigationCost": 5000,
+      "triggerCondition": "Risk event occurs as described",
+      "residualProbability": 3,
+      "residualImpact": 2
     },
     {
       "id": "r5",
@@ -398,7 +760,14 @@
       "probability": 4,
       "impact": 4,
       "status": "identified",
-      "mitigationPlan": "Early procurement, long-lead identification, alternative vendors"
+      "mitigationPlan": "Early procurement, long-lead identification, alternative vendors",
+      "taskId": null,
+      "ownerId": "partner",
+      "contingencyPlan": "Activate contingency budget and notify stakeholders",
+      "mitigationCost": 5000,
+      "triggerCondition": "Risk event occurs as described",
+      "residualProbability": 3,
+      "residualImpact": 3
     },
     {
       "id": "r6",
@@ -407,7 +776,14 @@
       "probability": 4,
       "impact": 4,
       "status": "mitigating",
-      "mitigationPlan": "3D laser scanning, clash detection, modular pre-assembly"
+      "mitigationPlan": "3D laser scanning, clash detection, modular pre-assembly",
+      "taskId": null,
+      "ownerId": "partner",
+      "contingencyPlan": "Activate contingency budget and notify stakeholders",
+      "mitigationCost": 5000,
+      "triggerCondition": "Risk event occurs as described",
+      "residualProbability": 3,
+      "residualImpact": 3
     },
     {
       "id": "r7",
@@ -416,7 +792,14 @@
       "probability": 3,
       "impact": 5,
       "status": "identified",
-      "mitigationPlan": "Detailed planning, 24/7 execution, contingency crews"
+      "mitigationPlan": "Detailed planning, 24/7 execution, contingency crews",
+      "taskId": null,
+      "ownerId": "partner",
+      "contingencyPlan": "Activate contingency budget and notify stakeholders",
+      "mitigationCost": 5000,
+      "triggerCondition": "Risk event occurs as described",
+      "residualProbability": 2,
+      "residualImpact": 4
     },
     {
       "id": "r8",
@@ -425,7 +808,14 @@
       "probability": 3,
       "impact": 4,
       "status": "identified",
-      "mitigationPlan": "RCFA, OEM engagement, upgraded materials, condition monitoring"
+      "mitigationPlan": "RCFA, OEM engagement, upgraded materials, condition monitoring",
+      "taskId": null,
+      "ownerId": "partner",
+      "contingencyPlan": "Activate contingency budget and notify stakeholders",
+      "mitigationCost": 5000,
+      "triggerCondition": "Risk event occurs as described",
+      "residualProbability": 2,
+      "residualImpact": 3
     },
     {
       "id": "r9",
@@ -434,7 +824,14 @@
       "probability": 2,
       "impact": 5,
       "status": "identified",
-      "mitigationPlan": "Engineered lift plans, rigging inspections, exclusion zones"
+      "mitigationPlan": "Engineered lift plans, rigging inspections, exclusion zones",
+      "taskId": null,
+      "ownerId": "partner",
+      "contingencyPlan": "Activate contingency budget and notify stakeholders",
+      "mitigationCost": 5000,
+      "triggerCondition": "Risk event occurs as described",
+      "residualProbability": 1,
+      "residualImpact": 4
     },
     {
       "id": "r10",
@@ -443,7 +840,14 @@
       "probability": 4,
       "impact": 3,
       "status": "monitoring",
-      "mitigationPlan": "CFD modeling, wear-resistant materials, monitoring programs"
+      "mitigationPlan": "CFD modeling, wear-resistant materials, monitoring programs",
+      "taskId": null,
+      "ownerId": "partner",
+      "contingencyPlan": "Activate contingency budget and notify stakeholders",
+      "mitigationCost": 5000,
+      "triggerCondition": "Risk event occurs as described",
+      "residualProbability": 3,
+      "residualImpact": 2
     }
   ],
   "resources": [
@@ -502,6 +906,182 @@
       "costRate": 190,
       "availability": 75,
       "color": "#EC4899"
+    }
+  ],
+  "materials": [
+    {
+      "id": "min-mat-1",
+      "name": "3D Scanner (rental)",
+      "classification": "opex",
+      "unit": "week",
+      "unitCost": 0,
+      "quantity": 4,
+      "vendor": "Leica",
+      "billingPeriod": "weekly",
+      "rentalRate": 2500,
+      "leaseStartDate": "2028-10-01",
+      "leaseEndDate": "2028-12-31",
+      "currency": "USD",
+      "status": "ordered"
+    },
+    {
+      "id": "min-mat-2",
+      "name": "Engineering Software Licenses",
+      "classification": "capex",
+      "unit": "license",
+      "unitCost": 5000,
+      "quantity": 5,
+      "vendor": "Autodesk",
+      "depreciationMethod": "straight-line",
+      "usefulLifeMonths": 12,
+      "salvageValue": 0,
+      "currency": "USD",
+      "status": "delivered"
+    },
+    {
+      "id": "min-mat-3",
+      "name": "Safety Equipment",
+      "classification": "capex",
+      "unit": "set",
+      "unitCost": 15000,
+      "quantity": 1,
+      "vendor": "Safety Supply Co",
+      "depreciationMethod": "straight-line",
+      "usefulLifeMonths": 24,
+      "salvageValue": 2000,
+      "currency": "USD",
+      "status": "delivered"
+    }
+  ],
+  "accounting": {
+    "baselineTotal": 850000,
+    "allocatedTotal": 900000,
+    "currentEstimateTotal": 875000,
+    "actualSpendTotal": 320000,
+    "etcTotal": 555000,
+    "materialCostTotal": 45000,
+    "currency": "USD",
+    "spendEntries": [
+      {
+        "id": "spend-1",
+        "taskId": "fel1-1",
+        "date": "2027-04-04",
+        "amount": 15000,
+        "currency": "USD",
+        "source": "Managing Partner",
+        "notes": "Project kickoff"
+      },
+      {
+        "id": "spend-2",
+        "taskId": "fel1-2",
+        "date": "2027-04-18",
+        "amount": 25000,
+        "currency": "USD",
+        "source": "Process Engineer",
+        "notes": "BFD development"
+      },
+      {
+        "id": "spend-3",
+        "taskId": "fel1-7",
+        "date": "2027-05-31",
+        "amount": 35000,
+        "currency": "USD",
+        "source": "Principal Mechanical Engineer",
+        "notes": "Concept study report"
+      },
+      {
+        "id": "spend-4",
+        "taskId": "fel2-1",
+        "date": "2027-06-05",
+        "amount": 20000,
+        "currency": "USD",
+        "source": "Managing Partner",
+        "notes": "PFS kickoff"
+      },
+      {
+        "id": "spend-5",
+        "taskId": "fel2-8",
+        "date": "2027-09-30",
+        "amount": 75000,
+        "currency": "USD",
+        "source": "Principal Mechanical Engineer",
+        "notes": "PFS report delivery"
+      },
+      {
+        "id": "spend-6",
+        "taskId": "feed-1",
+        "date": "2027-10-12",
+        "amount": 30000,
+        "currency": "USD",
+        "source": "Managing Partner",
+        "notes": "FEED kickoff"
+      },
+      {
+        "id": "spend-7",
+        "taskId": "feed-7",
+        "date": "2028-02-28",
+        "amount": 80000,
+        "currency": "USD",
+        "source": "Principal Mechanical Engineer",
+        "notes": "FEED package delivery"
+      },
+      {
+        "id": "spend-8",
+        "taskId": "epc-1",
+        "date": "2028-03-12",
+        "amount": 25000,
+        "currency": "USD",
+        "source": "Managing Partner",
+        "notes": "EPC kickoff"
+      },
+      {
+        "id": "spend-9",
+        "taskId": "epc-6",
+        "date": "2028-09-30",
+        "amount": 20000,
+        "currency": "USD",
+        "source": "Field/Commissioning Engineer",
+        "notes": "FAT completion"
+      }
+    ]
+  },
+  "capitalizationConfig": {
+    "threshold": 10000,
+    "currency": "USD",
+    "defaultUsefulLifeMonths": 60,
+    "defaultDepreciationMethod": "straight-line",
+    "defaultSalvagePercent": 5
+  },
+  "changeLog": [
+    {
+      "id": "cl-1",
+      "date": "2027-05-15",
+      "taskId": "fel1",
+      "changeType": "scope",
+      "description": "Expanded scope to include tailings facility assessment",
+      "costImpact": 50000,
+      "scheduleImpactDays": 14,
+      "approvedBy": "Client"
+    },
+    {
+      "id": "cl-2",
+      "date": "2027-08-01",
+      "taskId": "fel2",
+      "changeType": "resource",
+      "description": "Added second process engineer for mass balance work",
+      "costImpact": 30000,
+      "scheduleImpactDays": 0,
+      "approvedBy": "Managing Partner"
+    },
+    {
+      "id": "cl-3",
+      "date": "2028-01-15",
+      "taskId": "feed",
+      "changeType": "schedule",
+      "description": "Client requested 2-week pause for budget review",
+      "costImpact": 0,
+      "scheduleImpactDays": 14,
+      "approvedBy": "Client"
     }
   ]
 }

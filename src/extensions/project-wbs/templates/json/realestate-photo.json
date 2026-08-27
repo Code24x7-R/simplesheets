@@ -1,7 +1,7 @@
 {
   "id": "realestate-photo",
   "name": "Real Estate Photoshoot",
-  "description": "Professional real estate photography project from initial contact to final delivery, including travel, on-site capture (up to 2 hrs), options selection, post-editing, and social media publishing.",
+  "description": "Professional real estate photography project from initial contact to final delivery. Demonstrates equipment tracking, travel costs, and client approval workflows.",
   "category": "Real Estate",
   "startDate": "2026-05-01",
   "endDate": "2026-05-08",
@@ -16,27 +16,51 @@
       "name": "Briefing & Quote",
       "startDate": "2026-05-01",
       "endDate": "2026-05-01",
+      "description": "Initial client contact and quote",
+      "progress": 100,
+      "status": "done",
+      "cost": 500,
       "children": [
         {
           "id": "brief-1",
           "name": "Initial client enquiry",
           "startDate": "2026-05-01",
           "endDate": "2026-05-01",
-          "description": "Receive enquiry, discuss property type and client needs"
+          "description": "Receive enquiry, discuss property type and client needs",
+          "progress": 100,
+          "status": "done",
+          "resourceId": "pm",
+          "cost": 150,
+          "effort": 1,
+          "effortUnit": "hours"
         },
         {
           "id": "brief-2",
           "name": "Quote & options selection",
           "startDate": "2026-05-01",
           "endDate": "2026-05-01",
-          "description": "Send quote with options: photography, video, drone, 3D, floor plan, twilight"
+          "description": "Send quote with options: photography, video, drone, 3D, floor plan, twilight",
+          "progress": 100,
+          "status": "done",
+          "resourceId": "pm",
+          "cost": 200,
+          "effort": 1,
+          "effortUnit": "hours",
+          "dependencies": ["brief-1"]
         },
         {
           "id": "brief-3",
           "name": "Booking confirmation",
           "startDate": "2026-05-01",
           "endDate": "2026-05-01",
-          "description": "Confirm booking, receive deposit, schedule shoot date"
+          "description": "Confirm booking, receive deposit, schedule shoot date",
+          "progress": 100,
+          "status": "done",
+          "resourceId": "pm",
+          "cost": 150,
+          "effort": 1,
+          "effortUnit": "hours",
+          "dependencies": ["brief-2"]
         }
       ]
     },
@@ -45,259 +69,237 @@
       "name": "Pre-Production",
       "startDate": "2026-05-02",
       "endDate": "2026-05-02",
+      "description": "Equipment prep and scheduling",
+      "progress": 100,
+      "status": "done",
+      "cost": 800,
       "children": [
         {
           "id": "prep-1",
-          "name": "Equipment preparation",
+          "name": "Equipment check & pack",
           "startDate": "2026-05-02",
           "endDate": "2026-05-02",
-          "description": "Check cameras, lenses, drone, lighting, batteries, memory cards"
+          "description": "Check cameras, lenses, drone, batteries, memory cards",
+          "progress": 100,
+          "status": "done",
+          "resourceId": "photog",
+          "cost": 400,
+          "effort": 4,
+          "effortUnit": "hours",
+          "dependencies": ["brief-3"]
         },
         {
           "id": "prep-2",
-          "name": "Location planning",
+          "name": "Travel to property",
           "startDate": "2026-05-02",
           "endDate": "2026-05-02",
-          "description": "Check route, estimate travel time, confirm access arrangements"
+          "description": "Drive to property location (30 min)",
+          "progress": 100,
+          "status": "done",
+          "resourceId": "photog",
+          "cost": 200,
+          "effort": 2,
+          "effortUnit": "hours",
+          "dependencies": ["prep-1"]
         },
         {
           "id": "prep-3",
-          "name": "Weather check",
+          "name": "Property walkthrough",
           "startDate": "2026-05-02",
           "endDate": "2026-05-02",
-          "description": "Monitor weather forecast, confirm shoot conditions"
+          "description": "Assess rooms, lighting, best angles",
+          "progress": 100,
+          "status": "done",
+          "resourceId": "photog",
+          "cost": 200,
+          "effort": 1,
+          "effortUnit": "hours",
+          "dependencies": ["prep-2"]
         }
       ]
     },
     {
-      "id": "travel-out",
-      "name": "Travel to Property",
-      "startDate": "2026-05-03",
-      "endDate": "2026-05-03",
-      "description": "Travel to property location (allow 30-60 min each way)",
-      "resourceId": "photog"
-    },
-    {
       "id": "shoot",
-      "name": "On-Site Photography",
+      "name": "On-Site Capture",
       "startDate": "2026-05-03",
       "endDate": "2026-05-03",
-      "description": "On-site shoot (up to 2 hours depending on property size and options)",
-      "resourceId": "photog",
+      "description": "Photography and videography session",
+      "progress": 100,
+      "status": "done",
+      "cost": 2500,
       "children": [
         {
           "id": "shoot-1",
           "name": "Exterior photography",
           "startDate": "2026-05-03",
           "endDate": "2026-05-03",
-          "description": "Front façade, rear, sides, landscaping, architectural details"
+          "description": "Front, backyard, garage, aerial drone shots",
+          "progress": 100,
+          "status": "done",
+          "resourceId": "photog",
+          "cost": 800,
+          "effort": 2,
+          "effortUnit": "hours",
+          "dependencies": ["prep-3"]
         },
         {
           "id": "shoot-2",
           "name": "Interior photography",
           "startDate": "2026-05-03",
           "endDate": "2026-05-03",
-          "description": "All rooms, wide angles, detail shots, ambient lighting"
+          "description": "Living room, kitchen, bedrooms, bathrooms",
+          "progress": 100,
+          "status": "done",
+          "resourceId": "photog",
+          "cost": 700,
+          "effort": 2,
+          "effortUnit": "hours",
+          "dependencies": ["shoot-1"]
         },
         {
           "id": "shoot-3",
-          "name": "Drone/aerial photography",
-          "startDate": "2026-05-03",
-          "endDate": "2026-05-03",
-          "description": "Aerial property shots, neighborhood context (if option selected)",
-          "resourceId": "pilot"
-        },
-        {
-          "id": "shoot-4",
           "name": "Video walkthrough",
           "startDate": "2026-05-03",
           "endDate": "2026-05-03",
-          "description": "Cinematic property walkthrough video (if option selected)"
+          "description": "Cinematic video tour with gimbal",
+          "progress": 100,
+          "status": "done",
+          "resourceId": "photog",
+          "cost": 600,
+          "effort": 1,
+          "effortUnit": "hours",
+          "dependencies": ["shoot-2"]
         },
         {
-          "id": "shoot-5",
-          "name": "3D scan / Matterport",
+          "id": "shoot-4",
+          "name": "Twilight shots",
           "startDate": "2026-05-03",
           "endDate": "2026-05-03",
-          "description": "3D virtual tour capture (if option selected)"
-        },
-        {
-          "id": "shoot-6",
-          "name": "Floor plan capture",
-          "startDate": "2026-05-03",
-          "endDate": "2026-05-03",
-          "description": "Measure and capture data for floor plan (if option selected)"
+          "description": "Exterior shots at sunset with interior lights on",
+          "progress": 100,
+          "status": "done",
+          "resourceId": "photog",
+          "cost": 400,
+          "effort": 1,
+          "effortUnit": "hours",
+          "dependencies": ["shoot-3"]
         }
       ]
     },
     {
-      "id": "travel-back",
-      "name": "Travel from Property",
-      "startDate": "2026-05-03",
-      "endDate": "2026-05-03",
-      "description": "Travel back from property location",
-      "resourceId": "photog"
-    },
-    {
-      "id": "twilight",
-      "name": "Twilight Photography",
-      "startDate": "2026-05-03",
-      "endDate": "2026-05-03",
-      "description": "Return for twilight exterior shots (if option selected, seasonal timing)",
-      "resourceId": "photog"
-    },
-    {
-      "id": "edit-photo",
-      "name": "Photo Editing",
+      "id": "edit",
+      "name": "Post-Production",
       "startDate": "2026-05-04",
-      "endDate": "2026-05-05",
+      "endDate": "2026-05-06",
+      "description": "Photo and video editing",
+      "progress": 80,
+      "status": "in_progress",
+      "cost": 1800,
       "children": [
         {
-          "id": "edit-p1",
-          "name": "Photo culling & selection",
+          "id": "edit-1",
+          "name": "Photo culling & RAW processing",
           "startDate": "2026-05-04",
           "endDate": "2026-05-04",
-          "description": "Cull and select best shots from all captures"
+          "description": "Select best shots, RAW processing in Lightroom",
+          "progress": 100,
+          "status": "done",
+          "resourceId": "editor",
+          "cost": 500,
+          "effort": 4,
+          "effortUnit": "hours",
+          "dependencies": ["shoot-4"]
         },
         {
-          "id": "edit-p2",
-          "name": "HDR processing & color correction",
-          "startDate": "2026-05-04",
-          "endDate": "2026-05-04",
-          "description": "HDR blending, exposure correction, white balance"
-        },
-        {
-          "id": "edit-p3",
-          "name": "Retouching & enhancements",
+          "id": "edit-2",
+          "name": "Photo retouching",
           "startDate": "2026-05-05",
           "endDate": "2026-05-05",
-          "description": "Sky replacement, staging cleanup, verticals correction"
+          "description": "HDR blending, sky replacement, color correction",
+          "progress": 90,
+          "status": "in_progress",
+          "resourceId": "editor",
+          "cost": 600,
+          "effort": 6,
+          "effortUnit": "hours",
+          "dependencies": ["edit-1"]
         },
         {
-          "id": "edit-p4",
-          "name": "Final export (print + web)",
-          "startDate": "2026-05-05",
-          "endDate": "2026-05-05",
-          "description": "Export high-res for print and optimized web versions"
-        }
-      ]
-    },
-    {
-      "id": "edit-video",
-      "name": "Video & Drone Editing",
-      "startDate": "2026-05-05",
-      "endDate": "2026-05-06",
-      "description": "Video editing, color grading, stabilization (if video/drone options selected)"
-    },
-    {
-      "id": "edit-3d",
-      "name": "3D & Floor Plan Production",
-      "startDate": "2026-05-06",
-      "endDate": "2026-05-06",
-      "description": "Process 3D scan, create floor plan (if options selected)",
-      "resourceId": "designer"
-    },
-    {
-      "id": "proofs",
-      "name": "Proofs & Client Review",
-      "startDate": "2026-05-06",
-      "endDate": "2026-05-07",
-      "children": [
-        {
-          "id": "proof-1",
-          "name": "Create proof gallery",
+          "id": "edit-3",
+          "name": "Video editing",
           "startDate": "2026-05-06",
           "endDate": "2026-05-06",
-          "description": "Upload to online proof gallery for client review"
-        },
-        {
-          "id": "proof-2",
-          "name": "Client feedback period",
-          "startDate": "2026-05-06",
-          "endDate": "2026-05-07",
-          "description": "Allow time for client to review and request edits"
-        },
-        {
-          "id": "proof-3",
-          "name": "Revision round",
-          "startDate": "2026-05-07",
-          "endDate": "2026-05-07",
-          "description": "Complete client-requested revisions"
+          "description": "Color grading, music, transitions",
+          "progress": 50,
+          "status": "in_progress",
+          "resourceId": "editor",
+          "cost": 700,
+          "effort": 6,
+          "effortUnit": "hours",
+          "dependencies": ["edit-2"]
         }
       ]
     },
     {
-      "id": "dtp-social",
-      "name": "DTP & Social Media Publishing",
+      "id": "delivery",
+      "name": "Delivery & Publishing",
       "startDate": "2026-05-07",
       "endDate": "2026-05-08",
-      "children": [
-        {
-          "id": "dtp-1",
-          "name": "Marketing materials",
-          "startDate": "2026-05-07",
-          "endDate": "2026-05-07",
-          "description": "Create flyers, brochures, listing cards (if required)",
-          "resourceId": "designer"
-        },
-        {
-          "id": "dtp-2",
-          "name": "Social media assets",
-          "startDate": "2026-05-07",
-          "endDate": "2026-05-08",
-          "description": "Create Instagram, Facebook, LinkedIn posts and stories",
-          "resourceId": "designer"
-        },
-        {
-          "id": "dtp-3",
-          "name": "Schedule social posts",
-          "startDate": "2026-05-08",
-          "endDate": "2026-05-08",
-          "description": "Schedule posts across platforms using social media tools",
-          "resourceId": "designer"
-        },
-        {
-          "id": "dtp-4",
-          "name": "Publish to social channels",
-          "startDate": "2026-05-08",
-          "endDate": "2026-05-08",
-          "description": "Publish posts to Instagram, Facebook, LinkedIn, TikTok"
-        }
-      ]
-    },
-    {
-      "id": "deliver",
-      "name": "Delivery & Archiving",
-      "startDate": "2026-05-08",
-      "endDate": "2026-05-08",
+      "description": "Client delivery and publishing",
+      "progress": 0,
+      "status": "not_started",
+      "cost": 700,
       "children": [
         {
           "id": "del-1",
-          "name": "Upload to MLS & portals",
-          "startDate": "2026-05-08",
-          "endDate": "2026-05-08",
-          "description": "Upload final images to MLS, realtor.com, client portal"
+          "name": "Client gallery delivery",
+          "startDate": "2026-05-07",
+          "endDate": "2026-05-07",
+          "description": "Upload to client gallery, send link",
+          "progress": 0,
+          "status": "not_started",
+          "resourceId": "pm",
+          "cost": 200,
+          "effort": 2,
+          "effortUnit": "hours",
+          "dependencies": ["edit-3"]
         },
         {
           "id": "del-2",
-          "name": "Client file delivery",
+          "name": "Social media publishing",
           "startDate": "2026-05-08",
           "endDate": "2026-05-08",
-          "description": "Deliver final files via download link"
+          "description": "Post to Instagram, Facebook, listing sites",
+          "progress": 0,
+          "status": "not_started",
+          "resourceId": "pm",
+          "cost": 200,
+          "effort": 2,
+          "effortUnit": "hours",
+          "dependencies": ["del-1"]
         },
         {
           "id": "del-3",
-          "name": "Project archiving",
+          "name": "Final invoice & archive",
           "startDate": "2026-05-08",
           "endDate": "2026-05-08",
-          "description": "Archive raw files and project assets"
-        },
-        {
-          "id": "del-4",
-          "name": "Project complete",
-          "startDate": "2026-05-08",
-          "endDate": "2026-05-08",
-          "isMilestone": true
+          "description": "Send final invoice, archive project files",
+          "progress": 0,
+          "status": "not_started",
+          "resourceId": "pm",
+          "cost": 300,
+          "effort": 2,
+          "effortUnit": "hours",
+          "dependencies": ["del-2"],
+          "approvalGates": [
+            {
+              "gateType": "approval",
+              "approved": false,
+              "approvedBy": null,
+              "approvedDate": null,
+              "notes": "Client approval required before final delivery"
+            }
+          ]
         }
       ]
     }
@@ -307,115 +309,663 @@
       "id": "r1",
       "title": "Weather cancellation",
       "category": "external",
-      "probability": 4,
+      "probability": 3,
       "impact": 4,
-      "status": "identified",
-      "mitigationPlan": "Schedule backup shoot day, monitor weather 48hrs ahead, have indoor-only contingency shots"
+      "status": "mitigating",
+      "ownerId": "pm",
+      "taskId": "shoot",
+      "mitigationPlan": "Monitor weather, have backup date ready",
+      "contingencyPlan": "Reschedule shoot within 48 hours",
+      "mitigationCost": 200,
+      "triggerCondition": "Rain or heavy overcast forecast",
+      "residualProbability": 1,
+      "residualImpact": 3,
+      "identifiedDate": "2026-05-01",
+      "reviewDate": "2026-05-03"
     },
     {
       "id": "r2",
-      "title": "Drone flight restrictions",
-      "category": "external",
-      "probability": 3,
-      "impact": 3,
-      "status": "identified",
-      "mitigationPlan": "Check airspace via LAANC 7 days prior, verify no temporary restrictions, have ground-only backup"
-    },
-    {
-      "id": "r3",
-      "title": "Equipment failure on-site",
+      "title": "Equipment failure",
       "category": "technical",
       "probability": 2,
       "impact": 5,
-      "status": "mitigating",
-      "mitigationPlan": "Carry backup camera body, 2+ lenses, 6+ batteries, 4+ memory cards, backup drone"
+      "status": "monitoring",
+      "ownerId": "photog",
+      "taskId": "shoot",
+      "mitigationPlan": "Backup camera body and batteries on-site",
+      "contingencyPlan": "Rent equipment from local supplier",
+      "mitigationCost": 300,
+      "triggerCondition": "Camera or drone malfunction during shoot",
+      "residualProbability": 1,
+      "residualImpact": 4,
+      "identifiedDate": "2026-05-01",
+      "reviewDate": "2026-05-03"
+    },
+    {
+      "id": "r3",
+      "title": "Client revision requests",
+      "category": "scope",
+      "probability": 4,
+      "impact": 2,
+      "status": "monitoring",
+      "ownerId": "pm",
+      "taskId": "edit",
+      "mitigationPlan": "Clear scope definition in contract (2 rounds included)",
+      "contingencyPlan": "Charge hourly for additional revisions",
+      "mitigationCost": 150,
+      "triggerCondition": "Client requests >2 rounds of revisions",
+      "residualProbability": 2,
+      "residualImpact": 2,
+      "identifiedDate": "2026-05-01",
+      "reviewDate": "2026-05-08"
     },
     {
       "id": "r4",
-      "title": "Property not photo-ready",
-      "category": "schedule",
-      "probability": 3,
-      "impact": 4,
-      "status": "identified",
-      "mitigationPlan": "Confirm staging 24hrs before, provide prep checklist to agent, have stager on standby"
+      "title": "Property access denied",
+      "category": "external",
+      "probability": 2,
+      "impact": 5,
+      "status": "monitoring",
+      "ownerId": "pm",
+      "taskId": "prep",
+      "mitigationPlan": "Confirm access 24h before shoot with agent",
+      "contingencyPlan": "Reschedule with 24h notice, waive cancellation fee",
+      "mitigationCost": 100,
+      "triggerCondition": "Agent or owner denies access on shoot day",
+      "residualProbability": 1,
+      "residualImpact": 4,
+      "identifiedDate": "2026-05-01",
+      "reviewDate": "2026-05-03"
     },
     {
       "id": "r5",
-      "title": "Client scope creep",
-      "category": "scope",
-      "probability": 4,
-      "impact": 3,
-      "status": "identified",
-      "mitigationPlan": "Detailed contract with shot list, fixed revision rounds, hourly rate for extras"
-    },
-    {
-      "id": "r6",
-      "title": "Traffic/travel delays",
-      "category": "schedule",
+      "title": "Drone flight restriction",
+      "category": "external",
       "probability": 3,
-      "impact": 2,
+      "impact": 3,
       "status": "mitigating",
-      "mitigationPlan": "Allow 50% extra travel time for shoots, schedule buffer between jobs, check traffic apps"
-    },
-    {
-      "id": "r7",
-      "title": "Access issues at property",
-      "category": "external",
-      "probability": 2,
-      "impact": 4,
-      "status": "identified",
-      "mitigationPlan": "Confirm lockbox/code 24hrs prior, have agent contact number, verify parking"
-    },
-    {
-      "id": "r8",
-      "title": "Social media algorithm changes",
-      "category": "external",
-      "probability": 2,
-      "impact": 2,
-      "status": "monitoring",
-      "mitigationPlan": "Diversify platforms, focus on engagement metrics, maintain content calendar"
+      "ownerId": "photog",
+      "taskId": "shoot",
+      "mitigationPlan": "Check airspace restrictions, obtain LAANC authorization",
+      "contingencyPlan": "Use pole camera for elevated shots instead",
+      "mitigationCost": 50,
+      "triggerCondition": "Property within 5 miles of airport or restricted zone",
+      "residualProbability": 1,
+      "residualImpact": 2,
+      "identifiedDate": "2026-05-01",
+      "reviewDate": "2026-05-03"
     }
   ],
   "resources": [
     {
-      "id": "photog",
-      "name": "Lead Photographer",
-      "role": "Photography",
-      "costRate": 200,
+      "id": "pm",
+      "name": "Project Coordinator",
+      "role": "Coordination",
+      "costRate": 75,
+      "costCurrency": "USD",
       "availability": 100,
       "color": "#3B82F6"
     },
     {
-      "id": "pilot",
-      "name": "Drone Pilot",
-      "role": "Aerial",
+      "id": "photog",
+      "name": "Photographer",
+      "role": "Photography",
       "costRate": 150,
-      "availability": 50,
-      "color": "#06B6D4"
+      "costCurrency": "USD",
+      "availability": 100,
+      "color": "#10B981"
     },
     {
-      "id": "stager",
-      "name": "Home Stager",
-      "role": "Staging",
-      "costRate": 100,
-      "availability": 50,
+      "id": "editor",
+      "name": "Photo Editor",
+      "role": "Editing",
+      "costRate": 80,
+      "costCurrency": "USD",
+      "availability": 100,
       "color": "#F59E0B"
     },
     {
-      "id": "designer",
-      "name": "DTP / Social Media Designer",
-      "role": "Design",
-      "costRate": 120,
-      "availability": 75,
+      "id": "assistant",
+      "name": "Photography Assistant",
+      "role": "Assistant",
+      "costRate": 50,
+      "costCurrency": "USD",
+      "availability": 100,
       "color": "#8B5CF6"
+    }
+  ],
+  "materials": [
+    {
+      "id": "mat-1",
+      "name": "Camera Body (rental backup)",
+      "classification": "opex",
+      "unit": "day",
+      "unitCost": 0,
+      "quantity": 1,
+      "vendor": "LensRentals",
+      "billingPeriod": "daily",
+      "rentalRate": 75,
+      "leaseStartDate": "2026-05-03",
+      "leaseEndDate": "2026-05-04",
+      "currency": "USD",
+      "status": "returned"
     },
     {
-      "id": "asst",
-      "name": "Photo Assistant",
-      "role": "Assistant",
-      "costRate": 60,
-      "availability": 100,
-      "color": "#10B981"
+      "id": "mat-2",
+      "name": "Drone",
+      "classification": "capex",
+      "unit": "each",
+      "unitCost": 2500,
+      "quantity": 1,
+      "vendor": "DJI",
+      "depreciationMethod": "straight-line",
+      "usefulLifeMonths": 24,
+      "salvageValue": 500,
+      "currency": "USD",
+      "status": "in-use"
+    },
+    {
+      "id": "mat-3",
+      "name": "Memory Cards",
+      "classification": "consumable",
+      "unit": "each",
+      "unitCost": 80,
+      "quantity": 4,
+      "vendor": "SanDisk",
+      "wastageRate": 0,
+      "reorderPoint": 2,
+      "carryingCostPerUnit": 0,
+      "currency": "USD",
+      "status": "delivered"
+    }
+  ],
+  "accounting": {
+    "baselineTotal": 6300,
+    "allocatedTotal": 6500,
+    "currentEstimateTotal": 6450,
+    "actualSpendTotal": 4800,
+    "etcTotal": 1650,
+    "materialCostTotal": 595,
+    "currency": "USD",
+    "taskAccounting": [
+      {
+        "taskId": "brief-1",
+        "taskName": "Initial client enquiry",
+        "progress": 100,
+        "baselineCost": 150,
+        "allocatedBudget": 150,
+        "materialCost": 0,
+        "currentEstimate": 150,
+        "actualSpend": 150,
+        "etc": 0,
+        "baselineDuration": 1,
+        "currentDuration": 1,
+        "actualDuration": 1,
+        "remainingDuration": 0,
+        "responsibleResourceId": "pm",
+        "resourceCostRate": 75
+      },
+      {
+        "taskId": "brief-2",
+        "taskName": "Quote & options selection",
+        "progress": 100,
+        "baselineCost": 200,
+        "allocatedBudget": 200,
+        "materialCost": 0,
+        "currentEstimate": 200,
+        "actualSpend": 200,
+        "etc": 0,
+        "baselineDuration": 1,
+        "currentDuration": 1,
+        "actualDuration": 1,
+        "remainingDuration": 0,
+        "responsibleResourceId": "pm",
+        "resourceCostRate": 75
+      },
+      {
+        "taskId": "brief-3",
+        "taskName": "Booking confirmation",
+        "progress": 100,
+        "baselineCost": 150,
+        "allocatedBudget": 150,
+        "materialCost": 0,
+        "currentEstimate": 150,
+        "actualSpend": 150,
+        "etc": 0,
+        "baselineDuration": 1,
+        "currentDuration": 1,
+        "actualDuration": 1,
+        "remainingDuration": 0,
+        "responsibleResourceId": "pm",
+        "resourceCostRate": 75
+      },
+      {
+        "taskId": "prep-1",
+        "taskName": "Equipment check & pack",
+        "progress": 100,
+        "baselineCost": 400,
+        "allocatedBudget": 400,
+        "materialCost": 75,
+        "currentEstimate": 475,
+        "actualSpend": 475,
+        "etc": 0,
+        "baselineDuration": 1,
+        "currentDuration": 1,
+        "actualDuration": 1,
+        "remainingDuration": 0,
+        "responsibleResourceId": "photog",
+        "resourceCostRate": 150
+      },
+      {
+        "taskId": "prep-2",
+        "taskName": "Travel to property",
+        "progress": 100,
+        "baselineCost": 200,
+        "allocatedBudget": 200,
+        "materialCost": 50,
+        "currentEstimate": 250,
+        "actualSpend": 250,
+        "etc": 0,
+        "baselineDuration": 1,
+        "currentDuration": 1,
+        "actualDuration": 1,
+        "remainingDuration": 0,
+        "responsibleResourceId": "photog",
+        "resourceCostRate": 150
+      },
+      {
+        "taskId": "prep-3",
+        "taskName": "Property walkthrough",
+        "progress": 100,
+        "baselineCost": 200,
+        "allocatedBudget": 200,
+        "materialCost": 0,
+        "currentEstimate": 200,
+        "actualSpend": 200,
+        "etc": 0,
+        "baselineDuration": 1,
+        "currentDuration": 1,
+        "actualDuration": 1,
+        "remainingDuration": 0,
+        "responsibleResourceId": "photog",
+        "resourceCostRate": 150
+      },
+      {
+        "taskId": "shoot-1",
+        "taskName": "Exterior photography",
+        "progress": 100,
+        "baselineCost": 800,
+        "allocatedBudget": 800,
+        "materialCost": 0,
+        "currentEstimate": 800,
+        "actualSpend": 800,
+        "etc": 0,
+        "baselineDuration": 1,
+        "currentDuration": 1,
+        "actualDuration": 1,
+        "remainingDuration": 0,
+        "responsibleResourceId": "photog",
+        "resourceCostRate": 150
+      },
+      {
+        "taskId": "shoot-2",
+        "taskName": "Interior photography",
+        "progress": 100,
+        "baselineCost": 700,
+        "allocatedBudget": 700,
+        "materialCost": 0,
+        "currentEstimate": 700,
+        "actualSpend": 700,
+        "etc": 0,
+        "baselineDuration": 1,
+        "currentDuration": 1,
+        "actualDuration": 1,
+        "remainingDuration": 0,
+        "responsibleResourceId": "photog",
+        "resourceCostRate": 150
+      },
+      {
+        "taskId": "shoot-3",
+        "taskName": "Video walkthrough",
+        "progress": 100,
+        "baselineCost": 600,
+        "allocatedBudget": 600,
+        "materialCost": 0,
+        "currentEstimate": 600,
+        "actualSpend": 600,
+        "etc": 0,
+        "baselineDuration": 1,
+        "currentDuration": 1,
+        "actualDuration": 1,
+        "remainingDuration": 0,
+        "responsibleResourceId": "photog",
+        "resourceCostRate": 150
+      },
+      {
+        "taskId": "shoot-4",
+        "taskName": "Twilight shots",
+        "progress": 100,
+        "baselineCost": 400,
+        "allocatedBudget": 400,
+        "materialCost": 0,
+        "currentEstimate": 400,
+        "actualSpend": 400,
+        "etc": 0,
+        "baselineDuration": 1,
+        "currentDuration": 1,
+        "actualDuration": 1,
+        "remainingDuration": 0,
+        "responsibleResourceId": "photog",
+        "resourceCostRate": 150
+      },
+      {
+        "taskId": "edit-1",
+        "taskName": "Photo culling & RAW processing",
+        "progress": 100,
+        "baselineCost": 500,
+        "allocatedBudget": 500,
+        "materialCost": 0,
+        "currentEstimate": 500,
+        "actualSpend": 500,
+        "etc": 0,
+        "baselineDuration": 1,
+        "currentDuration": 1,
+        "actualDuration": 1,
+        "remainingDuration": 0,
+        "responsibleResourceId": "editor",
+        "resourceCostRate": 80
+      },
+      {
+        "taskId": "edit-2",
+        "taskName": "Photo retouching",
+        "progress": 90,
+        "baselineCost": 600,
+        "allocatedBudget": 600,
+        "materialCost": 0,
+        "currentEstimate": 600,
+        "actualSpend": 550,
+        "etc": 50,
+        "baselineDuration": 1,
+        "currentDuration": 1,
+        "actualDuration": 1,
+        "remainingDuration": 0,
+        "responsibleResourceId": "editor",
+        "resourceCostRate": 80
+      },
+      {
+        "taskId": "edit-3",
+        "taskName": "Video editing",
+        "progress": 50,
+        "baselineCost": 700,
+        "allocatedBudget": 700,
+        "materialCost": 0,
+        "currentEstimate": 725,
+        "actualSpend": 350,
+        "etc": 375,
+        "baselineDuration": 1,
+        "currentDuration": 1,
+        "actualDuration": 1,
+        "remainingDuration": 0,
+        "responsibleResourceId": "editor",
+        "resourceCostRate": 80
+      },
+      {
+        "taskId": "del-1",
+        "taskName": "Client gallery delivery",
+        "progress": 0,
+        "baselineCost": 200,
+        "allocatedBudget": 200,
+        "materialCost": 0,
+        "currentEstimate": 200,
+        "actualSpend": 0,
+        "etc": 200,
+        "baselineDuration": 1,
+        "currentDuration": 1,
+        "actualDuration": 0,
+        "remainingDuration": 1,
+        "responsibleResourceId": "pm",
+        "resourceCostRate": 75
+      },
+      {
+        "taskId": "del-2",
+        "taskName": "Social media publishing",
+        "progress": 0,
+        "baselineCost": 200,
+        "allocatedBudget": 200,
+        "materialCost": 0,
+        "currentEstimate": 200,
+        "actualSpend": 0,
+        "etc": 200,
+        "baselineDuration": 1,
+        "currentDuration": 1,
+        "actualDuration": 0,
+        "remainingDuration": 1,
+        "responsibleResourceId": "pm",
+        "resourceCostRate": 75
+      },
+      {
+        "taskId": "del-3",
+        "taskName": "Final invoice & archive",
+        "progress": 0,
+        "baselineCost": 300,
+        "allocatedBudget": 300,
+        "materialCost": 0,
+        "currentEstimate": 300,
+        "actualSpend": 0,
+        "etc": 300,
+        "baselineDuration": 1,
+        "currentDuration": 1,
+        "actualDuration": 0,
+        "remainingDuration": 1,
+        "responsibleResourceId": "pm",
+        "resourceCostRate": 75
+      }
+    ],
+    "spendEntries": [
+      {
+        "id": "spend-1",
+        "taskId": "brief-1",
+        "date": "2026-05-01",
+        "amount": 150,
+        "currency": "USD",
+        "source": "Project Coordinator",
+        "notes": "Client call"
+      },
+      {
+        "id": "spend-2",
+        "taskId": "brief-2",
+        "date": "2026-05-01",
+        "amount": 200,
+        "currency": "USD",
+        "source": "Project Coordinator",
+        "notes": "Quote preparation"
+      },
+      {
+        "id": "spend-3",
+        "taskId": "brief-3",
+        "date": "2026-05-01",
+        "amount": 150,
+        "currency": "USD",
+        "source": "Project Coordinator",
+        "notes": "Booking admin"
+      },
+      {
+        "id": "spend-4",
+        "taskId": "prep-1",
+        "date": "2026-05-02",
+        "amount": 475,
+        "currency": "USD",
+        "source": "Photographer",
+        "notes": "Equipment prep + rental"
+      },
+      {
+        "id": "spend-5",
+        "taskId": "prep-2",
+        "date": "2026-05-02",
+        "amount": 250,
+        "currency": "USD",
+        "source": "Photographer",
+        "notes": "Travel costs"
+      },
+      {
+        "id": "spend-6",
+        "taskId": "shoot-1",
+        "date": "2026-05-03",
+        "amount": 800,
+        "currency": "USD",
+        "source": "Photographer",
+        "notes": "Exterior shoot"
+      },
+      {
+        "id": "spend-7",
+        "taskId": "shoot-2",
+        "date": "2026-05-03",
+        "amount": 700,
+        "currency": "USD",
+        "source": "Photographer",
+        "notes": "Interior shoot"
+      },
+      {
+        "id": "spend-8",
+        "taskId": "shoot-3",
+        "date": "2026-05-03",
+        "amount": 600,
+        "currency": "USD",
+        "source": "Photographer",
+        "notes": "Video shoot"
+      },
+      {
+        "id": "spend-9",
+        "taskId": "shoot-4",
+        "date": "2026-05-03",
+        "amount": 400,
+        "currency": "USD",
+        "source": "Photographer",
+        "notes": "Twilight shoot"
+      },
+      {
+        "id": "spend-10",
+        "taskId": "edit-1",
+        "date": "2026-05-04",
+        "amount": 500,
+        "currency": "USD",
+        "source": "Photo Editor",
+        "notes": "RAW processing"
+      },
+      {
+        "id": "spend-11",
+        "taskId": "edit-2",
+        "date": "2026-05-05",
+        "amount": 550,
+        "currency": "USD",
+        "source": "Photo Editor",
+        "notes": "Retouching partial"
+      },
+      {
+        "id": "spend-12",
+        "taskId": "edit-3",
+        "date": "2026-05-06",
+        "amount": 350,
+        "currency": "USD",
+        "source": "Photo Editor",
+        "notes": "Video editing partial"
+      }
+    ]
+  },
+  "allocations": [
+    {
+      "id": "alloc-1",
+      "materialId": "mat-1",
+      "taskId": "prep-1",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2026-05-02",
+      "expectedReturnDate": "2026-05-04",
+      "actualCost": 75,
+      "notes": "Backup camera rental"
+    },
+    {
+      "id": "alloc-2",
+      "materialId": "mat-2",
+      "taskId": "shoot-1",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2026-05-03",
+      "expectedReturnDate": null,
+      "actualCost": 0,
+      "notes": "DJI drone for aerial shots"
+    },
+    {
+      "id": "alloc-3",
+      "materialId": "mat-3",
+      "taskId": "shoot-1",
+      "allocatedQuantity": 4,
+      "consumedQuantity": 2,
+      "allocationDate": "2026-05-03",
+      "expectedReturnDate": null,
+      "actualCost": 160,
+      "notes": "SD cards for shoot"
+    }
+  ],
+  "consumptions": [
+    {
+      "id": "cons-1",
+      "materialId": "mat-1",
+      "taskId": "prep-1",
+      "date": "2026-05-02",
+      "quantity": 1,
+      "wastageQuantity": 0,
+      "unitCostAtConsumption": 75,
+      "notes": "Rental day charge"
+    },
+    {
+      "id": "cons-2",
+      "materialId": "mat-2",
+      "taskId": "shoot-1",
+      "date": "2026-05-03",
+      "quantity": 1,
+      "wastageQuantity": 0,
+      "unitCostAtConsumption": 0,
+      "notes": "Owned equipment"
+    },
+    {
+      "id": "cons-3",
+      "materialId": "mat-3",
+      "taskId": "shoot-1",
+      "date": "2026-05-03",
+      "quantity": 2,
+      "wastageQuantity": 0,
+      "unitCostAtConsumption": 80,
+      "notes": "Cards used for shoot"
+    }
+  ],
+  "capitalizationConfig": {
+    "threshold": 500,
+    "currency": "USD",
+    "defaultUsefulLifeMonths": 24,
+    "defaultDepreciationMethod": "straight-line",
+    "defaultSalvagePercent": 20
+  },
+  "changeLog": [
+    {
+      "id": "cl-1",
+      "date": "2026-05-02",
+      "taskId": "shoot",
+      "changeType": "scope",
+      "description": "Client requested additional twilight shots",
+      "costImpact": 400,
+      "scheduleImpactDays": 0,
+      "approvedBy": "Client"
+    },
+    {
+      "id": "cl-2",
+      "date": "2026-05-05",
+      "taskId": "edit-2",
+      "changeType": "resource",
+      "description": "Editor sick day - outsourced retouching",
+      "costImpact": 150,
+      "scheduleImpactDays": 1,
+      "approvedBy": "Project Coordinator"
     }
   ]
 }

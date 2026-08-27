@@ -12,11 +12,64 @@
       "startDate": "2027-01-01",
       "endDate": "2027-01-16",
       "children": [
-        { "id": "pre-1", "name": "Site survey", "startDate": "2027-01-01", "endDate": "2027-01-04" },
-        { "id": "pre-2", "name": "Architectural design", "startDate": "2027-01-04", "endDate": "2027-01-11" },
-        { "id": "pre-3", "name": "Permits & approvals", "startDate": "2027-01-11", "endDate": "2027-01-16" },
-        { "id": "pre-4", "name": "Permits approved", "startDate": "2027-01-16", "endDate": "2027-01-16", "isMilestone": true }
-      ]
+        {
+          "id": "pre-1",
+          "name": "Site survey",
+          "startDate": "2027-01-01",
+          "endDate": "2027-01-04",
+          "progress": 100,
+          "status": "done",
+          "cost": 3000,
+          "effort": 8,
+          "effortUnit": "hours"
+        },
+        {
+          "id": "pre-2",
+          "name": "Architectural design",
+          "startDate": "2027-01-04",
+          "endDate": "2027-01-11",
+          "progress": 100,
+          "status": "done",
+          "cost": 3500,
+          "effort": 10,
+          "effortUnit": "hours",
+          "dependencies": [
+            "pre-1"
+          ]
+        },
+        {
+          "id": "pre-3",
+          "name": "Permits & approvals",
+          "startDate": "2027-01-11",
+          "endDate": "2027-01-16",
+          "progress": 100,
+          "status": "done",
+          "cost": 4000,
+          "effort": 12,
+          "effortUnit": "hours",
+          "dependencies": [
+            "pre-2"
+          ]
+        },
+        {
+          "id": "pre-4",
+          "name": "Permits approved",
+          "startDate": "2027-01-16",
+          "endDate": "2027-01-16",
+          "isMilestone": true,
+          "progress": 100,
+          "status": "done",
+          "cost": 4500,
+          "effort": 14,
+          "effortUnit": "hours",
+          "dependencies": [
+            "pre-3"
+          ]
+        }
+      ],
+      "progress": 100,
+      "status": "done",
+      "cost": 32000
     },
     {
       "id": "foundation",
@@ -24,11 +77,64 @@
       "startDate": "2027-01-17",
       "endDate": "2027-01-29",
       "children": [
-        { "id": "found-1", "name": "Excavation", "startDate": "2027-01-17", "endDate": "2027-01-21" },
-        { "id": "found-2", "name": "Foundation pouring", "startDate": "2027-01-21", "endDate": "2027-01-24" },
-        { "id": "found-3", "name": "Curing & inspection", "startDate": "2027-01-24", "endDate": "2027-01-29" },
-        { "id": "found-4", "name": "Foundation complete", "startDate": "2027-01-29", "endDate": "2027-01-29", "isMilestone": true }
-      ]
+        {
+          "id": "found-1",
+          "name": "Excavation",
+          "startDate": "2027-01-17",
+          "endDate": "2027-01-21",
+          "progress": 100,
+          "status": "done",
+          "cost": 3000,
+          "effort": 8,
+          "effortUnit": "hours"
+        },
+        {
+          "id": "found-2",
+          "name": "Foundation pouring",
+          "startDate": "2027-01-21",
+          "endDate": "2027-01-24",
+          "progress": 100,
+          "status": "done",
+          "cost": 3500,
+          "effort": 10,
+          "effortUnit": "hours",
+          "dependencies": [
+            "found-1"
+          ]
+        },
+        {
+          "id": "found-3",
+          "name": "Curing & inspection",
+          "startDate": "2027-01-24",
+          "endDate": "2027-01-29",
+          "progress": 100,
+          "status": "done",
+          "cost": 4000,
+          "effort": 12,
+          "effortUnit": "hours",
+          "dependencies": [
+            "found-2"
+          ]
+        },
+        {
+          "id": "found-4",
+          "name": "Foundation complete",
+          "startDate": "2027-01-29",
+          "endDate": "2027-01-29",
+          "isMilestone": true,
+          "progress": 100,
+          "status": "done",
+          "cost": 4500,
+          "effort": 14,
+          "effortUnit": "hours",
+          "dependencies": [
+            "found-3"
+          ]
+        }
+      ],
+      "progress": 100,
+      "status": "done",
+      "cost": 32000
     },
     {
       "id": "structure",
@@ -36,11 +142,64 @@
       "startDate": "2027-01-30",
       "endDate": "2027-02-19",
       "children": [
-        { "id": "struct-1", "name": "Framing", "startDate": "2027-01-30", "endDate": "2027-02-07" },
-        { "id": "struct-2", "name": "Roofing", "startDate": "2027-02-07", "endDate": "2027-02-13" },
-        { "id": "struct-3", "name": "Exterior walls", "startDate": "2027-02-13", "endDate": "2027-02-19" },
-        { "id": "struct-4", "name": "Structure complete", "startDate": "2027-02-19", "endDate": "2027-02-19", "isMilestone": true }
-      ]
+        {
+          "id": "struct-1",
+          "name": "Framing",
+          "startDate": "2027-01-30",
+          "endDate": "2027-02-07",
+          "progress": 80,
+          "status": "in_progress",
+          "cost": 3000,
+          "effort": 8,
+          "effortUnit": "hours"
+        },
+        {
+          "id": "struct-2",
+          "name": "Roofing",
+          "startDate": "2027-02-07",
+          "endDate": "2027-02-13",
+          "progress": 80,
+          "status": "in_progress",
+          "cost": 3500,
+          "effort": 10,
+          "effortUnit": "hours",
+          "dependencies": [
+            "struct-1"
+          ]
+        },
+        {
+          "id": "struct-3",
+          "name": "Exterior walls",
+          "startDate": "2027-02-13",
+          "endDate": "2027-02-19",
+          "progress": 80,
+          "status": "in_progress",
+          "cost": 4000,
+          "effort": 12,
+          "effortUnit": "hours",
+          "dependencies": [
+            "struct-2"
+          ]
+        },
+        {
+          "id": "struct-4",
+          "name": "Structure complete",
+          "startDate": "2027-02-19",
+          "endDate": "2027-02-19",
+          "isMilestone": true,
+          "progress": 80,
+          "status": "in_progress",
+          "cost": 4500,
+          "effort": 14,
+          "effortUnit": "hours",
+          "dependencies": [
+            "struct-3"
+          ]
+        }
+      ],
+      "progress": 80,
+      "status": "in_progress",
+      "cost": 32000
     },
     {
       "id": "mep",
@@ -48,11 +207,63 @@
       "startDate": "2027-02-20",
       "endDate": "2027-03-07",
       "children": [
-        { "id": "mep-1", "name": "Electrical rough-in", "startDate": "2027-02-20", "endDate": "2027-02-25" },
-        { "id": "mep-2", "name": "Plumbing rough-in", "startDate": "2027-02-25", "endDate": "2027-03-02" },
-        { "id": "mep-3", "name": "HVAC installation", "startDate": "2027-03-02", "endDate": "2027-03-07" },
-        { "id": "mep-4", "name": "MEP inspection", "startDate": "2027-03-07", "endDate": "2027-03-08" }
-      ]
+        {
+          "id": "mep-1",
+          "name": "Electrical rough-in",
+          "startDate": "2027-02-20",
+          "endDate": "2027-02-25",
+          "progress": 60,
+          "status": "in_progress",
+          "cost": 3000,
+          "effort": 8,
+          "effortUnit": "hours"
+        },
+        {
+          "id": "mep-2",
+          "name": "Plumbing rough-in",
+          "startDate": "2027-02-25",
+          "endDate": "2027-03-02",
+          "progress": 60,
+          "status": "in_progress",
+          "cost": 3500,
+          "effort": 10,
+          "effortUnit": "hours",
+          "dependencies": [
+            "mep-1"
+          ]
+        },
+        {
+          "id": "mep-3",
+          "name": "HVAC installation",
+          "startDate": "2027-03-02",
+          "endDate": "2027-03-07",
+          "progress": 60,
+          "status": "in_progress",
+          "cost": 4000,
+          "effort": 12,
+          "effortUnit": "hours",
+          "dependencies": [
+            "mep-2"
+          ]
+        },
+        {
+          "id": "mep-4",
+          "name": "MEP inspection",
+          "startDate": "2027-03-07",
+          "endDate": "2027-03-08",
+          "progress": 60,
+          "status": "in_progress",
+          "cost": 4500,
+          "effort": 14,
+          "effortUnit": "hours",
+          "dependencies": [
+            "mep-3"
+          ]
+        }
+      ],
+      "progress": 60,
+      "status": "in_progress",
+      "cost": 32000
     },
     {
       "id": "finishing",
@@ -60,11 +271,63 @@
       "startDate": "2027-03-08",
       "endDate": "2027-03-23",
       "children": [
-        { "id": "fin-1", "name": "Interior drywall", "startDate": "2027-03-08", "endDate": "2027-03-13" },
-        { "id": "fin-2", "name": "Flooring", "startDate": "2027-03-13", "endDate": "2027-03-17" },
-        { "id": "fin-3", "name": "Painting", "startDate": "2027-03-17", "endDate": "2027-03-20" },
-        { "id": "fin-4", "name": "Fixture installation", "startDate": "2027-03-20", "endDate": "2027-03-23" }
-      ]
+        {
+          "id": "fin-1",
+          "name": "Interior drywall",
+          "startDate": "2027-03-08",
+          "endDate": "2027-03-13",
+          "progress": 40,
+          "status": "in_progress",
+          "cost": 3000,
+          "effort": 8,
+          "effortUnit": "hours"
+        },
+        {
+          "id": "fin-2",
+          "name": "Flooring",
+          "startDate": "2027-03-13",
+          "endDate": "2027-03-17",
+          "progress": 40,
+          "status": "in_progress",
+          "cost": 3500,
+          "effort": 10,
+          "effortUnit": "hours",
+          "dependencies": [
+            "fin-1"
+          ]
+        },
+        {
+          "id": "fin-3",
+          "name": "Painting",
+          "startDate": "2027-03-17",
+          "endDate": "2027-03-20",
+          "progress": 40,
+          "status": "in_progress",
+          "cost": 4000,
+          "effort": 12,
+          "effortUnit": "hours",
+          "dependencies": [
+            "fin-2"
+          ]
+        },
+        {
+          "id": "fin-4",
+          "name": "Fixture installation",
+          "startDate": "2027-03-20",
+          "endDate": "2027-03-23",
+          "progress": 40,
+          "status": "in_progress",
+          "cost": 4500,
+          "effort": 14,
+          "effortUnit": "hours",
+          "dependencies": [
+            "fin-3"
+          ]
+        }
+      ],
+      "progress": 40,
+      "status": "in_progress",
+      "cost": 32000
     },
     {
       "id": "handover",
@@ -72,38 +335,364 @@
       "startDate": "2027-03-24",
       "endDate": "2027-03-28",
       "children": [
-        { "id": "hand-1", "name": "Final inspection", "startDate": "2027-03-24", "endDate": "2027-03-26" },
-        { "id": "hand-2", "name": "Punch list", "startDate": "2027-03-26", "endDate": "2027-03-28" },
-        { "id": "hand-3", "name": "Certificate of occupancy", "startDate": "2027-03-28", "endDate": "2027-03-29" }
-      ]
+        {
+          "id": "hand-1",
+          "name": "Final inspection",
+          "startDate": "2027-03-24",
+          "endDate": "2027-03-26",
+          "progress": 20,
+          "status": "in_progress",
+          "cost": 3000,
+          "effort": 8,
+          "effortUnit": "hours"
+        },
+        {
+          "id": "hand-2",
+          "name": "Punch list",
+          "startDate": "2027-03-26",
+          "endDate": "2027-03-28",
+          "progress": 20,
+          "status": "in_progress",
+          "cost": 3500,
+          "effort": 10,
+          "effortUnit": "hours",
+          "dependencies": [
+            "hand-1"
+          ]
+        },
+        {
+          "id": "hand-3",
+          "name": "Certificate of occupancy",
+          "startDate": "2027-03-28",
+          "endDate": "2027-03-29",
+          "progress": 20,
+          "status": "in_progress",
+          "cost": 4000,
+          "effort": 12,
+          "effortUnit": "hours",
+          "dependencies": [
+            "hand-2"
+          ]
+        }
+      ],
+      "progress": 20,
+      "status": "in_progress",
+      "cost": 24000
     },
     {
       "id": "milestone-construction",
       "name": "Construction Complete",
       "startDate": "2027-03-28",
       "endDate": "2027-03-28",
-      "isMilestone": true
+      "isMilestone": true,
+      "progress": 0,
+      "status": "not_started"
     }
   ],
   "risks": [
-    { "id": "r1", "title": "Weather delays", "category": "external", "probability": 4, "impact": 4, "status": "identified", "mitigationPlan": "Weather monitoring, indoor work alternatives", "identifiedDate": "2027-01-01", "reviewDate": "2027-03-01" },
-    { "id": "r2", "title": "Material delivery delays", "category": "schedule", "probability": 3, "impact": 4, "status": "identified", "mitigationPlan": "Order early, local suppliers as backup", "identifiedDate": "2027-01-01", "reviewDate": "2027-03-01" },
-    { "id": "r3", "title": "Safety incidents", "category": "other", "probability": 2, "impact": 5, "status": "identified", "mitigationPlan": "Safety training, daily safety briefings", "identifiedDate": "2027-01-01", "reviewDate": "2027-03-01" },
-    { "id": "r4", "title": "Budget overrun", "category": "cost", "probability": 3, "impact": 4, "status": "identified", "mitigationPlan": "Contingency budget, weekly cost tracking", "identifiedDate": "2027-01-01", "reviewDate": "2027-03-01" },
-    { "id": "r5", "title": "Regulatory changes", "category": "external", "probability": 2, "impact": 4, "status": "identified", "mitigationPlan": "Monitor regulatory updates, flexible design", "identifiedDate": "2027-01-01", "reviewDate": "2027-03-01" }
+    {
+      "id": "r1",
+      "title": "Weather delays",
+      "category": "external",
+      "probability": 4,
+      "impact": 4,
+      "status": "identified",
+      "mitigationPlan": "Weather monitoring, indoor work alternatives",
+      "identifiedDate": "2027-01-01",
+      "reviewDate": "2027-03-01",
+      "taskId": null,
+      "ownerId": "pm",
+      "contingencyPlan": "Activate contingency budget and notify stakeholders",
+      "mitigationCost": 3000,
+      "triggerCondition": "Risk event occurs as described",
+      "residualProbability": 3,
+      "residualImpact": 3
+    },
+    {
+      "id": "r2",
+      "title": "Material delivery delays",
+      "category": "schedule",
+      "probability": 3,
+      "impact": 4,
+      "status": "identified",
+      "mitigationPlan": "Order early, local suppliers as backup",
+      "identifiedDate": "2027-01-01",
+      "reviewDate": "2027-03-01",
+      "taskId": null,
+      "ownerId": "pm",
+      "contingencyPlan": "Activate contingency budget and notify stakeholders",
+      "mitigationCost": 3000,
+      "triggerCondition": "Risk event occurs as described",
+      "residualProbability": 2,
+      "residualImpact": 3
+    },
+    {
+      "id": "r3",
+      "title": "Safety incidents",
+      "category": "other",
+      "probability": 2,
+      "impact": 5,
+      "status": "identified",
+      "mitigationPlan": "Safety training, daily safety briefings",
+      "identifiedDate": "2027-01-01",
+      "reviewDate": "2027-03-01",
+      "taskId": null,
+      "ownerId": "pm",
+      "contingencyPlan": "Activate contingency budget and notify stakeholders",
+      "mitigationCost": 3000,
+      "triggerCondition": "Risk event occurs as described",
+      "residualProbability": 1,
+      "residualImpact": 4
+    },
+    {
+      "id": "r4",
+      "title": "Budget overrun",
+      "category": "cost",
+      "probability": 3,
+      "impact": 4,
+      "status": "identified",
+      "mitigationPlan": "Contingency budget, weekly cost tracking",
+      "identifiedDate": "2027-01-01",
+      "reviewDate": "2027-03-01",
+      "taskId": null,
+      "ownerId": "pm",
+      "contingencyPlan": "Activate contingency budget and notify stakeholders",
+      "mitigationCost": 3000,
+      "triggerCondition": "Risk event occurs as described",
+      "residualProbability": 2,
+      "residualImpact": 3
+    },
+    {
+      "id": "r5",
+      "title": "Regulatory changes",
+      "category": "external",
+      "probability": 2,
+      "impact": 4,
+      "status": "identified",
+      "mitigationPlan": "Monitor regulatory updates, flexible design",
+      "identifiedDate": "2027-01-01",
+      "reviewDate": "2027-03-01",
+      "taskId": null,
+      "ownerId": "pm",
+      "contingencyPlan": "Activate contingency budget and notify stakeholders",
+      "mitigationCost": 3000,
+      "triggerCondition": "Risk event occurs as described",
+      "residualProbability": 1,
+      "residualImpact": 3
+    }
   ],
   "resources": [
-    { "id": "pm", "name": "Construction Manager", "role": "PM", "costRate": 160, "availability": 100, "color": "#3B82F6" },
-    { "id": "arch", "name": "Architect", "role": "Design", "costRate": 150, "availability": 50, "color": "#8B5CF6" },
-    { "id": "engineer", "name": "Structural Engineer", "role": "Engineering", "costRate": 160, "availability": 50, "color": "#10B981" },
-    { "id": "contractor", "name": "General Contractor", "role": "Construction", "costRate": 180, "availability": 100, "color": "#F59E0B" }
+    {
+      "id": "pm",
+      "name": "Construction Manager",
+      "role": "PM",
+      "costRate": 160,
+      "availability": 100,
+      "color": "#3B82F6"
+    },
+    {
+      "id": "arch",
+      "name": "Architect",
+      "role": "Design",
+      "costRate": 150,
+      "availability": 50,
+      "color": "#8B5CF6"
+    },
+    {
+      "id": "engineer",
+      "name": "Structural Engineer",
+      "role": "Engineering",
+      "costRate": 160,
+      "availability": 50,
+      "color": "#10B981"
+    },
+    {
+      "id": "contractor",
+      "name": "General Contractor",
+      "role": "Construction",
+      "costRate": 180,
+      "availability": 100,
+      "color": "#F59E0B"
+    }
   ],
   "materials": [
-    { "id": "excavator", "name": "Excavator (rental)", "classification": "opex", "unit": "each", "unitCost": 0, "quantity": 1, "vendor": "Caterpillar", "billingPeriod": "daily", "rentalRate": 800, "leaseStartDate": "2027-01-17", "leaseEndDate": "2027-01-24", "currency": "USD", "status": "ordered" },
-    { "id": "concrete", "name": "Ready-Mix Concrete", "classification": "consumable", "unit": "m³", "unitCost": 180, "quantity": 50, "vendor": "Acme Concrete", "wastageRate": 5, "reorderPoint": 10, "carryingCostPerUnit": 0, "currency": "USD", "status": "ordered" },
-    { "id": "steel", "name": "Structural Steel", "classification": "consumable", "unit": "ton", "unitCost": 2500, "quantity": 12, "vendor": "Steel Corp", "wastageRate": 3, "reorderPoint": 2, "carryingCostPerUnit": 5, "currency": "USD", "status": "ordered" },
-    { "id": "lumber", "name": "Framing Lumber", "classification": "consumable", "unit": "board-ft", "unitCost": 3.5, "quantity": 5000, "vendor": "Lumber Yard", "wastageRate": 8, "reorderPoint": 500, "carryingCostPerUnit": 0.05, "currency": "USD", "status": "ordered" },
-    { "id": "crane", "name": "Tower Crane (rental)", "classification": "opex", "unit": "each", "unitCost": 0, "quantity": 1, "vendor": "Crane Co", "billingPeriod": "monthly", "rentalRate": 15000, "leaseStartDate": "2027-01-30", "leaseEndDate": "2027-03-07", "currency": "USD", "status": "ordered" },
-    { "id": "safety", "name": "Safety Equipment", "classification": "capex", "unit": "set", "unitCost": 5000, "quantity": 1, "vendor": "Safety First", "depreciationMethod": "straight-line", "usefulLifeMonths": 60, "salvageValue": 500, "currency": "USD", "status": "ordered" }
+    {
+      "id": "con-mat-1",
+      "name": "Excavator (rental)",
+      "classification": "opex",
+      "unit": "week",
+      "unitCost": 0,
+      "quantity": 1,
+      "vendor": "Caterpillar",
+      "billingPeriod": "weekly",
+      "rentalRate": 2500,
+      "leaseStartDate": "2027-01-17",
+      "leaseEndDate": "2027-01-24",
+      "currency": "USD",
+      "status": "ordered"
+    },
+    {
+      "id": "con-mat-2",
+      "name": "Concrete",
+      "classification": "consumable",
+      "unit": "yard",
+      "unitCost": 150,
+      "quantity": 50,
+      "vendor": "Quikrete",
+      "wastageRate": 5,
+      "reorderPoint": 10,
+      "carryingCostPerUnit": 0,
+      "currency": "USD",
+      "status": "ordered"
+    },
+    {
+      "id": "con-mat-3",
+      "name": "Lumber Package",
+      "classification": "consumable",
+      "unit": "piece",
+      "unitCost": 25,
+      "quantity": 500,
+      "vendor": "Lumber Yard",
+      "wastageRate": 10,
+      "reorderPoint": 50,
+      "carryingCostPerUnit": 0.5,
+      "currency": "USD",
+      "status": "ordered"
+    },
+    {
+      "id": "con-mat-4",
+      "name": "Roofing Materials",
+      "classification": "consumable",
+      "unit": "sqft",
+      "unitCost": 8,
+      "quantity": 2000,
+      "vendor": "GAF",
+      "wastageRate": 5,
+      "reorderPoint": 200,
+      "carryingCostPerUnit": 0.1,
+      "currency": "USD",
+      "status": "ordered"
+    }
+  ],
+  "accounting": {
+    "baselineTotal": 185000,
+    "allocatedTotal": 190000,
+    "currentEstimateTotal": 188000,
+    "actualSpendTotal": 95000,
+    "etcTotal": 93000,
+    "materialCostTotal": 35000,
+    "currency": "USD",
+    "spendEntries": [
+      {
+        "id": "spend-1",
+        "taskId": "pre-1",
+        "date": "2027-01-04",
+        "amount": 15000,
+        "currency": "USD",
+        "source": "Architect",
+        "notes": "Design services"
+      },
+      {
+        "id": "spend-2",
+        "taskId": "pre-3",
+        "date": "2027-01-16",
+        "amount": 5000,
+        "currency": "USD",
+        "source": "City",
+        "notes": "Permit fees"
+      },
+      {
+        "id": "spend-3",
+        "taskId": "found-1",
+        "date": "2027-01-21",
+        "amount": 12000,
+        "currency": "USD",
+        "source": "General Contractor",
+        "notes": "Excavation and foundation"
+      },
+      {
+        "id": "spend-4",
+        "taskId": "found-3",
+        "date": "2027-01-29",
+        "amount": 8000,
+        "currency": "USD",
+        "source": "General Contractor",
+        "notes": "Foundation complete"
+      },
+      {
+        "id": "spend-5",
+        "taskId": "struct-1",
+        "date": "2027-02-07",
+        "amount": 15000,
+        "currency": "USD",
+        "source": "General Contractor",
+        "notes": "Framing"
+      },
+      {
+        "id": "spend-6",
+        "taskId": "struct-2",
+        "date": "2027-02-13",
+        "amount": 10000,
+        "currency": "USD",
+        "source": "General Contractor",
+        "notes": "Roofing"
+      },
+      {
+        "id": "spend-7",
+        "taskId": "mep-1",
+        "date": "2027-02-25",
+        "amount": 12000,
+        "currency": "USD",
+        "source": "Electrician",
+        "notes": "Electrical rough-in"
+      },
+      {
+        "id": "spend-8",
+        "taskId": "mep-2",
+        "date": "2027-03-02",
+        "amount": 10000,
+        "currency": "USD",
+        "source": "Plumber",
+        "notes": "Plumbing rough-in"
+      },
+      {
+        "id": "spend-9",
+        "taskId": "mep-3",
+        "date": "2027-03-07",
+        "amount": 8000,
+        "currency": "USD",
+        "source": "HVAC Contractor",
+        "notes": "HVAC installation"
+      }
+    ]
+  },
+  "capitalizationConfig": {
+    "threshold": 1000,
+    "currency": "USD",
+    "defaultUsefulLifeMonths": 60,
+    "defaultDepreciationMethod": "straight-line",
+    "defaultSalvagePercent": 10
+  },
+  "changeLog": [
+    {
+      "id": "cl-1",
+      "date": "2027-01-20",
+      "taskId": "struct-1",
+      "changeType": "scope",
+      "description": "Added vaulted ceiling in living room",
+      "costImpact": 5000,
+      "scheduleImpactDays": 3,
+      "approvedBy": "Homeowner"
+    },
+    {
+      "id": "cl-2",
+      "date": "2027-02-10",
+      "taskId": "mep-1",
+      "changeType": "resource",
+      "description": "Electrician delayed - subcontractor availability",
+      "costImpact": 0,
+      "scheduleImpactDays": 5,
+      "approvedBy": "Construction Manager"
+    }
   ]
 }

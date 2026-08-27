@@ -1,20 +1,67 @@
 {
   "id": "website",
   "name": "Website Project",
-  "description": "Complete website design and development project from discovery to launch.",
+  "description": "Complete website design and development project from discovery to launch. Demonstrates agile-like delivery with design, development, and testing phases.",
   "category": "Web/Dev",
   "startDate": "2026-02-01",
   "endDate": "2026-03-06",
+  "calendar": {
+    "workingDays": [1, 2, 3, 4, 5],
+    "holidays": [],
+    "hoursPerDay": 8
+  },
   "tasks": [
     {
       "id": "discovery",
       "name": "Discovery",
       "startDate": "2026-02-01",
       "endDate": "2026-02-05",
+      "description": "Requirements gathering and planning",
+      "progress": 100,
+      "status": "done",
+      "cost": 8500,
       "children": [
-        { "id": "disc-1", "name": "Stakeholder interviews", "startDate": "2026-02-01", "endDate": "2026-02-02" },
-        { "id": "disc-2", "name": "Content audit", "startDate": "2026-02-03", "endDate": "2026-02-04" },
-        { "id": "disc-3", "name": "Sitemap & wireframes", "startDate": "2026-02-05", "endDate": "2026-02-05" }
+        {
+          "id": "disc-1",
+          "name": "Stakeholder interviews",
+          "startDate": "2026-02-01",
+          "endDate": "2026-02-02",
+          "description": "Interview key stakeholders",
+          "progress": 100,
+          "status": "done",
+          "resourceId": "pm",
+          "cost": 2000,
+          "effort": 16,
+          "effortUnit": "hours"
+        },
+        {
+          "id": "disc-2",
+          "name": "Content audit",
+          "startDate": "2026-02-03",
+          "endDate": "2026-02-04",
+          "description": "Audit existing content and assets",
+          "progress": 100,
+          "status": "done",
+          "resourceId": "designer",
+          "cost": 3000,
+          "effort": 16,
+          "effortUnit": "hours",
+          "dependencies": ["disc-1"]
+        },
+        {
+          "id": "disc-3",
+          "name": "Sitemap & wireframes",
+          "startDate": "2026-02-05",
+          "endDate": "2026-02-05",
+          "description": "Create sitemap and low-fidelity wireframes",
+          "progress": 100,
+          "status": "done",
+          "resourceId": "designer",
+          "cost": 3500,
+          "effort": 8,
+          "effortUnit": "hours",
+          "dependencies": ["disc-2"]
+        }
       ]
     },
     {
@@ -22,10 +69,62 @@
       "name": "Design",
       "startDate": "2026-02-06",
       "endDate": "2026-02-13",
+      "description": "Visual design and prototyping",
+      "progress": 100,
+      "status": "done",
+      "cost": 12000,
       "children": [
-        { "id": "des-1", "name": "Visual design", "startDate": "2026-02-06", "endDate": "2026-02-09" },
-        { "id": "des-2", "name": "Responsive mockups", "startDate": "2026-02-10", "endDate": "2026-02-12" },
-        { "id": "des-3", "name": "Design review", "startDate": "2026-02-13", "endDate": "2026-02-13" }
+        {
+          "id": "des-1",
+          "name": "Visual design",
+          "startDate": "2026-02-06",
+          "endDate": "2026-02-09",
+          "description": "Create high-fidelity visual designs",
+          "progress": 100,
+          "status": "done",
+          "resourceId": "designer",
+          "cost": 5000,
+          "effort": 24,
+          "effortUnit": "hours",
+          "dependencies": ["disc-3"]
+        },
+        {
+          "id": "des-2",
+          "name": "Responsive mockups",
+          "startDate": "2026-02-10",
+          "endDate": "2026-02-12",
+          "description": "Design tablet and mobile breakpoints",
+          "progress": 100,
+          "status": "done",
+          "resourceId": "designer",
+          "cost": 4500,
+          "effort": 24,
+          "effortUnit": "hours",
+          "dependencies": ["des-1"]
+        },
+        {
+          "id": "des-3",
+          "name": "Design review",
+          "startDate": "2026-02-13",
+          "endDate": "2026-02-13",
+          "description": "Stakeholder design review and approval",
+          "progress": 100,
+          "status": "done",
+          "resourceId": "pm",
+          "cost": 2500,
+          "effort": 8,
+          "effortUnit": "hours",
+          "dependencies": ["des-2"],
+          "approvalGates": [
+            {
+              "gateType": "approval",
+              "approved": true,
+              "approvedBy": "Client",
+              "approvedDate": "2026-02-13",
+              "notes": "Design approved with minor revisions"
+            }
+          ]
+        }
       ]
     },
     {
@@ -33,10 +132,53 @@
       "name": "Development",
       "startDate": "2026-02-14",
       "endDate": "2026-02-25",
+      "description": "Frontend and backend development",
+      "progress": 75,
+      "status": "in_progress",
+      "cost": 18000,
       "children": [
-        { "id": "dev-1", "name": "Frontend development", "startDate": "2026-02-14", "endDate": "2026-02-19" },
-        { "id": "dev-2", "name": "Backend integration", "startDate": "2026-02-20", "endDate": "2026-02-24" },
-        { "id": "dev-3", "name": "CMS setup", "startDate": "2026-02-25", "endDate": "2026-02-25" }
+        {
+          "id": "dev-1",
+          "name": "Frontend development",
+          "startDate": "2026-02-14",
+          "endDate": "2026-02-19",
+          "description": "Build React components and pages",
+          "progress": 100,
+          "status": "done",
+          "resourceId": "dev",
+          "cost": 7000,
+          "effort": 40,
+          "effortUnit": "hours",
+          "dependencies": ["des-3"]
+        },
+        {
+          "id": "dev-2",
+          "name": "Backend integration",
+          "startDate": "2026-02-20",
+          "endDate": "2026-02-24",
+          "description": "API integration and CMS setup",
+          "progress": 60,
+          "status": "in_progress",
+          "resourceId": "dev",
+          "cost": 7000,
+          "effort": 32,
+          "effortUnit": "hours",
+          "dependencies": ["dev-1"]
+        },
+        {
+          "id": "dev-3",
+          "name": "CMS setup",
+          "startDate": "2026-02-25",
+          "endDate": "2026-02-25",
+          "description": "Configure content management system",
+          "progress": 0,
+          "status": "not_started",
+          "resourceId": "dev",
+          "cost": 4000,
+          "effort": 8,
+          "effortUnit": "hours",
+          "dependencies": ["dev-2"]
+        }
       ]
     },
     {
@@ -44,10 +186,53 @@
       "name": "Testing",
       "startDate": "2026-02-26",
       "endDate": "2026-03-02",
+      "description": "Quality assurance and testing",
+      "progress": 0,
+      "status": "not_started",
+      "cost": 6000,
       "children": [
-        { "id": "qa-1", "name": "Functional testing", "startDate": "2026-02-26", "endDate": "2026-02-28" },
-        { "id": "qa-2", "name": "Cross-browser testing", "startDate": "2026-03-01", "endDate": "2026-03-02" },
-        { "id": "qa-3", "name": "Performance testing", "startDate": "2026-03-02", "endDate": "2026-03-02" }
+        {
+          "id": "qa-1",
+          "name": "Functional testing",
+          "startDate": "2026-02-26",
+          "endDate": "2026-02-28",
+          "description": "Test all features and workflows",
+          "progress": 0,
+          "status": "not_started",
+          "resourceId": "qa",
+          "cost": 3000,
+          "effort": 16,
+          "effortUnit": "hours",
+          "dependencies": ["dev-3"]
+        },
+        {
+          "id": "qa-2",
+          "name": "Cross-browser testing",
+          "startDate": "2026-03-01",
+          "endDate": "2026-03-02",
+          "description": "Test on Chrome, Firefox, Safari, Edge",
+          "progress": 0,
+          "status": "not_started",
+          "resourceId": "qa",
+          "cost": 2000,
+          "effort": 16,
+          "effortUnit": "hours",
+          "dependencies": ["qa-1"]
+        },
+        {
+          "id": "qa-3",
+          "name": "Performance testing",
+          "startDate": "2026-03-02",
+          "endDate": "2026-03-02",
+          "description": "Load testing and performance optimization",
+          "progress": 0,
+          "status": "not_started",
+          "resourceId": "qa",
+          "cost": 1000,
+          "effort": 8,
+          "effortUnit": "hours",
+          "dependencies": ["qa-2"]
+        }
       ]
     },
     {
@@ -55,9 +240,39 @@
       "name": "Launch",
       "startDate": "2026-03-03",
       "endDate": "2026-03-06",
+      "description": "Deployment and go-live",
+      "progress": 0,
+      "status": "not_started",
+      "cost": 4000,
       "children": [
-        { "id": "launch-1", "name": "Deployment", "startDate": "2026-03-03", "endDate": "2026-03-04" },
-        { "id": "launch-2", "name": "Go-live", "startDate": "2026-03-05", "endDate": "2026-03-06", "isMilestone": true }
+        {
+          "id": "launch-1",
+          "name": "Deployment",
+          "startDate": "2026-03-03",
+          "endDate": "2026-03-04",
+          "description": "Deploy to production server",
+          "progress": 0,
+          "status": "not_started",
+          "resourceId": "dev",
+          "cost": 2000,
+          "effort": 8,
+          "effortUnit": "hours",
+          "dependencies": ["qa-3"]
+        },
+        {
+          "id": "launch-2",
+          "name": "Go-live",
+          "startDate": "2026-03-05",
+          "endDate": "2026-03-06",
+          "description": "DNS switch and go-live",
+          "progress": 0,
+          "status": "not_started",
+          "resourceId": "pm",
+          "cost": 2000,
+          "effort": 8,
+          "effortUnit": "hours",
+          "dependencies": ["launch-1"]
+        }
       ]
     },
     {
@@ -65,7 +280,11 @@
       "name": "Website Live",
       "startDate": "2026-03-06",
       "endDate": "2026-03-06",
-      "isMilestone": true
+      "description": "Website is live and accessible",
+      "isMilestone": true,
+      "progress": 0,
+      "status": "not_started",
+      "dependencies": ["launch-2"]
     }
   ],
   "risks": [
@@ -75,7 +294,17 @@
       "category": "schedule",
       "probability": 4,
       "impact": 3,
-      "mitigationPlan": "Set clear deadlines and approval gates"
+      "status": "mitigating",
+      "ownerId": "pm",
+      "taskId": "design",
+      "mitigationPlan": "Set clear deadlines and approval gates with stakeholders",
+      "contingencyPlan": "Reduce design iterations from 3 to 2 if behind schedule",
+      "mitigationCost": 1500,
+      "triggerCondition": "Client feedback not received within 2 business days",
+      "residualProbability": 2,
+      "residualImpact": 2,
+      "identifiedDate": "2026-02-01",
+      "reviewDate": "2026-02-15"
     },
     {
       "id": "r2",
@@ -83,7 +312,17 @@
       "category": "scope",
       "probability": 3,
       "impact": 4,
-      "mitigationPlan": "Strict change control process"
+      "status": "monitoring",
+      "ownerId": "pm",
+      "taskId": "dev",
+      "mitigationPlan": "Strict change control process with impact assessment",
+      "contingencyPlan": "Defer non-critical features to phase 2",
+      "mitigationCost": 2000,
+      "triggerCondition": "More than 3 new feature requests per sprint",
+      "residualProbability": 2,
+      "residualImpact": 3,
+      "identifiedDate": "2026-02-01",
+      "reviewDate": "2026-02-15"
     },
     {
       "id": "r3",
@@ -91,13 +330,520 @@
       "category": "technical",
       "probability": 2,
       "impact": 3,
-      "mitigationPlan": "Test early and often on target browsers"
+      "status": "monitoring",
+      "ownerId": "dev",
+      "taskId": "qa",
+      "mitigationPlan": "Test early and often on target browsers",
+      "contingencyPlan": "Use polyfills or graceful degradation",
+      "mitigationCost": 1000,
+      "triggerCondition": "Layout breaks on supported browser",
+      "residualProbability": 1,
+      "residualImpact": 2,
+      "identifiedDate": "2026-02-01",
+      "reviewDate": "2026-02-15"
     }
   ],
   "resources": [
-    { "id": "pm", "name": "Project Manager", "role": "PM", "costRate": 150, "color": "#3B82F6" },
-    { "id": "designer", "name": "UI Designer", "role": "Design", "costRate": 130, "color": "#8B5CF6" },
-    { "id": "dev", "name": "Web Developer", "role": "Dev", "costRate": 140, "color": "#10B981" },
-    { "id": "qa", "name": "QA Engineer", "role": "QA", "costRate": 110, "color": "#F59E0B" }
+    {
+      "id": "pm",
+      "name": "Project Manager",
+      "role": "PM",
+      "costRate": 150,
+      "costCurrency": "USD",
+      "availability": 100,
+      "color": "#3B82F6"
+    },
+    {
+      "id": "designer",
+      "name": "UI Designer",
+      "role": "Design",
+      "costRate": 130,
+      "costCurrency": "USD",
+      "availability": 100,
+      "color": "#8B5CF6"
+    },
+    {
+      "id": "dev",
+      "name": "Web Developer",
+      "role": "Dev",
+      "costRate": 140,
+      "costCurrency": "USD",
+      "availability": 100,
+      "color": "#10B981"
+    },
+    {
+      "id": "qa",
+      "name": "QA Engineer",
+      "role": "QA",
+      "costRate": 110,
+      "costCurrency": "USD",
+      "availability": 100,
+      "color": "#F59E0B"
+    }
+  ],
+  "materials": [
+    {
+      "id": "mat-1",
+      "name": "Design Software License",
+      "classification": "opex",
+      "unit": "each",
+      "unitCost": 0,
+      "quantity": 2,
+      "vendor": "Figma",
+      "billingPeriod": "monthly",
+      "rentalRate": 45,
+      "leaseStartDate": "2026-02-01",
+      "leaseEndDate": "2026-03-31",
+      "currency": "USD",
+      "status": "in-use"
+    },
+    {
+      "id": "mat-2",
+      "name": "Hosting (Annual)",
+      "classification": "opex",
+      "unit": "each",
+      "unitCost": 0,
+      "quantity": 1,
+      "vendor": "Vercel",
+      "billingPeriod": "monthly",
+      "rentalRate": 20,
+      "leaseStartDate": "2026-02-01",
+      "leaseEndDate": "2027-01-31",
+      "currency": "USD",
+      "status": "in-use"
+    },
+    {
+      "id": "mat-3",
+      "name": "Stock Photos",
+      "classification": "consumable",
+      "unit": "pack",
+      "unitCost": 150,
+      "quantity": 3,
+      "vendor": "Shutterstock",
+      "wastageRate": 0,
+      "reorderPoint": 1,
+      "carryingCostPerUnit": 0,
+      "currency": "USD",
+      "status": "delivered"
+    }
+  ],
+  "accounting": {
+    "baselineTotal": 48500,
+    "allocatedTotal": 50000,
+    "currentEstimateTotal": 49200,
+    "actualSpendTotal": 32500,
+    "etcTotal": 16700,
+    "materialCostTotal": 690,
+    "currency": "USD",
+    "taskAccounting": [
+      {
+        "taskId": "disc-1",
+        "taskName": "Stakeholder interviews",
+        "progress": 100,
+        "baselineCost": 2000,
+        "allocatedBudget": 2000,
+        "materialCost": 0,
+        "currentEstimate": 2000,
+        "actualSpend": 2000,
+        "etc": 0,
+        "baselineDuration": 2,
+        "currentDuration": 2,
+        "actualDuration": 2,
+        "remainingDuration": 0,
+        "responsibleResourceId": "pm",
+        "resourceCostRate": 150
+      },
+      {
+        "taskId": "disc-2",
+        "taskName": "Content audit",
+        "progress": 100,
+        "baselineCost": 3000,
+        "allocatedBudget": 3000,
+        "materialCost": 0,
+        "currentEstimate": 3000,
+        "actualSpend": 3000,
+        "etc": 0,
+        "baselineDuration": 2,
+        "currentDuration": 2,
+        "actualDuration": 2,
+        "remainingDuration": 0,
+        "responsibleResourceId": "designer",
+        "resourceCostRate": 130
+      },
+      {
+        "taskId": "disc-3",
+        "taskName": "Sitemap & wireframes",
+        "progress": 100,
+        "baselineCost": 3500,
+        "allocatedBudget": 3500,
+        "materialCost": 0,
+        "currentEstimate": 3500,
+        "actualSpend": 3500,
+        "etc": 0,
+        "baselineDuration": 1,
+        "currentDuration": 1,
+        "actualDuration": 1,
+        "remainingDuration": 0,
+        "responsibleResourceId": "designer",
+        "resourceCostRate": 130
+      },
+      {
+        "taskId": "des-1",
+        "taskName": "Visual design",
+        "progress": 100,
+        "baselineCost": 5000,
+        "allocatedBudget": 5000,
+        "materialCost": 150,
+        "currentEstimate": 5200,
+        "actualSpend": 5200,
+        "etc": 0,
+        "baselineDuration": 4,
+        "currentDuration": 4,
+        "actualDuration": 4,
+        "remainingDuration": 0,
+        "responsibleResourceId": "designer",
+        "resourceCostRate": 130
+      },
+      {
+        "taskId": "des-2",
+        "taskName": "Responsive mockups",
+        "progress": 100,
+        "baselineCost": 4500,
+        "allocatedBudget": 4500,
+        "materialCost": 0,
+        "currentEstimate": 4500,
+        "actualSpend": 4500,
+        "etc": 0,
+        "baselineDuration": 3,
+        "currentDuration": 3,
+        "actualDuration": 3,
+        "remainingDuration": 0,
+        "responsibleResourceId": "designer",
+        "resourceCostRate": 130
+      },
+      {
+        "taskId": "des-3",
+        "taskName": "Design review",
+        "progress": 100,
+        "baselineCost": 2500,
+        "allocatedBudget": 2500,
+        "materialCost": 0,
+        "currentEstimate": 2300,
+        "actualSpend": 2300,
+        "etc": 0,
+        "baselineDuration": 1,
+        "currentDuration": 1,
+        "actualDuration": 1,
+        "remainingDuration": 0,
+        "responsibleResourceId": "pm",
+        "resourceCostRate": 150
+      },
+      {
+        "taskId": "dev-1",
+        "taskName": "Frontend development",
+        "progress": 100,
+        "baselineCost": 7000,
+        "allocatedBudget": 7000,
+        "materialCost": 0,
+        "currentEstimate": 7000,
+        "actualSpend": 7000,
+        "etc": 0,
+        "baselineDuration": 4,
+        "currentDuration": 4,
+        "actualDuration": 4,
+        "remainingDuration": 0,
+        "responsibleResourceId": "dev",
+        "resourceCostRate": 140
+      },
+      {
+        "taskId": "dev-2",
+        "taskName": "Backend integration",
+        "progress": 60,
+        "baselineCost": 7000,
+        "allocatedBudget": 7500,
+        "materialCost": 0,
+        "currentEstimate": 7200,
+        "actualSpend": 4500,
+        "etc": 2700,
+        "baselineDuration": 4,
+        "currentDuration": 4,
+        "actualDuration": 3,
+        "remainingDuration": 1,
+        "responsibleResourceId": "dev",
+        "resourceCostRate": 140
+      },
+      {
+        "taskId": "dev-3",
+        "taskName": "CMS setup",
+        "progress": 0,
+        "baselineCost": 4000,
+        "allocatedBudget": 4000,
+        "materialCost": 0,
+        "currentEstimate": 4000,
+        "actualSpend": 0,
+        "etc": 4000,
+        "baselineDuration": 1,
+        "currentDuration": 1,
+        "actualDuration": 0,
+        "remainingDuration": 1,
+        "responsibleResourceId": "dev",
+        "resourceCostRate": 140
+      },
+      {
+        "taskId": "qa-1",
+        "taskName": "Functional testing",
+        "progress": 0,
+        "baselineCost": 3000,
+        "allocatedBudget": 3000,
+        "materialCost": 0,
+        "currentEstimate": 3000,
+        "actualSpend": 0,
+        "etc": 3000,
+        "baselineDuration": 3,
+        "currentDuration": 3,
+        "actualDuration": 0,
+        "remainingDuration": 3,
+        "responsibleResourceId": "qa",
+        "resourceCostRate": 110
+      },
+      {
+        "taskId": "qa-2",
+        "taskName": "Cross-browser testing",
+        "progress": 0,
+        "baselineCost": 2000,
+        "allocatedBudget": 2000,
+        "materialCost": 0,
+        "currentEstimate": 2000,
+        "actualSpend": 0,
+        "etc": 2000,
+        "baselineDuration": 2,
+        "currentDuration": 2,
+        "actualDuration": 0,
+        "remainingDuration": 2,
+        "responsibleResourceId": "qa",
+        "resourceCostRate": 110
+      },
+      {
+        "taskId": "qa-3",
+        "taskName": "Performance testing",
+        "progress": 0,
+        "baselineCost": 1000,
+        "allocatedBudget": 1000,
+        "materialCost": 0,
+        "currentEstimate": 1000,
+        "actualSpend": 0,
+        "etc": 1000,
+        "baselineDuration": 1,
+        "currentDuration": 1,
+        "actualDuration": 0,
+        "remainingDuration": 1,
+        "responsibleResourceId": "qa",
+        "resourceCostRate": 110
+      },
+      {
+        "taskId": "launch-1",
+        "taskName": "Deployment",
+        "progress": 0,
+        "baselineCost": 2000,
+        "allocatedBudget": 2000,
+        "materialCost": 0,
+        "currentEstimate": 2000,
+        "actualSpend": 0,
+        "etc": 2000,
+        "baselineDuration": 2,
+        "currentDuration": 2,
+        "actualDuration": 0,
+        "remainingDuration": 2,
+        "responsibleResourceId": "dev",
+        "resourceCostRate": 140
+      },
+      {
+        "taskId": "launch-2",
+        "taskName": "Go-live",
+        "progress": 0,
+        "baselineCost": 2000,
+        "allocatedBudget": 2000,
+        "materialCost": 0,
+        "currentEstimate": 2000,
+        "actualSpend": 0,
+        "etc": 2000,
+        "baselineDuration": 2,
+        "currentDuration": 2,
+        "actualDuration": 0,
+        "remainingDuration": 2,
+        "responsibleResourceId": "pm",
+        "resourceCostRate": 150
+      }
+    ],
+    "spendEntries": [
+      {
+        "id": "spend-1",
+        "taskId": "disc-1",
+        "date": "2026-02-02",
+        "amount": 2000,
+        "currency": "USD",
+        "source": "Project Manager",
+        "notes": "Stakeholder workshop"
+      },
+      {
+        "id": "spend-2",
+        "taskId": "disc-2",
+        "date": "2026-02-04",
+        "amount": 3000,
+        "currency": "USD",
+        "source": "UI Designer",
+        "notes": "Content audit delivery"
+      },
+      {
+        "id": "spend-3",
+        "taskId": "disc-3",
+        "date": "2026-02-05",
+        "amount": 3500,
+        "currency": "USD",
+        "source": "UI Designer",
+        "notes": "Sitemap and wireframes"
+      },
+      {
+        "id": "spend-4",
+        "taskId": "des-1",
+        "date": "2026-02-09",
+        "amount": 5200,
+        "currency": "USD",
+        "source": "UI Designer",
+        "notes": "Visual design delivery"
+      },
+      {
+        "id": "spend-5",
+        "taskId": "des-2",
+        "date": "2026-02-12",
+        "amount": 4500,
+        "currency": "USD",
+        "source": "UI Designer",
+        "notes": "Responsive mockups"
+      },
+      {
+        "id": "spend-6",
+        "taskId": "des-3",
+        "date": "2026-02-13",
+        "amount": 2300,
+        "currency": "USD",
+        "source": "Project Manager",
+        "notes": "Design review session"
+      },
+      {
+        "id": "spend-7",
+        "taskId": "dev-1",
+        "date": "2026-02-19",
+        "amount": 7000,
+        "currency": "USD",
+        "source": "Web Developer",
+        "notes": "Frontend development"
+      },
+      {
+        "id": "spend-8",
+        "taskId": "dev-2",
+        "date": "2026-02-24",
+        "amount": 4500,
+        "currency": "USD",
+        "source": "Web Developer",
+        "notes": "Backend integration partial"
+      }
+    ]
+  },
+  "allocations": [
+    {
+      "id": "alloc-1",
+      "materialId": "mat-1",
+      "taskId": "des-1",
+      "allocatedQuantity": 2,
+      "consumedQuantity": 1,
+      "allocationDate": "2026-02-01",
+      "expectedReturnDate": "2026-03-31",
+      "actualCost": 45,
+      "notes": "Figma licenses for design team"
+    },
+    {
+      "id": "alloc-2",
+      "materialId": "mat-2",
+      "taskId": "launch-1",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2026-02-01",
+      "expectedReturnDate": "2027-01-31",
+      "actualCost": 20,
+      "notes": "Vercel hosting subscription"
+    },
+    {
+      "id": "alloc-3",
+      "materialId": "mat-3",
+      "taskId": "des-1",
+      "allocatedQuantity": 3,
+      "consumedQuantity": 2,
+      "allocationDate": "2026-02-06",
+      "expectedReturnDate": null,
+      "actualCost": 300,
+      "notes": "Stock photo packs for website"
+    }
+  ],
+  "consumptions": [
+    {
+      "id": "cons-1",
+      "materialId": "mat-1",
+      "taskId": "des-1",
+      "date": "2026-02-01",
+      "quantity": 1,
+      "wastageQuantity": 0,
+      "unitCostAtConsumption": 45,
+      "notes": "First month Figma subscription"
+    },
+    {
+      "id": "cons-2",
+      "materialId": "mat-2",
+      "taskId": "launch-1",
+      "date": "2026-02-01",
+      "quantity": 1,
+      "wastageQuantity": 0,
+      "unitCostAtConsumption": 20,
+      "notes": "First month hosting"
+    },
+    {
+      "id": "cons-3",
+      "materialId": "mat-3",
+      "taskId": "des-1",
+      "date": "2026-02-06",
+      "quantity": 2,
+      "wastageQuantity": 0,
+      "unitCostAtConsumption": 150,
+      "notes": "Hero images and icons"
+    }
+  ],
+  "capitalizationConfig": {
+    "threshold": 1000,
+    "currency": "USD",
+    "defaultUsefulLifeMonths": 36,
+    "defaultDepreciationMethod": "straight-line",
+    "defaultSalvagePercent": 10
+  },
+  "changeLog": [
+    {
+      "id": "cl-1",
+      "date": "2026-02-10",
+      "taskId": "des-1",
+      "changeType": "scope",
+      "description": "Added dark mode design variant per client request",
+      "costImpact": 1500,
+      "scheduleImpactDays": 2,
+      "approvedBy": "Client"
+    },
+    {
+      "id": "cl-2",
+      "date": "2026-02-20",
+      "taskId": "dev-2",
+      "changeType": "resource",
+      "description": "Backend developer reassigned to critical bug fix for 2 days",
+      "costImpact": 0,
+      "scheduleImpactDays": 2,
+      "approvedBy": "Project Manager"
+    }
   ]
 }

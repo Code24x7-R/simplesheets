@@ -215,8 +215,14 @@ describe('ProjectView', () => {
       fireEvent.click(screen.getByText('🧾 Actuals'));
     }
 
+    // Create a project without spend entries for Actuals flow tests
+    const projectNoSpend = createSimpleWBS();
+    if (projectNoSpend.accounting) {
+      projectNoSpend.accounting.spendEntries = [];
+    }
+
     it('opens actuals editor modal when + Add Spend Entry is clicked', () => {
-      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
+      render(<ProjectView project={projectNoSpend} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
 
       openAccountingActuals();
 
@@ -228,7 +234,7 @@ describe('ProjectView', () => {
     });
 
     it('saves a new actual spend entry and shows it in the actuals table', () => {
-      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
+      render(<ProjectView project={projectNoSpend} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
 
       openAccountingActuals();
 
@@ -258,7 +264,7 @@ describe('ProjectView', () => {
     });
 
     it('closes the actuals modal when Cancel is clicked', () => {
-      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
+      render(<ProjectView project={projectNoSpend} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
 
       openAccountingActuals();
 
@@ -1549,7 +1555,11 @@ describe('ProjectView', () => {
     });
 
     it('renders actuals editor modal for new entry', () => {
-      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
+      const testProject = createSimpleWBS();
+      if (testProject.accounting) {
+        testProject.accounting.spendEntries = [];
+      }
+      render(<ProjectView project={testProject} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
       fireEvent.click(screen.getByText('Accounting'));
       // Find and click the Actuals tab button
       const buttons = screen.getAllByRole('button');

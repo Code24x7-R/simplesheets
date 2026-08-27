@@ -1,31 +1,52 @@
 {
   "id": "simple-wbs",
   "name": "Simple WBS",
-  "description": "A simple customizable WBS template with planning, execution, and closure phases.",
+  "description": "A simple customizable WBS template with planning, execution, and closure phases. Demonstrates dependencies, status tracking, costs, and approvals.",
   "category": "Generic",
   "startDate": "2026-01-05",
   "endDate": "2026-01-28",
+  "calendar": {
+    "workingDays": [1, 2, 3, 4, 5],
+    "holidays": ["2026-01-19"],
+    "hoursPerDay": 8
+  },
   "tasks": [
     {
       "id": "t1",
       "name": "Planning",
       "startDate": "2026-01-05",
       "endDate": "2026-01-09",
+      "description": "Initial planning phase",
       "progress": 100,
+      "status": "done",
+      "cost": 12000,
       "children": [
         {
           "id": "t1-1",
           "name": "Requirements gathering",
           "startDate": "2026-01-05",
           "endDate": "2026-01-07",
-          "progress": 100
+          "description": "Collect and document requirements",
+          "progress": 100,
+          "status": "done",
+          "resourceId": "res-1",
+          "cost": 5000,
+          "effort": 16,
+          "effortUnit": "hours"
         },
         {
           "id": "t1-2",
           "name": "Project plan",
           "startDate": "2026-01-08",
           "endDate": "2026-01-09",
-          "progress": 100
+          "description": "Create detailed project plan",
+          "progress": 100,
+          "status": "done",
+          "resourceId": "res-1",
+          "cost": 7000,
+          "effort": 16,
+          "effortUnit": "hours",
+          "dependencies": ["t1-1"]
         }
       ]
     },
@@ -34,21 +55,38 @@
       "name": "Execution",
       "startDate": "2026-01-12",
       "endDate": "2026-01-23",
-      "progress": 50,
+      "description": "Main execution phase",
+      "progress": 60,
+      "status": "in_progress",
+      "cost": 28000,
       "children": [
         {
           "id": "t2-1",
           "name": "Design",
           "startDate": "2026-01-12",
           "endDate": "2026-01-15",
-          "progress": 75
+          "description": "System design and architecture",
+          "progress": 100,
+          "status": "done",
+          "resourceId": "res-2",
+          "cost": 12000,
+          "effort": 24,
+          "effortUnit": "hours",
+          "dependencies": ["t1-2"]
         },
         {
           "id": "t2-2",
           "name": "Implementation",
           "startDate": "2026-01-17",
           "endDate": "2026-01-23",
-          "progress": 25
+          "description": "Code development and unit testing",
+          "progress": 50,
+          "status": "in_progress",
+          "resourceId": "res-2",
+          "cost": 16000,
+          "effort": 40,
+          "effortUnit": "hours",
+          "dependencies": ["t2-1"]
         }
       ]
     },
@@ -57,21 +95,38 @@
       "name": "Closure",
       "startDate": "2026-01-24",
       "endDate": "2026-01-28",
+      "description": "Testing and deployment",
       "progress": 0,
+      "status": "not_started",
+      "cost": 10000,
       "children": [
         {
           "id": "t3-1",
           "name": "Testing",
           "startDate": "2026-01-24",
           "endDate": "2026-01-26",
-          "progress": 0
+          "description": "Integration and system testing",
+          "progress": 0,
+          "status": "not_started",
+          "resourceId": "res-2",
+          "cost": 6000,
+          "effort": 16,
+          "effortUnit": "hours",
+          "dependencies": ["t2-2"]
         },
         {
           "id": "t3-2",
           "name": "Deployment",
           "startDate": "2026-01-27",
           "endDate": "2026-01-28",
-          "progress": 0
+          "description": "Production deployment",
+          "progress": 0,
+          "status": "not_started",
+          "resourceId": "res-1",
+          "cost": 4000,
+          "effort": 8,
+          "effortUnit": "hours",
+          "dependencies": ["t3-1"]
         }
       ]
     },
@@ -80,8 +135,20 @@
       "name": "Project Complete",
       "startDate": "2026-01-28",
       "endDate": "2026-01-28",
+      "description": "Project completion milestone",
       "isMilestone": true,
-      "progress": 0
+      "progress": 0,
+      "status": "not_started",
+      "dependencies": ["t3-2"],
+      "approvalGates": [
+        {
+          "gateType": "approval",
+          "approved": false,
+          "approvedBy": null,
+          "approvedDate": null,
+          "notes": "Final sign-off required from sponsor"
+        }
+      ]
     }
   ],
   "risks": [
@@ -91,8 +158,15 @@
       "category": "scope",
       "probability": 3,
       "impact": 4,
-      "status": "identified",
-      "mitigationPlan": "Regular scope reviews",
+      "status": "mitigating",
+      "ownerId": "res-1",
+      "taskId": "t2",
+      "mitigationPlan": "Regular scope reviews and change control process",
+      "contingencyPlan": "Extend timeline by 1 week if scope increases >10%",
+      "mitigationCost": 2000,
+      "triggerCondition": "Stakeholder requests features outside approved scope",
+      "residualProbability": 2,
+      "residualImpact": 3,
       "identifiedDate": "2026-01-05",
       "reviewDate": "2026-02-01"
     },
@@ -102,8 +176,15 @@
       "category": "resource",
       "probability": 2,
       "impact": 3,
-      "status": "identified",
-      "mitigationPlan": "Cross-train team members",
+      "status": "monitoring",
+      "ownerId": "res-1",
+      "taskId": "t2-2",
+      "mitigationPlan": "Cross-train team members and maintain backup resource list",
+      "contingencyPlan": "Engage contractor from approved vendor list",
+      "mitigationCost": 5000,
+      "triggerCondition": "Team member unavailable for >3 consecutive days",
+      "residualProbability": 1,
+      "residualImpact": 2,
       "identifiedDate": "2026-01-05",
       "reviewDate": "2026-02-01"
     }
@@ -114,6 +195,7 @@
       "name": "Project Manager",
       "role": "PM",
       "costRate": 150,
+      "costCurrency": "USD",
       "availability": 100,
       "color": "#3B82F6"
     },
@@ -122,6 +204,7 @@
       "name": "Developer",
       "role": "Dev",
       "costRate": 120,
+      "costCurrency": "USD",
       "availability": 100,
       "color": "#10B981"
     }
@@ -129,7 +212,7 @@
   "materials": [
     {
       "id": "mat-1",
-      "name": "Laptop",
+      "name": "Development Laptop",
       "classification": "capex",
       "unit": "each",
       "unitCost": 2500,
@@ -148,6 +231,7 @@
       "unit": "each",
       "unitCost": 0,
       "quantity": 2,
+      "vendor": "JetBrains",
       "billingPeriod": "monthly",
       "rentalRate": 150,
       "leaseStartDate": "2026-01-05",
@@ -162,11 +246,268 @@
       "unit": "box",
       "unitCost": 50,
       "quantity": 5,
+      "vendor": "Office Depot",
       "wastageRate": 5,
       "reorderPoint": 2,
       "carryingCostPerUnit": 1,
       "currency": "USD",
       "status": "delivered"
+    }
+  ],
+  "accounting": {
+    "baselineTotal": 50000,
+    "allocatedTotal": 52000,
+    "currentEstimateTotal": 51500,
+    "actualSpendTotal": 28500,
+    "etcTotal": 23000,
+    "materialCostTotal": 5300,
+    "currency": "USD",
+    "taskAccounting": [
+      {
+        "taskId": "t1-1",
+        "taskName": "Requirements gathering",
+        "progress": 100,
+        "baselineCost": 5000,
+        "allocatedBudget": 5000,
+        "materialCost": 0,
+        "currentEstimate": 5200,
+        "actualSpend": 5200,
+        "etc": 0,
+        "baselineDuration": 3,
+        "currentDuration": 3,
+        "actualDuration": 3,
+        "remainingDuration": 0,
+        "responsibleResourceId": "res-1",
+        "resourceCostRate": 150
+      },
+      {
+        "taskId": "t1-2",
+        "taskName": "Project plan",
+        "progress": 100,
+        "baselineCost": 7000,
+        "allocatedBudget": 7000,
+        "materialCost": 0,
+        "currentEstimate": 6800,
+        "actualSpend": 6800,
+        "etc": 0,
+        "baselineDuration": 2,
+        "currentDuration": 2,
+        "actualDuration": 2,
+        "remainingDuration": 0,
+        "responsibleResourceId": "res-1",
+        "resourceCostRate": 150
+      },
+      {
+        "taskId": "t2-1",
+        "taskName": "Design",
+        "progress": 100,
+        "baselineCost": 12000,
+        "allocatedBudget": 12000,
+        "materialCost": 0,
+        "currentEstimate": 12500,
+        "actualSpend": 12500,
+        "etc": 0,
+        "baselineDuration": 4,
+        "currentDuration": 4,
+        "actualDuration": 4,
+        "remainingDuration": 0,
+        "responsibleResourceId": "res-2",
+        "resourceCostRate": 120
+      },
+      {
+        "taskId": "t2-2",
+        "taskName": "Implementation",
+        "progress": 50,
+        "baselineCost": 16000,
+        "allocatedBudget": 17000,
+        "materialCost": 0,
+        "currentEstimate": 16500,
+        "actualSpend": 8000,
+        "etc": 8500,
+        "baselineDuration": 5,
+        "currentDuration": 5,
+        "actualDuration": 3,
+        "remainingDuration": 2,
+        "responsibleResourceId": "res-2",
+        "resourceCostRate": 120
+      },
+      {
+        "taskId": "t3-1",
+        "taskName": "Testing",
+        "progress": 0,
+        "baselineCost": 6000,
+        "allocatedBudget": 6000,
+        "materialCost": 0,
+        "currentEstimate": 6000,
+        "actualSpend": 0,
+        "etc": 6000,
+        "baselineDuration": 3,
+        "currentDuration": 3,
+        "actualDuration": 0,
+        "remainingDuration": 3,
+        "responsibleResourceId": "res-2",
+        "resourceCostRate": 120
+      },
+      {
+        "taskId": "t3-2",
+        "taskName": "Deployment",
+        "progress": 0,
+        "baselineCost": 4000,
+        "allocatedBudget": 5000,
+        "materialCost": 0,
+        "currentEstimate": 4500,
+        "actualSpend": 0,
+        "etc": 4500,
+        "baselineDuration": 2,
+        "currentDuration": 2,
+        "actualDuration": 0,
+        "remainingDuration": 2,
+        "responsibleResourceId": "res-1",
+        "resourceCostRate": 150
+      }
+    ],
+    "spendEntries": [
+      {
+        "id": "spend-1",
+        "taskId": "t1-1",
+        "date": "2026-01-07",
+        "amount": 2400,
+        "currency": "USD",
+        "source": "Project Manager",
+        "notes": "Requirements workshop facilitation"
+      },
+      {
+        "id": "spend-2",
+        "taskId": "t1-1",
+        "date": "2026-01-07",
+        "amount": 2800,
+        "currency": "USD",
+        "source": "Stakeholder interviews",
+        "notes": "Travel and accommodation"
+      },
+      {
+        "id": "spend-3",
+        "taskId": "t1-2",
+        "date": "2026-01-09",
+        "amount": 6800,
+        "currency": "USD",
+        "source": "Project Manager",
+        "notes": "Plan development and review"
+      },
+      {
+        "id": "spend-4",
+        "taskId": "t2-1",
+        "date": "2026-01-15",
+        "amount": 12500,
+        "currency": "USD",
+        "source": "Developer",
+        "notes": "Design phase completion"
+      },
+      {
+        "id": "spend-5",
+        "taskId": "t2-2",
+        "date": "2026-01-23",
+        "amount": 8000,
+        "currency": "USD",
+        "source": "Developer",
+        "notes": "Implementation sprint 1"
+      }
+    ]
+  },
+  "allocations": [
+    {
+      "id": "alloc-1",
+      "materialId": "mat-1",
+      "taskId": "t2-2",
+      "allocatedQuantity": 2,
+      "consumedQuantity": 2,
+      "allocationDate": "2026-01-05",
+      "expectedReturnDate": null,
+      "actualCost": 5000,
+      "notes": "Laptops assigned to development team"
+    },
+    {
+      "id": "alloc-2",
+      "materialId": "mat-2",
+      "taskId": "t2-2",
+      "allocatedQuantity": 2,
+      "consumedQuantity": 1,
+      "allocationDate": "2026-01-05",
+      "expectedReturnDate": "2026-12-31",
+      "actualCost": 150,
+      "notes": "IDE licenses for developers"
+    },
+    {
+      "id": "alloc-3",
+      "materialId": "mat-3",
+      "taskId": "t1-1",
+      "allocatedQuantity": 2,
+      "consumedQuantity": 2,
+      "allocationDate": "2026-01-05",
+      "expectedReturnDate": null,
+      "actualCost": 100,
+      "notes": "Supplies for requirements workshop"
+    }
+  ],
+  "consumptions": [
+    {
+      "id": "cons-1",
+      "materialId": "mat-1",
+      "taskId": "t2-2",
+      "date": "2026-01-05",
+      "quantity": 2,
+      "wastageQuantity": 0,
+      "unitCostAtConsumption": 2500,
+      "notes": "Laptops issued to team"
+    },
+    {
+      "id": "cons-2",
+      "materialId": "mat-2",
+      "taskId": "t2-2",
+      "date": "2026-01-05",
+      "quantity": 1,
+      "wastageQuantity": 0,
+      "unitCostAtConsumption": 150,
+      "notes": "First month license fee"
+    },
+    {
+      "id": "cons-3",
+      "materialId": "mat-3",
+      "taskId": "t1-1",
+      "date": "2026-01-06",
+      "quantity": 2,
+      "wastageQuantity": 0,
+      "unitCostAtConsumption": 50,
+      "notes": "Whiteboards, markers, sticky notes"
+    }
+  ],
+  "capitalizationConfig": {
+    "threshold": 1000,
+    "currency": "USD",
+    "defaultUsefulLifeMonths": 36,
+    "defaultDepreciationMethod": "straight-line",
+    "defaultSalvagePercent": 10
+  },
+  "changeLog": [
+    {
+      "id": "cl-1",
+      "date": "2026-01-10",
+      "taskId": "t2-2",
+      "changeType": "scope",
+      "description": "Added user authentication module to implementation phase",
+      "costImpact": 2000,
+      "scheduleImpactDays": 2,
+      "approvedBy": "Project Sponsor"
+    },
+    {
+      "id": "cl-2",
+      "date": "2026-01-15",
+      "taskId": null,
+      "changeType": "schedule",
+      "description": "MLK Day holiday observed - no work on Jan 19",
+      "costImpact": 0,
+      "scheduleImpactDays": 1,
+      "approvedBy": "Project Manager"
     }
   ]
 }

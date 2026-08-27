@@ -78,7 +78,10 @@ describe('WBSTreePanel', () => {
 
   it('calls onTaskStatusChange when status dot is clicked', () => {
     const onTaskStatusChange = jest.fn();
-    render(<WBSTreePanel {...defaultProps} onTaskStatusChange={onTaskStatusChange} />);
+    // Create a project with a task that has status 'not_started'
+    const testProject = createSimpleWBS();
+    testProject.wbs[0].status = 'not_started';
+    render(<WBSTreePanel {...defaultProps} tasks={testProject.wbs} onTaskStatusChange={onTaskStatusChange} />);
 
     // Find the status dot (first rounded-full span in the tree)
     const statusDots = document.querySelectorAll('.rounded-full');
@@ -88,7 +91,7 @@ describe('WBSTreePanel', () => {
     fireEvent.click(statusDot);
 
     // Should call with the task id and the next status
-    expect(onTaskStatusChange).toHaveBeenCalledWith(project.wbs[0].id, 'in_progress');
+    expect(onTaskStatusChange).toHaveBeenCalledWith(testProject.wbs[0].id, 'in_progress');
   });
 
   it('does not call onTaskStatusChange when prop not provided', () => {

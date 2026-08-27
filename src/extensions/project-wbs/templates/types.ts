@@ -48,6 +48,134 @@ export interface ProjectTemplateJSON {
   resources?: ResourceJSON[];
   /** Material/asset definitions */
   materials?: MaterialJSON[];
+  /** Accounting data (baseline, allocated, estimate, actuals) */
+  accounting?: AccountingJSON;
+  /** Material allocations (linking materials to tasks) */
+  allocations?: AllocationJSON[];
+  /** Material consumption records */
+  consumptions?: ConsumptionJSON[];
+  /** Capitalization configuration */
+  capitalizationConfig?: CapConfigJSON;
+  /** Change log entries */
+  changeLog?: ChangeLogJSON[];
+}
+
+/** JSON accounting data */
+export interface AccountingJSON {
+  /** Original approved estimate */
+  baselineTotal: number;
+  /** Approved budget */
+  allocatedTotal: number;
+  /** Current estimate (EAC) */
+  currentEstimateTotal: number;
+  /** Actual costs to date */
+  actualSpendTotal: number;
+  /** Estimate to complete */
+  etcTotal: number;
+  /** Total material costs */
+  materialCostTotal: number;
+  /** Currency code */
+  currency: string;
+  /** Per-task accounting */
+  taskAccounting?: TaskAccountingJSON[];
+  /** Actual spend entries */
+  spendEntries?: SpendEntryJSON[];
+}
+
+/** JSON task accounting */
+export interface TaskAccountingJSON {
+  taskId: string;
+  taskName: string;
+  progress: number;
+  baselineCost: number;
+  allocatedBudget: number;
+  materialCost: number;
+  currentEstimate: number;
+  actualSpend: number;
+  etc: number;
+  baselineDuration: number;
+  currentDuration: number;
+  actualDuration: number;
+  remainingDuration: number;
+  responsibleResourceId?: string | null;
+  resourceCostRate?: number;
+}
+
+/** JSON spend entry */
+export interface SpendEntryJSON {
+  id: string;
+  taskId: string;
+  date: string;
+  amount: number;
+  currency: string;
+  source: string;
+  notes: string;
+}
+
+/** JSON material allocation */
+export interface AllocationJSON {
+  id: string;
+  materialId: string;
+  taskId: string;
+  allocatedQuantity: number;
+  consumedQuantity: number;
+  allocationDate: string;
+  expectedReturnDate?: string | null;
+  actualCost: number;
+  notes: string;
+}
+
+/** JSON material consumption */
+export interface ConsumptionJSON {
+  id: string;
+  materialId: string;
+  taskId: string;
+  date: string;
+  quantity: number;
+  wastageQuantity: number;
+  unitCostAtConsumption: number;
+  notes: string;
+}
+
+/** JSON capitalization config */
+export interface CapConfigJSON {
+  threshold: number;
+  currency: string;
+  defaultUsefulLifeMonths: number;
+  defaultDepreciationMethod: 'straight-line' | 'declining-balance' | 'none';
+  defaultSalvagePercent: number;
+}
+
+/** JSON change log entry */
+export interface ChangeLogJSON {
+  id: string;
+  date: string;
+  taskId?: string | null;
+  changeType: 'dependency' | 'scope' | 'resource' | 'schedule' | 'risk' | 'other';
+  description: string;
+  costImpact: number;
+  scheduleImpactDays: number;
+  approvedBy?: string | null;
+}
+
+/** Task status values */
+export type TaskStatus = 'not_started' | 'waiting' | 'ready' | 'in_progress' | 'done' | 'on_hold';
+
+/** Effort unit options */
+export type EffortUnit = 'hours' | 'storyPoints' | 'days';
+
+/** JSON approval gate definition */
+export interface ApprovalGateJSON {
+  /** Gate type */
+  gateType: 'approval' | 'review' | 'sign_off' | 'external';
+  /** Approved flag */
+  approved: boolean;
+  /** Approver name */
+  approvedBy: string | null;
+  /** Approval date (ISO) */
+  approvedDate: string | null;
+  /** Notes */
+  notes: string;
 }
 
 /** JSON task definition (supports nested children) */
@@ -72,6 +200,16 @@ export interface TaskJSON {
   color?: string;
   /** Dependency IDs */
   dependencies?: string[];
+  /** Task status */
+  status?: TaskStatus;
+  /** Allocated cost */
+  cost?: number;
+  /** Estimated effort */
+  effort?: number;
+  /** Effort unit */
+  effortUnit?: EffortUnit;
+  /** Approval gates */
+  approvalGates?: ApprovalGateJSON[];
   /** Nested child tasks */
   children?: TaskJSON[];
 }
@@ -92,8 +230,20 @@ export interface RiskJSON {
   status?: 'identified' | 'assessing' | 'mitigating' | 'monitoring' | 'occurred' | 'closed';
   /** Owner resource ID */
   ownerId?: string | null;
+  /** Linked task ID */
+  taskId?: string | null;
   /** Mitigation plan description */
   mitigationPlan?: string;
+  /** Contingency plan description */
+  contingencyPlan?: string;
+  /** Mitigation cost */
+  mitigationCost?: number;
+  /** Trigger condition */
+  triggerCondition?: string;
+  /** Residual probability after mitigation (1-5) */
+  residualProbability?: number;
+  /** Residual impact after mitigation (1-5) */
+  residualImpact?: number;
   /** Notes */
   notes?: string;
   /** Identified date (ISO format) */

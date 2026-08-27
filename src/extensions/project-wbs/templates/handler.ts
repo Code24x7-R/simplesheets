@@ -154,6 +154,101 @@ export function templateToProject(template: ProjectTemplateJSON): Project {
   // Convert materials
   const materials: Material[] = (template.materials ?? []).map((m) => jsonMaterialToMaterial(m));
 
+  // Convert accounting data
+  const accounting = template.accounting
+    ? {
+        baselineTotal: template.accounting.baselineTotal,
+        allocatedTotal: template.accounting.allocatedTotal,
+        currentEstimateTotal: template.accounting.currentEstimateTotal,
+        actualSpendTotal: template.accounting.actualSpendTotal,
+        etcTotal: template.accounting.etcTotal,
+        materialCostTotal: template.accounting.materialCostTotal,
+        currency: template.accounting.currency,
+        taskAccounting: (template.accounting.taskAccounting ?? []).map((ta) => ({
+          taskId: ta.taskId,
+          taskName: ta.taskName,
+          progress: ta.progress,
+          baselineCost: ta.baselineCost,
+          allocatedBudget: ta.allocatedBudget,
+          materialCost: ta.materialCost,
+          currentEstimate: ta.currentEstimate,
+          actualSpend: ta.actualSpend,
+          etc: ta.etc,
+          costVariance: ta.currentEstimate - ta.baselineCost,
+          baselineDuration: ta.baselineDuration,
+          currentDuration: ta.currentDuration,
+          actualDuration: ta.actualDuration,
+          remainingDuration: ta.remainingDuration,
+          durationVariance: ta.currentDuration - ta.baselineDuration,
+          cpi: ta.actualSpend > 0 ? (ta.baselineCost * ta.progress / 100) / ta.actualSpend : 1,
+          spi: ta.baselineDuration > 0 ? (ta.baselineDuration * ta.progress / 100) / ta.actualDuration : 1,
+          responsibleResourceId: ta.responsibleResourceId ?? null,
+          resourceCostRate: ta.resourceCostRate ?? 0,
+          scheduleVarianceDays: ta.baselineDuration - ta.actualDuration,
+        })),
+        spendEntries: (template.accounting.spendEntries ?? []).map((se) => ({
+          id: se.id,
+          taskId: se.taskId,
+          date: se.date,
+          amount: se.amount,
+          currency: se.currency,
+          source: se.source,
+          notes: se.notes,
+        })),
+        changeLog: (template.changeLog ?? []).map((cl) => ({
+          id: cl.id,
+          date: cl.date,
+          taskId: cl.taskId ?? null,
+          changeType: cl.changeType,
+          description: cl.description,
+          costImpact: cl.costImpact,
+          scheduleImpactDays: cl.scheduleImpactDays,
+          approvedBy: cl.approvedBy ?? null,
+        })),
+      }
+    : undefined;
+
+  // Convert material allocations
+  const materialAllocations = (template.allocations ?? []).map((a) => ({
+    id: a.id,
+    materialId: a.materialId,
+    taskId: a.taskId,
+    allocatedQuantity: a.allocatedQuantity,
+    consumedQuantity: a.consumedQuantity,
+    allocationDate: a.allocationDate,
+    expectedReturnDate: a.expectedReturnDate ?? null,
+    actualCost: a.actualCost,
+    notes: a.notes,
+  }));
+
+  // Convert material consumptions
+  const materialConsumptions = (template.consumptions ?? []).map((c) => ({
+    id: c.id,
+    materialId: c.materialId,
+    taskId: c.taskId,
+    date: c.date,
+    quantity: c.quantity,
+    wastageQuantity: c.wastageQuantity,
+    unitCostAtConsumption: c.unitCostAtConsumption,
+    notes: c.notes,
+  }));
+
+  // Update material allocated/consumed quantities from allocations
+  const materialQuantityMap = new Map<string, { allocated: number; consumed: number }>();
+  for (const alloc of materialAllocations) {
+    const existing = materialQuantityMap.get(alloc.materialId) ?? { allocated: 0, consumed: 0 };
+    existing.allocated += alloc.allocatedQuantity;
+    existing.consumed += alloc.consumedQuantity;
+    materialQuantityMap.set(alloc.materialId, existing);
+  }
+  for (const mat of materials) {
+    const quantities = materialQuantityMap.get(mat.id);
+    if (quantities) {
+      mat.allocatedQuantity = quantities.allocated;
+      mat.consumedQuantity = quantities.consumed;
+    }
+  }
+
   return {
     id: template.id,
     name: template.name,
@@ -164,7 +259,11 @@ export function templateToProject(template: ProjectTemplateJSON): Project {
     resources,
     risks,
     wbs: roots,
-    materials,
+    materials: materials.length > 0 ? materials : undefined,
+    accounting,
+    materialAllocations: materialAllocations.length > 0 ? materialAllocations : undefined,
+    materialConsumptions: materialConsumptions.length > 0 ? materialConsumptions : undefined,
+    capitalizationConfig: template.capitalizationConfig ?? undefined,
   };
 }
 
@@ -195,12 +294,21 @@ function jsonTaskToWBSTask(json: TaskJSON, level: number): WBSTask {
     endDate: json.endDate,
     duration: calculateWorkingDays(json.startDate, json.endDate),
     progress: json.progress ?? 0,
-    effort: calculateWorkingDays(json.startDate, json.endDate) * 8,
-    effortUnit: 'hours',
-    cost: 0,
+    effort: json.effort ?? calculateWorkingDays(json.startDate, json.endDate) * 8,
+    effortUnit: json.effortUnit ?? 'hours',
+    cost: json.cost ?? 0,
     costCurrency: getEffectiveCurrency(),
     responsibleResourceId: json.resourceId ?? null,
     dependencies: json.dependencies?.map((depId) => ({ predecessorId: depId, type: 'FS' as const, lag: 0 })) ?? [],
+    status: json.status,
+    approvalGates: (json.approvalGates ?? []).map((ag) => ({
+      taskId: json.id,
+      gateType: ag.gateType,
+      approved: ag.approved,
+      approvedBy: ag.approvedBy,
+      approvedDate: ag.approvedDate,
+      notes: ag.notes,
+    })),
     isMilestone: json.isMilestone ?? false,
     isSummary: children.length > 0,
     collapsed: false,
@@ -246,7 +354,7 @@ function jsonResourceToResource(json: ResourceJSON): Resource {
  * Convert JSON risk to Risk
  */
 function jsonRiskToRisk(json: RiskJSON, projectId: string, defaultDate: string): Risk {
-  return createRisk({
+  const risk = createRisk({
     id: json.id,
     projectId,
     title: json.title,
@@ -260,6 +368,15 @@ function jsonRiskToRisk(json: RiskJSON, projectId: string, defaultDate: string):
     identifiedDate: json.identifiedDate ?? defaultDate,
     reviewDate: json.reviewDate ?? '',
   });
+  // Set additional fields
+  risk.taskId = json.taskId ?? null;
+  risk.contingencyPlan = json.contingencyPlan ?? '';
+  risk.mitigationCost = json.mitigationCost ?? 0;
+  risk.triggerCondition = json.triggerCondition ?? '';
+  risk.residualProbability = json.residualProbability ?? json.probability;
+  risk.residualImpact = json.residualImpact ?? json.impact;
+  risk.residualRiskScore = (json.residualProbability ?? json.probability) * (json.residualImpact ?? json.impact);
+  return risk;
 }
 
 /**
