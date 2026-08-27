@@ -29,7 +29,7 @@ export const ACTUALS_SHEET_NAME = 'Actuals';
 
 // ─── Risk & Resource Column Layouts ───────────────────────────────────────
 
-const RISK_HEADERS = ['Risk', 'Category', 'Probability', 'Impact', 'Status', 'Owner', 'Mitigation Plan', 'Notes'];
+const RISK_HEADERS = ['Risk', 'Category', 'Probability', 'Impact', 'Status', 'Owner', 'Mitigation Plan', 'Notes', 'Linked Task'];
 const RESOURCE_HEADERS = ['Resource', 'Role', 'Cost Rate', 'Currency', 'Availability %', 'Color'];
 const MATERIAL_HEADERS = ['Material', 'Classification', 'Unit', 'Unit Cost', 'Quantity', 'Vendor', 'Depreciation', 'Useful Life', 'Salvage', 'Billing', 'Rental Rate', 'Lease Start', 'Lease End', 'Wastage %', 'Reorder Pt', 'Carrying Cost', 'Currency', 'Status'];
 const ACTUAL_HEADERS = ['Entry ID', 'Task ID', 'Date', 'Amount', 'Currency', 'Source', 'Notes'];
@@ -366,9 +366,11 @@ function sheetToProjectLegacy(sheet: Sheet, mapping: ColumnMapping, projectName?
 /**
  * Parse a single risk row.
  */
-function parseRiskRow(sheet: Sheet, row: number): RiskRow | null {
+export function parseRiskRow(sheet: Sheet, row: number): RiskRow | null {
   const title = getCellStringValue(sheet, row, 0);
   if (!title) return null;
+
+  const taskId = getCellStringValue(sheet, row, 8);
 
   return {
     id: `risk-${row}-${Date.now()}`,
@@ -378,7 +380,7 @@ function parseRiskRow(sheet: Sheet, row: number): RiskRow | null {
     impact: parseInt(getCellStringValue(sheet, row, 3)) || 1,
     status: getCellStringValue(sheet, row, 4) || 'identified',
     ownerId: getCellStringValue(sheet, row, 5) || null,
-    taskId: null,
+    taskId: taskId || null,
     mitigationPlan: getCellStringValue(sheet, row, 6),
     notes: getCellStringValue(sheet, row, 7),
   };
@@ -969,7 +971,7 @@ function findResourceRowNum(resources: ResourceRow[], resourceId: string): numbe
 /**
  * Create the risks sheet from a ProjectModel.
  */
-function createRisksSheetFromModel(model: ProjectModel): Sheet {
+export function createRisksSheetFromModel(model: ProjectModel): Sheet {
   const colCount = RISK_HEADERS.length;
   const rowCount = 1 + model.risks.length + 2;
   const cells: Record<string, Cell> = {};
@@ -995,6 +997,7 @@ function createRisksSheetFromModel(model: ProjectModel): Sheet {
     cells[`${row}:5`] = { rawValue: risk.ownerId ?? '', computedValue: risk.ownerId ?? '' };
     cells[`${row}:6`] = { rawValue: risk.mitigationPlan, computedValue: risk.mitigationPlan };
     cells[`${row}:7`] = { rawValue: risk.notes, computedValue: risk.notes };
+    cells[`${row}:8`] = { rawValue: risk.taskId ?? '', computedValue: risk.taskId ?? '' };
   }
 
   return {

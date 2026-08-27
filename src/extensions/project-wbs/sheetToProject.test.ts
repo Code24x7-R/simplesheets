@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
-import { detectColumnMapping, sheetToProject, projectModelToProject, projectModelToSheetCells, createProjectSheet, createSheetFromTemplate, getDefaultColumnMapping, PROJECT_SHEET_HEADERS, rowToResource, rowToRisk } from './sheetToProject';
+import { detectColumnMapping, sheetToProject, projectModelToProject, projectModelToSheetCells, createProjectSheet, createSheetFromTemplate, getDefaultColumnMapping, PROJECT_SHEET_HEADERS, rowToResource, rowToRisk, createRisksSheetFromModel, parseRiskRow } from './sheetToProject';
 import { resourceToRow, riskToRow } from './projectConverter';
 import type { Resource, Risk } from '../types';
 import type { Sheet, ColumnMapping, ProjectModel } from '../../types';
@@ -814,5 +814,98 @@ describe('sheetToProject', () => {
       expect(sheet!.frozenRows).toBe(1);
       expect(sheet!.frozenColumns).toBe(1);
     });
+  });
+
+  // ─── Phase 3: Risk→Task link in sheet tests ──────────────────────
+
+  it('includes Linked Task column in Risks sheet', () => {
+    const model: ProjectModel = {
+      id: 'proj-1',
+      name: 'Test',
+      description: '',
+      startDate: '2025-01-01',
+      endDate: '2025-01-31',
+      tasks: [
+        { id: 't1', name: 'Task 1', startDate: '2025-01-01', endDate: '2025-01-05', duration: 5, parentId: null, dependencies: [], progress: 0, resourceId: null, isMilestone: false, color: '#3B82F6', notes: '' },
+      ],
+      risks: [
+        { id: 'r1', title: 'Scope creep', category: 'scope', probability: 3, impact: 4, status: 'identified', ownerId: null, taskId: 't1', mitigationPlan: 'Reviews', notes: '' },
+      ],
+      resources: [],
+      materials: [],
+      actuals: [],
+    };
+
+    const sheet = createRisksSheetFromModel(model);
+    const headers = Object.entries(sheet.cells)
+      .filter(([key]) => key.startsWith('0:'))
+      .sort(([a], [b]) => parseInt(a.split(':')[1]) - parseInt(b.split(':')[1]))
+      .map(([, cell]) => cell.rawValue);
+
+    expect(headers).toContain('Linked Task');
+  });
+
+  it('writes taskId to Linked Task column in Risks sheet', () => {
+    const model: ProjectModel = {
+      id: 'proj-1',
+      name: 'Test',
+      description: '',
+      startDate: '2025-01-01',
+      endDate: '2025-01-31',
+      tasks: [
+        { id: 't1', name: 'Task 1', startDate: '2025-01-01', endDate: '2025-01-05', duration: 5, parentId: null, dependencies: [], progress: 0, resourceId: null, isMilestone: false, color: '#3B82F6', notes: '' },
+      ],
+      risks: [
+        { id: 'r1', title: 'Scope creep', category: 'scope', probability: 3, impact: 4, status: 'identified', ownerId: null, taskId: 't1', mitigationPlan: 'Reviews', notes: '' },
+      ],
+      resources: [],
+      materials: [],
+      actuals: [],
+    };
+
+    const sheet = createRisksSheetFromModel(model);
+    // Row 1 (first data row), column 8 (Linked Task)
+    const linkedTaskCell = sheet.cells['1:8'];
+    expect(linkedTaskCell).toBeTruthy();
+    expect(linkedTaskCell.rawValue).toBe('t1');
+  });
+
+  it('reads taskId from Linked Task column when parsing Risks sheet', () => {
+    const sheet: Sheet = {
+      id: 'test',
+      name: 'Risks',
+      cells: {
+        '0:0': { rawValue: 'Risk', computedValue: 'Risk' },
+        '0:1': { rawValue: 'Category', computedValue: 'Category' },
+        '0:2': { rawValue: 'Probability', computedValue: 'Probability' },
+        '0:3': { rawValue: 'Impact', computedValue: 'Impact' },
+        '0:4': { rawValue: 'Status', computedValue: 'Status' },
+        '0:5': { rawValue: 'Owner', computedValue: 'Owner' },
+        '0:6': { rawValue: 'Mitigation Plan', computedValue: 'Mitigation Plan' },
+        '0:7': { rawValue: 'Notes', computedValue: 'Notes' },
+        '0:8': { rawValue: 'Linked Task', computedValue: 'Linked Task' },
+        '1:0': { rawValue: 'Scope creep', computedValue: 'Scope creep' },
+        '1:1': { rawValue: 'scope', computedValue: 'scope' },
+        '1:2': { rawValue: '3', computedValue: '3' },
+        '1:3': { rawValue: '4', computedValue: '4' },
+        '1:4': { rawValue: 'identified', computedValue: 'identified' },
+        '1:5': { rawValue: '', computedValue: '' },
+        '1:6': { rawValue: 'Reviews', computedValue: 'Reviews' },
+        '1:7': { rawValue: '', computedValue: '' },
+        '1:8': { rawValue: 'task-1', computedValue: 'task-1' },
+      },
+      defaultColWidth: 120,
+      defaultRowHeight: 24,
+      columnWidths: {},
+      rowHeights: {},
+      columnCount: 9,
+      rowCount: 2,
+      frozenColumns: 0,
+      frozenRows: 1,
+    };
+
+    const risk = parseRiskRow(sheet, 1);
+    expect(risk).not.toBeNull();
+    expect(risk!.taskId).toBe('task-1');
   });
 });
