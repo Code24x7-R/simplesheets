@@ -66,7 +66,7 @@ import { useChartSettings } from './hooks/useChartSettings';
 import { SheetLinkProvider } from './components/SheetLink';
 import { ProjectView } from './extensions/project-wbs/ProjectView';
 import { createBlankTasksSheet, createWorkbookFromTemplate, createRisksSheet, createResourcesSheet, createMaterialsSheet, createActualsSheet, workbookToProject, projectModelToProject, projectModelToWorkbook } from './extensions/project-wbs/sheetToProject';
-import { TASKS_SHEET_NAME, RISKS_SHEET_NAME, RESOURCES_SHEET_NAME, MATERIALS_SHEET_NAME, ACTUALS_SHEET_NAME } from './extensions/project-wbs/sheetToProject';
+import { TASKS_SHEET_NAME, RISKS_SHEET_NAME, RESOURCES_SHEET_NAME, MATERIALS_SHEET_NAME, ACTUALS_SHEET_NAME, ALLOCATIONS_SHEET_NAME, CONSUMPTIONS_SHEET_NAME } from './extensions/project-wbs/sheetToProject';
 import type { Project } from './extensions/types';
 import type { ProjectModel, ColumnMapping } from './types';
 
@@ -1913,7 +1913,7 @@ function WorkbookView() {
       const newWorkbook = projectModelToWorkbook(model, mapping);
 
       // Replace existing project sheets (by name) with new ones
-      const projectSheetNames = new Set([TASKS_SHEET_NAME, RISKS_SHEET_NAME, RESOURCES_SHEET_NAME, MATERIALS_SHEET_NAME, ACTUALS_SHEET_NAME]);
+      const projectSheetNames = new Set([TASKS_SHEET_NAME, RISKS_SHEET_NAME, RESOURCES_SHEET_NAME, MATERIALS_SHEET_NAME, ACTUALS_SHEET_NAME, ALLOCATIONS_SHEET_NAME, CONSUMPTIONS_SHEET_NAME]);
       const existingNonProjectSheets = workbook.sheets.filter(
         (s) => !projectSheetNames.has(s.name)
       );
