@@ -147,6 +147,8 @@ describe('JSON Service', () => {
           { id: 'm2', name: 'Concrete', classification: 'consumable', unit: 'm³', unitCost: 180, quantity: 50, vendor: 'Acme', depreciationMethod: 'none', usefulLifeMonths: 0, salvageValue: 0, billingPeriod: 'daily', rentalRate: 0, leaseStartDate: null, leaseEndDate: null, wastageRate: 5, reorderPoint: 10, carryingCostPerUnit: 0, currency: 'USD', status: 'ordered' },
         ],
         actuals: [],
+    allocations: [],
+    consumptions: [],
       };
 
       const workbook = projectModelToWorkbook(model);
@@ -181,6 +183,8 @@ describe('JSON Service', () => {
           { id: 'm1', name: 'Steel', classification: 'consumable', unit: 'ton', unitCost: 2500, quantity: 12, vendor: 'Steel Corp', depreciationMethod: 'none', usefulLifeMonths: 0, salvageValue: 0, billingPeriod: 'daily', rentalRate: 0, leaseStartDate: null, leaseEndDate: null, wastageRate: 3, reorderPoint: 2, carryingCostPerUnit: 5, currency: 'USD', status: 'delivered' },
         ],
         actuals: [],
+    allocations: [],
+    consumptions: [],
       };
 
       const workbook = projectModelToWorkbook(model);

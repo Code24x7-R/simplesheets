@@ -7,8 +7,8 @@
  * Used by both ProjectView (for syncing to sheet) and sheetToProject (for templates).
  */
 
-import type { Project, WBSTask, Risk, Resource, Material } from '../types';
-import type { ProjectModel, TaskRow, RiskRow, ResourceRow, MaterialRow, ActualRow } from '../../types';
+import type { Project, WBSTask, Risk, Resource, Material, MaterialAllocation, MaterialConsumption } from '../types';
+import type { ProjectModel, TaskRow, RiskRow, ResourceRow, MaterialRow, ActualRow, AllocationRow, ConsumptionRow } from '../../types';
 import { projectModelToProject } from './sheetToProject';
 import { createDefaultCalendar } from './calendar';
 
@@ -50,6 +50,8 @@ export function projectToModel(projectState: Project): ProjectModel {
     resources: projectState.resources.map((r) => resourceToRow(r)),
     materials: (projectState.materials ?? []).map((m) => materialToRow(m)),
     actuals: (projectState.accounting?.spendEntries ?? []).map((a) => actualToRow(a)),
+    allocations: (projectState.materialAllocations ?? []).map((a) => allocationToRow(a)),
+    consumptions: (projectState.materialConsumptions ?? []).map((c) => consumptionToRow(c)),
   };
 }
 
@@ -153,6 +155,33 @@ export function actualToRow(actual: {
     currency: actual.currency,
     source: actual.source,
     notes: actual.notes,
+  };
+}
+
+export function allocationToRow(allocation: MaterialAllocation): AllocationRow {
+  return {
+    id: allocation.id,
+    materialId: allocation.materialId,
+    taskId: allocation.taskId,
+    allocatedQuantity: allocation.allocatedQuantity,
+    consumedQuantity: allocation.consumedQuantity,
+    allocationDate: allocation.allocationDate,
+    expectedReturnDate: allocation.expectedReturnDate,
+    actualCost: allocation.actualCost,
+    notes: allocation.notes,
+  };
+}
+
+export function consumptionToRow(consumption: MaterialConsumption): ConsumptionRow {
+  return {
+    id: consumption.id,
+    materialId: consumption.materialId,
+    taskId: consumption.taskId,
+    date: consumption.date,
+    quantity: consumption.quantity,
+    wastageQuantity: consumption.wastageQuantity,
+    unitCostAtConsumption: consumption.unitCostAtConsumption,
+    notes: consumption.notes,
   };
 }
 

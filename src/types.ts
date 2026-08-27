@@ -313,6 +313,8 @@ export interface ProjectModel {
   resources: ResourceRow[];
   materials: MaterialRow[];
   actuals: ActualRow[];
+  allocations: AllocationRow[];
+  consumptions: ConsumptionRow[];
 }
 
 /**
@@ -367,6 +369,35 @@ export interface ActualRow {
   amount: number;
   currency: string;
   source: string;
+  notes: string;
+}
+
+/**
+ * Serializable material allocation row.
+ */
+export interface AllocationRow {
+  id: string;
+  materialId: string;
+  taskId: string;
+  allocatedQuantity: number;
+  consumedQuantity: number;
+  allocationDate: string;
+  expectedReturnDate: string | null;
+  actualCost: number;
+  notes: string;
+}
+
+/**
+ * Serializable material consumption row.
+ */
+export interface ConsumptionRow {
+  id: string;
+  materialId: string;
+  taskId: string;
+  date: string;
+  quantity: number;
+  wastageQuantity: number;
+  unitCostAtConsumption: number;
   notes: string;
 }
 

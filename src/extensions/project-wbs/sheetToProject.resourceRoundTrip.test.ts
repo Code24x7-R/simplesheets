@@ -49,6 +49,8 @@ describe('Resource round-trip through sheet conversion', () => {
       ],
       materials: [],
       actuals: [],
+    allocations: [],
+    consumptions: [],
     };
 
     // Convert to workbook
@@ -105,6 +107,8 @@ describe('Resource round-trip through sheet conversion', () => {
       ],
       materials: [],
       actuals: [],
+    allocations: [],
+    consumptions: [],
     };
 
     const workbook = projectModelToWorkbook(model);

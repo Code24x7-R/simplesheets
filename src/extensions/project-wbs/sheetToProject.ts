@@ -11,7 +11,7 @@
  * - Progress and date parsing
  */
 
-import type { Sheet, Workbook, ColumnMapping, ProjectModel, TaskRow, RiskRow, ResourceRow, MaterialRow, ActualRow, Cell } from '../../types';
+import type { Sheet, Workbook, ColumnMapping, ProjectModel, TaskRow, RiskRow, ResourceRow, MaterialRow, ActualRow, AllocationRow, ConsumptionRow, Cell } from '../../types';
 import { colToLetter } from '../../types';
 import type { Project, WBSTask, Resource, Material } from '../types';
 import { getTemplateById } from './templates/index';
@@ -26,6 +26,8 @@ export const RISKS_SHEET_NAME = 'Risks';
 export const RESOURCES_SHEET_NAME = 'Resources';
 export const MATERIALS_SHEET_NAME = 'Materials';
 export const ACTUALS_SHEET_NAME = 'Actuals';
+export const ALLOCATIONS_SHEET_NAME = 'Allocations';
+export const CONSUMPTIONS_SHEET_NAME = 'Consumptions';
 
 // ─── Risk & Resource Column Layouts ───────────────────────────────────────
 
@@ -33,6 +35,8 @@ const RISK_HEADERS = ['Risk', 'Category', 'Probability', 'Impact', 'Status', 'Ow
 const RESOURCE_HEADERS = ['Resource', 'Role', 'Cost Rate', 'Currency', 'Availability %', 'Color'];
 const MATERIAL_HEADERS = ['Material', 'Classification', 'Unit', 'Unit Cost', 'Quantity', 'Vendor', 'Depreciation', 'Useful Life', 'Salvage', 'Billing', 'Rental Rate', 'Lease Start', 'Lease End', 'Wastage %', 'Reorder Pt', 'Carrying Cost', 'Currency', 'Status'];
 const ACTUAL_HEADERS = ['Entry ID', 'Task ID', 'Date', 'Amount', 'Currency', 'Source', 'Notes'];
+const ALLOCATION_HEADERS = ['Allocation ID', 'Material ID', 'Task ID', 'Allocated Qty', 'Consumed Qty', 'Allocation Date', 'Expected Return', 'Actual Cost', 'Notes'];
+const CONSUMPTION_HEADERS = ['Consumption ID', 'Material ID', 'Task ID', 'Date', 'Quantity', 'Wastage', 'Unit Cost', 'Notes'];
 
 // ─── Column Auto-Detection ──────────────────────────────────────────────────
 
@@ -187,6 +191,14 @@ export function workbookToProject(
   const actualsSheet = workbook.sheets.find((s) => s.name === ACTUALS_SHEET_NAME);
   const actuals = actualsSheet ? parseAllActuals(actualsSheet) : [];
 
+  // Parse allocations from the Allocations sheet
+  const allocationsSheet = workbook.sheets.find((s) => s.name === ALLOCATIONS_SHEET_NAME);
+  const allocations = allocationsSheet ? parseAllAllocations(allocationsSheet) : [];
+
+  // Parse consumptions from the Consumptions sheet
+  const consumptionsSheet = workbook.sheets.find((s) => s.name === CONSUMPTIONS_SHEET_NAME);
+  const consumptions = consumptionsSheet ? parseAllConsumptions(consumptionsSheet) : [];
+
   // Build resource name-to-ID lookup map
   const resourceNameToId = new Map<string, string>();
   for (const r of resources) {
@@ -215,6 +227,8 @@ export function workbookToProject(
     resources,
     materials,
     actuals,
+    allocations,
+    consumptions,
   };
 }
 
@@ -360,6 +374,8 @@ function sheetToProjectLegacy(sheet: Sheet, mapping: ColumnMapping, projectName?
     resources,
     materials: [],
     actuals: [],
+    allocations: [],
+    consumptions: [],
   };
 }
 
@@ -510,6 +526,87 @@ function parseAllActuals(sheet: Sheet): ActualRow[] {
 /**
  * Parse a single row into a TaskRow.
  */
+function parseAllAllocations(sheet: Sheet): AllocationRow[] {
+  const allocations: AllocationRow[] = [];
+
+  // Find header row
+  let headerRow = -1;
+  for (let row = 0; row < Math.min(5, sheet.rowCount); row++) {
+    const cell = sheet.cells[`${row}:0`];
+    const value = (cell?.rawValue ?? '').toString().trim().toLowerCase();
+    if (value === 'allocation id' || value === 'allocation' || value === 'alloc') {
+      headerRow = row;
+      break;
+    }
+  }
+  if (headerRow === -1) return allocations;
+
+  for (let row = headerRow + 1; row < sheet.rowCount; row++) {
+    const allocation = parseAllocationRow(sheet, row);
+    if (allocation) {
+      allocations.push(allocation);
+    }
+  }
+  return allocations;
+}
+
+function parseAllocationRow(sheet: Sheet, row: number): AllocationRow | null {
+  const id = getCellStringValue(sheet, row, 0);
+  if (!id) return null;
+
+  return {
+    id,
+    materialId: getCellStringValue(sheet, row, 1) || '',
+    taskId: getCellStringValue(sheet, row, 2) || '',
+    allocatedQuantity: parseInt(getCellStringValue(sheet, row, 3)) || 0,
+    consumedQuantity: parseInt(getCellStringValue(sheet, row, 4)) || 0,
+    allocationDate: getCellStringValue(sheet, row, 5) || '',
+    expectedReturnDate: getCellStringValue(sheet, row, 6) || null,
+    actualCost: parseFloat(getCellStringValue(sheet, row, 7)) || 0,
+    notes: getCellStringValue(sheet, row, 8) || '',
+  };
+}
+
+function parseAllConsumptions(sheet: Sheet): ConsumptionRow[] {
+  const consumptions: ConsumptionRow[] = [];
+
+  // Find header row
+  let headerRow = -1;
+  for (let row = 0; row < Math.min(5, sheet.rowCount); row++) {
+    const cell = sheet.cells[`${row}:0`];
+    const value = (cell?.rawValue ?? '').toString().trim().toLowerCase();
+    if (value === 'consumption id' || value === 'consumption' || value === 'consume') {
+      headerRow = row;
+      break;
+    }
+  }
+  if (headerRow === -1) return consumptions;
+
+  for (let row = headerRow + 1; row < sheet.rowCount; row++) {
+    const consumption = parseConsumptionRow(sheet, row);
+    if (consumption) {
+      consumptions.push(consumption);
+    }
+  }
+  return consumptions;
+}
+
+function parseConsumptionRow(sheet: Sheet, row: number): ConsumptionRow | null {
+  const id = getCellStringValue(sheet, row, 0);
+  if (!id) return null;
+
+  return {
+    id,
+    materialId: getCellStringValue(sheet, row, 1) || '',
+    taskId: getCellStringValue(sheet, row, 2) || '',
+    date: getCellStringValue(sheet, row, 3) || '',
+    quantity: parseInt(getCellStringValue(sheet, row, 4)) || 0,
+    wastageQuantity: parseInt(getCellStringValue(sheet, row, 5)) || 0,
+    unitCostAtConsumption: parseFloat(getCellStringValue(sheet, row, 6)) || 0,
+    notes: getCellStringValue(sheet, row, 7) || '',
+  };
+}
+
 function parseTaskRow(sheet: Sheet, row: number, mapping: ColumnMapping): TaskRow | null {
   const name = getCellStringValue(sheet, row, mapping.taskCol);
   if (!name) return null; // Skip empty rows
@@ -796,6 +893,31 @@ export function projectModelToProject(model: ProjectModel): Project {
     notes: a.notes,
   }));
 
+  // Convert allocation rows to runtime allocations
+  const allocations = (model.allocations ?? []).map((a) => ({
+    id: a.id,
+    materialId: a.materialId,
+    taskId: a.taskId,
+    allocatedQuantity: a.allocatedQuantity,
+    consumedQuantity: a.consumedQuantity,
+    allocationDate: a.allocationDate,
+    expectedReturnDate: a.expectedReturnDate,
+    actualCost: a.actualCost,
+    notes: a.notes,
+  }));
+
+  // Convert consumption rows to runtime consumptions
+  const consumptions = (model.consumptions ?? []).map((c) => ({
+    id: c.id,
+    materialId: c.materialId,
+    taskId: c.taskId,
+    date: c.date,
+    quantity: c.quantity,
+    wastageQuantity: c.wastageQuantity,
+    unitCostAtConsumption: c.unitCostAtConsumption,
+    notes: c.notes,
+  }));
+
   return {
     id: model.id,
     name: model.name,
@@ -811,6 +933,8 @@ export function projectModelToProject(model: ProjectModel): Project {
     risks,
     wbs: costSyncedRoots,
     materials,
+    materialAllocations: allocations,
+    materialConsumptions: consumptions,
     accounting: {
       baselineTotal: 0,
       allocatedTotal: 0,
@@ -853,6 +977,12 @@ export function projectModelToWorkbook(
 
   // ─── Actuals Sheet ──────────────────────────────────────────────
   sheets.push(createActualsSheetFromModel(model));
+
+  // ─── Allocations Sheet ──────────────────────────────────────────
+  sheets.push(createAllocationsSheetFromModel(model));
+
+  // ─── Consumptions Sheet ─────────────────────────────────────────
+  sheets.push(createConsumptionsSheetFromModel(model));
 
   return {
     id: `wb-${model.id}`,
@@ -1158,6 +1288,95 @@ function createActualsSheetFromModel(model: ProjectModel): Sheet {
   return {
     id: `sheet-actuals-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     name: ACTUALS_SHEET_NAME,
+    cells,
+    defaultColWidth: 110,
+    defaultRowHeight: 24,
+    columnWidths: { 0: 120, 1: 100 },
+    rowHeights: {},
+    columnCount: colCount,
+    rowCount: rowCount,
+    frozenColumns: 0,
+    frozenRows: 1,
+  };
+}
+
+function createAllocationsSheetFromModel(model: ProjectModel): Sheet {
+  const colCount = ALLOCATION_HEADERS.length;
+  const rowCount = 1 + (model.allocations?.length ?? 0) + 2;
+  const cells: Record<string, Cell> = {};
+
+  // Headers
+  for (let col = 0; col < ALLOCATION_HEADERS.length; col++) {
+    cells[`0:${col}`] = {
+      rawValue: ALLOCATION_HEADERS[col],
+      computedValue: ALLOCATION_HEADERS[col],
+      style: { fontWeight: 'bold', backgroundColor: '#EDE9FE', color: '#5B21B6' },
+    };
+  }
+
+  // Data rows
+  const allocations = model.allocations ?? [];
+  for (let i = 0; i < allocations.length; i++) {
+    const allocation = allocations[i];
+    const row = 1 + i;
+    cells[`${row}:0`] = { rawValue: allocation.id, computedValue: allocation.id };
+    cells[`${row}:1`] = { rawValue: allocation.materialId, computedValue: allocation.materialId };
+    cells[`${row}:2`] = { rawValue: allocation.taskId, computedValue: allocation.taskId };
+    cells[`${row}:3`] = { rawValue: String(allocation.allocatedQuantity), computedValue: allocation.allocatedQuantity };
+    cells[`${row}:4`] = { rawValue: String(allocation.consumedQuantity), computedValue: allocation.consumedQuantity };
+    cells[`${row}:5`] = { rawValue: allocation.allocationDate, computedValue: allocation.allocationDate };
+    cells[`${row}:6`] = { rawValue: allocation.expectedReturnDate ?? '', computedValue: allocation.expectedReturnDate ?? '' };
+    cells[`${row}:7`] = { rawValue: String(allocation.actualCost), computedValue: allocation.actualCost };
+    cells[`${row}:8`] = { rawValue: allocation.notes, computedValue: allocation.notes };
+  }
+
+  return {
+    id: `sheet-allocations-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    name: ALLOCATIONS_SHEET_NAME,
+    cells,
+    defaultColWidth: 110,
+    defaultRowHeight: 24,
+    columnWidths: { 0: 120, 1: 100 },
+    rowHeights: {},
+    columnCount: colCount,
+    rowCount: rowCount,
+    frozenColumns: 0,
+    frozenRows: 1,
+  };
+}
+
+function createConsumptionsSheetFromModel(model: ProjectModel): Sheet {
+  const colCount = CONSUMPTION_HEADERS.length;
+  const rowCount = 1 + (model.consumptions?.length ?? 0) + 2;
+  const cells: Record<string, Cell> = {};
+
+  // Headers
+  for (let col = 0; col < CONSUMPTION_HEADERS.length; col++) {
+    cells[`0:${col}`] = {
+      rawValue: CONSUMPTION_HEADERS[col],
+      computedValue: CONSUMPTION_HEADERS[col],
+      style: { fontWeight: 'bold', backgroundColor: '#FCE7F3', color: '#9D174D' },
+    };
+  }
+
+  // Data rows
+  const consumptions = model.consumptions ?? [];
+  for (let i = 0; i < consumptions.length; i++) {
+    const consumption = consumptions[i];
+    const row = 1 + i;
+    cells[`${row}:0`] = { rawValue: consumption.id, computedValue: consumption.id };
+    cells[`${row}:1`] = { rawValue: consumption.materialId, computedValue: consumption.materialId };
+    cells[`${row}:2`] = { rawValue: consumption.taskId, computedValue: consumption.taskId };
+    cells[`${row}:3`] = { rawValue: consumption.date, computedValue: consumption.date };
+    cells[`${row}:4`] = { rawValue: String(consumption.quantity), computedValue: consumption.quantity };
+    cells[`${row}:5`] = { rawValue: String(consumption.wastageQuantity), computedValue: consumption.wastageQuantity };
+    cells[`${row}:6`] = { rawValue: String(consumption.unitCostAtConsumption), computedValue: consumption.unitCostAtConsumption };
+    cells[`${row}:7`] = { rawValue: consumption.notes, computedValue: consumption.notes };
+  }
+
+  return {
+    id: `sheet-consumptions-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    name: CONSUMPTIONS_SHEET_NAME,
     cells,
     defaultColWidth: 110,
     defaultRowHeight: 24,
@@ -1575,6 +1794,8 @@ export function createSheetFromTemplate(templateId: string, projectName?: string
     })),
     materials: [],
     actuals: [],
+    allocations: [],
+    consumptions: [],
   };
 
   // Use projectModelToSheetCells to generate cells

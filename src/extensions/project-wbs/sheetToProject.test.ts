@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
-import { detectColumnMapping, sheetToProject, projectModelToProject, projectModelToSheetCells, createProjectSheet, createSheetFromTemplate, getDefaultColumnMapping, PROJECT_SHEET_HEADERS, rowToResource, rowToRisk, createRisksSheetFromModel, parseRiskRow } from './sheetToProject';
+import { detectColumnMapping, sheetToProject, projectModelToProject, projectModelToSheetCells, createProjectSheet, createSheetFromTemplate, getDefaultColumnMapping, PROJECT_SHEET_HEADERS, rowToResource, rowToRisk, createRisksSheetFromModel, parseRiskRow, projectModelToWorkbook, ALLOCATIONS_SHEET_NAME, CONSUMPTIONS_SHEET_NAME } from './sheetToProject';
 import { resourceToRow, riskToRow } from './projectConverter';
 import type { Resource, Risk } from '../types';
 import type { Sheet, ColumnMapping, ProjectModel } from '../../types';
@@ -282,6 +282,8 @@ describe('sheetToProject', () => {
       resources: [],
             materials: [],
             actuals: [],
+    allocations: [],
+    consumptions: [],
       };
 
       const project = projectModelToProject(model);
@@ -307,6 +309,8 @@ describe('sheetToProject', () => {
       resources: [],
             materials: [],
             actuals: [],
+    allocations: [],
+    consumptions: [],
       };
 
       const project = projectModelToProject(model);
@@ -328,6 +332,8 @@ describe('sheetToProject', () => {
         resources: [],
             materials: [],
             actuals: [],
+    allocations: [],
+    consumptions: [],
       };
 
       const project = projectModelToProject(model);
@@ -442,6 +448,8 @@ describe('sheetToProject', () => {
       resources: [],
             materials: [],
             actuals: [],
+    allocations: [],
+    consumptions: [],
       };
 
       const cells = projectModelToSheetCells(model, mapping);
@@ -467,6 +475,8 @@ describe('sheetToProject', () => {
       resources: [],
             materials: [],
             actuals: [],
+    allocations: [],
+    consumptions: [],
       };
 
       const cells = projectModelToSheetCells(model, mapping);
@@ -488,6 +498,8 @@ describe('sheetToProject', () => {
       resources: [],
             materials: [],
             actuals: [],
+    allocations: [],
+    consumptions: [],
       };
 
       const cells = projectModelToSheetCells(model, mapping);
@@ -523,6 +535,8 @@ describe('sheetToProject', () => {
       resources: [],
             materials: [],
             actuals: [],
+    allocations: [],
+    consumptions: [],
       };
 
       const cells = projectModelToSheetCells(model, partialMapping);
@@ -546,6 +560,8 @@ describe('sheetToProject', () => {
       resources: [],
             materials: [],
             actuals: [],
+    allocations: [],
+    consumptions: [],
       };
 
       const cells = projectModelToSheetCells(model, mapping);
@@ -708,6 +724,8 @@ describe('sheetToProject', () => {
         resources: [],
             materials: [],
             actuals: [],
+    allocations: [],
+    consumptions: [],
       };
 
       const cells = projectModelToSheetCells(model, mapping);
@@ -733,6 +751,8 @@ describe('sheetToProject', () => {
         ],
         materials: [],
             actuals: [],
+    allocations: [],
+    consumptions: [],
       };
 
       const cells = projectModelToSheetCells(model, mapping);
@@ -756,6 +776,8 @@ describe('sheetToProject', () => {
         resources: [],
             materials: [],
             actuals: [],
+    allocations: [],
+    consumptions: [],
       };
 
       const cells = projectModelToSheetCells(model, mapping);
@@ -834,6 +856,8 @@ describe('sheetToProject', () => {
       resources: [],
       materials: [],
       actuals: [],
+    allocations: [],
+    consumptions: [],
     };
 
     const sheet = createRisksSheetFromModel(model);
@@ -861,6 +885,8 @@ describe('sheetToProject', () => {
       resources: [],
       materials: [],
       actuals: [],
+    allocations: [],
+    consumptions: [],
     };
 
     const sheet = createRisksSheetFromModel(model);
@@ -907,5 +933,89 @@ describe('sheetToProject', () => {
     const risk = parseRiskRow(sheet, 1);
     expect(risk).not.toBeNull();
     expect(risk!.taskId).toBe('task-1');
+  });
+
+  // ─── Phase 3: Allocation persistence tests ───────────────────────
+
+  it('includes Allocations sheet in workbook', () => {
+    const model: ProjectModel = {
+      id: 'proj-1',
+      name: 'Test',
+      description: '',
+      startDate: '2025-01-01',
+      endDate: '2025-01-31',
+      tasks: [],
+      risks: [],
+      resources: [],
+      materials: [],
+      actuals: [],
+      allocations: [
+        { id: 'a1', materialId: 'm1', taskId: 't1', allocatedQuantity: 10, consumedQuantity: 5, allocationDate: '2025-01-15', expectedReturnDate: null, actualCost: 500, notes: '' },
+      ],
+      consumptions: [],
+    };
+
+    const workbook = projectModelToWorkbook(model);
+    const allocationSheet = workbook.sheets.find((s) => s.name === ALLOCATIONS_SHEET_NAME);
+    expect(allocationSheet).toBeTruthy();
+    expect(allocationSheet!.cells['0:0']?.rawValue).toBe('Allocation ID');
+    expect(allocationSheet!.cells['1:0']?.rawValue).toBe('a1');
+    expect(allocationSheet!.cells['1:1']?.rawValue).toBe('m1');
+    expect(allocationSheet!.cells['1:2']?.rawValue).toBe('t1');
+  });
+
+  it('includes Consumptions sheet in workbook', () => {
+    const model: ProjectModel = {
+      id: 'proj-1',
+      name: 'Test',
+      description: '',
+      startDate: '2025-01-01',
+      endDate: '2025-01-31',
+      tasks: [],
+      risks: [],
+      resources: [],
+      materials: [],
+      actuals: [],
+      allocations: [],
+      consumptions: [
+        { id: 'c1', materialId: 'm1', taskId: 't1', date: '2025-01-20', quantity: 3, wastageQuantity: 0, unitCostAtConsumption: 50, notes: '' },
+      ],
+    };
+
+    const workbook = projectModelToWorkbook(model);
+    const consumptionSheet = workbook.sheets.find((s) => s.name === CONSUMPTIONS_SHEET_NAME);
+    expect(consumptionSheet).toBeTruthy();
+    expect(consumptionSheet!.cells['0:0']?.rawValue).toBe('Consumption ID');
+    expect(consumptionSheet!.cells['1:0']?.rawValue).toBe('c1');
+    expect(consumptionSheet!.cells['1:4']?.rawValue).toBe('3');
+  });
+
+  it('round-trips allocations through sheet conversion', () => {
+    const model: ProjectModel = {
+      id: 'proj-1',
+      name: 'Test',
+      description: '',
+      startDate: '2025-01-01',
+      endDate: '2025-01-31',
+      tasks: [],
+      risks: [],
+      resources: [],
+      materials: [],
+      actuals: [],
+      allocations: [
+        { id: 'a1', materialId: 'm1', taskId: 't1', allocatedQuantity: 10, consumedQuantity: 5, allocationDate: '2025-01-15', expectedReturnDate: '2025-02-15', actualCost: 500, notes: 'Test allocation' },
+      ],
+      consumptions: [],
+    };
+
+    const project = projectModelToProject(model);
+
+    // Verify allocations are preserved
+    expect(project.materialAllocations).toHaveLength(1);
+    expect(project.materialAllocations![0].id).toBe('a1');
+    expect(project.materialAllocations![0].materialId).toBe('m1');
+    expect(project.materialAllocations![0].taskId).toBe('t1');
+    expect(project.materialAllocations![0].allocatedQuantity).toBe(10);
+    expect(project.materialAllocations![0].expectedReturnDate).toBe('2025-02-15');
   });
 });
