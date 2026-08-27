@@ -9,7 +9,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import type { WBSTask, Resource, EffortUnit } from '../types';
+import type { WBSTask, Resource, EffortUnit, ApprovalGate } from '../types';
 import { NumericInput } from '../../components/NumericInput';
 
 interface TaskEditorModalProps {
@@ -63,6 +63,7 @@ export function TaskEditorModal({
       collapsed: false,
       color: DEFAULT_COLORS[Math.floor(Math.random() * DEFAULT_COLORS.length)],
       riskIds: [],
+      approvalGates: [],
       customFields: {},
     },
   );
@@ -407,6 +408,78 @@ export function TaskEditorModal({
               }}
             >
               + Add Dependency
+            </button>
+          </div>
+
+          {/* Approval Gates */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Approval Gates</label>
+            {(!form.approvalGates || form.approvalGates.length === 0) && (
+              <p className="text-xs text-gray-400 mb-2">No approval gates</p>
+            )}
+            {form.approvalGates?.map((gate, idx) => (
+              <div key={idx} className="flex gap-2 mb-2 items-center">
+                <select
+                  value={gate.gateType}
+                  onChange={(e) => {
+                    const next = [...(form.approvalGates ?? [])];
+                    next[idx] = { ...next[idx], gateType: e.target.value as ApprovalGate['gateType'] };
+                    updateField('approvalGates', next);
+                  }}
+                  className="flex-1 border border-gray-300 rounded px-2 py-1 text-sm"
+                >
+                  <option value="approval">Approval</option>
+                  <option value="review">Review</option>
+                  <option value="sign_off">Sign-off</option>
+                  <option value="external">External</option>
+                </select>
+                <span className={`text-xs px-2 py-1 rounded ${gate.approved ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                  {gate.approved ? 'Approved' : 'Pending'}
+                </span>
+                {!gate.approved && (
+                  <button
+                    className="text-xs text-green-600 hover:underline"
+                    onClick={() => {
+                      const next = [...(form.approvalGates ?? [])];
+                      next[idx] = {
+                        ...next[idx],
+                        approved: true,
+                        approvedBy: 'Current User',
+                        approvedDate: new Date().toISOString().slice(0, 10),
+                      };
+                      updateField('approvalGates', next);
+                    }}
+                  >
+                    Approve
+                  </button>
+                )}
+                <button
+                  className="text-red-500 hover:text-red-700 text-sm"
+                  onClick={() => {
+                    const next = (form.approvalGates ?? []).filter((_, i) => i !== idx);
+                    updateField('approvalGates', next);
+                  }}
+                >
+                  Remove
+                </button>
+              </div>
+            ))}
+            <button
+              className="text-xs text-blue-600 hover:underline"
+              onClick={() => {
+                const newGate: ApprovalGate = {
+                  taskId: form.id,
+                  gateType: 'approval',
+                  approved: false,
+                  approvedBy: null,
+                  approvedDate: null,
+                  notes: '',
+                };
+                const next = [...(form.approvalGates ?? []), newGate];
+                updateField('approvalGates', next);
+              }}
+            >
+              + Add Approval Gate
             </button>
           </div>
         </div>

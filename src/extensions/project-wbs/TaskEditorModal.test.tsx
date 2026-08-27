@@ -194,4 +194,72 @@ describe('TaskEditorModal', () => {
     expect(screen.getByText('Dependencies')).toBeInTheDocument();
     expect(screen.getByText('+ Add Dependency')).toBeInTheDocument();
   });
+
+  // ─── Phase 4: Approval Gate tests ────────────────────────────────
+
+  it('renders Approval Gates section in edit mode', () => {
+    const task = allTasks[0];
+    render(
+      <TaskEditorModal
+        task={task}
+        resources={resources}
+        allTasks={allTasks}
+        onClose={jest.fn()}
+        onSave={jest.fn()}
+      />,
+    );
+    expect(screen.getByText('Approval Gates')).toBeInTheDocument();
+  });
+
+  it('shows existing approval gates', () => {
+    const task = {
+      ...allTasks[0],
+      approvalGates: [
+        {
+          taskId: allTasks[0].id,
+          gateType: 'approval' as const,
+          approved: false,
+          approvedBy: null,
+          approvedDate: null,
+          notes: '',
+        },
+      ],
+    };
+    render(
+      <TaskEditorModal
+        task={task}
+        resources={resources}
+        allTasks={allTasks}
+        onClose={jest.fn()}
+        onSave={jest.fn()}
+      />,
+    );
+    expect(screen.getByText('Approval')).toBeInTheDocument();
+    expect(screen.getByText('Pending')).toBeInTheDocument();
+  });
+
+  it('allows adding a new approval gate', () => {
+    const onSave = jest.fn();
+    const task = { ...allTasks[0], approvalGates: [] };
+    render(
+      <TaskEditorModal
+        task={task}
+        resources={resources}
+        allTasks={allTasks}
+        onClose={jest.fn()}
+        onSave={onSave}
+      />,
+    );
+
+    // Click add approval gate
+    fireEvent.click(screen.getByText('+ Add Approval Gate'));
+
+    // Save the task
+    fireEvent.click(screen.getByText('Save Changes'));
+
+    // Should have called onSave with the new gate
+    expect(onSave).toHaveBeenCalled();
+    const savedTask = onSave.mock.calls[0][0];
+    expect(savedTask.approvalGates).toHaveLength(1);
+  });
 });
