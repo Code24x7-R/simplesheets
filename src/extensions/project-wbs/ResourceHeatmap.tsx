@@ -16,6 +16,7 @@ interface ResourceHeatmapProps {
   project: Project;
   onCellClick?: (resourceId: string, date: string) => void;
   onTaskClick?: (taskId: string) => void; // Reserved for future task navigation
+  onResourceClick?: (resourceId: string) => void;
 }
 
 interface ResourceAllocation {
@@ -31,7 +32,7 @@ function isoToDate(iso: string): Date {
 // Number of days to show at once
 const DAYS_PER_VIEW = 30;
 
-export function ResourceHeatmap({ project, onCellClick, onTaskClick: _onTaskClick }: ResourceHeatmapProps) {
+export function ResourceHeatmap({ project, onCellClick, onTaskClick: _onTaskClick, onResourceClick }: ResourceHeatmapProps) {
   const [hoveredCell, setHoveredCell] = useState<{ resourceId: string; date: string } | null>(null);
   const [viewStartDate, setViewStartDate] = useState<string>(project.startDate);
 
@@ -288,9 +289,19 @@ export function ResourceHeatmap({ project, onCellClick, onTaskClick: _onTaskClic
                   className="w-3 h-3 rounded-full flex-shrink-0"
                   style={{ backgroundColor: resource.color }}
                 />
-                <span className="text-sm font-medium text-gray-800 truncate">
-                  {resource.name}
-                </span>
+                {onResourceClick ? (
+                  <button
+                    onClick={() => onResourceClick(resource.id)}
+                    className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline truncate text-left"
+                    title={`Edit ${resource.name}`}
+                  >
+                    {resource.name}
+                  </button>
+                ) : (
+                  <span className="text-sm font-medium text-gray-800 truncate">
+                    {resource.name}
+                  </span>
+                )}
               </div>
               <div className="text-xs text-gray-500">{resource.role} ({resource.availability}%)</div>
             </div>

@@ -908,6 +908,12 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
             onDeleteTask={handleDeleteTask}
             onToggleCollapse={handleToggleCollapse}
             onOpenDependencies={handleOpenDependencyDrawer}
+            onTaskStatusChange={(taskId, status) => {
+              handleProjectChange((prev) => ({
+                ...prev,
+                wbs: updateTask(prev.wbs, taskId, (t) => ({ ...t, status })),
+              }));
+            }}
           />
         )}
 
@@ -960,7 +966,15 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
             <RiskMatrix risks={project.risks} />
           )}
           {viewMode === 'resource-heatmap' && (
-            <ResourceHeatmap project={project} />
+            <ResourceHeatmap
+              project={project}
+              onResourceClick={(resourceId) => {
+                const resource = project.resources.find((r) => r.id === resourceId);
+                if (resource) {
+                  setResourceModal({ open: true, resource });
+                }
+              }}
+            />
           )}
           {viewMode === 'accounting' && (
             <AccountingDashboard
@@ -979,6 +993,10 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
               onDeleteSpend={(entryId) => {
                 handleActualsDelete(entryId);
               }}
+              onTaskClick={(taskId) => {
+                setViewMode('gantt');
+                setSelectedTaskId(taskId);
+              }}
               onEditAllocation={(taskId) => {
                 // TODO: Open allocation editor modal
                 console.log('Edit allocation for task:', taskId);
@@ -995,6 +1013,9 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
               onEditMaterial={handleEditMaterial}
               onDeleteMaterial={handleMaterialDelete}
               onAllocateMaterial={handleOpenAllocationModal}
+              onRecordConsumption={(materialId) => {
+                handleOpenAllocationModal(materialId);
+              }}
               onConfig={handleOpenCapitalizationConfig}
             />
           )}

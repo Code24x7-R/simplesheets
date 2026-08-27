@@ -16,6 +16,24 @@
 import { useState, useMemo } from 'react';
 import type { WBSTask } from '../types';
 
+const STATUS_CYCLE: Record<string, WBSTask['status']> = {
+  not_started: 'in_progress',
+  in_progress: 'done',
+  done: 'done',
+  waiting: 'in_progress',
+  ready: 'in_progress',
+  on_hold: 'in_progress',
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  not_started: 'Not Started',
+  in_progress: 'In Progress',
+  done: 'Done',
+  waiting: 'Waiting',
+  ready: 'Ready',
+  on_hold: 'On Hold',
+};
+
 interface WBSTreePanelProps {
   tasks: WBSTask[];
   selectedTaskId: string | null;
@@ -25,6 +43,7 @@ interface WBSTreePanelProps {
   onDeleteTask: (taskId: string) => void;
   onToggleCollapse: (taskId: string) => void;
   onOpenDependencies?: (taskId: string) => void;
+  onTaskStatusChange?: (taskId: string, status: WBSTask['status']) => void;
 }
 
 /**
@@ -56,6 +75,7 @@ export function WBSTreePanel({
   onDeleteTask,
   onToggleCollapse,
   onOpenDependencies,
+  onTaskStatusChange,
 }: WBSTreePanelProps) {
   const [collapsedSet, setCollapsedSet] = useState<Set<string>>(new Set());
 
@@ -139,8 +159,23 @@ export function WBSTreePanel({
                 )}
               </div>
 
-              {/* Status Dot */}
-              <span className={`w-2 h-2 rounded-full mr-2 flex-shrink-0 ${getStatusColor(task)}`} />
+              {/* Status Dot — clickable to cycle status */}
+              {onTaskStatusChange ? (
+                <button
+                  className={`w-3 h-3 rounded-full mr-2 flex-shrink-0 cursor-pointer ring-0 hover:ring-2 hover:ring-blue-300 transition-all ${getStatusColor(task)}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const nextStatus = STATUS_CYCLE[task.status ?? 'not_started'] ?? 'in_progress';
+                    onTaskStatusChange(task.id, nextStatus);
+                  }}
+                  title={`Status: ${STATUS_LABELS[task.status ?? 'not_started'] ?? task.status} — click to change`}
+                />
+              ) : (
+                <span
+                  className={`w-2 h-2 rounded-full mr-2 flex-shrink-0 ${getStatusColor(task)}`}
+                  title={`Status: ${STATUS_LABELS[task.status ?? 'not_started'] ?? task.status}`}
+                />
+              )}
 
               {/* Task Name */}
               <span

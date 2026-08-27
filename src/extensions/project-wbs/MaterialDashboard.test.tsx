@@ -155,6 +155,42 @@ describe('MaterialDashboard', () => {
     expect(screen.getByText('3 items')).toBeTruthy();
   });
 
+  // ─── Phase 2: Consumption tracking tests ──────────────────────────
+
+  it('renders "Record Consumption" button per row when onRecordConsumption provided', () => {
+    const onRecordConsumption = jest.fn();
+    const project = createProject({
+      materials: [createMaterial({ id: 'm1', name: 'Test Material' })],
+    });
+    render(<MaterialDashboard project={project} onRecordConsumption={onRecordConsumption} />);
+
+    expect(screen.getByText('Record Consumption')).toBeTruthy();
+  });
+
+  it('does not render "Record Consumption" button when prop not provided', () => {
+    const project = createProject({
+      materials: [createMaterial({ id: 'm1', name: 'Test Material' })],
+    });
+    render(<MaterialDashboard project={project} />);
+
+    expect(screen.queryByText('Record Consumption')).toBeNull();
+  });
+
+  it('calls onRecordConsumption with material id when button clicked', () => {
+    const onRecordConsumption = jest.fn();
+    const project = createProject({
+      materials: [
+        createMaterial({ id: 'm1', name: 'Material A' }),
+        createMaterial({ id: 'm2', name: 'Material B' }),
+      ],
+    });
+    render(<MaterialDashboard project={project} onRecordConsumption={onRecordConsumption} />);
+
+    const buttons = screen.getAllByText('Record Consumption');
+    fireEvent.click(buttons[0]);
+    expect(onRecordConsumption).toHaveBeenCalledWith('m1');
+  });
+
   // ─── Phase 1: Delete button tests ──────────────────────────────────
 
   it('renders Delete button per material row when onDelete provided', () => {

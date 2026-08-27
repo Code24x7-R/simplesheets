@@ -26,11 +26,12 @@ interface AccountingDashboardProps {
   onEditSpend?: (entryId: string) => void;
   onDeleteSpend?: (entryId: string) => void;
   onEditAllocation?: (taskId: string) => void;
+  onTaskClick?: (taskId: string) => void;
 }
 
 type AccountingTab = 'baseline' | 'allocation' | 'estimate' | 'actual' | 'changelog';
 
-export function AccountingDashboard({ project, onEditSpend, onDeleteSpend, onEditAllocation }: AccountingDashboardProps) {
+export function AccountingDashboard({ project, onEditSpend, onDeleteSpend, onEditAllocation, onTaskClick }: AccountingDashboardProps) {
   const [activeTab, setActiveTab] = useState<AccountingTab>('estimate');
 
   const accounting = useMemo(() => computeProjectAccounting(project), [project]);
@@ -117,11 +118,11 @@ export function AccountingDashboard({ project, onEditSpend, onDeleteSpend, onEdi
 
       {/* Table content */}
       <div className="overflow-x-auto">
-        {activeTab === 'baseline' && <BaselineTable accounting={accounting} currency={currency} />}
+        {activeTab === 'baseline' && <BaselineTable accounting={accounting} currency={currency} onTaskClick={onTaskClick} />}
         {activeTab === 'allocation' && (
-          <AllocationTable accounting={accounting} currency={currency} onEdit={onEditAllocation} />
+          <AllocationTable accounting={accounting} currency={currency} onEdit={onEditAllocation} onTaskClick={onTaskClick} />
         )}
-        {activeTab === 'estimate' && <EstimateTable accounting={accounting} currency={currency} />}
+        {activeTab === 'estimate' && <EstimateTable accounting={accounting} currency={currency} onTaskClick={onTaskClick} />}
         {activeTab === 'actual' && <ActualsTable accounting={accounting} currency={currency} onEdit={onEditSpend} onDelete={onDeleteSpend} taskNamesById={taskNamesById} />}
         {activeTab === 'changelog' && <ChangeLogTable accounting={accounting} currency={currency} />}
       </div>
@@ -159,7 +160,7 @@ function KpiBadge({ label, value, status }: { label: string; value: string; stat
 
 // ─── Baseline Table ──────────────────────────────────────────────────────────
 
-function BaselineTable({ accounting, currency }: { accounting: ReturnType<typeof computeProjectAccounting>; currency: string }) {
+function BaselineTable({ accounting, currency, onTaskClick }: { accounting: ReturnType<typeof computeProjectAccounting>; currency: string; onTaskClick?: (taskId: string) => void }) {
   return (
     <table className="w-full text-xs">
       <thead>
@@ -175,7 +176,19 @@ function BaselineTable({ accounting, currency }: { accounting: ReturnType<typeof
       <tbody>
         {accounting.taskAccounting.map((row) => (
           <tr key={row.taskId} className="border-t border-gray-100 hover:bg-gray-50">
-            <td className="px-3 py-2 text-gray-800">{row.taskName}</td>
+            <td className="px-3 py-2">
+              {onTaskClick ? (
+                <button
+                  onClick={() => onTaskClick(row.taskId)}
+                  className="text-blue-600 hover:text-blue-800 hover:underline text-left"
+                  title="View task in Gantt chart"
+                >
+                  {row.taskName}
+                </button>
+              ) : (
+                <span className="text-gray-800">{row.taskName}</span>
+              )}
+            </td>
             <td className="px-3 py-2 text-right font-mono">{currency} {row.baselineCost.toLocaleString()}</td>
             <td className="px-3 py-2 text-right">{row.baselineDuration}d</td>
             <td className="px-3 py-2 text-right text-gray-500">
@@ -204,10 +217,12 @@ function AllocationTable({
   accounting,
   currency,
   onEdit,
+  onTaskClick,
 }: {
   accounting: ReturnType<typeof computeProjectAccounting>;
   currency: string;
   onEdit?: (taskId: string) => void;
+  onTaskClick?: (taskId: string) => void;
 }) {
   return (
     <table className="w-full text-xs">
@@ -226,7 +241,19 @@ function AllocationTable({
           const variance = row.allocatedBudget - row.baselineCost;
           return (
             <tr key={row.taskId} className="border-t border-gray-100 hover:bg-gray-50">
-              <td className="px-3 py-2 text-gray-800">{row.taskName}</td>
+              <td className="px-3 py-2">
+                {onTaskClick ? (
+                  <button
+                    onClick={() => onTaskClick(row.taskId)}
+                    className="text-blue-600 hover:text-blue-800 hover:underline text-left"
+                    title="View task in Gantt chart"
+                  >
+                    {row.taskName}
+                  </button>
+                ) : (
+                  <span className="text-gray-800">{row.taskName}</span>
+                )}
+              </td>
               <td className="px-3 py-2 text-right font-mono">{currency} {row.allocatedBudget.toLocaleString()}</td>
               <td className={`px-3 py-2 text-right font-mono ${variance < 0 ? 'text-red-600' : variance > 0 ? 'text-green-600' : 'text-gray-400'}`}>
                 {formatVariance(variance, currency)}
@@ -261,7 +288,7 @@ function AllocationTable({
 
 // ─── Estimate Table (EAC) ────────────────────────────────────────────────────
 
-function EstimateTable({ accounting, currency }: { accounting: ReturnType<typeof computeProjectAccounting>; currency: string }) {
+function EstimateTable({ accounting, currency, onTaskClick }: { accounting: ReturnType<typeof computeProjectAccounting>; currency: string; onTaskClick?: (taskId: string) => void }) {
   return (
     <table className="w-full text-xs">
       <thead>
@@ -283,7 +310,19 @@ function EstimateTable({ accounting, currency }: { accounting: ReturnType<typeof
           const spiStatus = formatPerformanceIndex(row.spi);
           return (
             <tr key={row.taskId} className="border-t border-gray-100 hover:bg-gray-50">
-              <td className="px-3 py-2 text-gray-800">{row.taskName}</td>
+              <td className="px-3 py-2">
+                {onTaskClick ? (
+                  <button
+                    onClick={() => onTaskClick(row.taskId)}
+                    className="text-blue-600 hover:text-blue-800 hover:underline text-left"
+                    title="View task in Gantt chart"
+                  >
+                    {row.taskName}
+                  </button>
+                ) : (
+                  <span className="text-gray-800">{row.taskName}</span>
+                )}
+              </td>
               <td className="px-3 py-2 text-right font-mono text-gray-500">{currency} {row.baselineCost.toLocaleString()}</td>
               <td className="px-3 py-2 text-right font-mono font-medium">{currency} {row.currentEstimate.toLocaleString()}</td>
               <td className="px-3 py-2 text-right font-mono">{currency} {row.etc.toLocaleString()}</td>

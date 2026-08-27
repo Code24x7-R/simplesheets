@@ -128,6 +128,26 @@ describe('ResourceHeatmap', () => {
     expect(weekendCells.length).toBeGreaterThan(0);
   });
 
+  // ─── Phase 2: Resource click tests ────────────────────────────────
+
+  it('calls onResourceClick when resource name is clicked', () => {
+    const onResourceClick = jest.fn();
+    const project = createMockProject();
+    render(<ResourceHeatmap project={project} onResourceClick={onResourceClick} />);
+
+    // Click the resource name
+    fireEvent.click(screen.getByText('Developer 1'));
+    expect(onResourceClick).toHaveBeenCalledWith('dev1');
+  });
+
+  it('does not call onResourceClick when not provided', () => {
+    const project = createMockProject();
+    render(<ResourceHeatmap project={project} />);
+
+    // Clicking resource name should not throw when no handler
+    expect(() => fireEvent.click(screen.getByText('Developer 1'))).not.toThrow();
+  });
+
   // ─── Phase 1: Cell click interaction tests ─────────────────────────
 
   it('calls onCellClick with resource and date when cell is clicked', () => {

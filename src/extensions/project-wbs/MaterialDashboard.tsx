@@ -22,12 +22,13 @@ interface MaterialDashboardProps {
   onEditMaterial?: (materialId: string) => void;
   onDeleteMaterial?: (materialId: string) => void;
   onAllocateMaterial?: (materialId: string) => void;
+  onRecordConsumption?: (materialId: string) => void;
   onConfig?: () => void;
 }
 
 type MaterialFilter = 'all' | MaterialClassification;
 
-export function MaterialDashboard({ project, onAddMaterial, onEditMaterial, onDeleteMaterial, onAllocateMaterial, onConfig }: MaterialDashboardProps) {
+export function MaterialDashboard({ project, onAddMaterial, onEditMaterial, onDeleteMaterial, onAllocateMaterial, onRecordConsumption, onConfig }: MaterialDashboardProps) {
   const [filter, setFilter] = useState<MaterialFilter>('all');
 
   const materials = project.materials ?? [];
@@ -145,6 +146,7 @@ export function MaterialDashboard({ project, onAddMaterial, onEditMaterial, onDe
                   onEdit={onEditMaterial}
                   onDelete={onDeleteMaterial}
                   onAllocate={onAllocateMaterial}
+                  onRecordConsumption={onRecordConsumption}
                 />
               ))}
             </tbody>
@@ -192,12 +194,14 @@ function MaterialRow({
   onEdit,
   onDelete,
   onAllocate,
+  onRecordConsumption,
 }: {
   material: Material;
   currency: string;
   onEdit?: (materialId: string) => void;
   onDelete?: (materialId: string) => void;
   onAllocate?: (materialId: string) => void;
+  onRecordConsumption?: (materialId: string) => void;
 }) {
   const classificationBadge = {
     capex: 'bg-purple-100 text-purple-700',
@@ -273,6 +277,15 @@ function MaterialRow({
               title="Delete material"
             >
               Delete
+            </button>
+          )}
+          {onRecordConsumption && (
+            <button
+              onClick={() => onRecordConsumption(material.id)}
+              className="text-orange-600 hover:text-orange-800 text-xs"
+              title="Record material consumption"
+            >
+              Record Consumption
             </button>
           )}
         </div>

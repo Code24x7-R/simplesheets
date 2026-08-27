@@ -73,4 +73,29 @@ describe('WBSTreePanel', () => {
     const taskElement = screen.getByText(task.name).closest('div');
     expect(taskElement?.className).toContain('bg-blue-50');
   });
+
+  // ─── Phase 2: Inline task status management tests ─────────────────
+
+  it('calls onTaskStatusChange when status dot is clicked', () => {
+    const onTaskStatusChange = jest.fn();
+    render(<WBSTreePanel {...defaultProps} onTaskStatusChange={onTaskStatusChange} />);
+
+    // Find the status dot (first rounded-full span in the tree)
+    const statusDots = document.querySelectorAll('.rounded-full');
+    // The first one is the status dot for the first task
+    const statusDot = statusDots[0] as HTMLElement;
+    expect(statusDot).toBeTruthy();
+    fireEvent.click(statusDot);
+
+    // Should call with the task id and the next status
+    expect(onTaskStatusChange).toHaveBeenCalledWith(project.wbs[0].id, 'in_progress');
+  });
+
+  it('does not call onTaskStatusChange when prop not provided', () => {
+    render(<WBSTreePanel {...defaultProps} />);
+
+    const statusDots = document.querySelectorAll('.rounded-full');
+    const statusDot = statusDots[0] as HTMLElement;
+    expect(() => fireEvent.click(statusDot)).not.toThrow();
+  });
 });

@@ -206,6 +206,45 @@ describe('AccountingDashboard', () => {
     expect(screen.getByText('dependency')).toBeTruthy();
   });
 
+  // ─── Phase 2: Task drill-down tests ─────────────────────────────
+
+  it('calls onTaskClick when task name is clicked in Baseline tab', () => {
+    const onTaskClick = jest.fn();
+    const project = createProject({
+      wbs: [createTask({ id: 't1', name: 'Design Phase', cost: 5000 })],
+    });
+    render(<AccountingDashboard project={project} onTaskClick={onTaskClick} />);
+
+    // Switch to Baseline tab
+    fireEvent.click(screen.getByText(/📋 Baseline/));
+
+    // Click the task name
+    fireEvent.click(screen.getByText('Design Phase'));
+    expect(onTaskClick).toHaveBeenCalledWith('t1');
+  });
+
+  it('calls onTaskClick when task name is clicked in Estimate tab', () => {
+    const onTaskClick = jest.fn();
+    const project = createProject({
+      wbs: [createTask({ id: 't1', name: 'Build Phase', cost: 8000 })],
+    });
+    render(<AccountingDashboard project={project} onTaskClick={onTaskClick} />);
+
+    // Default tab is Estimate — click the task name
+    fireEvent.click(screen.getByText('Build Phase'));
+    expect(onTaskClick).toHaveBeenCalledWith('t1');
+  });
+
+  it('does not call onTaskClick when not provided', () => {
+    const project = createProject({
+      wbs: [createTask({ id: 't1', name: 'Test Task', cost: 1000 })],
+    });
+    render(<AccountingDashboard project={project} />);
+
+    // Clicking task name should not throw when no handler
+    expect(() => fireEvent.click(screen.getByText('Test Task'))).not.toThrow();
+  });
+
   // ─── Phase 1: Actuals Edit/Delete per entry tests ───────────────
 
   it('renders Edit and Delete buttons per spend entry', () => {
