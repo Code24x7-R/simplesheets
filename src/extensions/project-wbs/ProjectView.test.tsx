@@ -82,47 +82,40 @@ describe('ProjectView', () => {
   };
 
   it('renders project view', () => {
-    render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+    render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
     expect(screen.getByTestId('project-view')).toBeInTheDocument();
   });
 
   it('displays project name', () => {
-    render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+    render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
     expect(screen.getByText('Simple WBS')).toBeInTheDocument();
   });
 
   it('shows task and risk counts', () => {
-    render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+    render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
     expect(screen.getByText(/tasks \|/)).toBeInTheDocument();
     expect(screen.getByText(/\| \d+ risks/)).toBeInTheDocument();
   });
 
   it('renders Gantt chart by default', () => {
-    render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+    render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
     expect(screen.getByTestId('gantt-chart')).toBeInTheDocument();
   });
 
   it('switches to Risk Register view', () => {
-    render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+    render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
     fireEvent.click(screen.getByText('Risk Register'));
     expect(screen.getByTestId('risk-register')).toBeInTheDocument();
   });
 
   it('switches to Risk Matrix view', () => {
-    render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+    render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
     fireEvent.click(screen.getByText('Risk Matrix'));
     expect(screen.getByTestId('risk-matrix')).toBeInTheDocument();
   });
 
-  it('calls onClose when Close is clicked', () => {
-    const onClose = jest.fn();
-    render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={onClose} />);
-    fireEvent.click(screen.getByText('Close'));
-    expect(onClose).toHaveBeenCalledTimes(1);
-  });
-
   it('shows zoom controls in Gantt view', () => {
-    render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+    render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
     // Zoom controls are inside the Calendar dropdown
     openDropdown('📅 Calendar');
     expect(screen.getByText('Day')).toBeInTheDocument();
@@ -131,7 +124,7 @@ describe('ProjectView', () => {
   });
 
   it('displays critical risk badge when applicable', () => {
-    render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+    render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
     // Simple WBS has no critical risks by default
     expect(screen.queryByText(/critical/)).not.toBeInTheDocument();
   });
@@ -143,14 +136,14 @@ describe('ProjectView', () => {
       { id: 'risk-1', projectId: proj.id, taskId: null, title: 'Critical Risk', description: '', category: 'technical' as const, probability: 5, impact: 5, riskScore: 25, status: 'identified' as const, mitigationPlan: '', contingencyPlan: '', mitigationCost: 0, ownerId: null, identifiedDate: '2025-01-01', reviewDate: '2025-06-01', triggerCondition: '', residualProbability: 3, residualImpact: 3, residualRiskScore: 9, customFields: {} },
       { id: 'risk-2', projectId: proj.id, taskId: null, title: 'High Risk', description: '', category: 'schedule' as const, probability: 4, impact: 3, riskScore: 12, status: 'identified' as const, mitigationPlan: '', contingencyPlan: '', mitigationCost: 0, ownerId: null, identifiedDate: '2025-01-01', reviewDate: '2025-06-01', triggerCondition: '', residualProbability: 2, residualImpact: 2, residualRiskScore: 4, customFields: {} },
     ];
-    render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+    render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
     expect(screen.getByText(/1 critical/)).toBeInTheDocument();
     expect(screen.getByText(/1 high/)).toBeInTheDocument();
   });
 
   describe('Materials flow', () => {
     it('shows material in dashboard after adding via dialog', () => {
-      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
 
       // Switch to Materials view
       fireEvent.click(screen.getByText('Materials'));
@@ -170,7 +163,7 @@ describe('ProjectView', () => {
     });
 
     it('shows new material in dashboard after adding via dialog', () => {
-      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
 
       // Switch to Materials view
       fireEvent.click(screen.getByText('Materials'));
@@ -188,7 +181,7 @@ describe('ProjectView', () => {
 
   describe('Accounting tab', () => {
     it('shows accounting data from project tasks', () => {
-      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
 
       // Switch to Accounting view
       fireEvent.click(screen.getByText('Accounting'));
@@ -198,7 +191,7 @@ describe('ProjectView', () => {
     });
 
     it('shows accounting data after adding material', () => {
-      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
 
       // Add a material first
       fireEvent.click(screen.getByText('Materials'));
@@ -223,7 +216,7 @@ describe('ProjectView', () => {
     }
 
     it('opens actuals editor modal when + Add Spend Entry is clicked', () => {
-      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
 
       openAccountingActuals();
 
@@ -235,7 +228,7 @@ describe('ProjectView', () => {
     });
 
     it('saves a new actual spend entry and shows it in the actuals table', () => {
-      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
 
       openAccountingActuals();
 
@@ -265,7 +258,7 @@ describe('ProjectView', () => {
     });
 
     it('closes the actuals modal when Cancel is clicked', () => {
-      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
 
       openAccountingActuals();
 
@@ -285,7 +278,7 @@ describe('ProjectView', () => {
     }
 
     it('opens allocation modal when Allocate button is clicked on a material', () => {
-      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
 
       openMaterials();
 
@@ -304,7 +297,7 @@ describe('ProjectView', () => {
     });
 
     it('closes the allocation modal when close button is clicked', () => {
-      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
 
       openMaterials();
 
@@ -328,7 +321,7 @@ describe('ProjectView', () => {
   describe('Notification panel', () => {
     it('does not render notification panel when there are no notifications', () => {
       const testProject = createSimpleWBS();
-      render(<ProjectView project={testProject} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      render(<ProjectView project={testProject} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
 
       // No notifications initially
       expect(screen.queryByText('Notifications')).not.toBeInTheDocument();
@@ -346,13 +339,13 @@ describe('ProjectView', () => {
       }
 
       const { rerender } = render(
-        <ProjectView project={baseProject} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />
+        <ProjectView project={baseProject} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />
       );
 
       // Re-render with the same project — predecessor is done, so successor becomes ready
       const updatedProject = { ...baseProject };
       rerender(
-        <ProjectView project={updatedProject} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />
+        <ProjectView project={updatedProject} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />
       );
 
       // The notification panel should show (at least the header)
@@ -371,13 +364,13 @@ describe('ProjectView', () => {
       }
 
       const { rerender } = render(
-        <ProjectView project={baseProject} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />
+        <ProjectView project={baseProject} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />
       );
 
       // Re-render to trigger notification generation
       const updatedProject = { ...baseProject };
       rerender(
-        <ProjectView project={updatedProject} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />
+        <ProjectView project={updatedProject} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />
       );
 
       // If notifications appeared, dismiss buttons would be present
@@ -389,7 +382,7 @@ describe('ProjectView', () => {
 
   describe('Gantt calendar navigation', () => {
     it('renders nav buttons in Gantt view', () => {
-      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
       openDropdown('📅 Calendar');
       expect(screen.getByTestId('gantt-nav-prev-month')).toBeInTheDocument();
       expect(screen.getByTestId('gantt-nav-prev-week')).toBeInTheDocument();
@@ -399,7 +392,7 @@ describe('ProjectView', () => {
     });
 
     it('calls scrollTo when Today button is clicked', () => {
-      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
       openDropdown('📅 Calendar');
       const todayBtn = screen.getByTestId('gantt-nav-today');
       fireEvent.click(todayBtn);
@@ -408,7 +401,7 @@ describe('ProjectView', () => {
     });
 
     it('calls scrollTo when previous week button is clicked', () => {
-      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
       openDropdown('📅 Calendar');
       const prevWeekBtn = screen.getByTestId('gantt-nav-prev-week');
       fireEvent.click(prevWeekBtn);
@@ -417,7 +410,7 @@ describe('ProjectView', () => {
     });
 
     it('calls scrollTo when next month button is clicked', () => {
-      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
       openDropdown('📅 Calendar');
       const nextMonthBtn = screen.getByTestId('gantt-nav-next-month');
       fireEvent.click(nextMonthBtn);
@@ -426,7 +419,7 @@ describe('ProjectView', () => {
     });
 
     it('hides nav buttons when not in Gantt view', () => {
-      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
       // Switch to Risk Register
       fireEvent.click(screen.getByText('Risk Register'));
       expect(screen.queryByTestId('gantt-nav-today')).not.toBeInTheDocument();
@@ -435,13 +428,13 @@ describe('ProjectView', () => {
 
   describe('New project workflow', () => {
     it('opens new project dialog when + New Project is clicked', () => {
-      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
       fireEvent.click(screen.getByTestId('new-project-btn'));
       expect(screen.getByTestId('new-project-dialog')).toBeInTheDocument();
     });
 
     it('closes the new project dialog when Cancel is clicked', () => {
-      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
       fireEvent.click(screen.getByTestId('new-project-btn'));
       expect(screen.getByTestId('new-project-dialog')).toBeInTheDocument();
       fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
@@ -450,7 +443,7 @@ describe('ProjectView', () => {
 
     it('creates a blank project when Create Project is confirmed', () => {
       const onProjectChange = jest.fn();
-      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} onProjectChange={onProjectChange} />);
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onProjectChange={onProjectChange} />);
 
       fireEvent.click(screen.getByTestId('new-project-btn'));
 
@@ -474,28 +467,7 @@ describe('ProjectView', () => {
     });
   });
 
-  describe('Export project', () => {
-    it('triggers a file download when Export JSON is clicked', () => {
-      // Mock URL.createObjectURL and anchor click
-      const createObjectURL = jest.fn(() => 'blob:mock-url');
-      const revokeObjectURL = jest.fn();
-      URL.createObjectURL = createObjectURL;
-      URL.revokeObjectURL = revokeObjectURL;
-      const clickSpy = jest.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
 
-      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
-
-      // Open File dropdown to access Export button
-      openDropdown('File');
-      fireEvent.click(screen.getByTestId('export-project-btn'));
-
-      expect(createObjectURL).toHaveBeenCalledTimes(1);
-      expect(clickSpy).toHaveBeenCalledTimes(1);
-      expect(revokeObjectURL).toHaveBeenCalledWith('blob:mock-url');
-
-      clickSpy.mockRestore();
-    });
-  });
 
   describe('Import project', () => {
     // Mock FileReader — component assigns onload before calling readAsText,
@@ -536,7 +508,7 @@ describe('ProjectView', () => {
       const origFileReader = global.FileReader;
       global.FileReader = jest.fn(() => mockFileReader(jsonContent)) as unknown as typeof FileReader;
 
-      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} onProjectChange={onProjectChange} />);
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onProjectChange={onProjectChange} />);
 
       const input = document.querySelector('input[type="file"]') as HTMLInputElement;
       expect(input).toBeTruthy();
@@ -559,7 +531,7 @@ describe('ProjectView', () => {
       const origFileReader = global.FileReader;
       global.FileReader = jest.fn(() => mockFileReader('not valid json')) as unknown as typeof FileReader;
 
-      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} onProjectChange={onProjectChange} />);
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onProjectChange={onProjectChange} />);
 
       const input = document.querySelector('input[type="file"]') as HTMLInputElement;
       const file = createMockFile('not valid json');
@@ -583,9 +555,9 @@ describe('ProjectView', () => {
     });
 
     it('shows a "Saved!" confirmation after clicking Save', () => {
-      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
 
-      openDropdown('File');
+      openDropdown('Project');
       fireEvent.click(screen.getByText('↓ Save to Workbook'));
 
       expect(screen.getByTestId('save-confirmation')).toBeInTheDocument();
@@ -593,9 +565,9 @@ describe('ProjectView', () => {
     });
 
     it('hides the confirmation after 2 seconds', () => {
-      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
 
-      openDropdown('File');
+      openDropdown('Project');
       fireEvent.click(screen.getByText('↓ Save to Workbook'));
       expect(screen.getByTestId('save-confirmation')).toBeInTheDocument();
 
@@ -610,7 +582,7 @@ describe('ProjectView', () => {
 
   describe('Task CRUD', () => {
     it('opens task editor modal when + Add Task is clicked in toolbar', () => {
-      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
       // Toolbar button is the green one (first in DOM order among "+ Add Task")
       const addButtons = screen.getAllByText('+ Add Task');
       expect(addButtons.length).toBeGreaterThan(0);
@@ -620,7 +592,7 @@ describe('ProjectView', () => {
 
     it('adds a new task and shows it in the tree', () => {
       const onProjectChange = jest.fn();
-      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} onProjectChange={onProjectChange} />);
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onProjectChange={onProjectChange} />);
 
       const addButtons = screen.getAllByText('+ Add Task');
       fireEvent.click(addButtons[0]);
@@ -640,7 +612,7 @@ describe('ProjectView', () => {
     });
 
     it('opens task editor with existing task data when Edit is clicked from tree', () => {
-      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
 
       // The tree has an edit button with title="Edit task" for each task
       // Use getAllByTitle because there's one per task; click the first
@@ -661,7 +633,7 @@ describe('ProjectView', () => {
       // Mock window.confirm to return true
       const confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(true);
 
-      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} onProjectChange={onProjectChange} />);
+      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onProjectChange={onProjectChange} />);
 
       // Find and click the delete button (title="Delete task") in the tree
       const deleteButtons = screen.getAllByTitle('Delete task');
@@ -682,7 +654,7 @@ describe('ProjectView', () => {
       }
       const onProjectChange = jest.fn();
 
-      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} onProjectChange={onProjectChange} />);
+      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onProjectChange={onProjectChange} />);
 
       // Find and click the delete button (title="Delete task") in the tree
       const deleteButtons = screen.getAllByTitle('Delete task');
@@ -696,7 +668,7 @@ describe('ProjectView', () => {
     it('toggles task collapse from the tree', () => {
       // Create a project with a task that has children
       const proj = createSimpleWBS();
-      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
 
       // The tree shows a collapse toggle (▼ or ▶) for tasks with children
       // Find buttons with text ▼ or ▶
@@ -714,7 +686,7 @@ describe('ProjectView', () => {
   describe('Risk CRUD', () => {
     it('switches to Risk Register and adds a risk', () => {
       const onProjectChange = jest.fn();
-      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} onProjectChange={onProjectChange} />);
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onProjectChange={onProjectChange} />);
 
       fireEvent.click(screen.getByText('Risk Register'));
       fireEvent.click(screen.getByText('+ Add Risk'));
@@ -743,7 +715,7 @@ describe('ProjectView', () => {
         residualProbability: 2, residualImpact: 3, residualRiskScore: 6, customFields: {},
       }];
       const onProjectChange = jest.fn();
-      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} onProjectChange={onProjectChange} />);
+      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onProjectChange={onProjectChange} />);
 
       fireEvent.click(screen.getByText('Risk Register'));
 
@@ -768,7 +740,7 @@ describe('ProjectView', () => {
         residualProbability: 2, residualImpact: 3, residualRiskScore: 6, customFields: {},
       }];
       const onProjectChange = jest.fn();
-      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} onProjectChange={onProjectChange} />);
+      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onProjectChange={onProjectChange} />);
 
       fireEvent.click(screen.getByText('Risk Register'));
 
@@ -786,7 +758,7 @@ describe('ProjectView', () => {
 
   describe('Resource management', () => {
     it('opens resource list modal when Resources button is clicked', () => {
-      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
 
       fireEvent.click(screen.getByText(/👥 Resources/));
       // ResourceListModal has no testid; identify by header text
@@ -795,7 +767,7 @@ describe('ProjectView', () => {
 
     it('adds a new resource via the resource list modal', () => {
       const onProjectChange = jest.fn();
-      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} onProjectChange={onProjectChange} />);
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onProjectChange={onProjectChange} />);
 
       fireEvent.click(screen.getByText(/👥 Resources/));
       expect(screen.getByText('Manage Resources')).toBeInTheDocument();
@@ -820,7 +792,7 @@ describe('ProjectView', () => {
       const onProjectChange = jest.fn();
       const confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(true);
 
-      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} onProjectChange={onProjectChange} />);
+      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onProjectChange={onProjectChange} />);
 
       fireEvent.click(screen.getByText(/👥 Resources/));
       expect(screen.getByText('Manage Resources')).toBeInTheDocument();
@@ -839,26 +811,26 @@ describe('ProjectView', () => {
 
   describe('View switching', () => {
     it('switches to Resources (heatmap) view', () => {
-      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
       fireEvent.click(screen.getByText('Resources'));
       // ResourceHeatmap has no testid; identify by its "Previous month" nav button
       expect(screen.getByTitle('Previous month')).toBeInTheDocument();
     });
 
     it('switches to EVM Report view', () => {
-      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
       fireEvent.click(screen.getByText('EVM Report'));
       expect(screen.getByText('Earned Value Management')).toBeInTheDocument();
     });
 
     it('switches to Materials view', () => {
-      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
       fireEvent.click(screen.getByText('Materials'));
       expect(screen.getByText('Materials & Assets')).toBeInTheDocument();
     });
 
     it('switches to Accounting view', () => {
-      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
       fireEvent.click(screen.getByText('Accounting'));
       expect(screen.getByText('Project Accounting')).toBeInTheDocument();
     });
@@ -866,14 +838,14 @@ describe('ProjectView', () => {
 
   describe('Calendar config', () => {
     it('opens calendar config modal when Calendar button is clicked', () => {
-      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
       openDropdown('📅 Calendar');
       fireEvent.click(screen.getByText('⚙️ Calendar Settings'));
       expect(screen.getByTestId('calendar-config-modal')).toBeInTheDocument();
     });
 
     it('closes calendar config modal when Cancel is clicked', () => {
-      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
       openDropdown('📅 Calendar');
       fireEvent.click(screen.getByText('⚙️ Calendar Settings'));
       expect(screen.getByTestId('calendar-config-modal')).toBeInTheDocument();
@@ -886,7 +858,7 @@ describe('ProjectView', () => {
     it('opens material editor when Edit is clicked on a material', () => {
       const proj = createSimpleWBS();
       proj.materials = [createTestMaterial()];
-      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
 
       fireEvent.click(screen.getByText('Materials'));
 
@@ -902,7 +874,7 @@ describe('ProjectView', () => {
       const proj = createSimpleWBS();
       proj.materials = [createTestMaterial()];
       const onProjectChange = jest.fn();
-      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} onProjectChange={onProjectChange} />);
+      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onProjectChange={onProjectChange} />);
 
       fireEvent.click(screen.getByText('Materials'));
 
@@ -933,7 +905,7 @@ describe('ProjectView', () => {
         changeLog: [],
         currency: 'USD',
       };
-      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
 
       fireEvent.click(screen.getByText('Accounting'));
       fireEvent.click(screen.getByText('🧾 Actuals'));
@@ -961,7 +933,7 @@ describe('ProjectView', () => {
         currency: 'USD',
       };
       const onProjectChange = jest.fn();
-      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} onProjectChange={onProjectChange} />);
+      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onProjectChange={onProjectChange} />);
 
       fireEvent.click(screen.getByText('Accounting'));
       fireEvent.click(screen.getByText('🧾 Actuals'));
@@ -987,7 +959,7 @@ describe('ProjectView', () => {
       const proj = createSimpleWBS();
       proj.materials = [createTestMaterial()];
       const onProjectChange = jest.fn();
-      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} onProjectChange={onProjectChange} />);
+      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onProjectChange={onProjectChange} />);
 
       fireEvent.click(screen.getByText('Materials'));
 
@@ -1002,16 +974,16 @@ describe('ProjectView', () => {
 
   describe('Sheet conversion', () => {
     it('opens column mapping dialog when Convert Sheet is clicked', () => {
-      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
-      openDropdown('File');
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
+      openDropdown('Project');
       fireEvent.click(screen.getByText('↑ Convert Sheet to Project'));
       // ColumnMappingDialog has no testid; identify by header text
       expect(screen.getByText('Confirm Column Mapping')).toBeInTheDocument();
     });
 
     it('closes column mapping dialog when Cancel is clicked', () => {
-      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
-      openDropdown('File');
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
+      openDropdown('Project');
       fireEvent.click(screen.getByText('↑ Convert Sheet to Project'));
       expect(screen.getByText('Confirm Column Mapping')).toBeInTheDocument();
       fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
@@ -1026,7 +998,7 @@ describe('ProjectView', () => {
       if (proj.wbs[0]) {
         proj.wbs[0].dependencies = [];
       }
-      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
 
       // The tree should show a dependencies button or similar
       // This tests the render path for dependency drawer
@@ -1041,7 +1013,7 @@ describe('ProjectView', () => {
         proj.wbs[1].dependencies = [{ predecessorId: proj.wbs[0].id, type: 'FS', lag: 0 }];
       }
       const onProjectChange = jest.fn();
-      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} onProjectChange={onProjectChange} />);
+      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onProjectChange={onProjectChange} />);
 
       // Open dependency drawer for the first task via the tree
       const depButtons = screen.getAllByTitle('Manage dependencies');
@@ -1055,7 +1027,7 @@ describe('ProjectView', () => {
 
   describe('Gantt calendar navigation', () => {
     it('navigates to previous month', () => {
-      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
       openDropdown('📅 Calendar');
       const prevMonthBtn = screen.getByTestId('gantt-nav-prev-month');
       fireEvent.click(prevMonthBtn);
@@ -1064,7 +1036,7 @@ describe('ProjectView', () => {
     });
 
     it('navigates to next week', () => {
-      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
       openDropdown('📅 Calendar');
       const nextWeekBtn = screen.getByTestId('gantt-nav-next-week');
       fireEvent.click(nextWeekBtn);
@@ -1073,14 +1045,14 @@ describe('ProjectView', () => {
     });
 
     it('changes zoom level to day', () => {
-      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
       openDropdown('📅 Calendar');
       fireEvent.click(screen.getByText('Day'));
       expect(screen.getByTestId('gantt-chart')).toBeInTheDocument();
     });
 
     it('changes zoom level to month', () => {
-      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
       openDropdown('📅 Calendar');
       fireEvent.click(screen.getByText('Month'));
       expect(screen.getByTestId('gantt-chart')).toBeInTheDocument();
@@ -1091,9 +1063,9 @@ describe('ProjectView', () => {
     it('confirms column mapping and converts sheet', () => {
       const onProjectChange = jest.fn();
       const onSaveProject = jest.fn();
-      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={onSaveProject} onClose={jest.fn()} onProjectChange={onProjectChange} />);
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={onSaveProject} onProjectChange={onProjectChange} />);
 
-      openDropdown('File');
+      openDropdown('Project');
       fireEvent.click(screen.getByText('↑ Convert Sheet to Project'));
       expect(screen.getByText('Confirm Column Mapping')).toBeInTheDocument();
 
@@ -1110,7 +1082,7 @@ describe('ProjectView', () => {
       const proj = createSimpleWBS();
       proj.materials = [createTestMaterial()];
       const onProjectChange = jest.fn();
-      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} onProjectChange={onProjectChange} />);
+      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onProjectChange={onProjectChange} />);
 
       fireEvent.click(screen.getByText('Materials'));
 
@@ -1132,12 +1104,12 @@ describe('ProjectView', () => {
 
   describe('View rendering', () => {
     it('renders Gantt chart with critical path', () => {
-      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
       expect(screen.getByTestId('gantt-chart')).toBeInTheDocument();
     });
 
     it('renders Risk Matrix view', () => {
-      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
       fireEvent.click(screen.getByText('Risk Matrix'));
       expect(screen.getByTestId('risk-matrix')).toBeInTheDocument();
     });
@@ -1145,7 +1117,7 @@ describe('ProjectView', () => {
     it('renders Resource Heatmap with no resources', () => {
       const proj = createSimpleWBS();
       proj.resources = [];
-      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
       fireEvent.click(screen.getByText('Resources'));
       // ResourceHeatmap renders an empty state or navigation header
       // Check that the view switched (no longer showing Gantt)
@@ -1155,7 +1127,7 @@ describe('ProjectView', () => {
     it('renders Materials view with no materials', () => {
       const proj = createSimpleWBS();
       proj.materials = [];
-      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
       fireEvent.click(screen.getByText('Materials'));
       expect(screen.getByText('Materials & Assets')).toBeInTheDocument();
     });
@@ -1163,13 +1135,13 @@ describe('ProjectView', () => {
     it('renders Accounting view with no accounting data', () => {
       const proj = createSimpleWBS();
       proj.accounting = undefined;
-      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
       fireEvent.click(screen.getByText('Accounting'));
       expect(screen.getByText('Project Accounting')).toBeInTheDocument();
     });
 
     it('renders EVM Report view', () => {
-      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
       fireEvent.click(screen.getByText('EVM Report'));
       expect(screen.getByText('Earned Value Management')).toBeInTheDocument();
     });
@@ -1186,7 +1158,7 @@ describe('ProjectView', () => {
         residualProbability: 2, residualImpact: 3, residualRiskScore: 6, customFields: {},
       }];
       const onProjectChange = jest.fn();
-      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} onProjectChange={onProjectChange} />);
+      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onProjectChange={onProjectChange} />);
 
       fireEvent.click(screen.getByText('Risk Register'));
 
@@ -1215,7 +1187,7 @@ describe('ProjectView', () => {
         proj.wbs[1].dependencies = [{ predecessorId: proj.wbs[0].id, type: 'FS', lag: 0 }];
       }
       const onProjectChange = jest.fn();
-      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} onProjectChange={onProjectChange} />);
+      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onProjectChange={onProjectChange} />);
 
       // Open dependency drawer for the first task via the tree
       const depButtons = screen.getAllByTitle('Manage dependencies');
@@ -1237,7 +1209,7 @@ describe('ProjectView', () => {
       const proj = createSimpleWBS();
       proj.resources = [{ id: 'res-1', name: 'Alice', role: 'Developer', costRate: 100, costCurrency: 'USD', availability: 100, color: '#3B82EF' }];
       const onProjectChange = jest.fn();
-      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} onProjectChange={onProjectChange} />);
+      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onProjectChange={onProjectChange} />);
 
       fireEvent.click(screen.getByText(/👥 Resources/));
       expect(screen.getByText('Manage Resources')).toBeInTheDocument();
@@ -1259,7 +1231,7 @@ describe('ProjectView', () => {
   describe('Material CRUD edge cases', () => {
     it('adds a new material via the dialog', () => {
       const onProjectChange = jest.fn();
-      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} onProjectChange={onProjectChange} />);
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onProjectChange={onProjectChange} />);
 
       fireEvent.click(screen.getByText('Materials'));
       fireEvent.click(screen.getByText('+ Add Material'));
@@ -1288,7 +1260,7 @@ describe('ProjectView', () => {
         changeLog: [],
         currency: 'USD',
       };
-      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
 
       fireEvent.click(screen.getByText('Accounting'));
       fireEvent.click(screen.getByText('🧾 Actuals'));
@@ -1301,7 +1273,7 @@ describe('ProjectView', () => {
 
   describe('Gantt calendar navigation edge cases', () => {
     it('calls scrollTo when previous week button is clicked', () => {
-      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
       openDropdown('📅 Calendar');
       const prevWeekBtn = screen.getByTestId('gantt-nav-prev-week');
       fireEvent.click(prevWeekBtn);
@@ -1310,7 +1282,7 @@ describe('ProjectView', () => {
     });
 
     it('calls scrollTo when next month button is clicked', () => {
-      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
       openDropdown('📅 Calendar');
       const nextMonthBtn = screen.getByTestId('gantt-nav-next-month');
       fireEvent.click(nextMonthBtn);
@@ -1319,7 +1291,7 @@ describe('ProjectView', () => {
     });
 
     it('renders Gantt with different zoom levels', () => {
-      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
       // Default zoom is week
       expect(screen.getByTestId('gantt-chart')).toBeInTheDocument();
       // Switch to day zoom
@@ -1342,7 +1314,7 @@ describe('ProjectView', () => {
       const proj = createSimpleWBS();
       proj.resources = [{ id: 'res-1', name: 'Alice', role: 'Developer', costRate: 100, costCurrency: 'USD', availability: 100, color: '#3B82EF' }];
       const onProjectChange = jest.fn();
-      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} onProjectChange={onProjectChange} />);
+      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onProjectChange={onProjectChange} />);
 
       // Open resource list and edit existing resource
       fireEvent.click(screen.getByText(/👥 Resources/));
@@ -1361,10 +1333,10 @@ describe('ProjectView', () => {
     it('handles sheet conversion with active sheet', () => {
       const onProjectChange = jest.fn();
       const onSaveProject = jest.fn();
-      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={onSaveProject} onClose={jest.fn()} onProjectChange={onProjectChange} />);
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={onSaveProject} onProjectChange={onProjectChange} />);
 
       // Click convert sheet button (inside File dropdown)
-      openDropdown('File');
+      openDropdown('Project');
       fireEvent.click(screen.getByText('↑ Convert Sheet to Project'));
       expect(screen.getByText('Confirm Column Mapping')).toBeInTheDocument();
 
@@ -1379,7 +1351,7 @@ describe('ProjectView', () => {
       const proj = createSimpleWBS();
       proj.materials = [createTestMaterial()];
       const onProjectChange = jest.fn();
-      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} onProjectChange={onProjectChange} />);
+      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onProjectChange={onProjectChange} />);
 
       fireEvent.click(screen.getByText('Materials'));
 
@@ -1410,7 +1382,7 @@ describe('ProjectView', () => {
         changeLog: [],
         currency: 'USD',
       };
-      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
 
       fireEvent.click(screen.getByText('Accounting'));
 
@@ -1440,7 +1412,7 @@ describe('ProjectView', () => {
       const proj = createSimpleWBS();
       proj.materials = [createTestMaterial()];
       const onProjectChange = jest.fn();
-      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} onProjectChange={onProjectChange} />);
+      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onProjectChange={onProjectChange} />);
 
       fireEvent.click(screen.getByText('Materials'));
 
@@ -1456,17 +1428,17 @@ describe('ProjectView', () => {
 
     it('handles save to sheet', () => {
       const onSaveProject = jest.fn();
-      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={onSaveProject} onClose={jest.fn()} />);
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={onSaveProject} />);
 
       // Click Save button (inside File dropdown)
-      openDropdown('File');
+      openDropdown('Project');
       fireEvent.click(screen.getByText('↓ Save to Workbook'));
       expect(onSaveProject).toHaveBeenCalled();
     });
 
     it('handles calendar save', () => {
       const onProjectChange = jest.fn();
-      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} onProjectChange={onProjectChange} />);
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onProjectChange={onProjectChange} />);
 
       // Open calendar config (inside Calendar dropdown)
       openDropdown('📅 Calendar');
@@ -1483,7 +1455,7 @@ describe('ProjectView', () => {
   describe('View rendering branches', () => {
     it('renders Gantt with task selection', () => {
       const onProjectChange = jest.fn();
-      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} onProjectChange={onProjectChange} />);
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onProjectChange={onProjectChange} />);
       // Click on a task in the Gantt chart to select it
       const ganttBars = document.querySelectorAll('.gantt-rows g.cursor-pointer');
       if (ganttBars.length > 0) {
@@ -1501,20 +1473,20 @@ describe('ProjectView', () => {
         identifiedDate: '2025-01-01', reviewDate: '2025-06-01', triggerCondition: '',
         residualProbability: 2, residualImpact: 3, residualRiskScore: 6, customFields: {},
       }];
-      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
       fireEvent.click(screen.getByText('Risk Register'));
       expect(screen.getByText('Test Risk')).toBeInTheDocument();
     });
 
     it('renders Accounting view', () => {
-      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
       fireEvent.click(screen.getByText('Accounting'));
       // Accounting dashboard renders
       expect(screen.getByText('Project Accounting')).toBeInTheDocument();
     });
 
     it('switches to Actuals tab in Accounting', () => {
-      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
       fireEvent.click(screen.getByText('Accounting'));
       // The Accounting dashboard renders with the default Estimate tab
       // The Actuals tab is rendered as a button with icon + text
@@ -1530,7 +1502,7 @@ describe('ProjectView', () => {
 
   describe('Modal rendering branches', () => {
     it('renders task editor modal with delete button for existing task', () => {
-      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
       // Open task editor for existing task
       const editButtons = screen.getAllByTitle('Edit task');
       expect(editButtons.length).toBeGreaterThan(0);
@@ -1549,7 +1521,7 @@ describe('ProjectView', () => {
         identifiedDate: '2025-01-01', reviewDate: '2025-06-01', triggerCondition: '',
         residualProbability: 2, residualImpact: 3, residualRiskScore: 6, customFields: {},
       }];
-      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
       fireEvent.click(screen.getByText('Risk Register'));
       const editButtons = screen.getAllByRole('button', { name: 'Edit' });
       expect(editButtons.length).toBeGreaterThan(0);
@@ -1560,7 +1532,7 @@ describe('ProjectView', () => {
     });
 
     it('renders resource editor modal for new resource', () => {
-      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
       fireEvent.click(screen.getByText(/👥 Resources/));
       // Click add resource
       fireEvent.click(screen.getByRole('button', { name: 'Add Resource' }));
@@ -1570,14 +1542,14 @@ describe('ProjectView', () => {
     });
 
     it('renders material editor modal for new material', () => {
-      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
       fireEvent.click(screen.getByText('Materials'));
       fireEvent.click(screen.getByText('+ Add Material'));
       expect(screen.getByTestId('material-editor-modal')).toBeInTheDocument();
     });
 
     it('renders actuals editor modal for new entry', () => {
-      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
       fireEvent.click(screen.getByText('Accounting'));
       // Find and click the Actuals tab button
       const buttons = screen.getAllByRole('button');
@@ -1599,7 +1571,7 @@ describe('ProjectView', () => {
         proj.wbs[1].dependencies = [{ predecessorId: proj.wbs[0].id, type: 'FS', lag: 0 }];
       }
       const onProjectChange = jest.fn();
-      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} onProjectChange={onProjectChange} />);
+      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onProjectChange={onProjectChange} />);
 
       // Open dependency drawer for the first task via the tree
       const depButtons = screen.getAllByTitle('Manage dependencies');
@@ -1617,7 +1589,7 @@ describe('ProjectView', () => {
     });
 
     it('handles Gantt calendar navigation with different zoom levels', () => {
-      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
 
       // Test navigation with day zoom
       openDropdown('📅 Calendar');
@@ -1643,7 +1615,7 @@ describe('ProjectView', () => {
       const proj = createSimpleWBS();
       proj.resources = [{ id: 'res-1', name: 'Alice', role: 'Developer', costRate: 100, costCurrency: 'USD', availability: 100, color: '#3B82EF' }];
       const onProjectChange = jest.fn();
-      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} onProjectChange={onProjectChange} />);
+      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onProjectChange={onProjectChange} />);
 
       // Open resource list and edit existing resource
       fireEvent.click(screen.getByText(/👥 Resources/));
@@ -1663,7 +1635,7 @@ describe('ProjectView', () => {
       const proj = createSimpleWBS();
       proj.materials = [createTestMaterial()];
       const onProjectChange = jest.fn();
-      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} onProjectChange={onProjectChange} />);
+      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onProjectChange={onProjectChange} />);
 
       fireEvent.click(screen.getByText('Materials'));
 
@@ -1686,7 +1658,7 @@ describe('ProjectView', () => {
       const proj = createSimpleWBS();
       proj.materials = [createTestMaterial()];
       const onProjectChange = jest.fn();
-      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} onProjectChange={onProjectChange} />);
+      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onProjectChange={onProjectChange} />);
 
       fireEvent.click(screen.getByText('Materials'));
 
@@ -1704,7 +1676,7 @@ describe('ProjectView', () => {
       const proj = createSimpleWBS();
       proj.materials = [createTestMaterial()];
       const onProjectChange = jest.fn();
-      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} onProjectChange={onProjectChange} />);
+      render(<ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onProjectChange={onProjectChange} />);
 
       fireEvent.click(screen.getByText('Materials'));
 
@@ -1720,17 +1692,17 @@ describe('ProjectView', () => {
 
     it('handles save to sheet', () => {
       const onSaveProject = jest.fn();
-      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={onSaveProject} onClose={jest.fn()} />);
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={onSaveProject} />);
 
       // Click Save button (inside File dropdown)
-      openDropdown('File');
+      openDropdown('Project');
       fireEvent.click(screen.getByText('↓ Save to Workbook'));
       expect(onSaveProject).toHaveBeenCalled();
     });
 
     it('handles calendar save', () => {
       const onProjectChange = jest.fn();
-      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} onProjectChange={onProjectChange} />);
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onProjectChange={onProjectChange} />);
 
       // Open calendar config (inside Calendar dropdown)
       openDropdown('📅 Calendar');
@@ -1754,13 +1726,13 @@ describe('ProjectView', () => {
       }
 
       const { rerender } = render(
-        <ProjectView project={baseProject} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />
+        <ProjectView project={baseProject} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />
       );
 
       // Re-render to trigger notification generation
       const updatedProject = { ...baseProject };
       rerender(
-        <ProjectView project={updatedProject} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />
+        <ProjectView project={updatedProject} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />
       );
 
       // If notifications appeared, test clicking on them
@@ -1782,13 +1754,13 @@ describe('ProjectView', () => {
       }
 
       const { rerender } = render(
-        <ProjectView project={baseProject} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />
+        <ProjectView project={baseProject} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />
       );
 
       // Re-render to trigger notification generation
       const updatedProject = { ...baseProject };
       rerender(
-        <ProjectView project={updatedProject} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />
+        <ProjectView project={updatedProject} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />
       );
 
       // If notifications appeared, test dismissing them
@@ -1808,13 +1780,13 @@ describe('ProjectView', () => {
       }
 
       const { rerender } = render(
-        <ProjectView project={baseProject} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />
+        <ProjectView project={baseProject} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />
       );
 
       // Re-render to trigger notification generation
       const updatedProject = { ...baseProject };
       rerender(
-        <ProjectView project={updatedProject} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />
+        <ProjectView project={updatedProject} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />
       );
 
       // If notifications appeared, test clicking on them
@@ -1851,27 +1823,6 @@ describe('ProjectView', () => {
       return new File([content], name, { type: 'application/json' });
     }
 
-    it('exports project to JSON', () => {
-      // Mock URL.createObjectURL and anchor click
-      const createObjectURL = jest.fn(() => 'blob:mock-url');
-      const revokeObjectURL = jest.fn();
-      URL.createObjectURL = createObjectURL;
-      URL.revokeObjectURL = revokeObjectURL;
-      const clickSpy = jest.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
-
-      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
-
-      // Open File dropdown to access Export button
-      openDropdown('File');
-      fireEvent.click(screen.getByTestId('export-project-btn'));
-
-      expect(createObjectURL).toHaveBeenCalledTimes(1);
-      expect(clickSpy).toHaveBeenCalledTimes(1);
-      expect(revokeObjectURL).toHaveBeenCalledWith('blob:mock-url');
-
-      clickSpy.mockRestore();
-    });
-
     it('imports project from JSON file', () => {
       const onProjectChange = jest.fn();
       const projectToImport = createSimpleWBS();
@@ -1882,7 +1833,7 @@ describe('ProjectView', () => {
       const origFileReader = global.FileReader;
       global.FileReader = jest.fn(() => mockFileReader(jsonContent)) as unknown as typeof FileReader;
 
-      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} onProjectChange={onProjectChange} />);
+      render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onProjectChange={onProjectChange} />);
 
       const input = document.querySelector('input[type="file"]') as HTMLInputElement;
       expect(input).toBeTruthy();
@@ -1905,7 +1856,7 @@ describe('ProjectView', () => {
   });
 
   it('persists view mode to localStorage when changed', () => {
-    render(<ProjectView project={createSimpleWBS()} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+    render(<ProjectView project={createSimpleWBS()} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
 
     // Switch to risk-register view
     fireEvent.click(screen.getByText('Risk Register'));
@@ -1923,7 +1874,7 @@ describe('ProjectView', () => {
       viewMode: 'accounting',
     }));
 
-    render(<ProjectView project={createSimpleWBS()} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+    render(<ProjectView project={createSimpleWBS()} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
 
     // Should show Accounting view (not default Gantt)
     // The Execution section header should be visible (appears in Accounting tab grouping)
@@ -1932,7 +1883,7 @@ describe('ProjectView', () => {
   });
 
   it('persists zoom level to localStorage when changed', () => {
-    render(<ProjectView project={createSimpleWBS()} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+    render(<ProjectView project={createSimpleWBS()} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
 
     // Change zoom to month (open Calendar dropdown first)
     openDropdown('📅 Calendar');

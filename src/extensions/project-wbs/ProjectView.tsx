@@ -39,7 +39,7 @@ import type { TaskNotification } from './dependencyWorkflows';
 import { generateStatusNotifications } from './dependencyWorkflows';
 import type { ActualSpendEntry, MaterialAllocation, MaterialConsumption, ChangeLogEntry } from '../types';
 import { sheetToProject, projectModelToProject } from './sheetToProject';
-import { projectToModel, createBlankProject, exportProjectToJSON, importProjectFromJSON } from './projectConverter';
+import { projectToModel, createBlankProject, importProjectFromJSON } from './projectConverter';
 import { addTask, removeTask, updateTask, toggleCollapsed, findTask, getAllTasks, addResource, updateResource, removeResource, syncResourceCosts } from './treeOps';
 import { addRisk, updateRisk, removeRisk, getRiskSummary, linkRiskToTask, unlinkRiskFromTask } from './risks';
 import { recomputeRollups } from './rollups';
@@ -56,10 +56,9 @@ interface ProjectViewProps {
   columnMapping: ColumnMapping | null;
   onSaveProject: (model: ProjectModel, mapping: ColumnMapping | null, sheetId: string | null) => void;
   onProjectChange?: (project: Project) => void;
-  onClose: () => void;
 }
 
-export function ProjectView({ project: initialProject, activeSheet, columnMapping, onSaveProject, onProjectChange, onClose }: ProjectViewProps) {
+export function ProjectView({ project: initialProject, activeSheet, columnMapping, onSaveProject, onProjectChange }: ProjectViewProps) {
   const [project, setProject] = useState(initialProject);
 
   // ─── Sync to Sheet ──────────────────────────────────────────────────
@@ -722,24 +721,7 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
     setShowNewProjectDialog(false);
   }
 
-  // ─── Import / Export ──────────────────────────────────────────────────
-
-  function handleExportProject() {
-    const json = exportProjectToJSON(project);
-    const blob = new Blob([json], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${project.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }
-
-  function handleImportClick() {
-    fileInputRef.current?.click();
-  }
+  // ─── Import ──────────────────────────────────────────────────────────
 
   function handleImportFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -917,8 +899,8 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
             </button>
           )}
 
-          {/* File / I/O dropdown */}
-          <ToolbarDropdown label="File">
+          {/* Project I/O dropdown */}
+          <ToolbarDropdown label="Project">
             {activeSheet && (
               <button
                 className="w-full px-3 py-1.5 text-xs text-left hover:bg-gray-50"
@@ -933,22 +915,6 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
             >
               ↓ Save to Workbook
             </button>
-            <div className="border-t border-gray-100 mt-1 pt-1">
-              <button
-                className="w-full px-3 py-1.5 text-xs text-left hover:bg-gray-50"
-                onClick={handleImportClick}
-                data-testid="import-project-btn"
-              >
-                📥 Import JSON
-              </button>
-              <button
-                className="w-full px-3 py-1.5 text-xs text-left hover:bg-gray-50"
-                onClick={handleExportProject}
-                data-testid="export-project-btn"
-              >
-                📤 Export JSON
-              </button>
-            </div>
           </ToolbarDropdown>
 
           {/* Save confirmation (positioned relative to File dropdown) */}
@@ -961,13 +927,6 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
             </span>
           )}
 
-          {/* Close button */}
-          <button
-            className="ml-2 px-3 py-1 text-sm text-gray-600 hover:text-gray-800 border border-gray-200 rounded hover:bg-gray-50"
-            onClick={onClose}
-          >
-            Close
-          </button>
         </div>
       </div>
 
