@@ -11,7 +11,7 @@ import type { Project, WBSTask, Resource, WorkingCalendar, Risk, Material } from
 import type { ProjectTemplateJSON, TaskJSON, RiskJSON, ResourceJSON, MaterialJSON } from './types';
 import { createRisk } from '../risks';
 import { createDefaultCalendar } from '../calendar';
-import { getDefaultCurrency } from '../../../utils/currency';
+import { getEffectiveCurrency } from '../../../utils/currency';
 
 /**
  * Validation error for templates
@@ -198,7 +198,7 @@ function jsonTaskToWBSTask(json: TaskJSON, level: number): WBSTask {
     effort: calculateWorkingDays(json.startDate, json.endDate) * 8,
     effortUnit: 'hours',
     cost: 0,
-    costCurrency: getDefaultCurrency(),
+    costCurrency: getEffectiveCurrency(),
     responsibleResourceId: json.resourceId ?? null,
     dependencies: json.dependencies?.map((depId) => ({ predecessorId: depId, type: 'FS' as const, lag: 0 })) ?? [],
     isMilestone: json.isMilestone ?? false,
@@ -236,7 +236,7 @@ function jsonResourceToResource(json: ResourceJSON): Resource {
     name: json.name,
     role: json.role ?? '',
     costRate: json.costRate ?? 0,
-    costCurrency: json.costCurrency ?? getDefaultCurrency(),
+    costCurrency: json.costCurrency ?? getEffectiveCurrency(),
     availability: json.availability ?? 100,
     color: json.color ?? '#3B82F6',
   };
@@ -266,7 +266,7 @@ function jsonRiskToRisk(json: RiskJSON, projectId: string, defaultDate: string):
  * Convert JSON material to Material
  */
 function jsonMaterialToMaterial(json: MaterialJSON): Material {
-  const currency = json.currency ?? getDefaultCurrency();
+  const currency = json.currency ?? getEffectiveCurrency();
   return {
     id: json.id,
     name: json.name,

@@ -45,6 +45,8 @@ import { addRisk, updateRisk, removeRisk, getRiskSummary, linkRiskToTask, unlink
 import { recomputeRollups } from './rollups';
 import { autoScheduleSuccessors, updateTaskStatuses } from './dependencyWorkflows';
 import { getCriticalPath } from './dependencies';
+import { getEffectiveCurrency } from '../../utils/currency';
+import { CountrySelector } from './CountrySelector';
 import type { Project, ViewMode, WBSTask, Risk, Resource, TaskDependency } from '../types';
 import type { Sheet, ColumnMapping, ProjectModel } from '../../types';
 
@@ -810,6 +812,14 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
             ))}
           </div>
 
+          {/* Country / Currency selector */}
+          <CountrySelector
+            onCountryChange={() => {
+              // Force re-render to update currency display
+              setViewMode((prev) => prev);
+            }}
+          />
+
           {/* Calendar + Zoom dropdown (only for Gantt) */}
           {viewMode === 'gantt' && (
             <ToolbarDropdown label="📅 Calendar">
@@ -1187,7 +1197,7 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
         <ActualsEditorModal
           entry={actualsModal.entry}
           tasks={allTasks}
-          defaultCurrency={project.accounting?.currency ?? 'USD'}
+          defaultCurrency={project.accounting?.currency ?? getEffectiveCurrency()}
           onClose={handleCloseActualsModal}
           onSave={handleActualsSave}
           onDelete={actualsModal.entry ? () => handleActualsDelete(actualsModal.entry!.id) : undefined}

@@ -9,7 +9,7 @@
 
 import { useState, useEffect } from 'react';
 import type { Resource } from '../types';
-import { getDefaultCurrency, SUPPORTED_CURRENCIES } from '../../utils/currency';
+import { getEffectiveCurrency, SUPPORTED_CURRENCIES } from '../../utils/currency';
 import { NumericInput } from '../../components/NumericInput';
 
 interface ResourceEditorModalProps {
@@ -43,7 +43,7 @@ export function ResourceEditorModal({
     name: '',
     role: '',
     costRate: 0,
-    costCurrency: getDefaultCurrency(),
+    costCurrency: getEffectiveCurrency(),
     availability: 100,
     color: '#3B82F6',
   });

@@ -91,7 +91,7 @@ const COUNTRY_TO_CURRENCY: Record<string, string> = {
 /**
  * Get the default currency for the current browser locale.
  *
- * Uses Intl.NumberFormat to resolve the currency for the user's locale,
+ * Detects the country from the locale and maps it to a currency code,
  * with a fallback mapping for broader coverage.
  *
  * @param locale - Optional locale string (e.g., 'en-AU', 'de-DE'). Defaults to navigator.language.
@@ -100,25 +100,161 @@ const COUNTRY_TO_CURRENCY: Record<string, string> = {
 export function getDefaultCurrency(locale?: string): string {
   const userLocale = locale ?? (typeof navigator !== 'undefined' ? navigator.language : 'en-US');
 
+  // First, try to extract country code from locale (e.g., 'en-AU' -> 'AU')
+  const parts = userLocale.split('-');
+  if (parts.length >= 2) {
+    const countryCode = parts[1].toUpperCase();
+    const currency = COUNTRY_TO_CURRENCY[countryCode];
+    if (currency) {
+      return currency;
+    }
+  }
+
+  // Fallback: try to detect currency from locale using Intl.DisplayNames
+  // This approach doesn't require knowing the currency upfront
   try {
-    // Use Intl.NumberFormat to get currency for locale
-    const formatter = new Intl.NumberFormat(userLocale, { style: 'currency', currency: 'USD' });
-    const resolved = formatter.resolvedOptions().currency;
-    if (resolved && resolved !== 'USD') {
-      return resolved;
+    // Use a known locale to get the currency for the target locale
+    // We iterate through supported currencies to find one that matches the locale
+    for (const currency of SUPPORTED_CURRENCIES) {
+      const formatter = new Intl.NumberFormat(userLocale, { style: 'currency', currency });
+      const resolved = formatter.resolvedOptions().currency;
+      if (resolved === currency) {
+        // Verify this currency is appropriate for the locale's country
+        const parts = userLocale.split('-');
+        if (parts.length >= 2) {
+          const countryCode = parts[1].toUpperCase();
+          if (COUNTRY_TO_CURRENCY[countryCode] === currency) {
+            return currency;
+          }
+        }
+      }
     }
   } catch {
     // Intl not available or unsupported locale
   }
 
-  // Fallback: parse country code from locale
-  const parts = userLocale.split('-');
+  // Final fallback: parse country code from locale
   if (parts.length >= 2) {
     const countryCode = parts[1].toUpperCase();
     return COUNTRY_TO_CURRENCY[countryCode] || 'USD';
   }
 
   return 'USD';
+}
+
+/**
+ * Get the country code from a locale string.
+ * @param locale - Locale string (e.g., 'en-AU', 'de-DE')
+ * @returns ISO 3166-1 alpha-2 country code (e.g., 'AU', 'DE')
+ */
+export function getCountryFromLocale(locale?: string): string {
+  const userLocale = locale ?? (typeof navigator !== 'undefined' ? navigator.language : 'en-US');
+  const parts = userLocale.split('-');
+  if (parts.length >= 2) {
+    return parts[1].toUpperCase();
+  }
+  return 'US';
+}
+
+/**
+ * Get all supported countries for dropdown selection.
+ */
+export const SUPPORTED_COUNTRIES = [
+  { code: 'AU', name: 'Australia', currency: 'AUD' },
+  { code: 'US', name: 'United States', currency: 'USD' },
+  { code: 'GB', name: 'United Kingdom', currency: 'GBP' },
+  { code: 'CA', name: 'Canada', currency: 'CAD' },
+  { code: 'NZ', name: 'New Zealand', currency: 'NZD' },
+  { code: 'DE', name: 'Germany', currency: 'EUR' },
+  { code: 'FR', name: 'France', currency: 'EUR' },
+  { code: 'JP', name: 'Japan', currency: 'JPY' },
+  { code: 'CN', name: 'China', currency: 'CNY' },
+  { code: 'IN', name: 'India', currency: 'INR' },
+  { code: 'SG', name: 'Singapore', currency: 'SGD' },
+  { code: 'HK', name: 'Hong Kong', currency: 'HKD' },
+  { code: 'KR', name: 'South Korea', currency: 'KRW' },
+  { code: 'BR', name: 'Brazil', currency: 'BRL' },
+  { code: 'ZA', name: 'South Africa', currency: 'ZAR' },
+  { code: 'AE', name: 'United Arab Emirates', currency: 'AED' },
+  { code: 'CH', name: 'Switzerland', currency: 'CHF' },
+  { code: 'SE', name: 'Sweden', currency: 'SEK' },
+  { code: 'NO', name: 'Norway', currency: 'NOK' },
+  { code: 'DK', name: 'Denmark', currency: 'DKK' },
+  { code: 'MX', name: 'Mexico', currency: 'MXN' },
+  { code: 'TH', name: 'Thailand', currency: 'THB' },
+  { code: 'MY', name: 'Malaysia', currency: 'MYR' },
+  { code: 'ID', name: 'Indonesia', currency: 'IDR' },
+  { code: 'PH', name: 'Philippines', currency: 'PHP' },
+  { code: 'VN', name: 'Vietnam', currency: 'VND' },
+  { code: 'TW', name: 'Taiwan', currency: 'TWD' },
+  { code: 'IT', name: 'Italy', currency: 'EUR' },
+  { code: 'ES', name: 'Spain', currency: 'EUR' },
+  { code: 'NL', name: 'Netherlands', currency: 'EUR' },
+] as const;
+
+export type SupportedCountry = (typeof SUPPORTED_COUNTRIES)[number]['code'];
+
+const COUNTRY_CURRENCY_MAP: Record<string, string> = Object.fromEntries(
+  SUPPORTED_COUNTRIES.map((c) => [c.code, c.currency]),
+);
+
+/**
+ * Get the currency for a given country code.
+ * @param countryCode - ISO 3166-1 alpha-2 country code
+ * @returns ISO 4217 currency code
+ */
+export function getCurrencyForCountry(countryCode: string): string {
+  return COUNTRY_CURRENCY_MAP[countryCode.toUpperCase()] || 'USD';
+}
+
+/**
+ * Persistence key for country/currency settings.
+ */
+const COUNTRY_STORAGE_KEY = 'simplesheets:country';
+
+/**
+ * Get the persisted country code from localStorage.
+ * @returns The stored country code or null if not set.
+ */
+export function getPersistedCountry(): string | null {
+  try {
+    return localStorage.getItem(COUNTRY_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Persist the country code to localStorage.
+ * @param countryCode - ISO 3166-1 alpha-2 country code
+ */
+export function setPersistedCountry(countryCode: string): void {
+  try {
+    localStorage.setItem(COUNTRY_STORAGE_KEY, countryCode);
+  } catch {
+    // Ignore storage errors
+  }
+}
+
+/**
+ * Get the effective currency, considering persisted country preference.
+ * Priority: persisted country > browser locale > USD fallback
+ * @returns ISO 4217 currency code
+ */
+export function getEffectiveCurrency(): string {
+  const persistedCountry = getPersistedCountry();
+  if (persistedCountry) {
+    return getCurrencyForCountry(persistedCountry);
+  }
+  return getDefaultCurrency();
+}
+
+/**
+ * Get the effective country code, considering persisted preference.
+ * @returns ISO 3166-1 alpha-2 country code
+ */
+export function getEffectiveCountry(): string {
+  return getPersistedCountry() || getCountryFromLocale();
 }
 
 /**

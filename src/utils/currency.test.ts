@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
-import { getDefaultCurrency, formatCurrency, SUPPORTED_CURRENCIES, getCurrencySymbol, getCurrencyFormatPattern } from './currency';
+import { getDefaultCurrency, formatCurrency, SUPPORTED_CURRENCIES, getCurrencySymbol, getCurrencyFormatPattern, getEffectiveCurrency, getEffectiveCountry, getPersistedCountry, setPersistedCountry, getCurrencyForCountry, SUPPORTED_COUNTRIES, getCountryFromLocale } from './currency';
 
 describe('currency', () => {
   describe('getDefaultCurrency', () => {
@@ -119,6 +119,93 @@ describe('currency', () => {
 
     it('has at least 10 currencies', () => {
       expect(SUPPORTED_CURRENCIES.length).toBeGreaterThanOrEqual(10);
+    });
+  });
+
+  describe('getCountryFromLocale', () => {
+    it('returns AU for en-AU locale', () => {
+      expect(getCountryFromLocale('en-AU')).toBe('AU');
+    });
+
+    it('returns US for en-US locale', () => {
+      expect(getCountryFromLocale('en-US')).toBe('US');
+    });
+
+    it('returns DE for de-DE locale', () => {
+      expect(getCountryFromLocale('de-DE')).toBe('DE');
+    });
+
+    it('falls back to US for locale without country', () => {
+      expect(getCountryFromLocale('en')).toBe('US');
+    });
+  });
+
+  describe('getCurrencyForCountry', () => {
+    it('returns AUD for AU', () => {
+      expect(getCurrencyForCountry('AU')).toBe('AUD');
+    });
+
+    it('returns USD for US', () => {
+      expect(getCurrencyForCountry('US')).toBe('USD');
+    });
+
+    it('returns EUR for DE', () => {
+      expect(getCurrencyForCountry('DE')).toBe('EUR');
+    });
+
+    it('falls back to USD for unknown country', () => {
+      expect(getCurrencyForCountry('XX')).toBe('USD');
+    });
+  });
+
+  describe('persisted country', () => {
+    beforeEach(() => {
+      localStorage.clear();
+    });
+
+    it('returns null when no country is persisted', () => {
+      expect(getPersistedCountry()).toBeNull();
+    });
+
+    it('persists and retrieves country', () => {
+      setPersistedCountry('AU');
+      expect(getPersistedCountry()).toBe('AU');
+    });
+
+    it('getEffectiveCurrency returns persisted currency', () => {
+      setPersistedCountry('AU');
+      expect(getEffectiveCurrency()).toBe('AUD');
+    });
+
+    it('getEffectiveCountry returns persisted country', () => {
+      setPersistedCountry('AU');
+      expect(getEffectiveCountry()).toBe('AU');
+    });
+
+    it('getEffectiveCurrency falls back to locale when no persisted country', () => {
+      localStorage.clear();
+      // Without persisted country, falls back to locale detection
+      const currency = getEffectiveCurrency();
+      expect(typeof currency).toBe('string');
+      expect(currency.length).toBe(3);
+    });
+  });
+
+  describe('SUPPORTED_COUNTRIES', () => {
+    it('includes Australia', () => {
+      const au = SUPPORTED_COUNTRIES.find((c) => c.code === 'AU');
+      expect(au).toBeTruthy();
+      expect(au!.currency).toBe('AUD');
+    });
+
+    it('includes United States', () => {
+      const us = SUPPORTED_COUNTRIES.find((c) => c.code === 'US');
+      expect(us).toBeTruthy();
+      expect(us!.currency).toBe('USD');
+    });
+
+    it('has at least 10 countries', () => {
+      expect(SUPPORTED_COUNTRIES.length).toBeGreaterThanOrEqual(10);
     });
   });
 });

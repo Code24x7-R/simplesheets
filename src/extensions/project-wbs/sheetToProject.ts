@@ -16,7 +16,7 @@ import { colToLetter } from '../../types';
 import type { Project, WBSTask, Resource, Material } from '../types';
 import { getTemplateById } from './templates/index';
 import { getAllTasks, syncResourceCosts } from './treeOps';
-import { getDefaultCurrency, getCurrencyFormatPattern } from '../../utils/currency';
+import { getEffectiveCurrency, getCurrencyFormatPattern } from '../../utils/currency';
 import { projectToModel } from './projectConverter';
 
 // ─── Sheet Name Constants ──────────────────────────────────────────────────
@@ -414,7 +414,7 @@ function parseResourceRow(sheet: Sheet, row: number): ResourceRow | null {
     name,
     role: getCellStringValue(sheet, row, 1),
     costRate: parseFloat(getCellStringValue(sheet, row, 2)) || 0,
-    costCurrency: getCellStringValue(sheet, row, 3) || getDefaultCurrency(),
+    costCurrency: getCellStringValue(sheet, row, 3) || getEffectiveCurrency(),
     // Availability stored as decimal (0-1) with percentage format, convert back to 0-100
     availability: Math.round((parseFloat(getCellStringValue(sheet, row, 4)) || 1) * 100),
     color: getCellStringValue(sheet, row, 5) || '#3B82F6',
@@ -446,7 +446,7 @@ function parseMaterialRow(sheet: Sheet, row: number): MaterialRow | null {
     wastageRate: parseFloat(getCellStringValue(sheet, row, 13)) || 0,
     reorderPoint: parseInt(getCellStringValue(sheet, row, 14)) || 0,
     carryingCostPerUnit: parseFloat(getCellStringValue(sheet, row, 15)) || 0,
-    currency: getCellStringValue(sheet, row, 16) || getDefaultCurrency(),
+    currency: getCellStringValue(sheet, row, 16) || getEffectiveCurrency(),
     status: (getCellStringValue(sheet, row, 17) || 'delivered').toLowerCase(),
   };
 }
@@ -490,7 +490,7 @@ function parseActualRow(sheet: Sheet, row: number): ActualRow | null {
     taskId,
     date: getCellStringValue(sheet, row, 2) || new Date().toISOString().split('T')[0],
     amount: parseFloat(getCellStringValue(sheet, row, 3)) || 0,
-    currency: getCellStringValue(sheet, row, 4) || getDefaultCurrency(),
+    currency: getCellStringValue(sheet, row, 4) || getEffectiveCurrency(),
     source: getCellStringValue(sheet, row, 5) || '',
     notes: getCellStringValue(sheet, row, 6) || '',
   };
@@ -781,7 +781,7 @@ export function projectModelToProject(model: ProjectModel): Project {
       effort: row.duration,
       effortUnit: 'days',
       cost: 0,
-      costCurrency: getDefaultCurrency(),
+      costCurrency: getEffectiveCurrency(),
       responsibleResourceId: row.resourceId,
       dependencies: row.dependencies.map((predId) => ({
         predecessorId: predId,

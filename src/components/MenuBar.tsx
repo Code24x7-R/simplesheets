@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
 import { useCallback } from 'react';
-import { getDefaultCurrency, getCurrencyFormatPattern } from '../utils/currency';
+import { getEffectiveCurrency, getCurrencyFormatPattern } from '../utils/currency';
 import {
   FileSpreadsheet,
   FlaskConical,
@@ -219,7 +219,7 @@ export function MenuBar(props: MenuBarProps) {
         'format-fill-blue': () => props.onSetBackgroundColor('#CCCCFF'),
         'format-number-general': () => props.onSetNumberFormat('General'),
         'format-number-number': () => props.onSetNumberFormat('0.00'),
-        'format-number-currency': () => props.onSetNumberFormat(getCurrencyFormatPattern(getDefaultCurrency())),
+        'format-number-currency': () => props.onSetNumberFormat(getCurrencyFormatPattern(getEffectiveCurrency())),
         'format-number-percent': () => props.onSetNumberFormat('0.00%'),
         'format-number-date': () => props.onSetNumberFormat('mm/dd/yyyy'),
         'format-number-date-short': () => props.onSetNumberFormat('dd-mmm-yy'),
