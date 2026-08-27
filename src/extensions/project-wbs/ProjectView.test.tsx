@@ -1897,4 +1897,51 @@ describe('ProjectView', () => {
       global.FileReader = origFileReader;
     });
   });
+
+  // ─── Phase 4: View-state persistence tests ───────────────────────
+
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it('persists view mode to localStorage when changed', () => {
+    render(<ProjectView project={createSimpleWBS()} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+
+    // Switch to risk-register view
+    fireEvent.click(screen.getByText('Risk Register'));
+
+    // Check localStorage
+    const stored = localStorage.getItem('simplesheets:project-view-state');
+    expect(stored).toBeTruthy();
+    const state = JSON.parse(stored!);
+    expect(state.viewMode).toBe('risk-register');
+  });
+
+  it('restores view mode from localStorage on mount', () => {
+    // Pre-set localStorage
+    localStorage.setItem('simplesheets:project-view-state', JSON.stringify({
+      viewMode: 'accounting',
+    }));
+
+    render(<ProjectView project={createSimpleWBS()} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+
+    // Should show Accounting view (not default Gantt)
+    // The Execution section header should be visible (appears in Accounting tab grouping)
+    const executionHeaders = screen.getAllByText('Execution');
+    expect(executionHeaders.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('persists zoom level to localStorage when changed', () => {
+    render(<ProjectView project={createSimpleWBS()} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+
+    // Change zoom to month (open Calendar dropdown first)
+    openDropdown('📅 Calendar');
+    const monthButton = screen.getByText('Month');
+    fireEvent.click(monthButton);
+
+    const stored = localStorage.getItem('simplesheets:project-view-state');
+    expect(stored).toBeTruthy();
+    const state = JSON.parse(stored!);
+    expect(state.zoom).toBe('month');
+  });
 });

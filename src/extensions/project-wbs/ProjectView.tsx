@@ -158,6 +158,32 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
   // Gantt chart scroll ref for calendar navigation
   const ganttContainerRef = useRef<HTMLDivElement>(null);
 
+  // ─── View-state persistence ────────────────────────────────────────
+  const viewStateKey = 'simplesheets:project-view-state';
+
+  // Restore view state from localStorage on mount
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(viewStateKey);
+      if (stored) {
+        const state = JSON.parse(stored);
+        if (state.viewMode) setViewMode(state.viewMode);
+        if (state.zoom) setZoom(state.zoom);
+      }
+    } catch {
+      // Ignore parse errors
+    }
+  }, []);
+
+  // Persist view state to localStorage when it changes
+  useEffect(() => {
+    try {
+      localStorage.setItem(viewStateKey, JSON.stringify({ viewMode, zoom }));
+    } catch {
+      // Ignore quota errors
+    }
+  }, [viewMode, zoom]);
+
   // Derived values
   const riskSummary = useMemo(() => getRiskSummary(project), [project]);
   const taskCount = useMemo(() => getAllTasks(project.wbs).length, [project.wbs]);
