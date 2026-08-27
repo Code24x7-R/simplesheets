@@ -11,6 +11,7 @@ import type { Project, WBSTask, Risk, Resource, Material, MaterialAllocation, Ma
 import type { ProjectModel, TaskRow, RiskRow, ResourceRow, MaterialRow, ActualRow, AllocationRow, ConsumptionRow } from '../../types';
 import { projectModelToProject } from './sheetToProject';
 import { createDefaultCalendar } from './calendar';
+import { getEffectiveCurrency } from '../../utils/currency';
 
 /**
  * Flatten a task tree into a list of tasks with parentId set correctly.
@@ -274,7 +275,7 @@ export function createBlankProject(name = 'New Project', startDate?: string, end
       taskAccounting: [],
       spendEntries: [],
       changeLog: [],
-      currency: 'USD',
+      currency: getEffectiveCurrency(),
     },
   };
 }

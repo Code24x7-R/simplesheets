@@ -568,7 +568,7 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
         taskAccounting: [],
         spendEntries: [],
         changeLog: [],
-        currency: 'USD',
+        currency: getEffectiveCurrency(),
       };
       const existingIndex = accounting.spendEntries.findIndex((e) => e.id === entry.id);
       const updatedEntries = existingIndex >= 0
@@ -796,9 +796,15 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
 
           {/* Country / Currency selector */}
           <CountrySelector
-            onCountryChange={() => {
-              // Force re-render to update currency display
-              setViewMode((prev) => prev);
+            onCountryChange={(_countryCode, currency) => {
+              // Update project currency to match selected country
+              handleProjectChange((prev) => ({
+                ...prev,
+                accounting: { ...prev.accounting, currency } as Project['accounting'],
+                capitalizationConfig: prev.capitalizationConfig
+                  ? { ...prev.capitalizationConfig, currency }
+                  : prev.capitalizationConfig,
+              }));
             }}
           />
 
@@ -1199,7 +1205,7 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
         <CapitalizationConfigModal
           config={project.capitalizationConfig ?? {
             threshold: 1000,
-            currency: 'USD',
+            currency: getEffectiveCurrency(),
             defaultUsefulLifeMonths: 36,
             defaultDepreciationMethod: 'straight-line',
             defaultSalvagePercent: 10,
