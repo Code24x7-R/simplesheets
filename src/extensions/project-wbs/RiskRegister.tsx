@@ -16,6 +16,7 @@ interface RiskRegisterProps {
   onRiskClose?: (riskId: string) => void;
   onRiskEdit?: (riskId: string) => void;
   onRiskAdd?: () => void;
+  onBulkStatusChange?: (riskIds: string[], status: RiskStatus) => void;
   selectedRiskId?: string | null;
 }
 
@@ -49,13 +50,36 @@ const LEVEL_COLORS = {
   low: 'bg-green-100 text-green-800',
 };
 
-export function RiskRegister({ risks, onRiskSelect, onRiskClose, onRiskEdit, onRiskAdd, selectedRiskId }: RiskRegisterProps) {
+export function RiskRegister({ risks, onRiskSelect, onRiskClose, onRiskEdit, onRiskAdd, onBulkStatusChange, selectedRiskId }: RiskRegisterProps) {
   const [sortField, setSortField] = useState<SortField>('riskScore');
   const [sortAsc, setSortAsc] = useState(false);
   const [filterStatus, setFilterStatus] = useState<RiskStatus | 'all'>('all');
   const [filterCategory, setFilterCategory] = useState<RiskCategory | 'all'>('all');
   const [groupBy, setGroupBy] = useState<GroupBy>('none');
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+  const [selectedRiskIds, setSelectedRiskIds] = useState<Set<string>>(new Set());
+
+  const isAllSelected = selectedRiskIds.size === risks.length && risks.length > 0;
+
+  function toggleSelectAll() {
+    if (isAllSelected) {
+      setSelectedRiskIds(new Set());
+    } else {
+      setSelectedRiskIds(new Set(risks.map((r) => r.id)));
+    }
+  }
+
+  function toggleSelectRisk(riskId: string) {
+    setSelectedRiskIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(riskId)) {
+        next.delete(riskId);
+      } else {
+        next.add(riskId);
+      }
+      return next;
+    });
+  }
 
   const filteredRisks = useMemo(() => {
     let result = risks;
@@ -187,11 +211,67 @@ export function RiskRegister({ risks, onRiskSelect, onRiskClose, onRiskEdit, onR
         </div>
       </div>
 
+      {/* Bulk Action Toolbar */}
+      {selectedRiskIds.size > 0 && (
+        <div className="flex items-center gap-3 p-2 border-b border-gray-200 bg-blue-50">
+          <span className="text-sm text-blue-700 font-medium">
+            {selectedRiskIds.size} selected
+          </span>
+          <span className="text-sm text-gray-500">Bulk Actions:</span>
+          {onBulkStatusChange && (
+            <>
+              <button
+                className="px-2 py-1 text-xs text-blue-600 border border-blue-300 rounded hover:bg-blue-100"
+                onClick={() => {
+                  onBulkStatusChange(Array.from(selectedRiskIds), 'mitigating');
+                  setSelectedRiskIds(new Set());
+                }}
+              >
+                Mitigate
+              </button>
+              <button
+                className="px-2 py-1 text-xs text-green-600 border border-green-300 rounded hover:bg-green-100"
+                onClick={() => {
+                  onBulkStatusChange(Array.from(selectedRiskIds), 'monitoring');
+                  setSelectedRiskIds(new Set());
+                }}
+              >
+                Monitor
+              </button>
+              <button
+                className="px-2 py-1 text-xs text-gray-600 border border-gray-300 rounded hover:bg-gray-100"
+                onClick={() => {
+                  onBulkStatusChange(Array.from(selectedRiskIds), 'closed');
+                  setSelectedRiskIds(new Set());
+                }}
+              >
+                Close Selected
+              </button>
+            </>
+          )}
+          <button
+            className="px-2 py-1 text-xs text-red-600 border border-red-300 rounded hover:bg-red-100 ml-auto"
+            onClick={() => setSelectedRiskIds(new Set())}
+          >
+            Clear
+          </button>
+        </div>
+      )}
+
       {/* Table */}
       <div className="overflow-auto">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
+              <th className="px-3 py-2 text-center font-medium">
+                <input
+                  type="checkbox"
+                  checked={isAllSelected}
+                  onChange={toggleSelectAll}
+                  className="w-4 h-4 rounded border-gray-300"
+                  aria-label="Select all risks"
+                />
+              </th>
               <th className="px-3 py-2 text-left font-medium cursor-pointer hover:bg-gray-100" onClick={() => handleSort('title')}>
                 Title {sortField === 'title' && (sortAsc ? '↑' : '↓')}
               </th>
@@ -234,7 +314,7 @@ export function RiskRegister({ risks, onRiskSelect, onRiskClose, onRiskEdit, onR
                         className="bg-gray-50 cursor-pointer"
                         onClick={() => toggleGroup(group.key)}
                       >
-                        <td colSpan={7} className="px-3 py-1.5 text-xs font-medium text-gray-600">
+                        <td colSpan={8} className="px-3 py-1.5 text-xs font-medium text-gray-600">
                           <span className="mr-1">{isCollapsed ? '▶' : '▼'}</span>
                           {group.label}
                           <span className="ml-2 text-gray-400">({group.count} risk{group.count !== 1 ? 's' : ''})</span>
@@ -245,12 +325,23 @@ export function RiskRegister({ risks, onRiskSelect, onRiskClose, onRiskEdit, onR
                         group.risks.map((risk) => {
                           const level = getRiskLevel(risk.riskScore);
                           const isSelected = risk.id === selectedRiskId;
+                          const isChecked = selectedRiskIds.has(risk.id);
                           return (
                             <tr
                               key={risk.id}
                               className={`border-b border-gray-100 hover:bg-blue-50 cursor-pointer ${isSelected ? 'bg-blue-100' : ''}`}
                               onClick={() => onRiskSelect?.(risk.id)}
                             >
+                              <td className="px-3 py-2 text-center">
+                                <input
+                                  type="checkbox"
+                                  checked={isChecked}
+                                  onChange={() => toggleSelectRisk(risk.id)}
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="w-4 h-4 rounded border-gray-300"
+                                  aria-label={`Select ${risk.title}`}
+                                />
+                              </td>
                               <td className="px-3 py-2 font-medium pl-6">{risk.title}</td>
                               <td className="px-3 py-2">{CATEGORY_LABELS[risk.category]}</td>
                               <td className="px-3 py-2 text-center">{risk.probability}</td>
@@ -294,12 +385,23 @@ export function RiskRegister({ risks, onRiskSelect, onRiskClose, onRiskEdit, onR
               : sortedRisks.map((risk) => {
                   const level = getRiskLevel(risk.riskScore);
                   const isSelected = risk.id === selectedRiskId;
+                  const isChecked = selectedRiskIds.has(risk.id);
                   return (
                     <tr
                       key={risk.id}
                       className={`border-b border-gray-100 hover:bg-blue-50 cursor-pointer ${isSelected ? 'bg-blue-100' : ''}`}
                       onClick={() => onRiskSelect?.(risk.id)}
                     >
+                      <td className="px-3 py-2 text-center">
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => toggleSelectRisk(risk.id)}
+                          onClick={(e) => e.stopPropagation()}
+                          className="w-4 h-4 rounded border-gray-300"
+                          aria-label={`Select ${risk.title}`}
+                        />
+                      </td>
                       <td className="px-3 py-2 font-medium">{risk.title}</td>
                       <td className="px-3 py-2">{CATEGORY_LABELS[risk.category]}</td>
                       <td className="px-3 py-2 text-center">{risk.probability}</td>

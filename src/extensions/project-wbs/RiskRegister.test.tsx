@@ -146,4 +146,42 @@ describe('RiskRegister', () => {
     const counts = screen.getAllByText(/\d+ risk/);
     expect(counts.length).toBe(3); // 3 categories with 1 risk each
   });
+
+  // ─── Phase 4: Bulk actions tests ─────────────────────────────────
+
+  it('renders checkboxes for bulk selection', () => {
+    render(<RiskRegister risks={risks} />);
+
+    // Should have checkboxes for each risk + 1 select-all checkbox
+    const checkboxes = screen.getAllByRole('checkbox');
+    expect(checkboxes.length).toBe(risks.length + 1);
+  });
+
+  it('shows bulk action toolbar when risks are selected', () => {
+    render(<RiskRegister risks={risks} />);
+
+    // Initially no bulk action toolbar
+    expect(screen.queryByText(/selected/)).toBeNull();
+
+    // Select first risk (skip the select-all checkbox at index 0)
+    const checkboxes = screen.getAllByRole('checkbox');
+    fireEvent.click(checkboxes[1]);
+
+    // Bulk action toolbar should appear
+    expect(screen.getByText(/selected/)).toBeTruthy();
+  });
+
+  it('calls onBulkStatusChange when Close is clicked', () => {
+    const onBulkStatusChange = jest.fn();
+    render(<RiskRegister risks={risks} onBulkStatusChange={onBulkStatusChange} />);
+
+    // Select first risk (skip the select-all checkbox at index 0)
+    const checkboxes = screen.getAllByRole('checkbox');
+    fireEvent.click(checkboxes[1]);
+
+    // Click Close in bulk actions
+    fireEvent.click(screen.getByText('Close Selected'));
+
+    expect(onBulkStatusChange).toHaveBeenCalledWith([risks[0].id], 'closed');
+  });
 });
