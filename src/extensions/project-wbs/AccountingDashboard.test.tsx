@@ -206,6 +206,83 @@ describe('AccountingDashboard', () => {
     expect(screen.getByText('dependency')).toBeTruthy();
   });
 
+  // ─── Phase 1: Actuals Edit/Delete per entry tests ───────────────
+
+  it('renders Edit and Delete buttons per spend entry', () => {
+    const onEditSpend = jest.fn();
+    const onDeleteSpend = jest.fn();
+    const project = createProject({
+      wbs: [createTask({ id: 't1', name: 'Task 1' })],
+      accounting: {
+        baselineTotal: 1000,
+        allocatedTotal: 1000,
+        currentEstimateTotal: 1000,
+        actualSpendTotal: 500,
+        etcTotal: 500,
+        materialCostTotal: 0,
+        taskAccounting: [],
+        spendEntries: [
+          {
+            id: 'act-1',
+            taskId: 't1',
+            date: '2026-01-10',
+            amount: 500,
+            currency: 'USD',
+            source: 'Invoice',
+            notes: 'Test entry',
+          },
+        ],
+        changeLog: [],
+        currency: 'USD',
+      },
+    });
+    render(<AccountingDashboard project={project} onEditSpend={onEditSpend} onDeleteSpend={onDeleteSpend} />);
+
+    // Switch to Actuals tab
+    fireEvent.click(screen.getByText(/Actuals/));
+
+    // Should have Edit and Delete buttons
+    expect(screen.getByText('Edit')).toBeTruthy();
+    expect(screen.getByText('Delete')).toBeTruthy();
+  });
+
+  it('calls onDeleteSpend with entry id when Delete clicked', () => {
+    const onDeleteSpend = jest.fn();
+    const project = createProject({
+      wbs: [createTask({ id: 't1', name: 'Task 1' })],
+      accounting: {
+        baselineTotal: 1000,
+        allocatedTotal: 1000,
+        currentEstimateTotal: 1000,
+        actualSpendTotal: 500,
+        etcTotal: 500,
+        materialCostTotal: 0,
+        taskAccounting: [],
+        spendEntries: [
+          {
+            id: 'act-1',
+            taskId: 't1',
+            date: '2026-01-10',
+            amount: 500,
+            currency: 'USD',
+            source: 'Invoice',
+            notes: 'Test entry',
+          },
+        ],
+        changeLog: [],
+        currency: 'USD',
+      },
+    });
+    render(<AccountingDashboard project={project} onDeleteSpend={onDeleteSpend} />);
+
+    // Switch to Actuals tab
+    fireEvent.click(screen.getByText(/Actuals/));
+
+    // Click Delete
+    fireEvent.click(screen.getByText('Delete'));
+    expect(onDeleteSpend).toHaveBeenCalledWith('act-1');
+  });
+
   it('shows material cost in header when materials exist', () => {
     const project = createProject({
       wbs: [createTask()],

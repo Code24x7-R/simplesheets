@@ -154,4 +154,43 @@ describe('MaterialDashboard', () => {
     render(<MaterialDashboard project={project} />);
     expect(screen.getByText('3 items')).toBeTruthy();
   });
+
+  // ─── Phase 1: Delete button tests ──────────────────────────────────
+
+  it('renders Delete button per material row when onDelete provided', () => {
+    const onDeleteMaterial = jest.fn();
+    const project = createProject({
+      materials: [createMaterial({ id: 'm1', name: 'Test Material' })],
+    });
+    render(<MaterialDashboard project={project} onDeleteMaterial={onDeleteMaterial} />);
+
+    // Each row should have both Edit and Delete buttons
+    const deleteButtons = screen.getAllByText('Delete');
+    expect(deleteButtons.length).toBe(1);
+  });
+
+  it('does not render Delete button when onDelete not provided', () => {
+    const project = createProject({
+      materials: [createMaterial({ id: 'm1', name: 'Test Material' })],
+    });
+    render(<MaterialDashboard project={project} />);
+
+    expect(screen.queryByText('Delete')).toBeNull();
+  });
+
+  it('calls onDeleteMaterial with correct material id when Delete clicked', () => {
+    const onDeleteMaterial = jest.fn();
+    const project = createProject({
+      materials: [
+        createMaterial({ id: 'm1', name: 'Material A' }),
+        createMaterial({ id: 'm2', name: 'Material B' }),
+      ],
+    });
+    render(<MaterialDashboard project={project} onDeleteMaterial={onDeleteMaterial} />);
+
+    // Click the Delete button in the second row (Material B)
+    const deleteButtons = screen.getAllByText('Delete');
+    fireEvent.click(deleteButtons[1]);
+    expect(onDeleteMaterial).toHaveBeenCalledWith('m2');
+  });
 });

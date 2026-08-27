@@ -14,6 +14,8 @@ import { getDayOfWeek, isWeekend, isWorkingDay, toISO } from './calendar';
 
 interface ResourceHeatmapProps {
   project: Project;
+  onCellClick?: (resourceId: string, date: string) => void;
+  onTaskClick?: (taskId: string) => void; // Reserved for future task navigation
 }
 
 interface ResourceAllocation {
@@ -29,7 +31,7 @@ function isoToDate(iso: string): Date {
 // Number of days to show at once
 const DAYS_PER_VIEW = 30;
 
-export function ResourceHeatmap({ project }: ResourceHeatmapProps) {
+export function ResourceHeatmap({ project, onCellClick, onTaskClick: _onTaskClick }: ResourceHeatmapProps) {
   const [hoveredCell, setHoveredCell] = useState<{ resourceId: string; date: string } | null>(null);
   const [viewStartDate, setViewStartDate] = useState<string>(project.startDate);
 
@@ -310,6 +312,7 @@ export function ResourceHeatmap({ project }: ResourceHeatmapProps) {
                     } ${weekend ? 'opacity-50' : ''} ${!isWorking && !weekend ? 'opacity-70' : ''} ${
                       isHovered ? 'ring-2 ring-blue-500 z-10' : ''
                     }`}
+                    onClick={() => onCellClick?.(resource.id, dateStr)}
                     onMouseEnter={() => setHoveredCell({ resourceId: resource.id, date: dateStr })}
                     onMouseLeave={() => setHoveredCell(null)}
                     title={`${resource.name} - ${dateStr}: ${pct}% allocated`}

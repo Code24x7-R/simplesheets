@@ -15,6 +15,11 @@ beforeAll(() => {
   HTMLElement.prototype.scrollTo = jest.fn();
 });
 
+// ─── Helper to open a toolbar dropdown ──────────────────────────────
+function openDropdown(triggerLabel: string) {
+  fireEvent.click(screen.getByText(triggerLabel));
+}
+
 
   // Helper to create a valid Material with all required fields
   function createTestMaterial(overrides: Partial<import('../types').Material> = {}): import('../types').Material {
@@ -118,6 +123,8 @@ describe('ProjectView', () => {
 
   it('shows zoom controls in Gantt view', () => {
     render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+    // Zoom controls are inside the Calendar dropdown
+    openDropdown('📅 Calendar');
     expect(screen.getByText('Day')).toBeInTheDocument();
     expect(screen.getByText('Week')).toBeInTheDocument();
     expect(screen.getByText('Month')).toBeInTheDocument();
@@ -383,6 +390,7 @@ describe('ProjectView', () => {
   describe('Gantt calendar navigation', () => {
     it('renders nav buttons in Gantt view', () => {
       render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      openDropdown('📅 Calendar');
       expect(screen.getByTestId('gantt-nav-prev-month')).toBeInTheDocument();
       expect(screen.getByTestId('gantt-nav-prev-week')).toBeInTheDocument();
       expect(screen.getByTestId('gantt-nav-today')).toBeInTheDocument();
@@ -392,6 +400,7 @@ describe('ProjectView', () => {
 
     it('calls scrollTo when Today button is clicked', () => {
       render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      openDropdown('📅 Calendar');
       const todayBtn = screen.getByTestId('gantt-nav-today');
       fireEvent.click(todayBtn);
       const ganttContainer = document.querySelector('[data-testid="gantt-chart"]');
@@ -400,6 +409,7 @@ describe('ProjectView', () => {
 
     it('calls scrollTo when previous week button is clicked', () => {
       render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      openDropdown('📅 Calendar');
       const prevWeekBtn = screen.getByTestId('gantt-nav-prev-week');
       fireEvent.click(prevWeekBtn);
       const ganttContainer = document.querySelector('[data-testid="gantt-chart"]');
@@ -408,6 +418,7 @@ describe('ProjectView', () => {
 
     it('calls scrollTo when next month button is clicked', () => {
       render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      openDropdown('📅 Calendar');
       const nextMonthBtn = screen.getByTestId('gantt-nav-next-month');
       fireEvent.click(nextMonthBtn);
       const ganttContainer = document.querySelector('[data-testid="gantt-chart"]');
@@ -474,6 +485,8 @@ describe('ProjectView', () => {
 
       render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
 
+      // Open File dropdown to access Export button
+      openDropdown('File');
       fireEvent.click(screen.getByTestId('export-project-btn'));
 
       expect(createObjectURL).toHaveBeenCalledTimes(1);
@@ -572,7 +585,8 @@ describe('ProjectView', () => {
     it('shows a "Saved!" confirmation after clicking Save', () => {
       render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
 
-      fireEvent.click(screen.getByText('↓ Save'));
+      openDropdown('File');
+      fireEvent.click(screen.getByText('↓ Save to Workbook'));
 
       expect(screen.getByTestId('save-confirmation')).toBeInTheDocument();
       expect(screen.getByTestId('save-confirmation').textContent).toBe('Saved!');
@@ -581,7 +595,8 @@ describe('ProjectView', () => {
     it('hides the confirmation after 2 seconds', () => {
       render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
 
-      fireEvent.click(screen.getByText('↓ Save'));
+      openDropdown('File');
+      fireEvent.click(screen.getByText('↓ Save to Workbook'));
       expect(screen.getByTestId('save-confirmation')).toBeInTheDocument();
 
       // Advance timers and flush the state update
@@ -852,13 +867,15 @@ describe('ProjectView', () => {
   describe('Calendar config', () => {
     it('opens calendar config modal when Calendar button is clicked', () => {
       render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
-      fireEvent.click(screen.getByText('📅 Calendar'));
+      openDropdown('📅 Calendar');
+      fireEvent.click(screen.getByText('⚙️ Calendar Settings'));
       expect(screen.getByTestId('calendar-config-modal')).toBeInTheDocument();
     });
 
     it('closes calendar config modal when Cancel is clicked', () => {
       render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
-      fireEvent.click(screen.getByText('📅 Calendar'));
+      openDropdown('📅 Calendar');
+      fireEvent.click(screen.getByText('⚙️ Calendar Settings'));
       expect(screen.getByTestId('calendar-config-modal')).toBeInTheDocument();
       fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
       expect(screen.queryByTestId('calendar-config-modal')).not.toBeInTheDocument();
@@ -955,9 +972,12 @@ describe('ProjectView', () => {
       fireEvent.click(editButtons[0]);
       expect(screen.getByTestId('actuals-editor-modal')).toBeInTheDocument();
 
-      // Click "Delete" in the modal
-      const deleteButton = screen.getByRole('button', { name: 'Delete' });
-      fireEvent.click(deleteButton);
+      // Click "Delete" in the modal (scope to modal to avoid matching table row Delete)
+      const modal = screen.getByTestId('actuals-editor-modal');
+      const modalButtons = modal.querySelectorAll('button');
+      const modalDeleteButton = Array.from(modalButtons).find((b) => b.textContent === 'Delete');
+      expect(modalDeleteButton).toBeTruthy();
+      fireEvent.click(modalDeleteButton!);
       expect(onProjectChange).toHaveBeenCalled();
     });
   });
@@ -983,14 +1003,16 @@ describe('ProjectView', () => {
   describe('Sheet conversion', () => {
     it('opens column mapping dialog when Convert Sheet is clicked', () => {
       render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
-      fireEvent.click(screen.getByText('↑ Convert Sheet'));
+      openDropdown('File');
+      fireEvent.click(screen.getByText('↑ Convert Sheet to Project'));
       // ColumnMappingDialog has no testid; identify by header text
       expect(screen.getByText('Confirm Column Mapping')).toBeInTheDocument();
     });
 
     it('closes column mapping dialog when Cancel is clicked', () => {
       render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
-      fireEvent.click(screen.getByText('↑ Convert Sheet'));
+      openDropdown('File');
+      fireEvent.click(screen.getByText('↑ Convert Sheet to Project'));
       expect(screen.getByText('Confirm Column Mapping')).toBeInTheDocument();
       fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
       expect(screen.queryByText('Confirm Column Mapping')).not.toBeInTheDocument();
@@ -1034,6 +1056,7 @@ describe('ProjectView', () => {
   describe('Gantt calendar navigation', () => {
     it('navigates to previous month', () => {
       render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      openDropdown('📅 Calendar');
       const prevMonthBtn = screen.getByTestId('gantt-nav-prev-month');
       fireEvent.click(prevMonthBtn);
       const ganttContainer = document.querySelector('[data-testid="gantt-chart"]');
@@ -1042,6 +1065,7 @@ describe('ProjectView', () => {
 
     it('navigates to next week', () => {
       render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      openDropdown('📅 Calendar');
       const nextWeekBtn = screen.getByTestId('gantt-nav-next-week');
       fireEvent.click(nextWeekBtn);
       const ganttContainer = document.querySelector('[data-testid="gantt-chart"]');
@@ -1050,12 +1074,14 @@ describe('ProjectView', () => {
 
     it('changes zoom level to day', () => {
       render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      openDropdown('📅 Calendar');
       fireEvent.click(screen.getByText('Day'));
       expect(screen.getByTestId('gantt-chart')).toBeInTheDocument();
     });
 
     it('changes zoom level to month', () => {
       render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      openDropdown('📅 Calendar');
       fireEvent.click(screen.getByText('Month'));
       expect(screen.getByTestId('gantt-chart')).toBeInTheDocument();
     });
@@ -1067,7 +1093,8 @@ describe('ProjectView', () => {
       const onSaveProject = jest.fn();
       render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={onSaveProject} onClose={jest.fn()} onProjectChange={onProjectChange} />);
 
-      fireEvent.click(screen.getByText('↑ Convert Sheet'));
+      openDropdown('File');
+      fireEvent.click(screen.getByText('↑ Convert Sheet to Project'));
       expect(screen.getByText('Confirm Column Mapping')).toBeInTheDocument();
 
       // Confirm the mapping — button text is "Convert to Project"
@@ -1275,6 +1302,7 @@ describe('ProjectView', () => {
   describe('Gantt calendar navigation edge cases', () => {
     it('calls scrollTo when previous week button is clicked', () => {
       render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      openDropdown('📅 Calendar');
       const prevWeekBtn = screen.getByTestId('gantt-nav-prev-week');
       fireEvent.click(prevWeekBtn);
       const ganttContainer = document.querySelector('[data-testid="gantt-chart"]');
@@ -1283,6 +1311,7 @@ describe('ProjectView', () => {
 
     it('calls scrollTo when next month button is clicked', () => {
       render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
+      openDropdown('📅 Calendar');
       const nextMonthBtn = screen.getByTestId('gantt-nav-next-month');
       fireEvent.click(nextMonthBtn);
       const ganttContainer = document.querySelector('[data-testid="gantt-chart"]');
@@ -1294,12 +1323,15 @@ describe('ProjectView', () => {
       // Default zoom is week
       expect(screen.getByTestId('gantt-chart')).toBeInTheDocument();
       // Switch to day zoom
+      openDropdown('📅 Calendar');
       fireEvent.click(screen.getByText('Day'));
       expect(screen.getByTestId('gantt-chart')).toBeInTheDocument();
       // Switch to month zoom
+      openDropdown('📅 Calendar');
       fireEvent.click(screen.getByText('Month'));
       expect(screen.getByTestId('gantt-chart')).toBeInTheDocument();
       // Switch back to week
+      openDropdown('📅 Calendar');
       fireEvent.click(screen.getByText('Week'));
       expect(screen.getByTestId('gantt-chart')).toBeInTheDocument();
     });
@@ -1331,8 +1363,9 @@ describe('ProjectView', () => {
       const onSaveProject = jest.fn();
       render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={onSaveProject} onClose={jest.fn()} onProjectChange={onProjectChange} />);
 
-      // Click convert sheet button
-      fireEvent.click(screen.getByText('↑ Convert Sheet'));
+      // Click convert sheet button (inside File dropdown)
+      openDropdown('File');
+      fireEvent.click(screen.getByText('↑ Convert Sheet to Project'));
       expect(screen.getByText('Confirm Column Mapping')).toBeInTheDocument();
 
       // Confirm the mapping
@@ -1425,8 +1458,9 @@ describe('ProjectView', () => {
       const onSaveProject = jest.fn();
       render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={onSaveProject} onClose={jest.fn()} />);
 
-      // Click Save button
-      fireEvent.click(screen.getByText('↓ Save'));
+      // Click Save button (inside File dropdown)
+      openDropdown('File');
+      fireEvent.click(screen.getByText('↓ Save to Workbook'));
       expect(onSaveProject).toHaveBeenCalled();
     });
 
@@ -1434,8 +1468,9 @@ describe('ProjectView', () => {
       const onProjectChange = jest.fn();
       render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} onProjectChange={onProjectChange} />);
 
-      // Open calendar config
-      fireEvent.click(screen.getByText('📅 Calendar'));
+      // Open calendar config (inside Calendar dropdown)
+      openDropdown('📅 Calendar');
+      fireEvent.click(screen.getByText('⚙️ Calendar Settings'));
       expect(screen.getByTestId('calendar-config-modal')).toBeInTheDocument();
 
       // Save calendar changes — button text is "Save Calendar"
@@ -1585,14 +1620,20 @@ describe('ProjectView', () => {
       render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
 
       // Test navigation with day zoom
+      openDropdown('📅 Calendar');
       fireEvent.click(screen.getByText('Day'));
+      // Reopen dropdown to access nav buttons
+      openDropdown('📅 Calendar');
       const prevWeekBtn = screen.getByTestId('gantt-nav-prev-week');
       fireEvent.click(prevWeekBtn);
       const ganttContainer = document.querySelector('[data-testid="gantt-chart"]');
       expect(ganttContainer?.scrollTo).toHaveBeenCalled();
 
       // Test navigation with month zoom
+      openDropdown('📅 Calendar');
       fireEvent.click(screen.getByText('Month'));
+      // Reopen dropdown to access nav buttons
+      openDropdown('📅 Calendar');
       const nextMonthBtn = screen.getByTestId('gantt-nav-next-month');
       fireEvent.click(nextMonthBtn);
       expect(ganttContainer?.scrollTo).toHaveBeenCalled();
@@ -1681,8 +1722,9 @@ describe('ProjectView', () => {
       const onSaveProject = jest.fn();
       render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={onSaveProject} onClose={jest.fn()} />);
 
-      // Click Save button
-      fireEvent.click(screen.getByText('↓ Save'));
+      // Click Save button (inside File dropdown)
+      openDropdown('File');
+      fireEvent.click(screen.getByText('↓ Save to Workbook'));
       expect(onSaveProject).toHaveBeenCalled();
     });
 
@@ -1690,8 +1732,9 @@ describe('ProjectView', () => {
       const onProjectChange = jest.fn();
       render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} onProjectChange={onProjectChange} />);
 
-      // Open calendar config
-      fireEvent.click(screen.getByText('📅 Calendar'));
+      // Open calendar config (inside Calendar dropdown)
+      openDropdown('📅 Calendar');
+      fireEvent.click(screen.getByText('⚙️ Calendar Settings'));
       expect(screen.getByTestId('calendar-config-modal')).toBeInTheDocument();
 
       // Save calendar changes — button text is "Save Calendar"
@@ -1818,6 +1861,8 @@ describe('ProjectView', () => {
 
       render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} onClose={jest.fn()} />);
 
+      // Open File dropdown to access Export button
+      openDropdown('File');
       fireEvent.click(screen.getByTestId('export-project-btn'));
 
       expect(createObjectURL).toHaveBeenCalledTimes(1);

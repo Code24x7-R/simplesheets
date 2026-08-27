@@ -20,13 +20,14 @@ interface MaterialDashboardProps {
   project: Project;
   onAddMaterial?: () => void;
   onEditMaterial?: (materialId: string) => void;
+  onDeleteMaterial?: (materialId: string) => void;
   onAllocateMaterial?: (materialId: string) => void;
   onConfig?: () => void;
 }
 
 type MaterialFilter = 'all' | MaterialClassification;
 
-export function MaterialDashboard({ project, onAddMaterial, onEditMaterial, onAllocateMaterial, onConfig }: MaterialDashboardProps) {
+export function MaterialDashboard({ project, onAddMaterial, onEditMaterial, onDeleteMaterial, onAllocateMaterial, onConfig }: MaterialDashboardProps) {
   const [filter, setFilter] = useState<MaterialFilter>('all');
 
   const materials = project.materials ?? [];
@@ -142,6 +143,7 @@ export function MaterialDashboard({ project, onAddMaterial, onEditMaterial, onAl
                   material={material}
                   currency={currency}
                   onEdit={onEditMaterial}
+                  onDelete={onDeleteMaterial}
                   onAllocate={onAllocateMaterial}
                 />
               ))}
@@ -188,11 +190,13 @@ function MaterialRow({
   material,
   currency,
   onEdit,
+  onDelete,
   onAllocate,
 }: {
   material: Material;
   currency: string;
   onEdit?: (materialId: string) => void;
+  onDelete?: (materialId: string) => void;
   onAllocate?: (materialId: string) => void;
 }) {
   const classificationBadge = {
@@ -260,6 +264,15 @@ function MaterialRow({
               className="text-blue-600 hover:text-blue-800 text-xs"
             >
               Edit
+            </button>
+          )}
+          {onDelete && (
+            <button
+              onClick={() => onDelete(material.id)}
+              className="text-red-600 hover:text-red-800 text-xs"
+              title="Delete material"
+            >
+              Delete
             </button>
           )}
         </div>

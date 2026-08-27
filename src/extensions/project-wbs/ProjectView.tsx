@@ -11,6 +11,7 @@
  */
 
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import { ToolbarDropdown } from './ToolbarDropdown';
 import { GanttChart } from './GanttChart';
 import { RiskRegister } from './RiskRegister';
 import { RiskMatrix } from './RiskMatrix';
@@ -736,70 +737,77 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
             ))}
           </div>
 
-          {/* Zoom controls (only for Gantt) */}
+          {/* Calendar + Zoom dropdown (only for Gantt) */}
           {viewMode === 'gantt' && (
-            <div className="flex items-center gap-1 ml-2">
-              {/* Calendar navigation */}
-              <div className="flex rounded border border-gray-200 overflow-hidden">
-                <button
-                  className="px-2 py-1 text-xs bg-white text-gray-700 hover:bg-gray-50 border-r border-gray-200"
-                  onClick={() => navigateGantt('prev', 'month')}
-                  title="Previous month"
-                  data-testid="gantt-nav-prev-month"
-                >
-                  <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><polygon points="6,1 2,5 6,9" /><polygon points="9,1 5,5 9,9" /></svg>
-                </button>
-                <button
-                  className="px-2 py-1 text-xs bg-white text-gray-700 hover:bg-gray-50 border-r border-gray-200"
-                  onClick={() => navigateGantt('prev', 'week')}
-                  title="Previous week"
-                  data-testid="gantt-nav-prev-week"
-                >
-                  <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><polygon points="8,1 3,5 8,9" /></svg>
-                </button>
-                <button
-                  className="px-2 py-1 text-xs bg-blue-50 text-blue-700 hover:bg-blue-100 font-medium"
-                  onClick={jumpToToday}
-                  title="Jump to today"
-                  data-testid="gantt-nav-today"
-                >
-                  Today
-                </button>
-                <button
-                  className="px-2 py-1 text-xs bg-white text-gray-700 hover:bg-gray-50 border-l border-gray-200"
-                  onClick={() => navigateGantt('next', 'week')}
-                  title="Next week"
-                  data-testid="gantt-nav-next-week"
-                >
-                  <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><polygon points="2,1 7,5 2,9" /></svg>
-                </button>
-                <button
-                  className="px-2 py-1 text-xs bg-white text-gray-700 hover:bg-gray-50 border-l border-gray-200"
-                  onClick={() => navigateGantt('next', 'month')}
-                  title="Next month"
-                  data-testid="gantt-nav-next-month"
-                >
-                  <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><polygon points="1,1 5,5 1,9" /><polygon points="4,1 8,5 4,9" /></svg>
-                </button>
+            <ToolbarDropdown label="📅 Calendar">
+              <div className="px-3 py-2 text-xs font-medium text-gray-500 border-b border-gray-100">
+                Navigation
               </div>
-
-              {/* Zoom level */}
-              <div className="flex rounded border border-gray-200 overflow-hidden">
+              <button
+                className="w-full px-3 py-1.5 text-xs text-left hover:bg-gray-50 flex items-center gap-2"
+                onClick={() => navigateGantt('prev', 'month')}
+                data-testid="gantt-nav-prev-month"
+              >
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><polygon points="6,1 2,5 6,9" /><polygon points="9,1 5,5 9,9" /></svg>
+                Previous Month
+              </button>
+              <button
+                className="w-full px-3 py-1.5 text-xs text-left hover:bg-gray-50 flex items-center gap-2"
+                onClick={() => navigateGantt('prev', 'week')}
+                data-testid="gantt-nav-prev-week"
+              >
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><polygon points="8,1 3,5 8,9" /></svg>
+                Previous Week
+              </button>
+              <button
+                className="w-full px-3 py-1.5 text-xs text-left hover:bg-gray-50 font-medium text-blue-700"
+                onClick={jumpToToday}
+                data-testid="gantt-nav-today"
+              >
+                Jump to Today
+              </button>
+              <button
+                className="w-full px-3 py-1.5 text-xs text-left hover:bg-gray-50 flex items-center gap-2"
+                onClick={() => navigateGantt('next', 'week')}
+                data-testid="gantt-nav-next-week"
+              >
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><polygon points="2,1 7,5 2,9" /></svg>
+                Next Week
+              </button>
+              <button
+                className="w-full px-3 py-1.5 text-xs text-left hover:bg-gray-50 flex items-center gap-2"
+                onClick={() => navigateGantt('next', 'month')}
+                data-testid="gantt-nav-next-month"
+              >
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><polygon points="1,1 5,5 1,9" /><polygon points="4,1 8,5 4,9" /></svg>
+                Next Month
+              </button>
+              <div className="border-t border-gray-100 mt-1 pt-1">
+                <div className="px-3 py-1 text-xs font-medium text-gray-500">
+                  Zoom
+                </div>
                 {(['day', 'week', 'month'] as const).map((z) => (
                   <button
                     key={z}
-                    className={`px-2 py-1 text-xs ${
-                      zoom === z
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-white text-gray-700 hover:bg-gray-50'
+                    className={`w-full px-3 py-1.5 text-xs text-left hover:bg-gray-50 ${
+                      zoom === z ? 'font-medium text-blue-700' : ''
                     }`}
                     onClick={() => setZoom(z)}
                   >
                     {z.charAt(0).toUpperCase() + z.slice(1)}
+                    {zoom === z && <span className="ml-1">✓</span>}
                   </button>
                 ))}
               </div>
-            </div>
+              <div className="border-t border-gray-100 mt-1 pt-1">
+                <button
+                  className="w-full px-3 py-1.5 text-xs text-left hover:bg-gray-50"
+                  onClick={() => setShowCalendarConfig(true)}
+                >
+                  ⚙️ Calendar Settings
+                </button>
+              </div>
+            </ToolbarDropdown>
           )}
 
           {/* Add buttons */}
@@ -826,66 +834,53 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
             </button>
           )}
 
-          {/* Calendar Config button */}
-          <button
-            className="ml-2 px-3 py-1 text-sm text-gray-600 border border-gray-300 rounded hover:bg-gray-50"
-            onClick={() => setShowCalendarConfig(true)}
-            title="Configure working calendar"
-          >
-            📅 Calendar
-          </button>
-
-          {/* Convert Sheet button */}
-          {activeSheet && (
-            <button
-              className="ml-2 px-3 py-1 text-sm text-blue-600 border border-blue-300 rounded hover:bg-blue-50"
-              onClick={handleConvertSheet}
-              title="Convert current sheet to project plan"
-            >
-              ↑ Convert Sheet
-            </button>
-          )}
-
-          {/* Save to Sheet */}
-          <div className="relative">
-            <button
-              className="ml-2 px-3 py-1 text-sm text-gray-600 border border-gray-300 rounded hover:bg-gray-50"
-              onClick={handleSaveToSheet}
-              title="Project auto-saves on change. Click to force-sync to workbook."
-            >
-              ↓ Save
-            </button>
-            {saveConfirmation && (
-              <span
-                className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-xs text-green-600 whitespace-nowrap"
-                data-testid="save-confirmation"
+          {/* File / I/O dropdown */}
+          <ToolbarDropdown label="File">
+            {activeSheet && (
+              <button
+                className="w-full px-3 py-1.5 text-xs text-left hover:bg-gray-50"
+                onClick={handleConvertSheet}
               >
-                Saved!
-              </span>
+                ↑ Convert Sheet to Project
+              </button>
             )}
-          </div>
+            <button
+              className="w-full px-3 py-1.5 text-xs text-left hover:bg-gray-50"
+              onClick={handleSaveToSheet}
+            >
+              ↓ Save to Workbook
+            </button>
+            <div className="border-t border-gray-100 mt-1 pt-1">
+              <button
+                className="w-full px-3 py-1.5 text-xs text-left hover:bg-gray-50"
+                onClick={handleImportClick}
+                data-testid="import-project-btn"
+              >
+                📥 Import JSON
+              </button>
+              <button
+                className="w-full px-3 py-1.5 text-xs text-left hover:bg-gray-50"
+                onClick={handleExportProject}
+                data-testid="export-project-btn"
+              >
+                📤 Export JSON
+              </button>
+            </div>
+          </ToolbarDropdown>
 
-          {/* Import / Export */}
-          <button
-            className="ml-2 px-3 py-1 text-sm text-gray-600 border border-gray-300 rounded hover:bg-gray-50"
-            onClick={handleImportClick}
-            title="Import project from JSON file"
-            data-testid="import-project-btn"
-          >
-            Import JSON
-          </button>
-          <button
-            className="ml-2 px-3 py-1 text-sm text-gray-600 border border-gray-300 rounded hover:bg-gray-50"
-            onClick={handleExportProject}
-            title="Export project to JSON file"
-            data-testid="export-project-btn"
-          >
-            Export JSON
-          </button>
+          {/* Save confirmation (positioned relative to File dropdown) */}
+          {saveConfirmation && (
+            <span
+              className="text-xs text-green-600"
+              data-testid="save-confirmation"
+            >
+              Saved!
+            </span>
+          )}
 
           {/* Close button */}
           <button
-            className="ml-4 px-3 py-1 text-sm text-gray-600 hover:text-gray-800 border border-gray-200 rounded hover:bg-gray-50"
+            className="ml-2 px-3 py-1 text-sm text-gray-600 hover:text-gray-800 border border-gray-200 rounded hover:bg-gray-50"
             onClick={onClose}
           >
             Close
@@ -970,26 +965,19 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
           {viewMode === 'accounting' && (
             <AccountingDashboard
               project={project}
-              onEditSpend={(taskId) => {
-                if (taskId) {
-                  const existing = project.accounting?.spendEntries.find((e) => e.taskId === taskId);
-                  if (existing) {
-                    handleOpenActualsModal(existing);
-                  } else {
-                    // Create a new entry pre-filled with this task
-                    handleOpenActualsModal({
-                      id: `act-${Date.now()}`,
-                      taskId,
-                      date: new Date().toISOString().slice(0, 10),
-                      amount: 0,
-                      currency: project.accounting?.currency ?? 'USD',
-                      source: '',
-                      notes: '',
-                    });
+              onEditSpend={(entryId) => {
+                if (entryId) {
+                  const entry = project.accounting?.spendEntries.find((e) => e.id === entryId);
+                  if (entry) {
+                    handleOpenActualsModal(entry);
+                    return;
                   }
-                } else {
-                  handleOpenActualsModal(null);
                 }
+                // Empty entryId = create new entry
+                handleOpenActualsModal(null);
+              }}
+              onDeleteSpend={(entryId) => {
+                handleActualsDelete(entryId);
               }}
               onEditAllocation={(taskId) => {
                 // TODO: Open allocation editor modal
@@ -1005,6 +993,7 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
               project={project}
               onAddMaterial={handleAddMaterial}
               onEditMaterial={handleEditMaterial}
+              onDeleteMaterial={handleMaterialDelete}
               onAllocateMaterial={handleOpenAllocationModal}
               onConfig={handleOpenCapitalizationConfig}
             />

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, jest } from '@jest/globals';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { ResourceHeatmap } from './ResourceHeatmap';
 import type { Project } from '../types';
 import { createDefaultCalendar } from './calendar';
@@ -125,5 +126,48 @@ describe('ResourceHeatmap', () => {
     // May 2-3, 9-10 are weekends in 2026
     const weekendCells = document.querySelectorAll('.bg-gray-100.text-gray-400');
     expect(weekendCells.length).toBeGreaterThan(0);
+  });
+
+  // ─── Phase 1: Cell click interaction tests ─────────────────────────
+
+  it('calls onCellClick with resource and date when cell is clicked', () => {
+    const onCellClick = jest.fn();
+    const project = createMockProject();
+    render(<ResourceHeatmap project={project} onCellClick={onCellClick} />);
+
+    // Find a day cell (cursor-pointer class) and click it
+    const dayCells = document.querySelectorAll('.cursor-pointer');
+    expect(dayCells.length).toBeGreaterThan(0);
+
+    // Click the first cell (Developer 1, May 1)
+    fireEvent.click(dayCells[0]);
+    expect(onCellClick).toHaveBeenCalledWith('dev1', '2026-05-01');
+  });
+
+  it('does not call onCellClick when not provided', () => {
+    const project = createMockProject();
+    // Render without onCellClick — clicking should not throw
+    render(<ResourceHeatmap project={project} />);
+
+    const dayCells = document.querySelectorAll('.cursor-pointer');
+    expect(() => fireEvent.click(dayCells[0])).not.toThrow();
+  });
+
+  it('shows task tooltip on hover when tasks are assigned', () => {
+    const project = createMockProject();
+    render(<ResourceHeatmap project={project} />);
+
+    // Find cells for Developer 1 (first row)
+    const dayCells = document.querySelectorAll('.cursor-pointer');
+    // First cell is May 1 — Task 1 is assigned to dev1 from May 1-5
+    const firstCell = dayCells[0];
+
+    // Hover should show tooltip with task name
+    fireEvent.mouseEnter(firstCell);
+
+    // The legend area should show the hovered cell info
+    const legend = document.querySelector('.sticky.bottom-0');
+    expect(legend?.textContent).toContain('Developer 1');
+    expect(legend?.textContent).toContain('2026-05-01');
   });
 });

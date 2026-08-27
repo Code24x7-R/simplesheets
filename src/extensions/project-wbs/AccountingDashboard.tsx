@@ -23,13 +23,14 @@ import {
 
 interface AccountingDashboardProps {
   project: Project;
-  onEditSpend?: (taskId: string) => void;
+  onEditSpend?: (entryId: string) => void;
+  onDeleteSpend?: (entryId: string) => void;
   onEditAllocation?: (taskId: string) => void;
 }
 
 type AccountingTab = 'baseline' | 'allocation' | 'estimate' | 'actual' | 'changelog';
 
-export function AccountingDashboard({ project, onEditSpend, onEditAllocation }: AccountingDashboardProps) {
+export function AccountingDashboard({ project, onEditSpend, onDeleteSpend, onEditAllocation }: AccountingDashboardProps) {
   const [activeTab, setActiveTab] = useState<AccountingTab>('estimate');
 
   const accounting = useMemo(() => computeProjectAccounting(project), [project]);
@@ -121,7 +122,7 @@ export function AccountingDashboard({ project, onEditSpend, onEditAllocation }: 
           <AllocationTable accounting={accounting} currency={currency} onEdit={onEditAllocation} />
         )}
         {activeTab === 'estimate' && <EstimateTable accounting={accounting} currency={currency} />}
-        {activeTab === 'actual' && <ActualsTable accounting={accounting} currency={currency} onEdit={onEditSpend} taskNamesById={taskNamesById} />}
+        {activeTab === 'actual' && <ActualsTable accounting={accounting} currency={currency} onEdit={onEditSpend} onDelete={onDeleteSpend} taskNamesById={taskNamesById} />}
         {activeTab === 'changelog' && <ChangeLogTable accounting={accounting} currency={currency} />}
       </div>
 
@@ -337,11 +338,13 @@ function ActualsTable({
   accounting,
   currency,
   onEdit,
+  onDelete,
   taskNamesById,
 }: {
   accounting: ReturnType<typeof computeProjectAccounting>;
   currency: string;
-  onEdit?: (taskId: string) => void;
+  onEdit?: (entryId: string) => void;
+  onDelete?: (entryId: string) => void;
   taskNamesById: Map<string, string>;
 }) {
   const hasSpendEntries = accounting.spendEntries.length > 0;
@@ -388,14 +391,25 @@ function ActualsTable({
             <td className="px-3 py-2 text-gray-600">{entry.source}</td>
             <td className="px-3 py-2 text-gray-500">{entry.date}</td>
             <td className="px-3 py-2 text-center">
-              {onEdit && (
-                <button
-                  onClick={() => onEdit(entry.taskId)}
-                  className="text-blue-600 hover:text-blue-800 text-xs"
-                >
-                  Edit
-                </button>
-              )}
+              <div className="flex items-center justify-center gap-2">
+                {onEdit && (
+                  <button
+                    onClick={() => onEdit(entry.id)}
+                    className="text-blue-600 hover:text-blue-800 text-xs"
+                  >
+                    Edit
+                  </button>
+                )}
+                {onDelete && (
+                  <button
+                    onClick={() => onDelete(entry.id)}
+                    className="text-red-600 hover:text-red-800 text-xs"
+                    title="Delete spend entry"
+                  >
+                    Delete
+                  </button>
+                )}
+              </div>
             </td>
           </tr>
         ))}
