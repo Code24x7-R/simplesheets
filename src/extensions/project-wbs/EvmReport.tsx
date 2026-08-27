@@ -12,6 +12,7 @@
 
 import { useState, useMemo } from 'react';
 import type { Project } from '../types';
+import { formatCurrency } from '../../utils/currency';
 import {
   getRegisteredReports,
   calculateEvmMetrics,
@@ -204,14 +205,4 @@ function MetricRow({ metric }: { metric: EvmMetricRow }) {
   );
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function formatCurrency(value: number, currency: string): string {
-  const symbols: Record<string, string> = {
-    USD: '$', EUR: '\u20AC', GBP: '\u00A3', JPY: '\u00A5',
-    AUD: 'A$', CAD: 'C$', CHF: 'CHF ', CNY: '\u00A5',
-  };
-  const symbol = symbols[currency] ?? currency + ' ';
-  const sign = value < 0 ? '-' : '';
-  return `${sign}${symbol}${Math.abs(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-}

@@ -49,9 +49,10 @@ export function AccountingDashboard({ project, onEditSpend, onEditAllocation }: 
   }, [project.wbs]);
 
   // Project-level metrics
+  // Earned Value = Σ(baselineCost × progress%) from per-task accounting
   const totalEarnedValue = accounting.taskAccounting.reduce(
-    (sum, t) => sum + t.baselineCost * 0.5,
-    0, // Using 50% as placeholder since we don't have per-task progress in accounting
+    (sum, t) => sum + t.baselineCost * (t.progress / 100),
+    0,
   );
   const projectCPI = accounting.actualSpendTotal > 0
     ? totalEarnedValue / accounting.actualSpendTotal

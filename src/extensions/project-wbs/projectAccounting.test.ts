@@ -510,4 +510,33 @@ describe('computeProjectAccounting material integration', () => {
     const result = computeProjectAccounting(project);
     expect(result.materialCostTotal).toBe(0);
   });
+
+  it('includes material costs in task accounting baseline', () => {
+    const project = createProject({
+      wbs: [createTask({ id: 't1', name: 'Build', cost: 1000, progress: 50 })],
+      materials: [
+        {
+          id: 'mat-1', name: 'Steel', description: '', classification: 'consumable',
+          unit: 'kg', unitCost: 50, quantity: 10, currency: 'USD', vendor: null,
+          depreciationMethod: 'none', usefulLifeMonths: 0, salvageValue: 0,
+          acquisitionDate: null, billingPeriod: 'fixed', rentalRate: 0,
+          leaseStartDate: null, leaseEndDate: null, wastageRate: 0,
+          reorderPoint: 0, carryingCostPerUnit: 0, allocatedQuantity: 0,
+          consumedQuantity: 10, status: 'delivered',
+        },
+      ],
+      materialAllocations: [
+        { id: 'ma-1', materialId: 'mat-1', taskId: 't1', allocatedQuantity: 10,
+          consumedQuantity: 10, allocationDate: '2026-01-05', expectedReturnDate: null,
+          actualCost: 500, notes: '' },
+      ],
+    });
+
+    const result = computeProjectAccounting(project);
+    const taskAcct = result.taskAccounting.find((t) => t.taskId === 't1');
+    expect(taskAcct).toBeDefined();
+    // Material cost should be included in baseline
+    expect(taskAcct!.materialCost).toBeGreaterThan(0);
+    expect(taskAcct!.baselineCost).toBeGreaterThan(1000); // original + material
+  });
 });

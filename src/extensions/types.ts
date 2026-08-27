@@ -207,9 +207,11 @@ export interface Project {
 export interface TaskAccounting {
   taskId: string;
   taskName: string;
+  progress: number;            // Task completion percentage (0-100)
   // Cost fields
-  baselineCost: number;        // Original approved estimate
+  baselineCost: number;        // Original approved estimate (resource + material)
   allocatedBudget: number;     // Approved budget (may differ from baseline)
+  materialCost: number;        // Material costs allocated to this task (from materialEngine)
   currentEstimate: number;     // EAC — rolling forecast
   actualSpend: number;         // Real costs to date
   etc: number;                 // Estimate to Complete

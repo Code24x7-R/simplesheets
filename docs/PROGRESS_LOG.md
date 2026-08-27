@@ -6,6 +6,26 @@
 
 ---
 
+### 2026-08-27 [FEATURE] Project/WBS Extension — Normalization & Data Flow Repair
+- **What**: Comprehensive review and normalization of the Project/WBS extension (`src/extensions/project-wbs/`). Identified and fixed **3 bugs**, removed **5 duplications**, and wired **3 missing data flows** between views and sheets. See `docs/PROJECT_WBS_NORMALIZATION_PLAN.md` for the full analysis.
+- **Bug Fixes**:
+  - **RiskMatrix wrong thresholds** (`RiskMatrix.tsx`): Removed local `getRiskLevel()` with incorrect thresholds (`≥15/≥10/≥5`); now imports canonical version from `risks.ts` (`≥20/≥12/≥6`). Risk levels are now consistent across all views.
+  - **EVM simulated actual cost** (`evmEngine.ts`): Replaced `calculateEvmMetrics` simulated AC (`bac × progress × 1.1`) with real spend entries from `project.accounting.spendEntries`, filtered by `asOfDate`. EVM now reflects actual costs.
+  - **Accounting EV placeholder** (`AccountingDashboard.tsx`): Replaced hardcoded `baselineCost × 0.5` earned value with real `baselineCost × (progress/100)` using per-task progress.
+- **Deduplication**:
+  - **`TaskStatus` type** (`dependencyWorkflows.ts`): Removed local duplicate; imports from `../types`.
+  - **Currency formatting** (`MaterialDashboard.tsx`, `EvmReport.tsx`): Removed local `formatCurrency()` from both; now use shared `src/utils/currency.ts`.
+  - **Date helpers** (`calendar.ts`, `ResourceHeatmap.tsx`, `GanttChart.tsx`): Exported `toISO()` from `calendar.ts`; removed local `isoToDate`/`dateToIso`/`getDayOfWeek`/`isWeekend` from ResourceHeatmap and `toISODate` from GanttChart. All now use canonical calendar utilities.
+  - **Dead re-export** (`sheetToProject.ts`): Removed unused `export { resourceToRow, riskToRow } from './projectConverter'`.
+- **Missing Data Flows**:
+  - **Resource cost → Task cost** (`treeOps.ts`, `sheetToProject.ts`, `ProjectView.tsx`): Added `computeTaskCost()` and `syncResourceCosts()` helpers. Tasks with assigned resources now auto-compute `cost = costRate × duration`. Wired into `projectModelToProject` (sheet import), `handleTaskSave`, and `handleSaveDependencies`.
+  - **Risk → Task persistence** (`types.ts`, `projectConverter.ts`, `sheetToProject.ts`, `RiskEditorModal.tsx`, `ProjectView.tsx`): Added `taskId: string | null` to `RiskRow`. RiskEditorModal now has a "Linked Task" dropdown. `handleRiskSave` syncs `task.riskIds` via `linkRiskToTask`/`unlinkRiskToTask`.
+  - **Material cost → Task accounting** (`types.ts`, `projectAccounting.ts`): Added `materialCost` field to `TaskAccounting`. `computeProjectAccounting` folds per-task material costs (from `calculateMaterialCostSummary`) into each task's baseline/allocated/estimate.
+- **Type Changes**: `TaskAccounting` now requires `progress: number` and `materialCost: number`. `RiskRow` now requires `taskId: string | null`. All constructors updated.
+- **Tests**: +12 tests (risk level canonical, EVM real AC + date filtering, resource cost sync ×4, risk taskId persistence, material→accounting integration, `riskToRow` taskId, date helper usage). Total: 746 tests across 31 suites.
+- **Files modified**: `RiskMatrix.tsx`, `evmEngine.ts`, `AccountingDashboard.tsx`, `dependencyWorkflows.ts`, `MaterialDashboard.tsx`, `EvmReport.tsx`, `calendar.ts`, `ResourceHeatmap.tsx`, `GanttChart.tsx`, `sheetToProject.ts`, `treeOps.ts`, `types.ts`, `projectConverter.ts`, `RiskEditorModal.tsx`, `ProjectView.tsx`, `projectAccounting.ts` (+ test files).
+- **Results**: 746 tests pass, lint clean, type-check clean, build succeeds.
+
 ### 2026-08-27 [FEATURE] Named Ranges — Insert menu item + formula highlight
 - **What**: Added a "Named Ranges…" item to the Insert menu (with Tag icon) so the dialog is reachable from both the toolbar and the menu bar. Also extended formula range highlighting to resolve named range references — when editing a formula that references a named range (e.g. `=SUM(SalesData)`), the cells the name points to are highlighted on the grid in the same manner as regular A1 range references.
 - **Changes**:

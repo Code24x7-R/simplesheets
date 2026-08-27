@@ -128,11 +128,26 @@ export interface EvmChartDataPoint {
 // ─── Core EVM Calculations ───────────────────────────────────────────────────
 
 /**
+ * Build a map of taskId → actual cost from spend entries,
+ * filtered to entries on or before asOfDate.
+ */
+function buildActualCostMap(project: Project, asOfDate: string): Map<string, number> {
+  const map = new Map<string, number>();
+  for (const entry of project.accounting?.spendEntries ?? []) {
+    if (entry.date <= asOfDate) {
+      map.set(entry.taskId, (map.get(entry.taskId) ?? 0) + entry.amount);
+    }
+  }
+  return map;
+}
+
+/**
  * Calculate comprehensive EVM metrics for a project at a given date.
  * This is the primary function that feeds all EVM reports.
  */
 export function calculateEvmMetrics(project: Project, asOfDate: string = new Date().toISOString().slice(0, 10)): EvmMetrics {
   const allTasks = getAllTasks(project.wbs);
+  const actualCostMap = buildActualCostMap(project, asOfDate);
 
   let totalPV = 0;
   let totalEV = 0;
@@ -145,9 +160,8 @@ export function calculateEvmMetrics(project: Project, asOfDate: string = new Dat
     const bac = task.cost;
     const ev = earnedValue(bac, task.progress);
     const pv = plannedValue(bac, task.startDate, task.endDate, asOfDate);
-    // Actual cost — simplified: use task.cost as placeholder for spent
-    // In production, this would come from ActualSpendEntry records
-    const ac = task.progress > 0 ? bac * (task.progress / 100) * 1.1 : 0; // Simulated: 10% over
+    // Actual cost from real spend entries (falls back to 0 if none recorded)
+    const ac = actualCostMap.get(task.id) ?? 0;
 
     totalPV += pv;
     totalEV += ev;
@@ -196,12 +210,14 @@ export function calculateTaskEvmBreakdown(
   asOfDate: string = new Date().toISOString().slice(0, 10),
 ): TaskEvmBreakdown[] {
   const allTasks = getAllTasks(project.wbs);
+  const actualCostMap = buildActualCostMap(project, asOfDate);
 
   return allTasks.map((task) => {
     const bac = task.cost;
     const ev = earnedValue(bac, task.progress);
     const pv = plannedValue(bac, task.startDate, task.endDate, asOfDate);
-    const ac = task.progress > 0 ? bac * (task.progress / 100) * 1.1 : 0;
+    // Actual cost from real spend entries (falls back to 0 if none recorded)
+    const ac = actualCostMap.get(task.id) ?? 0;
     const cv = costVariance(ev, ac);
     const sv = scheduleVariance(ev, pv);
     const cpi = costPerformanceIndex(ev, ac);

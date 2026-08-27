@@ -227,6 +227,7 @@ export function computeTaskAccounting(
   return {
     taskId: task.id,
     taskName: task.name,
+    progress: task.progress,
     // Cost
     baselineCost: task.cost,
     allocatedBudget: task.cost, // Default allocation = baseline
@@ -234,6 +235,7 @@ export function computeTaskAccounting(
     actualSpend,
     etc,
     costVariance: eac - task.cost,
+    materialCost: 0,
     // Duration
     baselineDuration,
     currentDuration,
@@ -263,12 +265,28 @@ export function computeProjectAccounting(project: Project): ProjectAccounting {
   const resourceMap = new Map(project.resources.map((r) => [r.id, r]));
   const spendEntries = project.accounting?.spendEntries ?? [];
 
+  // Compute per-task material costs from allocations/consumptions
+  const materialSummary = calculateMaterialCostSummary(project);
+  const materialCostByTask = new Map<string, number>();
+  for (const tc of materialSummary.taskCosts) {
+    materialCostByTask.set(tc.taskId, tc.totalMaterialCost);
+  }
+
   const taskAccounting: TaskAccounting[] = allTasks.map((task) => {
     const resource = task.responsibleResourceId ? resourceMap.get(task.responsibleResourceId) : null;
     const resourceCostRate = resource?.costRate ?? 0;
     // Filter spend entries for this task
     const entries = spendEntries.filter((e) => e.taskId === task.id);
-    return computeTaskAccounting(task, entries, resourceCostRate);
+    const accounting = computeTaskAccounting(task, entries, resourceCostRate);
+    // Add material cost to baseline and current estimate
+    const matCost = materialCostByTask.get(task.id) ?? 0;
+    if (matCost > 0) {
+      accounting.materialCost = matCost;
+      accounting.baselineCost += matCost;
+      accounting.allocatedBudget += matCost;
+      accounting.currentEstimate += matCost;
+    }
+    return accounting;
   });
 
   const baselineTotal = taskAccounting.reduce((sum, t) => sum + t.baselineCost, 0);
@@ -292,8 +310,7 @@ export function computeProjectAccounting(project: Project): ProjectAccounting {
     }
   }
 
-  // Material cost integration
-  const materialSummary = calculateMaterialCostSummary(project);
+  // Material cost integration (reuse materialSummary computed above for per-task costs)
   const materialCostTotal = materialSummary.totalMaterialCost;
 
   return {

@@ -399,6 +399,7 @@ export interface RiskRow {
   impact: number;
   status: string;
   ownerId: string | null;
+  taskId: string | null;
   mitigationPlan: string;
   notes: string;
 }

@@ -10,7 +10,7 @@
 
 import { useMemo, useState, useCallback } from 'react';
 import type { Project, Resource, WBSTask } from '../types';
-import { isWorkingDay } from './calendar';
+import { getDayOfWeek, isWeekend, isWorkingDay, toISO } from './calendar';
 
 interface ResourceHeatmapProps {
   project: Project;
@@ -24,11 +24,6 @@ interface ResourceAllocation {
 // Helper to convert ISO date string to Date object
 function isoToDate(iso: string): Date {
   return new Date(iso + 'T00:00:00');
-}
-
-// Helper to convert Date object to ISO date string
-function dateToIso(date: Date): string {
-  return date.toISOString().slice(0, 10);
 }
 
 // Number of days to show at once
@@ -65,7 +60,7 @@ export function ResourceHeatmap({ project }: ResourceHeatmapProps) {
     const current = new Date(startDate);
 
     for (let i = 0; i < DAYS_PER_VIEW; i++) {
-      dates.push(dateToIso(current));
+      dates.push(toISO(current));
       current.setDate(current.getDate() + 1);
     }
 
@@ -99,13 +94,13 @@ export function ResourceHeatmap({ project }: ResourceHeatmapProps) {
   const navigatePrevious = useCallback(() => {
     const newDate = isoToDate(viewStartDate);
     newDate.setDate(newDate.getDate() - DAYS_PER_VIEW);
-    setViewStartDate(dateToIso(newDate));
+    setViewStartDate(toISO(newDate));
   }, [viewStartDate]);
 
   const navigateNext = useCallback(() => {
     const newDate = isoToDate(viewStartDate);
     newDate.setDate(newDate.getDate() + DAYS_PER_VIEW);
-    setViewStartDate(dateToIso(newDate));
+    setViewStartDate(toISO(newDate));
   }, [viewStartDate]);
 
   const navigateToday = useCallback(() => {
@@ -115,7 +110,7 @@ export function ResourceHeatmap({ project }: ResourceHeatmapProps) {
   const jumpToMonth = useCallback((months: number) => {
     const newDate = isoToDate(viewStartDate);
     newDate.setMonth(newDate.getMonth() + months);
-    setViewStartDate(dateToIso(newDate));
+    setViewStartDate(toISO(newDate));
   }, [viewStartDate]);
 
   // Get color based on allocation percentage
@@ -126,17 +121,6 @@ export function ResourceHeatmap({ project }: ResourceHeatmapProps) {
     if (percentage <= 75) return 'bg-yellow-400';
     if (percentage <= 100) return 'bg-orange-400';
     return 'bg-red-500'; // Over-allocated
-  }
-
-  // Get day of week for a date string (0=Sun, 6=Sat)
-  function getDayOfWeek(dateStr: string): number {
-    return isoToDate(dateStr).getDay();
-  }
-
-  // Check if date is a weekend
-  function isWeekend(dateStr: string): boolean {
-    const day = getDayOfWeek(dateStr);
-    return day === 0 || day === 6;
   }
 
   // Get month labels for the header

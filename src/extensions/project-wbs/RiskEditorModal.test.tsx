@@ -2,11 +2,21 @@
 // Copyright (c) 2026 Richard Robertson
 import { render, screen, fireEvent } from '@testing-library/react';
 import { RiskEditorModal } from './RiskEditorModal';
-import type { Resource, Risk } from '../types';
+import type { Resource, Risk, WBSTask } from '../types';
 
 describe('RiskEditorModal', () => {
   const resources: Resource[] = [
     { id: 'r1', name: 'Alice', role: 'Dev', costRate: 100, costCurrency: 'USD', availability: 100, color: '#3B82F6' },
+  ];
+
+  const allTasks: WBSTask[] = [
+    {
+      id: 'task-1', name: 'Design', description: '', level: 0, parentId: null, children: [],
+      startDate: '2025-01-01', endDate: '2025-01-10', duration: 5, progress: 0,
+      effort: 0, effortUnit: 'hours', cost: 0, costCurrency: 'USD',
+      responsibleResourceId: null, dependencies: [], isMilestone: false, isSummary: false,
+      collapsed: false, color: '#3B82F6', riskIds: [], customFields: {},
+    },
   ];
 
   const existingRisk: Risk = {
@@ -38,6 +48,7 @@ describe('RiskEditorModal', () => {
       <RiskEditorModal
         risk={null}
         resources={resources}
+        allTasks={allTasks}
         onClose={jest.fn()}
         onSave={jest.fn()}
       />,
@@ -51,6 +62,7 @@ describe('RiskEditorModal', () => {
       <RiskEditorModal
         risk={existingRisk}
         resources={resources}
+        allTasks={allTasks}
         onClose={jest.fn()}
         onSave={jest.fn()}
       />,
@@ -63,6 +75,7 @@ describe('RiskEditorModal', () => {
       <RiskEditorModal
         risk={null}
         resources={resources}
+        allTasks={allTasks}
         onClose={jest.fn()}
         onSave={jest.fn()}
       />,
@@ -78,6 +91,7 @@ describe('RiskEditorModal', () => {
       <RiskEditorModal
         risk={null}
         resources={resources}
+        allTasks={allTasks}
         onClose={jest.fn()}
         onSave={onSave}
       />,
@@ -98,6 +112,7 @@ describe('RiskEditorModal', () => {
       <RiskEditorModal
         risk={null}
         resources={resources}
+        allTasks={allTasks}
         onClose={onClose}
         onSave={jest.fn()}
       />,
@@ -112,6 +127,7 @@ describe('RiskEditorModal', () => {
       <RiskEditorModal
         risk={existingRisk}
         resources={resources}
+        allTasks={allTasks}
         onClose={jest.fn()}
         onSave={jest.fn()}
         onDelete={onDelete}
@@ -126,6 +142,7 @@ describe('RiskEditorModal', () => {
       <RiskEditorModal
         risk={null}
         resources={resources}
+        allTasks={allTasks}
         onClose={jest.fn()}
         onSave={jest.fn()}
         onDelete={jest.fn()}
@@ -139,6 +156,7 @@ describe('RiskEditorModal', () => {
       <RiskEditorModal
         risk={null}
         resources={resources}
+        allTasks={allTasks}
         onClose={jest.fn()}
         onSave={jest.fn()}
       />,
@@ -153,6 +171,7 @@ describe('RiskEditorModal', () => {
       <RiskEditorModal
         risk={null}
         resources={resources}
+        allTasks={allTasks}
         onClose={jest.fn()}
         onSave={jest.fn()}
       />,
@@ -167,6 +186,7 @@ describe('RiskEditorModal', () => {
       <RiskEditorModal
         risk={null}
         resources={resources}
+        allTasks={allTasks}
         onClose={jest.fn()}
         onSave={jest.fn()}
       />,
@@ -180,6 +200,7 @@ describe('RiskEditorModal', () => {
       <RiskEditorModal
         risk={null}
         resources={resources}
+        allTasks={allTasks}
         onClose={jest.fn()}
         onSave={jest.fn()}
       />,

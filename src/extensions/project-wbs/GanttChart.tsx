@@ -17,7 +17,7 @@
 import React, { useMemo, useState, useCallback } from 'react';
 import type { Project, WBSTask, GanttZoom, RiskLevel } from '../types';
 import { flattenToRows } from './treeOps';
-import { formatDate } from './calendar';
+import { formatDate, toISO } from './calendar';
 import { rollUpRiskExposure } from './rollups';
 import { getRiskLevel } from './risks';
 
@@ -491,7 +491,7 @@ function computeTimelineTicks(projectStart: string, totalDays: number, dayWidth:
     for (let i = 0; i < totalDays; i++) {
       const date = new Date(start);
       date.setDate(date.getDate() + i);
-      const iso = toISODate(date);
+      const iso = toISO(date);
       const isWeekend = date.getDay() === 0 || date.getDay() === 6;
       ticks.push({
         date: iso,
@@ -504,7 +504,7 @@ function computeTimelineTicks(projectStart: string, totalDays: number, dayWidth:
     for (let i = 0; i < totalDays; i += 7) {
       const date = new Date(start);
       date.setDate(date.getDate() + i);
-      const iso = toISODate(date);
+      const iso = toISO(date);
       ticks.push({
         date: iso,
         x: i * dayWidth,
@@ -517,7 +517,7 @@ function computeTimelineTicks(projectStart: string, totalDays: number, dayWidth:
     for (let monthOffset = 0; monthOffset * 30 < totalDays; monthOffset++) {
       const current = new Date(start);
       current.setMonth(current.getMonth() + monthOffset);
-      const iso = toISODate(current);
+      const iso = toISO(current);
       const dayOffset = getDaysBetween(projectStart, iso);
       ticks.push({
         date: iso,
@@ -622,6 +622,4 @@ function computeTodayPosition(projectStart: string, today: string, dayWidth: num
   return getDaysBetween(projectStart, today) * dayWidth;
 }
 
-function toISODate(date: Date): string {
-  return date.toISOString().slice(0, 10);
-}
+

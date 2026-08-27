@@ -38,8 +38,8 @@ import { generateStatusNotifications } from './dependencyWorkflows';
 import type { ActualSpendEntry, MaterialAllocation, MaterialConsumption } from '../types';
 import { sheetToProject, projectModelToProject } from './sheetToProject';
 import { projectToModel, createBlankProject, exportProjectToJSON, importProjectFromJSON } from './projectConverter';
-import { addTask, removeTask, updateTask, toggleCollapsed, findTask, getAllTasks, addResource, updateResource, removeResource } from './treeOps';
-import { addRisk, updateRisk, removeRisk, getRiskSummary } from './risks';
+import { addTask, removeTask, updateTask, toggleCollapsed, findTask, getAllTasks, addResource, updateResource, removeResource, syncResourceCosts } from './treeOps';
+import { addRisk, updateRisk, removeRisk, getRiskSummary, linkRiskToTask, unlinkRiskFromTask } from './risks';
 import { recomputeRollups } from './rollups';
 import { autoScheduleSuccessors, updateTaskStatuses } from './dependencyWorkflows';
 import { getCriticalPath } from './dependencies';
@@ -212,6 +212,8 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
       }
       // Recompute rollups for summary tasks
       next = { ...next, wbs: recomputeRollups(next.wbs, next.risks) };
+      // Sync resource cost rates into task cost fields
+      next = { ...next, wbs: syncResourceCosts(next.wbs, next.resources) };
       return next;
     });
     setTaskModal({ open: false, task: null, parentId: null, isChild: false });
@@ -290,6 +292,8 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
 
       // Recompute rollups for summary tasks
       next = { ...next, wbs: recomputeRollups(next.wbs, next.risks) };
+      // Sync resource cost rates into task cost fields
+      next = { ...next, wbs: syncResourceCosts(next.wbs, next.resources) };
 
       return next;
     });
@@ -374,10 +378,21 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
       if (riskModal.risk) {
         // Edit existing - pass the full risk object as changes
         next = updateRisk(prev, riskModal.risk.id, risk);
+        // Sync task.riskIds if the linked task changed
+        const oldTaskId = riskModal.risk.taskId;
+        const newTaskId = risk.taskId;
+        if (oldTaskId !== newTaskId) {
+          if (oldTaskId) next = unlinkRiskFromTask(next, risk.id);
+          if (newTaskId) next = linkRiskToTask(next, risk.id, newTaskId);
+        }
       } else {
         // Add new
         const newRisk = { ...risk, projectId: prev.id };
         next = addRisk(prev, newRisk);
+        // Link to task if specified
+        if (newRisk.taskId) {
+          next = linkRiskToTask(next, newRisk.id, newRisk.taskId);
+        }
       }
       return next;
     });
@@ -1015,6 +1030,7 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
         <RiskEditorModal
           risk={riskModal.risk}
           resources={project.resources}
+          allTasks={allTasks}
           onClose={() => setRiskModal({ open: false, risk: null })}
           onSave={handleRiskSave}
           onDelete={riskModal.risk ? () => handleRiskDelete(riskModal.risk!.id) : undefined}

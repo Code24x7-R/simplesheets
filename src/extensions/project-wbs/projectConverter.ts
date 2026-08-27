@@ -85,6 +85,7 @@ export function riskToRow(risk: Risk): RiskRow {
     impact: risk.impact,
     status: risk.status,
     ownerId: risk.ownerId,
+    taskId: risk.taskId,
     mitigationPlan: risk.mitigationPlan,
     notes: risk.description,
   };

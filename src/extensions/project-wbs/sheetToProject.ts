@@ -15,7 +15,7 @@ import type { Sheet, Workbook, ColumnMapping, ProjectModel, TaskRow, RiskRow, Re
 import { colToLetter } from '../../types';
 import type { Project, WBSTask, Resource, Material } from '../types';
 import { getTemplateById } from './templates/index';
-import { getAllTasks } from './treeOps';
+import { getAllTasks, syncResourceCosts } from './treeOps';
 import { getDefaultCurrency, getCurrencyFormatPattern } from '../../utils/currency';
 import { projectToModel } from './projectConverter';
 
@@ -378,6 +378,7 @@ function parseRiskRow(sheet: Sheet, row: number): RiskRow | null {
     impact: parseInt(getCellStringValue(sheet, row, 3)) || 1,
     status: getCellStringValue(sheet, row, 4) || 'identified',
     ownerId: getCellStringValue(sheet, row, 5) || null,
+    taskId: null,
     mitigationPlan: getCellStringValue(sheet, row, 6),
     notes: getCellStringValue(sheet, row, 7),
   };
@@ -750,6 +751,10 @@ export function projectModelToProject(model: ProjectModel): Project {
   // Convert resource rows to runtime resources
   const resources: Resource[] = model.resources.map((r) => rowToResource(r));
 
+  // Sync resource cost rates into task cost fields
+  // (task.cost = resource.costRate × duration for tasks with assigned resources)
+  const costSyncedRoots = syncResourceCosts(roots, resources);
+
   // Convert material rows to runtime materials
   const materials: Material[] = (model.materials ?? []).map((m) => ({
     id: m.id,
@@ -802,7 +807,7 @@ export function projectModelToProject(model: ProjectModel): Project {
     },
     resources,
     risks,
-    wbs: roots,
+    wbs: costSyncedRoots,
     materials,
     accounting: {
       baselineTotal: 0,
@@ -1206,7 +1211,7 @@ export function rowToRisk(row: RiskRow) {
   return {
     id: row.id,
     projectId: '',
-    taskId: null,
+    taskId: row.taskId ?? null,
     title: row.title,
     description: row.notes,
     category: row.category as import('../types').RiskCategory,
@@ -1227,10 +1232,6 @@ export function rowToRisk(row: RiskRow) {
     customFields: {},
   };
 }
-
-// ─── Re-exports from projectConverter (canonical location) ─────────────────
-
-export { resourceToRow, riskToRow } from './projectConverter';
 
 // ─── Utility Functions ──────────────────────────────────────────────────────
 
@@ -1556,6 +1557,7 @@ export function createSheetFromTemplate(templateId: string, projectName?: string
       impact: r.impact,
       status: r.status,
       ownerId: r.ownerId,
+      taskId: r.taskId,
       mitigationPlan: r.mitigationPlan,
       notes: r.description,
     })),

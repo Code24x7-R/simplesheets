@@ -28,6 +28,8 @@ import {
   validateTree,
   countTasks,
   getTreeDepth,
+  syncResourceCosts,
+  computeTaskCost,
 } from './treeOps';
 import type { WBSTask, Resource } from '../types';
 
@@ -538,6 +540,83 @@ describe('treeOps', () => {
     it('handles non-sequential IDs', () => {
       const r5: Resource = { id: 'r5', name: 'A', role: '', costRate: 0, costCurrency: 'USD', availability: 100, color: '#3B82F6' };
       expect(generateResourceId([r5])).toBe('r6');
+    });
+  });
+
+  describe('computeTaskCost', () => {
+    const resourceMap = new Map<string, Resource>([
+      ['r1', { id: 'r1', name: 'Alice', role: 'Dev', costRate: 100, costCurrency: 'USD', availability: 100, color: '#3B82F6' }],
+    ]);
+
+    it('returns 0 when no resource assigned', () => {
+      const t = task('t1');
+      t.responsibleResourceId = null;
+      expect(computeTaskCost(t, resourceMap)).toBe(0);
+    });
+
+    it('returns 0 when resource not found', () => {
+      const t = task('t1');
+      t.responsibleResourceId = 'nonexistent';
+      expect(computeTaskCost(t, resourceMap)).toBe(0);
+    });
+
+    it('computes cost as rate × duration', () => {
+      const t = task('t1');
+      t.responsibleResourceId = 'r1';
+      t.duration = 5;
+      // 100 × 5 = 500
+      expect(computeTaskCost(t, resourceMap)).toBe(500);
+    });
+
+    it('uses minimum duration of 1', () => {
+      const t = task('t1');
+      t.responsibleResourceId = 'r1';
+      t.duration = 0;
+      expect(computeTaskCost(t, resourceMap)).toBe(100);
+    });
+  });
+
+  describe('syncResourceCosts', () => {
+    const resources: Resource[] = [
+      { id: 'r1', name: 'Alice', role: 'Dev', costRate: 100, costCurrency: 'USD', availability: 100, color: '#3B82F6' },
+      { id: 'r2', name: 'Bob', role: 'PM', costRate: 150, costCurrency: 'USD', availability: 100, color: '#10B981' },
+    ];
+
+    it('sets cost for tasks with assigned resources', () => {
+      const t1 = task('t1');
+      t1.responsibleResourceId = 'r1';
+      t1.duration = 5;
+      const result = syncResourceCosts([t1], resources);
+      expect(result[0].cost).toBe(500);
+    });
+
+    it('leaves cost at 0 for tasks without resources', () => {
+      const t1 = task('t1');
+      t1.responsibleResourceId = null;
+      const result = syncResourceCosts([t1], resources);
+      expect(result[0].cost).toBe(0);
+    });
+
+    it('syncs costs recursively through children', () => {
+      const child = task('t2', 't1', 1);
+      child.responsibleResourceId = 'r2';
+      child.duration = 3;
+      const parent = task('t1', null, 0, [child]);
+      parent.responsibleResourceId = 'r1';
+      parent.duration = 5;
+      const result = syncResourceCosts([parent], resources);
+      expect(result[0].cost).toBe(500);
+      expect(result[0].children[0].cost).toBe(450);
+    });
+
+    it('does not mutate the original tree', () => {
+      const t1 = task('t1');
+      t1.responsibleResourceId = 'r1';
+      t1.duration = 5;
+      t1.cost = 0;
+      const original = [{ ...t1 }];
+      syncResourceCosts(original, resources);
+      expect(original[0].cost).toBe(0);
     });
   });
 });

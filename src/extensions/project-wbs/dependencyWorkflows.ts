@@ -14,10 +14,6 @@ import type { Project, WBSTask } from '../types';
 import { topologicalSort } from './dependencies';
 import { addWorkingDays } from './calendar';
 
-// ─── Task Status ───────────────────────────────────────────────────────────
-
-export type TaskStatus = 'not_started' | 'waiting' | 'ready' | 'in_progress' | 'done' | 'on_hold';
-
 /**
  * Check if a task is blocked by incomplete predecessors.
  */

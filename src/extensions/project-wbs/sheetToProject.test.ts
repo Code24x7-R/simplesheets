@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
-import { detectColumnMapping, sheetToProject, projectModelToProject, projectModelToSheetCells, createProjectSheet, createSheetFromTemplate, getDefaultColumnMapping, PROJECT_SHEET_HEADERS, resourceToRow, rowToResource, riskToRow, rowToRisk } from './sheetToProject';
+import { detectColumnMapping, sheetToProject, projectModelToProject, projectModelToSheetCells, createProjectSheet, createSheetFromTemplate, getDefaultColumnMapping, PROJECT_SHEET_HEADERS, rowToResource, rowToRisk } from './sheetToProject';
+import { resourceToRow, riskToRow } from './projectConverter';
 import type { Resource, Risk } from '../types';
 import type { Sheet, ColumnMapping, ProjectModel } from '../../types';
 
@@ -322,7 +323,7 @@ describe('sheetToProject', () => {
         endDate: '2025-01-31',
         tasks: [],
         risks: [
-          { id: 'r1', title: 'Server down', category: 'technical', probability: 4, impact: 5, status: 'identified', ownerId: null, mitigationPlan: 'Add redundancy', notes: '' },
+          { id: 'r1', title: 'Server down', category: 'technical', probability: 4, impact: 5, status: 'identified', ownerId: null, taskId: null, mitigationPlan: 'Add redundancy', notes: '' },
         ],
         resources: [],
             materials: [],
@@ -620,6 +621,35 @@ describe('sheetToProject', () => {
       expect(row.category).toBe('scope');
       expect(row.probability).toBe(3);
       expect(row.notes).toBe('Requirements may expand');
+      expect(row.taskId).toBeNull();
+    });
+
+    it('preserves taskId when converting Risk to RiskRow', () => {
+      const riskWithTask: Risk = {
+        id: 'risk-2',
+        projectId: 'proj-1',
+        taskId: 'task-1',
+        title: 'Data loss',
+        description: 'Database corruption',
+        category: 'technical',
+        probability: 2,
+        impact: 5,
+        riskScore: 10,
+        status: 'identified',
+        mitigationPlan: 'Backups',
+        contingencyPlan: '',
+        mitigationCost: 0,
+        ownerId: null,
+        identifiedDate: '2025-01-01',
+        reviewDate: '',
+        triggerCondition: '',
+        residualProbability: 1,
+        residualImpact: 4,
+        residualRiskScore: 4,
+        customFields: {},
+      };
+      const row = riskToRow(riskWithTask);
+      expect(row.taskId).toBe('task-1');
     });
   });
 
@@ -633,6 +663,7 @@ describe('sheetToProject', () => {
         impact: 4,
         status: 'identified',
         ownerId: null,
+        taskId: null,
         mitigationPlan: 'Regular reviews',
         notes: 'Requirements may expand',
       };
@@ -672,7 +703,7 @@ describe('sheetToProject', () => {
           { id: 't1', name: 'Task 1', startDate: '2025-01-01', endDate: '2025-01-05', duration: 5, parentId: null, dependencies: [], progress: 0, resourceId: null, isMilestone: false, color: '#3B82F6', notes: '' },
         ],
         risks: [
-          { id: 'r1', title: 'Scope creep', category: 'scope', probability: 3, impact: 4, status: 'identified', ownerId: null, mitigationPlan: 'Reviews', notes: '' },
+          { id: 'r1', title: 'Scope creep', category: 'scope', probability: 3, impact: 4, status: 'identified', ownerId: null, taskId: null, mitigationPlan: 'Reviews', notes: '' },
         ],
         resources: [],
             materials: [],

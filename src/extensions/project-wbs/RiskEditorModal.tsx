@@ -9,12 +9,13 @@
  */
 
 import { useState, useEffect } from 'react';
-import type { Risk, RiskStatus, RiskCategory, Resource } from '../types';
+import type { Risk, RiskStatus, RiskCategory, Resource, WBSTask } from '../types';
 import { NumericInput } from '../../components/NumericInput';
 
 interface RiskEditorModalProps {
   risk: Risk | null; // null = create mode
   resources: Resource[];
+  allTasks: WBSTask[];
   onClose: () => void;
   onSave: (risk: Risk) => void;
   onDelete?: (riskId: string) => void;
@@ -47,6 +48,7 @@ function computeScore(probability: number, impact: number): number {
 export function RiskEditorModal({
   risk,
   resources,
+  allTasks,
   onClose,
   onSave,
   onDelete,
@@ -366,8 +368,23 @@ export function RiskEditorModal({
             </div>
           </div>
 
-          {/* Owner + Dates Row */}
-          <div className="grid grid-cols-3 gap-4">
+          {/* Linked Task + Owner Row */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Linked Task</label>
+              <select
+                value={form.taskId ?? ''}
+                onChange={(e) => updateField('taskId', e.target.value || null)}
+                className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+              >
+                <option value="">Project-level</option>
+                {allTasks.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
+                ))}
+              </select>
+            </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Owner</label>
               <select
@@ -383,6 +400,10 @@ export function RiskEditorModal({
                 ))}
               </select>
             </div>
+          </div>
+
+          {/* Dates Row */}
+          <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Identified Date</label>
               <input

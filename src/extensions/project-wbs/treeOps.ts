@@ -540,3 +540,36 @@ export function generateResourceId(resources: Resource[]): string {
   }, 0);
   return `r${maxNum + 1}`;
 }
+
+// ─── Resource Cost Sync ───────────────────────────────────────────────────
+
+/**
+ * Compute the cost of a task based on its assigned resource's cost rate.
+ * Cost = resource costRate × task duration (working days).
+ * Returns 0 if no resource is assigned or rate is 0.
+ */
+export function computeTaskCost(task: WBSTask, resourceMap: Map<string, Resource>): number {
+  if (!task.responsibleResourceId) return 0;
+  const resource = resourceMap.get(task.responsibleResourceId);
+  if (!resource || resource.costRate <= 0) return 0;
+  return resource.costRate * Math.max(task.duration, 1);
+}
+
+/**
+ * Sync resource cost rates into task cost fields.
+ * For each task with an assigned resource, sets task.cost = resource.costRate × duration.
+ * Tasks without a resource assignment (or with costRate 0) are left unchanged.
+ * Returns a new tree with updated costs.
+ */
+export function syncResourceCosts(tree: WBSTask[], resources: Resource[]): WBSTask[] {
+  const resourceMap = new Map(resources.map((r) => [r.id, r]));
+  function sync(task: WBSTask): WBSTask {
+    const cost = computeTaskCost(task, resourceMap);
+    const updated = cost > 0 ? { ...task, cost } : task;
+    return {
+      ...updated,
+      children: updated.children.map(sync),
+    };
+  }
+  return tree.map(sync);
+}

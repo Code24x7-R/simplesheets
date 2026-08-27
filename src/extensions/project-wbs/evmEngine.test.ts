@@ -120,6 +120,47 @@ describe('calculateEvmMetrics', () => {
     expect(metrics.cpi).toBeGreaterThan(0);
   });
 
+  it('uses real spend entries for actual cost (AC)', () => {
+    const project = createProject({
+      wbs: [createTask({ id: 't1', cost: 1000, progress: 50 })],
+      accounting: {
+        baselineTotal: 0, allocatedTotal: 0, currentEstimateTotal: 0,
+        actualSpendTotal: 600, etcTotal: 0, materialCostTotal: 0,
+        taskAccounting: [], spendEntries: [
+          { id: 's1', taskId: 't1', date: '2026-01-10', amount: 600, currency: 'USD', source: 'Vendor', notes: '' },
+        ],
+        changeLog: [], currency: 'USD',
+      },
+    });
+
+    const metrics = calculateEvmMetrics(project, '2026-01-15');
+    // AC should come from spend entries (600), not simulated 10% over
+    expect(metrics.ac).toBe(600);
+    // EV = 1000 * 0.5 = 500, CPI = 500 / 600 ≈ 0.833
+    expect(metrics.ev).toBe(500);
+    expect(metrics.cpi).toBeCloseTo(500 / 600, 5);
+  });
+
+  it('ignores spend entries after asOfDate', () => {
+    const project = createProject({
+      wbs: [createTask({ id: 't1', cost: 1000, progress: 100 })],
+      accounting: {
+        baselineTotal: 0, allocatedTotal: 0, currentEstimateTotal: 0,
+        actualSpendTotal: 0, etcTotal: 0, materialCostTotal: 0,
+        taskAccounting: [], spendEntries: [
+          { id: 's1', taskId: 't1', date: '2026-01-20', amount: 500, currency: 'USD', source: 'Vendor', notes: '' },
+        ],
+        changeLog: [], currency: 'USD',
+      },
+    });
+
+    // asOfDate is Jan 15, spend entry is Jan 20 — should be excluded
+    const metrics = calculateEvmMetrics(project, '2026-01-15');
+    expect(metrics.ac).toBe(0);
+    // CPI = EV / AC, AC=0 → CPI=1 (no cost yet)
+    expect(metrics.cpi).toBe(1);
+  });
+
   it('calculates VAC', () => {
     const project = createProject({
       wbs: [

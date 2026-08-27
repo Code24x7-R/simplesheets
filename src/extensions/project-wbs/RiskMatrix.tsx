@@ -8,7 +8,7 @@
  */
 
 import type { Risk, RiskLevel } from '../types';
-import { getRiskMatrix } from './risks';
+import { getRiskLevel, getRiskMatrix } from './risks';
 
 interface RiskMatrixProps {
   risks: Risk[];
@@ -253,12 +253,4 @@ export function RiskMatrix({ risks, onCellClick, onRiskClick, width: _width = 35
   );
 }
 
-/**
- * Get risk level from score.
- */
-function getRiskLevel(score: number): RiskLevel {
-  if (score >= 15) return 'critical';
-  if (score >= 10) return 'high';
-  if (score >= 5) return 'medium';
-  return 'low';
-}
+
