@@ -47,6 +47,7 @@ import { autoScheduleSuccessors, updateTaskStatuses } from './dependencyWorkflow
 import { getCriticalPath } from './dependencies';
 import { getEffectiveCurrency } from '../../utils/currency';
 import { CountrySelector } from './CountrySelector';
+import { ProjectAnalyzerPanel } from './analyzer';
 import type { Project, ViewMode, WBSTask, Risk, Resource, TaskDependency } from '../types';
 import type { Sheet, ColumnMapping, ProjectModel } from '../../types';
 
@@ -154,6 +155,7 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
 
   // Save confirmation
   const [saveConfirmation, setSaveConfirmation] = useState(false);
+  const [showAnalyzer, setShowAnalyzer] = useState(false);
   const saveConfirmationTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Gantt chart scroll ref for calendar navigation
@@ -905,6 +907,15 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
             </button>
           )}
 
+          {/* Project Analyzer button */}
+          <button
+            className="ml-2 px-3 py-1 text-sm text-indigo-600 border border-indigo-300 rounded hover:bg-indigo-50"
+            onClick={() => setShowAnalyzer(true)}
+            title="Analyze project health and get recommendations"
+          >
+            🔍 Analyze
+          </button>
+
           {/* Project I/O dropdown */}
           <ToolbarDropdown label="Project">
             {activeSheet && (
@@ -1213,6 +1224,18 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
           onClose={handleCloseCapitalizationConfig}
           onSave={handleCapitalizationConfigSave}
         />
+      )}
+
+      {/* Project Analyzer Panel */}
+      {showAnalyzer && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-lg shadow-2xl w-full max-w-4xl h-[80vh] flex flex-col">
+            <ProjectAnalyzerPanel
+              project={project}
+              onClose={() => setShowAnalyzer(false)}
+            />
+          </div>
+        </div>
       )}
 
       {/* New Project Dialog */}
