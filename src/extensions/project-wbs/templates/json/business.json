@@ -6,7 +6,13 @@
   "startDate": "2026-08-01",
   "endDate": "2026-09-05",
   "calendar": {
-    "workingDays": [1, 2, 3, 4, 5],
+    "workingDays": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
     "holidays": [],
     "hoursPerDay": 8
   },
@@ -46,7 +52,9 @@
           "cost": 6000,
           "effort": 24,
           "effortUnit": "hours",
-          "dependencies": ["feas-1"]
+          "dependencies": [
+            "feas-1"
+          ]
         },
         {
           "id": "feas-3",
@@ -60,7 +68,9 @@
           "cost": 5000,
           "effort": 16,
           "effortUnit": "hours",
-          "dependencies": ["feas-2"]
+          "dependencies": [
+            "feas-2"
+          ]
         },
         {
           "id": "feas-4",
@@ -71,7 +81,9 @@
           "isMilestone": true,
           "progress": 100,
           "status": "done",
-          "dependencies": ["feas-3"],
+          "dependencies": [
+            "feas-3"
+          ],
           "approvalGates": [
             {
               "gateType": "approval",
@@ -106,7 +118,9 @@
           "cost": 5000,
           "effort": 16,
           "effortUnit": "hours",
-          "dependencies": ["feas-4"]
+          "dependencies": [
+            "feas-4"
+          ]
         },
         {
           "id": "plan-2",
@@ -120,7 +134,9 @@
           "cost": 5000,
           "effort": 24,
           "effortUnit": "hours",
-          "dependencies": ["plan-1"]
+          "dependencies": [
+            "plan-1"
+          ]
         },
         {
           "id": "plan-3",
@@ -134,7 +150,9 @@
           "cost": 4000,
           "effort": 16,
           "effortUnit": "hours",
-          "dependencies": ["plan-2"]
+          "dependencies": [
+            "plan-2"
+          ]
         },
         {
           "id": "plan-4",
@@ -145,7 +163,9 @@
           "isMilestone": true,
           "progress": 100,
           "status": "done",
-          "dependencies": ["plan-3"]
+          "dependencies": [
+            "plan-3"
+          ]
         }
       ]
     },
@@ -171,7 +191,9 @@
           "cost": 12000,
           "effort": 40,
           "effortUnit": "hours",
-          "dependencies": ["plan-4"]
+          "dependencies": [
+            "plan-4"
+          ]
         },
         {
           "id": "exec-2",
@@ -185,7 +207,9 @@
           "cost": 12000,
           "effort": 40,
           "effortUnit": "hours",
-          "dependencies": ["exec-1"]
+          "dependencies": [
+            "exec-1"
+          ]
         },
         {
           "id": "exec-3",
@@ -199,7 +223,9 @@
           "cost": 8000,
           "effort": 32,
           "effortUnit": "hours",
-          "dependencies": ["exec-2"]
+          "dependencies": [
+            "exec-2"
+          ]
         },
         {
           "id": "exec-4",
@@ -213,7 +239,9 @@
           "cost": 3000,
           "effort": 8,
           "effortUnit": "hours",
-          "dependencies": ["exec-3"]
+          "dependencies": [
+            "exec-3"
+          ]
         }
       ]
     },
@@ -239,7 +267,9 @@
           "cost": 2000,
           "effort": 16,
           "effortUnit": "hours",
-          "dependencies": ["exec-4"]
+          "dependencies": [
+            "exec-4"
+          ]
         },
         {
           "id": "rev-2",
@@ -253,7 +283,9 @@
           "cost": 2000,
           "effort": 16,
           "effortUnit": "hours",
-          "dependencies": ["rev-1"]
+          "dependencies": [
+            "rev-1"
+          ]
         },
         {
           "id": "rev-3",
@@ -264,7 +296,53 @@
           "isMilestone": true,
           "progress": 0,
           "status": "not_started",
-          "dependencies": ["rev-2"]
+          "dependencies": [
+            "rev-2"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "closure",
+      "name": "Project Closure",
+      "startDate": "2026-09-06",
+      "endDate": "2026-09-08",
+      "description": "Final report, lessons learned, and administrative closure",
+      "progress": 0,
+      "status": "not_started",
+      "cost": 2000,
+      "children": [
+        {
+          "id": "closure-1",
+          "name": "Lessons learned workshop",
+          "startDate": "2026-09-06",
+          "endDate": "2026-09-06",
+          "description": "Document what went well and what to improve",
+          "progress": 0,
+          "status": "not_started",
+          "resourceId": "pm",
+          "cost": 1000,
+          "effort": 8,
+          "effortUnit": "hours",
+          "dependencies": [
+            "review"
+          ]
+        },
+        {
+          "id": "closure-2",
+          "name": "Final project report",
+          "startDate": "2026-09-08",
+          "endDate": "2026-09-08",
+          "description": "Compile final project report and metrics",
+          "progress": 0,
+          "status": "not_started",
+          "resourceId": "pm",
+          "cost": 1000,
+          "effort": 8,
+          "effortUnit": "hours",
+          "dependencies": [
+            "closure-1"
+          ]
         }
       ]
     }
@@ -723,6 +801,94 @@
       "expectedReturnDate": null,
       "actualCost": 6000,
       "notes": "Team laptops"
+    },
+    {
+      "id": "alloc-feas-1",
+      "materialId": "mat-1",
+      "taskId": "feas-1",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2026-08-03",
+      "expectedReturnDate": null,
+      "actualCost": 4000,
+      "notes": "Service: Project Manager"
+    },
+    {
+      "id": "alloc-feas-2",
+      "materialId": "mat-1",
+      "taskId": "feas-2",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2026-08-06",
+      "expectedReturnDate": null,
+      "actualCost": 6000,
+      "notes": "Service: Business Analyst"
+    },
+    {
+      "id": "alloc-feas-3",
+      "materialId": "mat-1",
+      "taskId": "feas-3",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2026-08-08",
+      "expectedReturnDate": null,
+      "actualCost": 5000,
+      "notes": "Service: Project Manager"
+    },
+    {
+      "id": "alloc-plan-1",
+      "materialId": "mat-1",
+      "taskId": "plan-1",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2026-08-11",
+      "expectedReturnDate": null,
+      "actualCost": 5000,
+      "notes": "Service: Project Manager"
+    },
+    {
+      "id": "alloc-plan-2",
+      "materialId": "mat-1",
+      "taskId": "plan-2",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2026-08-14",
+      "expectedReturnDate": null,
+      "actualCost": 5000,
+      "notes": "Service: Project Manager"
+    },
+    {
+      "id": "alloc-plan-3",
+      "materialId": "mat-1",
+      "taskId": "plan-3",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2026-08-16",
+      "expectedReturnDate": null,
+      "actualCost": 4000,
+      "notes": "Service: Project Manager"
+    },
+    {
+      "id": "alloc-exec-2",
+      "materialId": "mat-1",
+      "taskId": "exec-2",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2026-08-27",
+      "expectedReturnDate": null,
+      "actualCost": 10000,
+      "notes": "Service: Project Lead"
+    },
+    {
+      "id": "alloc-exec-3",
+      "materialId": "mat-1",
+      "taskId": "exec-3",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2026-09-01",
+      "expectedReturnDate": null,
+      "actualCost": 1500,
+      "notes": "Service: Project Lead"
     }
   ],
   "consumptions": [

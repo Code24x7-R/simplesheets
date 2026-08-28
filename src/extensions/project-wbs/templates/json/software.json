@@ -6,7 +6,13 @@
   "startDate": "2026-03-01",
   "endDate": "2026-04-13",
   "calendar": {
-    "workingDays": [1, 2, 3, 4, 5],
+    "workingDays": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
     "holidays": [],
     "hoursPerDay": 8
   },
@@ -46,7 +52,9 @@
           "cost": 6000,
           "effort": 24,
           "effortUnit": "hours",
-          "dependencies": ["req-1"]
+          "dependencies": [
+            "req-1"
+          ]
         },
         {
           "id": "req-3",
@@ -57,7 +65,9 @@
           "isMilestone": true,
           "progress": 100,
           "status": "done",
-          "dependencies": ["req-2"],
+          "dependencies": [
+            "req-2"
+          ],
           "approvalGates": [
             {
               "gateType": "approval",
@@ -92,7 +102,9 @@
           "cost": 8000,
           "effort": 24,
           "effortUnit": "hours",
-          "dependencies": ["req-3"]
+          "dependencies": [
+            "req-3"
+          ]
         },
         {
           "id": "des-2",
@@ -106,7 +118,9 @@
           "cost": 6000,
           "effort": 24,
           "effortUnit": "hours",
-          "dependencies": ["req-3"]
+          "dependencies": [
+            "req-3"
+          ]
         },
         {
           "id": "des-3",
@@ -120,7 +134,9 @@
           "cost": 5000,
           "effort": 16,
           "effortUnit": "hours",
-          "dependencies": ["des-1"]
+          "dependencies": [
+            "des-1"
+          ]
         },
         {
           "id": "des-4",
@@ -131,7 +147,10 @@
           "isMilestone": true,
           "progress": 100,
           "status": "done",
-          "dependencies": ["des-2", "des-3"]
+          "dependencies": [
+            "des-2",
+            "des-3"
+          ]
         }
       ]
     },
@@ -157,7 +176,9 @@
           "cost": 15000,
           "effort": 40,
           "effortUnit": "hours",
-          "dependencies": ["des-4"]
+          "dependencies": [
+            "des-4"
+          ]
         },
         {
           "id": "code-2",
@@ -171,7 +192,9 @@
           "cost": 15000,
           "effort": 40,
           "effortUnit": "hours",
-          "dependencies": ["code-1"]
+          "dependencies": [
+            "code-1"
+          ]
         },
         {
           "id": "code-3",
@@ -185,7 +208,9 @@
           "cost": 15000,
           "effort": 40,
           "effortUnit": "hours",
-          "dependencies": ["code-2"]
+          "dependencies": [
+            "code-2"
+          ]
         }
       ]
     },
@@ -211,7 +236,9 @@
           "cost": 4000,
           "effort": 24,
           "effortUnit": "hours",
-          "dependencies": ["code-3"]
+          "dependencies": [
+            "code-3"
+          ]
         },
         {
           "id": "qa-2",
@@ -225,7 +252,9 @@
           "cost": 4000,
           "effort": 16,
           "effortUnit": "hours",
-          "dependencies": ["qa-1"]
+          "dependencies": [
+            "qa-1"
+          ]
         },
         {
           "id": "qa-3",
@@ -239,7 +268,9 @@
           "cost": 4000,
           "effort": 16,
           "effortUnit": "hours",
-          "dependencies": ["qa-2"]
+          "dependencies": [
+            "qa-2"
+          ]
         }
       ]
     },
@@ -265,7 +296,9 @@
           "cost": 2000,
           "effort": 8,
           "effortUnit": "hours",
-          "dependencies": ["qa-3"]
+          "dependencies": [
+            "qa-3"
+          ]
         },
         {
           "id": "dep-2",
@@ -279,7 +312,9 @@
           "cost": 3000,
           "effort": 8,
           "effortUnit": "hours",
-          "dependencies": ["dep-1"]
+          "dependencies": [
+            "dep-1"
+          ]
         },
         {
           "id": "dep-3",
@@ -293,7 +328,9 @@
           "cost": 3000,
           "effort": 16,
           "effortUnit": "hours",
-          "dependencies": ["dep-2"]
+          "dependencies": [
+            "dep-2"
+          ]
         }
       ]
     },
@@ -306,7 +343,53 @@
       "isMilestone": true,
       "progress": 0,
       "status": "not_started",
-      "dependencies": ["dep-3"]
+      "dependencies": [
+        "dep-3"
+      ]
+    },
+    {
+      "id": "closure",
+      "name": "Project Closure",
+      "startDate": "2026-04-14",
+      "endDate": "2026-04-16",
+      "description": "Final report, lessons learned, and administrative closure",
+      "progress": 0,
+      "status": "not_started",
+      "cost": 2000,
+      "children": [
+        {
+          "id": "closure-1",
+          "name": "Lessons learned workshop",
+          "startDate": "2026-04-14",
+          "endDate": "2026-04-14",
+          "description": "Document what went well and what to improve",
+          "progress": 0,
+          "status": "not_started",
+          "resourceId": "pm",
+          "cost": 1000,
+          "effort": 8,
+          "effortUnit": "hours",
+          "dependencies": [
+            "milestone-release"
+          ]
+        },
+        {
+          "id": "closure-2",
+          "name": "Final project report",
+          "startDate": "2026-04-16",
+          "endDate": "2026-04-16",
+          "description": "Compile final project report and metrics",
+          "progress": 0,
+          "status": "not_started",
+          "resourceId": "pm",
+          "cost": 1000,
+          "effort": 8,
+          "effortUnit": "hours",
+          "dependencies": [
+            "closure-1"
+          ]
+        }
+      ]
     }
   ],
   "risks": [
@@ -814,6 +897,83 @@
       "expectedReturnDate": "2026-12-31",
       "actualCost": 50,
       "notes": "JetBrains licenses"
+    },
+    {
+      "id": "alloc-req-1",
+      "materialId": "mat-1",
+      "taskId": "req-1",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2026-03-02",
+      "expectedReturnDate": null,
+      "actualCost": 4000,
+      "notes": "Service: Project Manager"
+    },
+    {
+      "id": "alloc-req-2",
+      "materialId": "mat-1",
+      "taskId": "req-2",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2026-03-05",
+      "expectedReturnDate": null,
+      "actualCost": 6000,
+      "notes": "Service: Project Manager"
+    },
+    {
+      "id": "alloc-des-1",
+      "materialId": "mat-1",
+      "taskId": "des-1",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2026-03-09",
+      "expectedReturnDate": null,
+      "actualCost": 8000,
+      "notes": "Service: Tech Lead"
+    },
+    {
+      "id": "alloc-des-2",
+      "materialId": "mat-1",
+      "taskId": "des-2",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2026-03-10",
+      "expectedReturnDate": null,
+      "actualCost": 6000,
+      "notes": "Service: Senior Dev"
+    },
+    {
+      "id": "alloc-des-3",
+      "materialId": "mat-1",
+      "taskId": "des-3",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2026-03-11",
+      "expectedReturnDate": null,
+      "actualCost": 5000,
+      "notes": "Service: Tech Lead"
+    },
+    {
+      "id": "alloc-code-2",
+      "materialId": "mat-1",
+      "taskId": "code-2",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2026-03-22",
+      "expectedReturnDate": null,
+      "actualCost": 12500,
+      "notes": "Service: Junior Dev"
+    },
+    {
+      "id": "alloc-code-3",
+      "materialId": "mat-1",
+      "taskId": "code-3",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2026-03-27",
+      "expectedReturnDate": null,
+      "actualCost": 3000,
+      "notes": "Service: Senior Dev"
     }
   ],
   "consumptions": [

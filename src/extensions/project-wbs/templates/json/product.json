@@ -6,7 +6,13 @@
   "startDate": "2026-09-01",
   "endDate": "2026-09-29",
   "calendar": {
-    "workingDays": [1, 2, 3, 4, 5],
+    "workingDays": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
     "holidays": [],
     "hoursPerDay": 8
   },
@@ -46,7 +52,9 @@
           "cost": 8000,
           "effort": 24,
           "effortUnit": "hours",
-          "dependencies": ["dev-1"]
+          "dependencies": [
+            "dev-1"
+          ]
         },
         {
           "id": "dev-3",
@@ -60,7 +68,9 @@
           "cost": 12000,
           "effort": 24,
           "effortUnit": "hours",
-          "dependencies": ["dev-2"]
+          "dependencies": [
+            "dev-2"
+          ]
         },
         {
           "id": "dev-4",
@@ -71,7 +81,9 @@
           "isMilestone": true,
           "progress": 100,
           "status": "done",
-          "dependencies": ["dev-3"]
+          "dependencies": [
+            "dev-3"
+          ]
         }
       ]
     },
@@ -97,7 +109,9 @@
           "cost": 5000,
           "effort": 32,
           "effortUnit": "hours",
-          "dependencies": ["dev-1"]
+          "dependencies": [
+            "dev-1"
+          ]
         },
         {
           "id": "mkt-2",
@@ -111,7 +125,9 @@
           "cost": 5000,
           "effort": 24,
           "effortUnit": "hours",
-          "dependencies": ["mkt-1"]
+          "dependencies": [
+            "mkt-1"
+          ]
         },
         {
           "id": "mkt-3",
@@ -125,7 +141,9 @@
           "cost": 5000,
           "effort": 32,
           "effortUnit": "hours",
-          "dependencies": ["mkt-2"]
+          "dependencies": [
+            "mkt-2"
+          ]
         }
       ]
     },
@@ -151,7 +169,9 @@
           "cost": 3000,
           "effort": 16,
           "effortUnit": "hours",
-          "dependencies": ["dev-4"]
+          "dependencies": [
+            "dev-4"
+          ]
         },
         {
           "id": "read-2",
@@ -165,7 +185,9 @@
           "cost": 3000,
           "effort": 16,
           "effortUnit": "hours",
-          "dependencies": ["read-1"]
+          "dependencies": [
+            "read-1"
+          ]
         },
         {
           "id": "read-3",
@@ -179,7 +201,10 @@
           "cost": 2000,
           "effort": 8,
           "effortUnit": "hours",
-          "dependencies": ["read-2", "mkt-3"]
+          "dependencies": [
+            "read-2",
+            "mkt-3"
+          ]
         }
       ]
     },
@@ -205,7 +230,9 @@
           "cost": 4000,
           "effort": 8,
           "effortUnit": "hours",
-          "dependencies": ["read-3"]
+          "dependencies": [
+            "read-3"
+          ]
         },
         {
           "id": "launch-2",
@@ -219,7 +246,9 @@
           "cost": 5000,
           "effort": 16,
           "effortUnit": "hours",
-          "dependencies": ["launch-1"]
+          "dependencies": [
+            "launch-1"
+          ]
         },
         {
           "id": "launch-3",
@@ -233,7 +262,9 @@
           "cost": 3000,
           "effort": 8,
           "effortUnit": "hours",
-          "dependencies": ["launch-1"]
+          "dependencies": [
+            "launch-1"
+          ]
         }
       ]
     },
@@ -259,7 +290,9 @@
           "cost": 2000,
           "effort": 24,
           "effortUnit": "hours",
-          "dependencies": ["launch-2"]
+          "dependencies": [
+            "launch-2"
+          ]
         },
         {
           "id": "post-2",
@@ -273,7 +306,9 @@
           "cost": 1500,
           "effort": 16,
           "effortUnit": "hours",
-          "dependencies": ["post-1"]
+          "dependencies": [
+            "post-1"
+          ]
         },
         {
           "id": "post-3",
@@ -287,7 +322,53 @@
           "cost": 1500,
           "effort": 16,
           "effortUnit": "hours",
-          "dependencies": ["post-2"]
+          "dependencies": [
+            "post-2"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "closure",
+      "name": "Project Closure",
+      "startDate": "2026-09-30",
+      "endDate": "2026-10-02",
+      "description": "Final report, lessons learned, and administrative closure",
+      "progress": 0,
+      "status": "not_started",
+      "cost": 2000,
+      "children": [
+        {
+          "id": "closure-1",
+          "name": "Lessons learned workshop",
+          "startDate": "2026-09-30",
+          "endDate": "2026-09-30",
+          "description": "Document what went well and what to improve",
+          "progress": 0,
+          "status": "not_started",
+          "resourceId": "dev",
+          "cost": 1000,
+          "effort": 8,
+          "effortUnit": "hours",
+          "dependencies": [
+            "post-launch"
+          ]
+        },
+        {
+          "id": "closure-2",
+          "name": "Final project report",
+          "startDate": "2026-10-02",
+          "endDate": "2026-10-02",
+          "description": "Compile final project report and metrics",
+          "progress": 0,
+          "status": "not_started",
+          "resourceId": "dev",
+          "cost": 1000,
+          "effort": 8,
+          "effortUnit": "hours",
+          "dependencies": [
+            "closure-1"
+          ]
         }
       ]
     }
@@ -822,6 +903,72 @@
       "expectedReturnDate": null,
       "actualCost": 500,
       "notes": "Press kits for media"
+    },
+    {
+      "id": "alloc-dev-1",
+      "materialId": "mat-1",
+      "taskId": "dev-1",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2026-09-07",
+      "expectedReturnDate": null,
+      "actualCost": 15000,
+      "notes": "Service: Lead Developer"
+    },
+    {
+      "id": "alloc-dev-2",
+      "materialId": "mat-1",
+      "taskId": "dev-2",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2026-09-10",
+      "expectedReturnDate": null,
+      "actualCost": 8000,
+      "notes": "Service: QA Engineer"
+    },
+    {
+      "id": "alloc-dev-3",
+      "materialId": "mat-1",
+      "taskId": "dev-3",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2026-09-13",
+      "expectedReturnDate": null,
+      "actualCost": 12000,
+      "notes": "Service: Lead Developer"
+    },
+    {
+      "id": "alloc-mkt-1",
+      "materialId": "mat-1",
+      "taskId": "mkt-1",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2026-09-11",
+      "expectedReturnDate": null,
+      "actualCost": 5000,
+      "notes": "Service: Marketing Lead"
+    },
+    {
+      "id": "alloc-mkt-3",
+      "materialId": "mat-1",
+      "taskId": "mkt-3",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2026-09-18",
+      "expectedReturnDate": null,
+      "actualCost": 3500,
+      "notes": "Service: Marketing Lead"
+    },
+    {
+      "id": "alloc-read-1",
+      "materialId": "mat-1",
+      "taskId": "read-1",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2026-09-16",
+      "expectedReturnDate": null,
+      "actualCost": 3000,
+      "notes": "Service: Product Manager"
     }
   ],
   "consumptions": [

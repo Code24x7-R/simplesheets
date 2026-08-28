@@ -6,8 +6,16 @@
   "startDate": "2026-01-05",
   "endDate": "2026-01-28",
   "calendar": {
-    "workingDays": [1, 2, 3, 4, 5],
-    "holidays": ["2026-01-19"],
+    "workingDays": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "holidays": [
+      "2026-01-19"
+    ],
     "hoursPerDay": 8
   },
   "tasks": [
@@ -46,7 +54,9 @@
           "cost": 7000,
           "effort": 16,
           "effortUnit": "hours",
-          "dependencies": ["t1-1"]
+          "dependencies": [
+            "t1-1"
+          ]
         }
       ]
     },
@@ -72,7 +82,9 @@
           "cost": 12000,
           "effort": 24,
           "effortUnit": "hours",
-          "dependencies": ["t1-2"]
+          "dependencies": [
+            "t1-2"
+          ]
         },
         {
           "id": "t2-2",
@@ -86,7 +98,9 @@
           "cost": 16000,
           "effort": 40,
           "effortUnit": "hours",
-          "dependencies": ["t2-1"]
+          "dependencies": [
+            "t2-1"
+          ]
         }
       ]
     },
@@ -112,7 +126,9 @@
           "cost": 6000,
           "effort": 16,
           "effortUnit": "hours",
-          "dependencies": ["t2-2"]
+          "dependencies": [
+            "t2-2"
+          ]
         },
         {
           "id": "t3-2",
@@ -126,7 +142,9 @@
           "cost": 4000,
           "effort": 8,
           "effortUnit": "hours",
-          "dependencies": ["t3-1"]
+          "dependencies": [
+            "t3-1"
+          ]
         }
       ]
     },
@@ -139,7 +157,9 @@
       "isMilestone": true,
       "progress": 0,
       "status": "not_started",
-      "dependencies": ["t3-2"],
+      "dependencies": [
+        "t3-2"
+      ],
       "approvalGates": [
         {
           "gateType": "approval",
@@ -447,6 +467,28 @@
       "expectedReturnDate": null,
       "actualCost": 100,
       "notes": "Supplies for requirements workshop"
+    },
+    {
+      "id": "alloc-t1-2",
+      "materialId": "mat-1",
+      "taskId": "t1-2",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2026-01-09",
+      "expectedReturnDate": null,
+      "actualCost": 6800,
+      "notes": "Service: Project Manager"
+    },
+    {
+      "id": "alloc-t2-1",
+      "materialId": "mat-1",
+      "taskId": "t2-1",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2026-01-15",
+      "expectedReturnDate": null,
+      "actualCost": 12500,
+      "notes": "Service: Developer"
     }
   ],
   "consumptions": [

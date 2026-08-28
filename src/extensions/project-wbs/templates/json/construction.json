@@ -86,7 +86,10 @@
           "status": "done",
           "cost": 3000,
           "effort": 8,
-          "effortUnit": "hours"
+          "effortUnit": "hours",
+          "dependencies": [
+            "pre-4"
+          ]
         },
         {
           "id": "found-2",
@@ -151,7 +154,10 @@
           "status": "in_progress",
           "cost": 3000,
           "effort": 8,
-          "effortUnit": "hours"
+          "effortUnit": "hours",
+          "dependencies": [
+            "found-4"
+          ]
         },
         {
           "id": "struct-2",
@@ -216,7 +222,10 @@
           "status": "in_progress",
           "cost": 3000,
           "effort": 8,
-          "effortUnit": "hours"
+          "effortUnit": "hours",
+          "dependencies": [
+            "struct-4"
+          ]
         },
         {
           "id": "mep-2",
@@ -280,7 +289,10 @@
           "status": "in_progress",
           "cost": 3000,
           "effort": 8,
-          "effortUnit": "hours"
+          "effortUnit": "hours",
+          "dependencies": [
+            "mep-4"
+          ]
         },
         {
           "id": "fin-2",
@@ -344,7 +356,10 @@
           "status": "in_progress",
           "cost": 3000,
           "effort": 8,
-          "effortUnit": "hours"
+          "effortUnit": "hours",
+          "dependencies": [
+            "fin-4"
+          ]
         },
         {
           "id": "hand-2",
@@ -387,6 +402,50 @@
       "isMilestone": true,
       "progress": 0,
       "status": "not_started"
+    },
+    {
+      "id": "closure",
+      "name": "Project Closure",
+      "startDate": "2027-03-29",
+      "endDate": "2027-03-31",
+      "description": "Final report, lessons learned, and administrative closure",
+      "progress": 0,
+      "status": "not_started",
+      "cost": 2000,
+      "children": [
+        {
+          "id": "closure-1",
+          "name": "Lessons learned workshop",
+          "startDate": "2027-03-29",
+          "endDate": "2027-03-29",
+          "description": "Document what went well and what to improve",
+          "progress": 0,
+          "status": "not_started",
+          "resourceId": "pm",
+          "cost": 1000,
+          "effort": 8,
+          "effortUnit": "hours",
+          "dependencies": [
+            "milestone-construction"
+          ]
+        },
+        {
+          "id": "closure-2",
+          "name": "Final project report",
+          "startDate": "2027-03-31",
+          "endDate": "2027-03-31",
+          "description": "Compile final project report and metrics",
+          "progress": 0,
+          "status": "not_started",
+          "resourceId": "pm",
+          "cost": 1000,
+          "effort": 8,
+          "effortUnit": "hours",
+          "dependencies": [
+            "closure-1"
+          ]
+        }
+      ]
     }
   ],
   "risks": [
@@ -693,6 +752,107 @@
       "costImpact": 0,
       "scheduleImpactDays": 5,
       "approvedBy": "Construction Manager"
+    }
+  ],
+  "allocations": [
+    {
+      "id": "alloc-pre-1",
+      "materialId": "con-mat-1",
+      "taskId": "pre-1",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2027-01-04",
+      "expectedReturnDate": null,
+      "actualCost": 15000,
+      "notes": "Service: Architect"
+    },
+    {
+      "id": "alloc-pre-3",
+      "materialId": "con-mat-1",
+      "taskId": "pre-3",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2027-01-16",
+      "expectedReturnDate": null,
+      "actualCost": 5000,
+      "notes": "Service: City"
+    },
+    {
+      "id": "alloc-found-1",
+      "materialId": "con-mat-1",
+      "taskId": "found-1",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2027-01-21",
+      "expectedReturnDate": null,
+      "actualCost": 12000,
+      "notes": "Service: General Contractor"
+    },
+    {
+      "id": "alloc-found-3",
+      "materialId": "con-mat-1",
+      "taskId": "found-3",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2027-01-29",
+      "expectedReturnDate": null,
+      "actualCost": 8000,
+      "notes": "Service: General Contractor"
+    },
+    {
+      "id": "alloc-struct-1",
+      "materialId": "con-mat-1",
+      "taskId": "struct-1",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2027-02-07",
+      "expectedReturnDate": null,
+      "actualCost": 15000,
+      "notes": "Service: General Contractor"
+    },
+    {
+      "id": "alloc-struct-2",
+      "materialId": "con-mat-1",
+      "taskId": "struct-2",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2027-02-13",
+      "expectedReturnDate": null,
+      "actualCost": 10000,
+      "notes": "Service: General Contractor"
+    },
+    {
+      "id": "alloc-mep-1",
+      "materialId": "con-mat-1",
+      "taskId": "mep-1",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2027-02-25",
+      "expectedReturnDate": null,
+      "actualCost": 12000,
+      "notes": "Service: Electrician"
+    },
+    {
+      "id": "alloc-mep-2",
+      "materialId": "con-mat-1",
+      "taskId": "mep-2",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2027-03-02",
+      "expectedReturnDate": null,
+      "actualCost": 10000,
+      "notes": "Service: Plumber"
+    },
+    {
+      "id": "alloc-mep-3",
+      "materialId": "con-mat-1",
+      "taskId": "mep-3",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2027-03-07",
+      "expectedReturnDate": null,
+      "actualCost": 8000,
+      "notes": "Service: HVAC Contractor"
     }
   ]
 }

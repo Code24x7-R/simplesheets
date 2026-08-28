@@ -6,8 +6,16 @@
   "startDate": "2026-07-01",
   "endDate": "2026-07-30",
   "calendar": {
-    "workingDays": [1, 2, 3, 4, 5],
-    "holidays": ["2026-07-04"],
+    "workingDays": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "holidays": [
+      "2026-07-04"
+    ],
     "hoursPerDay": 8
   },
   "tasks": [
@@ -46,7 +54,9 @@
           "cost": 3000,
           "effort": 16,
           "effortUnit": "hours",
-          "dependencies": ["res-1"]
+          "dependencies": [
+            "res-1"
+          ]
         },
         {
           "id": "res-3",
@@ -60,7 +70,9 @@
           "cost": 3000,
           "effort": 16,
           "effortUnit": "hours",
-          "dependencies": ["res-2"]
+          "dependencies": [
+            "res-2"
+          ]
         },
         {
           "id": "res-4",
@@ -71,7 +83,9 @@
           "isMilestone": true,
           "progress": 100,
           "status": "done",
-          "dependencies": ["res-3"],
+          "dependencies": [
+            "res-3"
+          ],
           "approvalGates": [
             {
               "gateType": "approval",
@@ -106,7 +120,9 @@
           "cost": 4000,
           "effort": 24,
           "effortUnit": "hours",
-          "dependencies": ["res-4"]
+          "dependencies": [
+            "res-4"
+          ]
         },
         {
           "id": "cont-2",
@@ -120,7 +136,9 @@
           "cost": 6000,
           "effort": 32,
           "effortUnit": "hours",
-          "dependencies": ["cont-1"]
+          "dependencies": [
+            "cont-1"
+          ]
         },
         {
           "id": "cont-3",
@@ -134,7 +152,9 @@
           "cost": 5000,
           "effort": 24,
           "effortUnit": "hours",
-          "dependencies": ["cont-2"]
+          "dependencies": [
+            "cont-2"
+          ]
         },
         {
           "id": "cont-4",
@@ -148,7 +168,9 @@
           "cost": 3000,
           "effort": 8,
           "effortUnit": "hours",
-          "dependencies": ["cont-3"]
+          "dependencies": [
+            "cont-3"
+          ]
         }
       ]
     },
@@ -174,7 +196,9 @@
           "cost": 2000,
           "effort": 8,
           "effortUnit": "hours",
-          "dependencies": ["cont-1"]
+          "dependencies": [
+            "cont-1"
+          ]
         },
         {
           "id": "dist-2",
@@ -188,7 +212,9 @@
           "cost": 3000,
           "effort": 16,
           "effortUnit": "hours",
-          "dependencies": ["dist-1"]
+          "dependencies": [
+            "dist-1"
+          ]
         },
         {
           "id": "dist-3",
@@ -202,7 +228,9 @@
           "cost": 2000,
           "effort": 16,
           "effortUnit": "hours",
-          "dependencies": ["dist-2"]
+          "dependencies": [
+            "dist-2"
+          ]
         },
         {
           "id": "dist-4",
@@ -216,7 +244,9 @@
           "cost": 1000,
           "effort": 16,
           "effortUnit": "hours",
-          "dependencies": ["dist-3"]
+          "dependencies": [
+            "dist-3"
+          ]
         }
       ]
     },
@@ -242,7 +272,10 @@
           "cost": 5000,
           "effort": 8,
           "effortUnit": "hours",
-          "dependencies": ["cont-4", "dist-4"]
+          "dependencies": [
+            "cont-4",
+            "dist-4"
+          ]
         },
         {
           "id": "launch-2",
@@ -256,7 +289,9 @@
           "cost": 10000,
           "effort": 16,
           "effortUnit": "hours",
-          "dependencies": ["launch-1"]
+          "dependencies": [
+            "launch-1"
+          ]
         }
       ]
     },
@@ -282,7 +317,9 @@
           "cost": 2000,
           "effort": 16,
           "effortUnit": "hours",
-          "dependencies": ["launch-2"]
+          "dependencies": [
+            "launch-2"
+          ]
         },
         {
           "id": "anal-2",
@@ -296,7 +333,9 @@
           "cost": 2000,
           "effort": 16,
           "effortUnit": "hours",
-          "dependencies": ["anal-1"]
+          "dependencies": [
+            "anal-1"
+          ]
         },
         {
           "id": "anal-3",
@@ -310,7 +349,53 @@
           "cost": 1000,
           "effort": 8,
           "effortUnit": "hours",
-          "dependencies": ["anal-2"]
+          "dependencies": [
+            "anal-2"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "closure",
+      "name": "Project Closure",
+      "startDate": "2026-07-31",
+      "endDate": "2026-08-02",
+      "description": "Final report, lessons learned, and administrative closure",
+      "progress": 0,
+      "status": "not_started",
+      "cost": 2000,
+      "children": [
+        {
+          "id": "closure-1",
+          "name": "Lessons learned workshop",
+          "startDate": "2026-07-31",
+          "endDate": "2026-07-31",
+          "description": "Document what went well and what to improve",
+          "progress": 0,
+          "status": "not_started",
+          "resourceId": "pm",
+          "cost": 1000,
+          "effort": 8,
+          "effortUnit": "hours",
+          "dependencies": [
+            "analysis"
+          ]
+        },
+        {
+          "id": "closure-2",
+          "name": "Final project report",
+          "startDate": "2026-08-02",
+          "endDate": "2026-08-02",
+          "description": "Compile final project report and metrics",
+          "progress": 0,
+          "status": "not_started",
+          "resourceId": "pm",
+          "cost": 1000,
+          "effort": 8,
+          "effortUnit": "hours",
+          "dependencies": [
+            "closure-1"
+          ]
         }
       ]
     }
@@ -888,6 +973,94 @@
       "expectedReturnDate": null,
       "actualCost": 5000,
       "notes": "Initial ad spend"
+    },
+    {
+      "id": "alloc-res-1",
+      "materialId": "mat-1",
+      "taskId": "res-1",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2026-07-04",
+      "expectedReturnDate": null,
+      "actualCost": 4000,
+      "notes": "Service: Marketing Manager"
+    },
+    {
+      "id": "alloc-res-2",
+      "materialId": "mat-1",
+      "taskId": "res-2",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2026-07-06",
+      "expectedReturnDate": null,
+      "actualCost": 3000,
+      "notes": "Service: Strategy Lead"
+    },
+    {
+      "id": "alloc-res-3",
+      "materialId": "mat-1",
+      "taskId": "res-3",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2026-07-08",
+      "expectedReturnDate": null,
+      "actualCost": 3000,
+      "notes": "Service: Strategy Lead"
+    },
+    {
+      "id": "alloc-cont-1",
+      "materialId": "mat-1",
+      "taskId": "cont-1",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2026-07-12",
+      "expectedReturnDate": null,
+      "actualCost": 4000,
+      "notes": "Service: Strategy Lead"
+    },
+    {
+      "id": "alloc-cont-3",
+      "materialId": "mat-1",
+      "taskId": "cont-3",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2026-07-19",
+      "expectedReturnDate": null,
+      "actualCost": 3500,
+      "notes": "Service: Copywriter"
+    },
+    {
+      "id": "alloc-dist-1",
+      "materialId": "mat-1",
+      "taskId": "dist-1",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2026-07-17",
+      "expectedReturnDate": null,
+      "actualCost": 2000,
+      "notes": "Service: Strategy Lead"
+    },
+    {
+      "id": "alloc-dist-2",
+      "materialId": "mat-1",
+      "taskId": "dist-2",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2026-07-19",
+      "expectedReturnDate": null,
+      "actualCost": 2500,
+      "notes": "Service: Media Buyer"
+    },
+    {
+      "id": "alloc-dist-3",
+      "materialId": "mat-1",
+      "taskId": "dist-3",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2026-07-21",
+      "expectedReturnDate": null,
+      "actualCost": 600,
+      "notes": "Service: Media Buyer"
     }
   ],
   "consumptions": [

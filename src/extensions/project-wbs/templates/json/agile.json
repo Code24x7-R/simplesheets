@@ -6,8 +6,17 @@
   "startDate": "2026-11-01",
   "endDate": "2026-12-05",
   "calendar": {
-    "workingDays": [1, 2, 3, 4, 5],
-    "holidays": ["2026-11-26", "2026-11-27"],
+    "workingDays": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "holidays": [
+      "2026-11-26",
+      "2026-11-27"
+    ],
     "hoursPerDay": 8
   },
   "tasks": [
@@ -46,7 +55,9 @@
           "cost": 3000,
           "effort": 16,
           "effortUnit": "hours",
-          "dependencies": ["back-1"]
+          "dependencies": [
+            "back-1"
+          ]
         },
         {
           "id": "back-3",
@@ -60,7 +71,9 @@
           "cost": 2000,
           "effort": 8,
           "effortUnit": "hours",
-          "dependencies": ["back-2"]
+          "dependencies": [
+            "back-2"
+          ]
         },
         {
           "id": "back-4",
@@ -71,7 +84,9 @@
           "isMilestone": true,
           "progress": 100,
           "status": "done",
-          "dependencies": ["back-3"]
+          "dependencies": [
+            "back-3"
+          ]
         }
       ]
     },
@@ -97,7 +112,9 @@
           "cost": 2000,
           "effort": 8,
           "effortUnit": "hours",
-          "dependencies": ["back-4"]
+          "dependencies": [
+            "back-4"
+          ]
         },
         {
           "id": "s1-2",
@@ -111,7 +128,9 @@
           "cost": 8000,
           "effort": 40,
           "effortUnit": "hours",
-          "dependencies": ["s1-1"]
+          "dependencies": [
+            "s1-1"
+          ]
         },
         {
           "id": "s1-3",
@@ -125,7 +144,9 @@
           "cost": 4000,
           "effort": 24,
           "effortUnit": "hours",
-          "dependencies": ["s1-2"]
+          "dependencies": [
+            "s1-2"
+          ]
         },
         {
           "id": "s1-4",
@@ -139,7 +160,9 @@
           "cost": 1000,
           "effort": 8,
           "effortUnit": "hours",
-          "dependencies": ["s1-3"]
+          "dependencies": [
+            "s1-3"
+          ]
         }
       ]
     },
@@ -165,7 +188,9 @@
           "cost": 2000,
           "effort": 8,
           "effortUnit": "hours",
-          "dependencies": ["s1-4"]
+          "dependencies": [
+            "s1-4"
+          ]
         },
         {
           "id": "s2-2",
@@ -179,7 +204,9 @@
           "cost": 8000,
           "effort": 40,
           "effortUnit": "hours",
-          "dependencies": ["s2-1"]
+          "dependencies": [
+            "s2-1"
+          ]
         },
         {
           "id": "s2-3",
@@ -193,7 +220,9 @@
           "cost": 4000,
           "effort": 16,
           "effortUnit": "hours",
-          "dependencies": ["s2-2"]
+          "dependencies": [
+            "s2-2"
+          ]
         },
         {
           "id": "s2-4",
@@ -207,7 +236,9 @@
           "cost": 1000,
           "effort": 8,
           "effortUnit": "hours",
-          "dependencies": ["s2-3"]
+          "dependencies": [
+            "s2-3"
+          ]
         }
       ]
     },
@@ -233,7 +264,9 @@
           "cost": 2000,
           "effort": 8,
           "effortUnit": "hours",
-          "dependencies": ["s2-4"]
+          "dependencies": [
+            "s2-4"
+          ]
         },
         {
           "id": "s3-2",
@@ -247,7 +280,9 @@
           "cost": 6000,
           "effort": 40,
           "effortUnit": "hours",
-          "dependencies": ["s3-1"]
+          "dependencies": [
+            "s3-1"
+          ]
         },
         {
           "id": "s3-3",
@@ -261,7 +296,9 @@
           "cost": 3000,
           "effort": 16,
           "effortUnit": "hours",
-          "dependencies": ["s3-2"]
+          "dependencies": [
+            "s3-2"
+          ]
         },
         {
           "id": "s3-4",
@@ -275,7 +312,9 @@
           "cost": 1000,
           "effort": 8,
           "effortUnit": "hours",
-          "dependencies": ["s3-3"]
+          "dependencies": [
+            "s3-3"
+          ]
         }
       ]
     },
@@ -288,7 +327,53 @@
       "isMilestone": true,
       "progress": 0,
       "status": "not_started",
-      "dependencies": ["s3-4"]
+      "dependencies": [
+        "s3-4"
+      ]
+    },
+    {
+      "id": "closure",
+      "name": "Project Closure",
+      "startDate": "2026-12-06",
+      "endDate": "2026-12-08",
+      "description": "Final report, lessons learned, and administrative closure",
+      "progress": 0,
+      "status": "not_started",
+      "cost": 2000,
+      "children": [
+        {
+          "id": "closure-1",
+          "name": "Lessons learned workshop",
+          "startDate": "2026-12-06",
+          "endDate": "2026-12-06",
+          "description": "Document what went well and what to improve",
+          "progress": 0,
+          "status": "not_started",
+          "resourceId": "dev",
+          "cost": 1000,
+          "effort": 8,
+          "effortUnit": "hours",
+          "dependencies": [
+            "release"
+          ]
+        },
+        {
+          "id": "closure-2",
+          "name": "Final project report",
+          "startDate": "2026-12-08",
+          "endDate": "2026-12-08",
+          "description": "Compile final project report and metrics",
+          "progress": 0,
+          "status": "not_started",
+          "resourceId": "dev",
+          "cost": 1000,
+          "effort": 8,
+          "effortUnit": "hours",
+          "dependencies": [
+            "closure-1"
+          ]
+        }
+      ]
     }
   ],
   "risks": [
@@ -806,6 +891,105 @@
       "expectedReturnDate": "2027-01-31",
       "actualCost": 500,
       "notes": "AWS hosting"
+    },
+    {
+      "id": "alloc-back-1",
+      "materialId": "mat-1",
+      "taskId": "back-1",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2026-11-03",
+      "expectedReturnDate": null,
+      "actualCost": 3000,
+      "notes": "Service: Scrum Master"
+    },
+    {
+      "id": "alloc-back-2",
+      "materialId": "mat-1",
+      "taskId": "back-2",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2026-11-05",
+      "expectedReturnDate": null,
+      "actualCost": 3000,
+      "notes": "Service: Senior Developer"
+    },
+    {
+      "id": "alloc-back-3",
+      "materialId": "mat-1",
+      "taskId": "back-3",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2026-11-06",
+      "expectedReturnDate": null,
+      "actualCost": 2000,
+      "notes": "Service: Scrum Master"
+    },
+    {
+      "id": "alloc-s1-1",
+      "materialId": "mat-1",
+      "taskId": "s1-1",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2026-11-08",
+      "expectedReturnDate": null,
+      "actualCost": 2000,
+      "notes": "Service: Scrum Master"
+    },
+    {
+      "id": "alloc-s1-3",
+      "materialId": "mat-1",
+      "taskId": "s1-3",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2026-11-16",
+      "expectedReturnDate": null,
+      "actualCost": 4000,
+      "notes": "Service: QA Engineer"
+    },
+    {
+      "id": "alloc-s1-4",
+      "materialId": "mat-1",
+      "taskId": "s1-4",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2026-11-17",
+      "expectedReturnDate": null,
+      "actualCost": 1000,
+      "notes": "Service: Scrum Master"
+    },
+    {
+      "id": "alloc-s2-1",
+      "materialId": "mat-1",
+      "taskId": "s2-1",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2026-11-18",
+      "expectedReturnDate": null,
+      "actualCost": 2000,
+      "notes": "Service: Scrum Master"
+    },
+    {
+      "id": "alloc-s2-2",
+      "materialId": "mat-1",
+      "taskId": "s2-2",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2026-11-23",
+      "expectedReturnDate": null,
+      "actualCost": 7200,
+      "notes": "Service: Senior Developer"
+    },
+    {
+      "id": "alloc-s2-3",
+      "materialId": "mat-1",
+      "taskId": "s2-3",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2026-11-25",
+      "expectedReturnDate": null,
+      "actualCost": 1200,
+      "notes": "Service: QA Engineer"
     }
   ],
   "consumptions": [

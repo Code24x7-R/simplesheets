@@ -6,7 +6,13 @@
   "startDate": "2026-06-01",
   "endDate": "2026-06-27",
   "calendar": {
-    "workingDays": [1, 2, 3, 4, 5],
+    "workingDays": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
     "holidays": [],
     "hoursPerDay": 8
   },
@@ -46,7 +52,9 @@
           "cost": 2000,
           "effort": 16,
           "effortUnit": "hours",
-          "dependencies": ["setup-1"]
+          "dependencies": [
+            "setup-1"
+          ]
         },
         {
           "id": "setup-3",
@@ -60,7 +68,9 @@
           "cost": 10000,
           "effort": 24,
           "effortUnit": "hours",
-          "dependencies": ["setup-2"]
+          "dependencies": [
+            "setup-2"
+          ]
         },
         {
           "id": "setup-4",
@@ -71,7 +81,9 @@
           "isMilestone": true,
           "progress": 100,
           "status": "done",
-          "dependencies": ["setup-3"]
+          "dependencies": [
+            "setup-3"
+          ]
         }
       ]
     },
@@ -97,7 +109,9 @@
           "cost": 3000,
           "effort": 24,
           "effortUnit": "hours",
-          "dependencies": ["setup-4"]
+          "dependencies": [
+            "setup-4"
+          ]
         },
         {
           "id": "cat-2",
@@ -111,7 +125,9 @@
           "cost": 1000,
           "effort": 4,
           "effortUnit": "hours",
-          "dependencies": ["cat-1"]
+          "dependencies": [
+            "cat-1"
+          ]
         },
         {
           "id": "cat-3",
@@ -125,7 +141,9 @@
           "cost": 8000,
           "effort": 16,
           "effortUnit": "hours",
-          "dependencies": ["cat-2"]
+          "dependencies": [
+            "cat-2"
+          ]
         },
         {
           "id": "cat-4",
@@ -136,7 +154,9 @@
           "isMilestone": true,
           "progress": 0,
           "status": "not_started",
-          "dependencies": ["cat-3"]
+          "dependencies": [
+            "cat-3"
+          ]
         }
       ]
     },
@@ -162,7 +182,9 @@
           "cost": 2000,
           "effort": 24,
           "effortUnit": "hours",
-          "dependencies": ["setup-4"]
+          "dependencies": [
+            "setup-4"
+          ]
         },
         {
           "id": "mkt-2",
@@ -176,7 +198,9 @@
           "cost": 1500,
           "effort": 16,
           "effortUnit": "hours",
-          "dependencies": ["mkt-1"]
+          "dependencies": [
+            "mkt-1"
+          ]
         },
         {
           "id": "mkt-3",
@@ -190,7 +214,9 @@
           "cost": 2000,
           "effort": 16,
           "effortUnit": "hours",
-          "dependencies": ["mkt-2"]
+          "dependencies": [
+            "mkt-2"
+          ]
         },
         {
           "id": "mkt-4",
@@ -204,7 +230,9 @@
           "cost": 2500,
           "effort": 16,
           "effortUnit": "hours",
-          "dependencies": ["mkt-3"]
+          "dependencies": [
+            "mkt-3"
+          ]
         }
       ]
     },
@@ -230,7 +258,9 @@
           "cost": 4000,
           "effort": 24,
           "effortUnit": "hours",
-          "dependencies": ["cat-4"]
+          "dependencies": [
+            "cat-4"
+          ]
         },
         {
           "id": "log-2",
@@ -244,7 +274,9 @@
           "cost": 2000,
           "effort": 16,
           "effortUnit": "hours",
-          "dependencies": ["log-1"]
+          "dependencies": [
+            "log-1"
+          ]
         },
         {
           "id": "log-3",
@@ -258,7 +290,10 @@
           "cost": 3000,
           "effort": 16,
           "effortUnit": "hours",
-          "dependencies": ["log-2", "mkt-4"]
+          "dependencies": [
+            "log-2",
+            "mkt-4"
+          ]
         },
         {
           "id": "log-4",
@@ -272,7 +307,9 @@
           "cost": 1000,
           "effort": 8,
           "effortUnit": "hours",
-          "dependencies": ["log-3"]
+          "dependencies": [
+            "log-3"
+          ]
         }
       ]
     },
@@ -285,7 +322,53 @@
       "isMilestone": true,
       "progress": 0,
       "status": "not_started",
-      "dependencies": ["log-3"]
+      "dependencies": [
+        "log-3"
+      ]
+    },
+    {
+      "id": "closure",
+      "name": "Project Closure",
+      "startDate": "2026-06-28",
+      "endDate": "2026-06-30",
+      "description": "Final report, lessons learned, and administrative closure",
+      "progress": 0,
+      "status": "not_started",
+      "cost": 2000,
+      "children": [
+        {
+          "id": "closure-1",
+          "name": "Lessons learned workshop",
+          "startDate": "2026-06-28",
+          "endDate": "2026-06-28",
+          "description": "Document what went well and what to improve",
+          "progress": 0,
+          "status": "not_started",
+          "resourceId": "pm",
+          "cost": 1000,
+          "effort": 8,
+          "effortUnit": "hours",
+          "dependencies": [
+            "milestone-event"
+          ]
+        },
+        {
+          "id": "closure-2",
+          "name": "Final project report",
+          "startDate": "2026-06-30",
+          "endDate": "2026-06-30",
+          "description": "Compile final project report and metrics",
+          "progress": 0,
+          "status": "not_started",
+          "resourceId": "pm",
+          "cost": 1000,
+          "effort": 8,
+          "effortUnit": "hours",
+          "dependencies": [
+            "closure-1"
+          ]
+        }
+      ]
     }
   ],
   "risks": [
@@ -844,6 +927,83 @@
       "expectedReturnDate": null,
       "actualCost": 1000,
       "notes": "Name badges for attendees"
+    },
+    {
+      "id": "alloc-setup-1",
+      "materialId": "mat-1",
+      "taskId": "setup-1",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2026-06-03",
+      "expectedReturnDate": null,
+      "actualCost": 3000,
+      "notes": "Service: Event Manager"
+    },
+    {
+      "id": "alloc-setup-2",
+      "materialId": "mat-1",
+      "taskId": "setup-2",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2026-06-05",
+      "expectedReturnDate": null,
+      "actualCost": 2000,
+      "notes": "Service: Event Manager"
+    },
+    {
+      "id": "alloc-cat-1",
+      "materialId": "mat-1",
+      "taskId": "cat-1",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2026-06-12",
+      "expectedReturnDate": null,
+      "actualCost": 3000,
+      "notes": "Service: Event Manager"
+    },
+    {
+      "id": "alloc-cat-2",
+      "materialId": "mat-1",
+      "taskId": "cat-2",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2026-06-13",
+      "expectedReturnDate": null,
+      "actualCost": 1000,
+      "notes": "Service: Caterer"
+    },
+    {
+      "id": "alloc-cat-3",
+      "materialId": "mat-1",
+      "taskId": "cat-3",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2026-06-15",
+      "expectedReturnDate": null,
+      "actualCost": 4000,
+      "notes": "Service: Caterer"
+    },
+    {
+      "id": "alloc-mkt-2",
+      "materialId": "mat-1",
+      "taskId": "mkt-2",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2026-06-14",
+      "expectedReturnDate": null,
+      "actualCost": 1500,
+      "notes": "Service: Event Coordinator"
+    },
+    {
+      "id": "alloc-mkt-3",
+      "materialId": "mat-1",
+      "taskId": "mkt-3",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2026-06-17",
+      "expectedReturnDate": null,
+      "actualCost": 1500,
+      "notes": "Service: Email Platform"
     }
   ],
   "consumptions": [

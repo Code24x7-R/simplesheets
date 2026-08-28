@@ -148,7 +148,10 @@
           "status": "in_progress",
           "cost": 8000,
           "effort": 16,
-          "effortUnit": "hours"
+          "effortUnit": "hours",
+          "dependencies": [
+            "fel1-7"
+          ]
         },
         {
           "id": "fel2-2",
@@ -277,7 +280,10 @@
           "status": "in_progress",
           "cost": 8000,
           "effort": 16,
-          "effortUnit": "hours"
+          "effortUnit": "hours",
+          "dependencies": [
+            "fel2-8"
+          ]
         },
         {
           "id": "feed-2",
@@ -391,7 +397,10 @@
           "status": "in_progress",
           "cost": 8000,
           "effort": 16,
-          "effortUnit": "hours"
+          "effortUnit": "hours",
+          "dependencies": [
+            "feed-7"
+          ]
         },
         {
           "id": "epc-2",
@@ -490,7 +499,10 @@
           "status": "in_progress",
           "cost": 8000,
           "effort": 16,
-          "effortUnit": "hours"
+          "effortUnit": "hours",
+          "dependencies": [
+            "epc-6"
+          ]
         },
         {
           "id": "com-2",
@@ -575,7 +587,10 @@
           "status": "in_progress",
           "cost": 8000,
           "effort": 16,
-          "effortUnit": "hours"
+          "effortUnit": "hours",
+          "dependencies": [
+            "com-5"
+          ]
         },
         {
           "id": "bf-2",
@@ -686,6 +701,50 @@
       "progress": 0,
       "status": "not_started",
       "cost": 120000
+    },
+    {
+      "id": "closure",
+      "name": "Project Closure",
+      "startDate": "2028-07-01",
+      "endDate": "2028-07-03",
+      "description": "Final report, lessons learned, and administrative closure",
+      "progress": 0,
+      "status": "not_started",
+      "cost": 2000,
+      "children": [
+        {
+          "id": "closure-1",
+          "name": "Lessons learned workshop",
+          "startDate": "2028-07-01",
+          "endDate": "2028-07-01",
+          "description": "Document what went well and what to improve",
+          "progress": 0,
+          "status": "not_started",
+          "resourceId": "partner",
+          "cost": 1000,
+          "effort": 8,
+          "effortUnit": "hours",
+          "dependencies": [
+            "brownfield"
+          ]
+        },
+        {
+          "id": "closure-2",
+          "name": "Final project report",
+          "startDate": "2028-07-03",
+          "endDate": "2028-07-03",
+          "description": "Compile final project report and metrics",
+          "progress": 0,
+          "status": "not_started",
+          "resourceId": "partner",
+          "cost": 1000,
+          "effort": 8,
+          "effortUnit": "hours",
+          "dependencies": [
+            "closure-1"
+          ]
+        }
+      ]
     }
   ],
   "risks": [
@@ -1082,6 +1141,107 @@
       "costImpact": 0,
       "scheduleImpactDays": 14,
       "approvedBy": "Client"
+    }
+  ],
+  "allocations": [
+    {
+      "id": "alloc-fel1-1",
+      "materialId": "min-mat-1",
+      "taskId": "fel1-1",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2027-04-04",
+      "expectedReturnDate": null,
+      "actualCost": 15000,
+      "notes": "Service: Managing Partner"
+    },
+    {
+      "id": "alloc-fel1-2",
+      "materialId": "min-mat-1",
+      "taskId": "fel1-2",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2027-04-18",
+      "expectedReturnDate": null,
+      "actualCost": 25000,
+      "notes": "Service: Process Engineer"
+    },
+    {
+      "id": "alloc-fel1-7",
+      "materialId": "min-mat-1",
+      "taskId": "fel1-7",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2027-05-31",
+      "expectedReturnDate": null,
+      "actualCost": 35000,
+      "notes": "Service: Principal Mechanical Engineer"
+    },
+    {
+      "id": "alloc-fel2-1",
+      "materialId": "min-mat-1",
+      "taskId": "fel2-1",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2027-06-05",
+      "expectedReturnDate": null,
+      "actualCost": 20000,
+      "notes": "Service: Managing Partner"
+    },
+    {
+      "id": "alloc-fel2-8",
+      "materialId": "min-mat-1",
+      "taskId": "fel2-8",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2027-09-30",
+      "expectedReturnDate": null,
+      "actualCost": 75000,
+      "notes": "Service: Principal Mechanical Engineer"
+    },
+    {
+      "id": "alloc-feed-1",
+      "materialId": "min-mat-1",
+      "taskId": "feed-1",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2027-10-12",
+      "expectedReturnDate": null,
+      "actualCost": 30000,
+      "notes": "Service: Managing Partner"
+    },
+    {
+      "id": "alloc-feed-7",
+      "materialId": "min-mat-1",
+      "taskId": "feed-7",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2028-02-28",
+      "expectedReturnDate": null,
+      "actualCost": 80000,
+      "notes": "Service: Principal Mechanical Engineer"
+    },
+    {
+      "id": "alloc-epc-1",
+      "materialId": "min-mat-1",
+      "taskId": "epc-1",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2028-03-12",
+      "expectedReturnDate": null,
+      "actualCost": 25000,
+      "notes": "Service: Managing Partner"
+    },
+    {
+      "id": "alloc-epc-6",
+      "materialId": "min-mat-1",
+      "taskId": "epc-6",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2028-09-30",
+      "expectedReturnDate": null,
+      "actualCost": 20000,
+      "notes": "Service: Field/Commissioning Engineer"
     }
   ]
 }

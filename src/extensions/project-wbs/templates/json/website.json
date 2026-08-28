@@ -6,7 +6,13 @@
   "startDate": "2026-02-01",
   "endDate": "2026-03-06",
   "calendar": {
-    "workingDays": [1, 2, 3, 4, 5],
+    "workingDays": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
     "holidays": [],
     "hoursPerDay": 8
   },
@@ -46,7 +52,9 @@
           "cost": 3000,
           "effort": 16,
           "effortUnit": "hours",
-          "dependencies": ["disc-1"]
+          "dependencies": [
+            "disc-1"
+          ]
         },
         {
           "id": "disc-3",
@@ -60,7 +68,9 @@
           "cost": 3500,
           "effort": 8,
           "effortUnit": "hours",
-          "dependencies": ["disc-2"]
+          "dependencies": [
+            "disc-2"
+          ]
         }
       ]
     },
@@ -86,7 +96,9 @@
           "cost": 5000,
           "effort": 24,
           "effortUnit": "hours",
-          "dependencies": ["disc-3"]
+          "dependencies": [
+            "disc-3"
+          ]
         },
         {
           "id": "des-2",
@@ -100,7 +112,9 @@
           "cost": 4500,
           "effort": 24,
           "effortUnit": "hours",
-          "dependencies": ["des-1"]
+          "dependencies": [
+            "des-1"
+          ]
         },
         {
           "id": "des-3",
@@ -114,7 +128,9 @@
           "cost": 2500,
           "effort": 8,
           "effortUnit": "hours",
-          "dependencies": ["des-2"],
+          "dependencies": [
+            "des-2"
+          ],
           "approvalGates": [
             {
               "gateType": "approval",
@@ -149,7 +165,9 @@
           "cost": 7000,
           "effort": 40,
           "effortUnit": "hours",
-          "dependencies": ["des-3"]
+          "dependencies": [
+            "des-3"
+          ]
         },
         {
           "id": "dev-2",
@@ -163,7 +181,9 @@
           "cost": 7000,
           "effort": 32,
           "effortUnit": "hours",
-          "dependencies": ["dev-1"]
+          "dependencies": [
+            "dev-1"
+          ]
         },
         {
           "id": "dev-3",
@@ -177,7 +197,9 @@
           "cost": 4000,
           "effort": 8,
           "effortUnit": "hours",
-          "dependencies": ["dev-2"]
+          "dependencies": [
+            "dev-2"
+          ]
         }
       ]
     },
@@ -203,7 +225,9 @@
           "cost": 3000,
           "effort": 16,
           "effortUnit": "hours",
-          "dependencies": ["dev-3"]
+          "dependencies": [
+            "dev-3"
+          ]
         },
         {
           "id": "qa-2",
@@ -217,7 +241,9 @@
           "cost": 2000,
           "effort": 16,
           "effortUnit": "hours",
-          "dependencies": ["qa-1"]
+          "dependencies": [
+            "qa-1"
+          ]
         },
         {
           "id": "qa-3",
@@ -231,7 +257,9 @@
           "cost": 1000,
           "effort": 8,
           "effortUnit": "hours",
-          "dependencies": ["qa-2"]
+          "dependencies": [
+            "qa-2"
+          ]
         }
       ]
     },
@@ -257,7 +285,9 @@
           "cost": 2000,
           "effort": 8,
           "effortUnit": "hours",
-          "dependencies": ["qa-3"]
+          "dependencies": [
+            "qa-3"
+          ]
         },
         {
           "id": "launch-2",
@@ -271,7 +301,9 @@
           "cost": 2000,
           "effort": 8,
           "effortUnit": "hours",
-          "dependencies": ["launch-1"]
+          "dependencies": [
+            "launch-1"
+          ]
         }
       ]
     },
@@ -284,7 +316,53 @@
       "isMilestone": true,
       "progress": 0,
       "status": "not_started",
-      "dependencies": ["launch-2"]
+      "dependencies": [
+        "launch-2"
+      ]
+    },
+    {
+      "id": "closure",
+      "name": "Project Closure",
+      "startDate": "2026-03-07",
+      "endDate": "2026-03-09",
+      "description": "Final report, lessons learned, and administrative closure",
+      "progress": 0,
+      "status": "not_started",
+      "cost": 2000,
+      "children": [
+        {
+          "id": "closure-1",
+          "name": "Lessons learned workshop",
+          "startDate": "2026-03-07",
+          "endDate": "2026-03-07",
+          "description": "Document what went well and what to improve",
+          "progress": 0,
+          "status": "not_started",
+          "resourceId": "pm",
+          "cost": 1000,
+          "effort": 8,
+          "effortUnit": "hours",
+          "dependencies": [
+            "milestone-launch"
+          ]
+        },
+        {
+          "id": "closure-2",
+          "name": "Final project report",
+          "startDate": "2026-03-09",
+          "endDate": "2026-03-09",
+          "description": "Compile final project report and metrics",
+          "progress": 0,
+          "status": "not_started",
+          "resourceId": "pm",
+          "cost": 1000,
+          "effort": 8,
+          "effortUnit": "hours",
+          "dependencies": [
+            "closure-1"
+          ]
+        }
+      ]
     }
   ],
   "risks": [
@@ -783,6 +861,83 @@
       "expectedReturnDate": null,
       "actualCost": 300,
       "notes": "Stock photo packs for website"
+    },
+    {
+      "id": "alloc-disc-1",
+      "materialId": "mat-1",
+      "taskId": "disc-1",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2026-02-02",
+      "expectedReturnDate": null,
+      "actualCost": 2000,
+      "notes": "Service: Project Manager"
+    },
+    {
+      "id": "alloc-disc-2",
+      "materialId": "mat-1",
+      "taskId": "disc-2",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2026-02-04",
+      "expectedReturnDate": null,
+      "actualCost": 3000,
+      "notes": "Service: UI Designer"
+    },
+    {
+      "id": "alloc-disc-3",
+      "materialId": "mat-1",
+      "taskId": "disc-3",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2026-02-05",
+      "expectedReturnDate": null,
+      "actualCost": 3500,
+      "notes": "Service: UI Designer"
+    },
+    {
+      "id": "alloc-des-2",
+      "materialId": "mat-1",
+      "taskId": "des-2",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2026-02-12",
+      "expectedReturnDate": null,
+      "actualCost": 4500,
+      "notes": "Service: UI Designer"
+    },
+    {
+      "id": "alloc-des-3",
+      "materialId": "mat-1",
+      "taskId": "des-3",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2026-02-13",
+      "expectedReturnDate": null,
+      "actualCost": 2300,
+      "notes": "Service: Project Manager"
+    },
+    {
+      "id": "alloc-dev-1",
+      "materialId": "mat-1",
+      "taskId": "dev-1",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2026-02-19",
+      "expectedReturnDate": null,
+      "actualCost": 7000,
+      "notes": "Service: Web Developer"
+    },
+    {
+      "id": "alloc-dev-2",
+      "materialId": "mat-1",
+      "taskId": "dev-2",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2026-02-24",
+      "expectedReturnDate": null,
+      "actualCost": 4500,
+      "notes": "Service: Web Developer"
     }
   ],
   "consumptions": [

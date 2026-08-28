@@ -6,7 +6,13 @@
   "startDate": "2026-10-01",
   "endDate": "2026-11-06",
   "calendar": {
-    "workingDays": [1, 2, 3, 4, 5],
+    "workingDays": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
     "holidays": [],
     "hoursPerDay": 8
   },
@@ -46,7 +52,9 @@
           "cost": 6000,
           "effort": 24,
           "effortUnit": "hours",
-          "dependencies": ["aud-1"]
+          "dependencies": [
+            "aud-1"
+          ]
         },
         {
           "id": "aud-3",
@@ -60,7 +68,9 @@
           "cost": 6000,
           "effort": 16,
           "effortUnit": "hours",
-          "dependencies": ["aud-2"]
+          "dependencies": [
+            "aud-2"
+          ]
         },
         {
           "id": "aud-4",
@@ -71,7 +81,9 @@
           "isMilestone": true,
           "progress": 100,
           "status": "done",
-          "dependencies": ["aud-3"]
+          "dependencies": [
+            "aud-3"
+          ]
         }
       ]
     },
@@ -97,7 +109,9 @@
           "cost": 6000,
           "effort": 24,
           "effortUnit": "hours",
-          "dependencies": ["aud-4"]
+          "dependencies": [
+            "aud-4"
+          ]
         },
         {
           "id": "plan-2",
@@ -111,7 +125,9 @@
           "cost": 5000,
           "effort": 16,
           "effortUnit": "hours",
-          "dependencies": ["plan-1"]
+          "dependencies": [
+            "plan-1"
+          ]
         },
         {
           "id": "plan-3",
@@ -125,7 +141,9 @@
           "cost": 4000,
           "effort": 16,
           "effortUnit": "hours",
-          "dependencies": ["plan-2"]
+          "dependencies": [
+            "plan-2"
+          ]
         },
         {
           "id": "plan-4",
@@ -136,7 +154,9 @@
           "isMilestone": true,
           "progress": 100,
           "status": "done",
-          "dependencies": ["plan-3"],
+          "dependencies": [
+            "plan-3"
+          ],
           "approvalGates": [
             {
               "gateType": "approval",
@@ -171,7 +191,9 @@
           "cost": 8000,
           "effort": 32,
           "effortUnit": "hours",
-          "dependencies": ["plan-4"]
+          "dependencies": [
+            "plan-4"
+          ]
         },
         {
           "id": "mig-2",
@@ -185,7 +207,9 @@
           "cost": 5000,
           "effort": 24,
           "effortUnit": "hours",
-          "dependencies": ["mig-1"]
+          "dependencies": [
+            "mig-1"
+          ]
         },
         {
           "id": "mig-3",
@@ -199,7 +223,9 @@
           "cost": 7000,
           "effort": 16,
           "effortUnit": "hours",
-          "dependencies": ["mig-2"]
+          "dependencies": [
+            "mig-2"
+          ]
         },
         {
           "id": "mig-4",
@@ -213,7 +239,9 @@
           "cost": 5000,
           "effort": 16,
           "effortUnit": "hours",
-          "dependencies": ["mig-3"]
+          "dependencies": [
+            "mig-3"
+          ]
         }
       ]
     },
@@ -239,7 +267,9 @@
           "cost": 4000,
           "effort": 24,
           "effortUnit": "hours",
-          "dependencies": ["mig-4"]
+          "dependencies": [
+            "mig-4"
+          ]
         },
         {
           "id": "val-2",
@@ -253,7 +283,9 @@
           "cost": 3000,
           "effort": 8,
           "effortUnit": "hours",
-          "dependencies": ["val-1"]
+          "dependencies": [
+            "val-1"
+          ]
         },
         {
           "id": "val-3",
@@ -267,7 +299,9 @@
           "cost": 3000,
           "effort": 24,
           "effortUnit": "hours",
-          "dependencies": ["val-2"]
+          "dependencies": [
+            "val-2"
+          ]
         },
         {
           "id": "val-4",
@@ -281,7 +315,53 @@
           "cost": 2000,
           "effort": 8,
           "effortUnit": "hours",
-          "dependencies": ["val-3"]
+          "dependencies": [
+            "val-3"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "closure",
+      "name": "Project Closure",
+      "startDate": "2026-11-07",
+      "endDate": "2026-11-09",
+      "description": "Final report, lessons learned, and administrative closure",
+      "progress": 0,
+      "status": "not_started",
+      "cost": 2000,
+      "children": [
+        {
+          "id": "closure-1",
+          "name": "Lessons learned workshop",
+          "startDate": "2026-11-07",
+          "endDate": "2026-11-07",
+          "description": "Document what went well and what to improve",
+          "progress": 0,
+          "status": "not_started",
+          "resourceId": "pm",
+          "cost": 1000,
+          "effort": 8,
+          "effortUnit": "hours",
+          "dependencies": [
+            "validation"
+          ]
+        },
+        {
+          "id": "closure-2",
+          "name": "Final project report",
+          "startDate": "2026-11-09",
+          "endDate": "2026-11-09",
+          "description": "Compile final project report and metrics",
+          "progress": 0,
+          "status": "not_started",
+          "resourceId": "pm",
+          "cost": 1000,
+          "effort": 8,
+          "effortUnit": "hours",
+          "dependencies": [
+            "closure-1"
+          ]
         }
       ]
     }
@@ -800,6 +880,94 @@
       "expectedReturnDate": "2027-03-31",
       "actualCost": 230,
       "notes": "Backup storage"
+    },
+    {
+      "id": "alloc-aud-1",
+      "materialId": "mat-1",
+      "taskId": "aud-1",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2026-10-04",
+      "expectedReturnDate": null,
+      "actualCost": 6000,
+      "notes": "Service: Cloud Architect"
+    },
+    {
+      "id": "alloc-aud-2",
+      "materialId": "mat-1",
+      "taskId": "aud-2",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2026-10-07",
+      "expectedReturnDate": null,
+      "actualCost": 6000,
+      "notes": "Service: Cloud Architect"
+    },
+    {
+      "id": "alloc-aud-3",
+      "materialId": "mat-1",
+      "taskId": "aud-3",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2026-10-09",
+      "expectedReturnDate": null,
+      "actualCost": 6000,
+      "notes": "Service: Cloud Architect"
+    },
+    {
+      "id": "alloc-plan-1",
+      "materialId": "mat-1",
+      "taskId": "plan-1",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2026-10-13",
+      "expectedReturnDate": null,
+      "actualCost": 6000,
+      "notes": "Service: Cloud Architect"
+    },
+    {
+      "id": "alloc-plan-2",
+      "materialId": "mat-1",
+      "taskId": "plan-2",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2026-10-15",
+      "expectedReturnDate": null,
+      "actualCost": 5000,
+      "notes": "Service: Migration PM"
+    },
+    {
+      "id": "alloc-plan-3",
+      "materialId": "mat-1",
+      "taskId": "plan-3",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2026-10-17",
+      "expectedReturnDate": null,
+      "actualCost": 4000,
+      "notes": "Service: Cloud Architect"
+    },
+    {
+      "id": "alloc-mig-2",
+      "materialId": "mat-1",
+      "taskId": "mig-2",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2026-10-25",
+      "expectedReturnDate": null,
+      "actualCost": 4000,
+      "notes": "Service: Migration PM"
+    },
+    {
+      "id": "alloc-mig-3",
+      "materialId": "mat-1",
+      "taskId": "mig-3",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2026-10-27",
+      "expectedReturnDate": null,
+      "actualCost": 2000,
+      "notes": "Service: Migration Engineer"
     }
   ],
   "consumptions": [

@@ -6,7 +6,13 @@
   "startDate": "2026-04-01",
   "endDate": "2026-05-21",
   "calendar": {
-    "workingDays": [1, 2, 3, 4, 5],
+    "workingDays": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
     "holidays": [],
     "hoursPerDay": 8
   },
@@ -46,7 +52,9 @@
           "cost": 3000,
           "effort": 24,
           "effortUnit": "hours",
-          "dependencies": ["plan-1"]
+          "dependencies": [
+            "plan-1"
+          ]
         },
         {
           "id": "plan-3",
@@ -60,7 +68,9 @@
           "cost": 4000,
           "effort": 24,
           "effortUnit": "hours",
-          "dependencies": ["plan-2"]
+          "dependencies": [
+            "plan-2"
+          ]
         },
         {
           "id": "plan-4",
@@ -71,7 +81,9 @@
           "isMilestone": true,
           "progress": 100,
           "status": "done",
-          "dependencies": ["plan-2"]
+          "dependencies": [
+            "plan-2"
+          ]
         }
       ]
     },
@@ -97,7 +109,9 @@
           "cost": 2000,
           "effort": 8,
           "effortUnit": "hours",
-          "dependencies": ["plan-4"]
+          "dependencies": [
+            "plan-4"
+          ]
         },
         {
           "id": "demo-2",
@@ -111,7 +125,9 @@
           "cost": 4000,
           "effort": 24,
           "effortUnit": "hours",
-          "dependencies": ["demo-1"]
+          "dependencies": [
+            "demo-1"
+          ]
         },
         {
           "id": "demo-3",
@@ -125,7 +141,9 @@
           "cost": 2000,
           "effort": 8,
           "effortUnit": "hours",
-          "dependencies": ["demo-2"]
+          "dependencies": [
+            "demo-2"
+          ]
         }
       ]
     },
@@ -151,7 +169,9 @@
           "cost": 6000,
           "effort": 24,
           "effortUnit": "hours",
-          "dependencies": ["demo-3"]
+          "dependencies": [
+            "demo-3"
+          ]
         },
         {
           "id": "struct-2",
@@ -165,7 +185,9 @@
           "cost": 6000,
           "effort": 24,
           "effortUnit": "hours",
-          "dependencies": ["struct-1"]
+          "dependencies": [
+            "struct-1"
+          ]
         },
         {
           "id": "struct-3",
@@ -179,7 +201,9 @@
           "cost": 500,
           "effort": 4,
           "effortUnit": "hours",
-          "dependencies": ["struct-2"]
+          "dependencies": [
+            "struct-2"
+          ]
         },
         {
           "id": "struct-4",
@@ -190,7 +214,9 @@
           "isMilestone": true,
           "progress": 0,
           "status": "not_started",
-          "dependencies": ["struct-3"],
+          "dependencies": [
+            "struct-3"
+          ],
           "approvalGates": [
             {
               "gateType": "external",
@@ -225,7 +251,9 @@
           "cost": 6000,
           "effort": 32,
           "effortUnit": "hours",
-          "dependencies": ["struct-4"]
+          "dependencies": [
+            "struct-4"
+          ]
         },
         {
           "id": "mep-2",
@@ -239,7 +267,9 @@
           "cost": 6000,
           "effort": 24,
           "effortUnit": "hours",
-          "dependencies": ["mep-1"]
+          "dependencies": [
+            "mep-1"
+          ]
         },
         {
           "id": "mep-3",
@@ -253,7 +283,9 @@
           "cost": 6000,
           "effort": 24,
           "effortUnit": "hours",
-          "dependencies": ["mep-2"]
+          "dependencies": [
+            "mep-2"
+          ]
         },
         {
           "id": "mep-4",
@@ -267,7 +299,9 @@
           "cost": 500,
           "effort": 4,
           "effortUnit": "hours",
-          "dependencies": ["mep-3"]
+          "dependencies": [
+            "mep-3"
+          ]
         }
       ]
     },
@@ -293,7 +327,9 @@
           "cost": 4000,
           "effort": 32,
           "effortUnit": "hours",
-          "dependencies": ["mep-4"]
+          "dependencies": [
+            "mep-4"
+          ]
         },
         {
           "id": "fin-2",
@@ -307,7 +343,9 @@
           "cost": 5000,
           "effort": 24,
           "effortUnit": "hours",
-          "dependencies": ["fin-1"]
+          "dependencies": [
+            "fin-1"
+          ]
         },
         {
           "id": "fin-3",
@@ -321,7 +359,9 @@
           "cost": 3000,
           "effort": 24,
           "effortUnit": "hours",
-          "dependencies": ["fin-2"]
+          "dependencies": [
+            "fin-2"
+          ]
         },
         {
           "id": "fin-4",
@@ -335,7 +375,9 @@
           "cost": 2000,
           "effort": 16,
           "effortUnit": "hours",
-          "dependencies": ["fin-3"]
+          "dependencies": [
+            "fin-3"
+          ]
         },
         {
           "id": "fin-5",
@@ -349,7 +391,9 @@
           "cost": 1000,
           "effort": 8,
           "effortUnit": "hours",
-          "dependencies": ["fin-4"]
+          "dependencies": [
+            "fin-4"
+          ]
         }
       ]
     },
@@ -375,7 +419,9 @@
           "cost": 1000,
           "effort": 8,
           "effortUnit": "hours",
-          "dependencies": ["fin-5"]
+          "dependencies": [
+            "fin-5"
+          ]
         },
         {
           "id": "hand-2",
@@ -389,7 +435,9 @@
           "cost": 500,
           "effort": 8,
           "effortUnit": "hours",
-          "dependencies": ["hand-1"]
+          "dependencies": [
+            "hand-1"
+          ]
         },
         {
           "id": "hand-3",
@@ -400,7 +448,9 @@
           "isMilestone": true,
           "progress": 0,
           "status": "not_started",
-          "dependencies": ["hand-2"],
+          "dependencies": [
+            "hand-2"
+          ],
           "approvalGates": [
             {
               "gateType": "sign_off",
@@ -422,7 +472,53 @@
       "isMilestone": true,
       "progress": 0,
       "status": "not_started",
-      "dependencies": ["hand-3"]
+      "dependencies": [
+        "hand-3"
+      ]
+    },
+    {
+      "id": "closure",
+      "name": "Project Closure",
+      "startDate": "2026-05-22",
+      "endDate": "2026-05-24",
+      "description": "Final report, lessons learned, and administrative closure",
+      "progress": 0,
+      "status": "not_started",
+      "cost": 2000,
+      "children": [
+        {
+          "id": "closure-1",
+          "name": "Lessons learned workshop",
+          "startDate": "2026-05-22",
+          "endDate": "2026-05-22",
+          "description": "Document what went well and what to improve",
+          "progress": 0,
+          "status": "not_started",
+          "resourceId": "pm",
+          "cost": 1000,
+          "effort": 8,
+          "effortUnit": "hours",
+          "dependencies": [
+            "milestone-complete"
+          ]
+        },
+        {
+          "id": "closure-2",
+          "name": "Final project report",
+          "startDate": "2026-05-24",
+          "endDate": "2026-05-24",
+          "description": "Compile final project report and metrics",
+          "progress": 0,
+          "status": "not_started",
+          "resourceId": "pm",
+          "cost": 1000,
+          "effort": 8,
+          "effortUnit": "hours",
+          "dependencies": [
+            "closure-1"
+          ]
+        }
+      ]
     }
   ],
   "risks": [
@@ -1100,6 +1196,61 @@
       "expectedReturnDate": "2026-04-25",
       "actualCost": 400,
       "notes": "Power tools rental"
+    },
+    {
+      "id": "alloc-plan-1",
+      "materialId": "mat-1",
+      "taskId": "plan-1",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2026-04-06",
+      "expectedReturnDate": null,
+      "actualCost": 5000,
+      "notes": "Service: Architect"
+    },
+    {
+      "id": "alloc-plan-2",
+      "materialId": "mat-1",
+      "taskId": "plan-2",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2026-04-09",
+      "expectedReturnDate": null,
+      "actualCost": 3000,
+      "notes": "Service: City Permits"
+    },
+    {
+      "id": "alloc-plan-3",
+      "materialId": "mat-1",
+      "taskId": "plan-3",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2026-04-12",
+      "expectedReturnDate": null,
+      "actualCost": 4000,
+      "notes": "Service: Material selection"
+    },
+    {
+      "id": "alloc-demo-1",
+      "materialId": "mat-1",
+      "taskId": "demo-1",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2026-04-13",
+      "expectedReturnDate": null,
+      "actualCost": 2500,
+      "notes": "Service: Contractor"
+    },
+    {
+      "id": "alloc-demo-3",
+      "materialId": "mat-1",
+      "taskId": "demo-3",
+      "allocatedQuantity": 1,
+      "consumedQuantity": 1,
+      "allocationDate": "2026-04-17",
+      "expectedReturnDate": null,
+      "actualCost": 2500,
+      "notes": "Service: Waste Management"
     }
   ],
   "consumptions": [
