@@ -80,6 +80,27 @@ export function FilterDropdown({
   const [customFilterValue, setCustomFilterValue] = useState<string>(() => initialCustom?.value ?? '');
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  // Sync custom-filter state when the currentFilter prop changes
+  // while the dropdown stays mounted.
+  useEffect(() => {
+    const newInitialCustom = getInitialCustomCondition();
+    setShowCustomFilter(newInitialCustom !== null);
+    setCustomFilterType(newInitialCustom?.type ?? 'contains');
+    setCustomFilterValue(newInitialCustom?.value ?? '');
+    if (currentFilter) {
+      const includesCondition = currentFilter.conditions.find(
+        (c): c is { type: 'includes'; values: string[] } => c.type === 'includes',
+      );
+      if (includesCondition) {
+        setSelectedValues(new Set(includesCondition.values));
+      } else {
+        setSelectedValues(new Set());
+      }
+    } else {
+      setSelectedValues(new Set());
+    }
+  }, [currentFilter]);
+
   // Get unique values for this column
   const allUniqueValues = getUniqueValues(sheet, column, headerRow);
 

@@ -66,6 +66,17 @@ export function ChartDialog({ isOpen, onClose, onApply, sheet, initialRange, exi
   const [yAxisLabel, setYAxisLabel] = useState(existingChart?.yAxisLabel || settings?.yAxisLabel || '');
   const [legendPosition, setLegendPosition] = useState<LegendPosition>(existingChart?.legendPosition || settings?.legendPosition || 'bottom');
 
+  // Sync local state when the existingChart / settings props change
+  // (e.g. user edits a different chart while the dialog stays mounted).
+  useEffect(() => {
+    setChartType(existingChart?.type || settings?.type || 'bar');
+    setDataRange(existingChart?.dataRange || defaultRange);
+    setTitle(existingChart?.title || settings?.title || 'Chart Title');
+    setXAxisLabel(existingChart?.xAxisLabel || settings?.xAxisLabel || '');
+    setYAxisLabel(existingChart?.yAxisLabel || settings?.yAxisLabel || '');
+    setLegendPosition(existingChart?.legendPosition || settings?.legendPosition || 'bottom');
+  }, [existingChart, settings, defaultRange]);
+
   // Listen for chart range selection events from the grid
   useEffect(() => {
     const handleRangeSelected = (e: Event) => {

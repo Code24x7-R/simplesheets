@@ -7,7 +7,7 @@
  * recommendations, and next steps for the PM.
  */
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import type { Project } from '../../types';
 import { analyzeProject } from './projectAnalyzer';
 import type { ProjectAnalysis, FindingSeverity, AnalysisCategory } from './types';
@@ -244,9 +244,14 @@ const NextStepsCard: React.FC<{ steps: ProjectAnalysis['nextSteps'] }> = ({
 const CategoryCard: React.FC<{
   category: ProjectAnalysis['categories'][0];
 }> = ({ category }) => {
-  const [expanded, setExpanded] = React.useState(
+  const [expanded, setExpanded] = useState(
     category.critical > 0 || category.warning > 0,
   );
+
+  // Re-evaluate auto-expand when the category prop changes (e.g. analysis re-run).
+  useEffect(() => {
+    setExpanded(category.critical > 0 || category.warning > 0);
+  }, [category]);
 
   const hasFindings = category.findings.length > 0;
 

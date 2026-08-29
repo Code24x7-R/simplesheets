@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { colToLetter } from '../types';
 import type { SortDirection } from '../utils/sheetSort';
 
@@ -64,6 +64,12 @@ export function SortDialog({
     { key: nextLevelKey(), column: defaultColumn, direction: defaultDirection },
   ]);
   const [hasHeader, setHasHeader] = useState(defaultHasHeader);
+
+  // Sync sort state when default props change while dialog stays mounted.
+  useEffect(() => {
+    setLevels([{ key: nextLevelKey(), column: defaultColumn, direction: defaultDirection }]);
+    setHasHeader(defaultHasHeader);
+  }, [defaultColumn, defaultDirection, defaultHasHeader]);
 
   const handleAddLevel = useCallback(() => {
     setLevels((prev) => [

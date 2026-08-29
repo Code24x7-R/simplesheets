@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { NumericInput } from './NumericInput';
 
 interface ColumnRowSizeModalProps {
@@ -66,6 +66,13 @@ export function ColumnRowSizeModal({
   const [type, setType] = useState<'col' | 'row'>(initialType);
   const [applyToAll, setApplyToAll] = useState(false);
   const [size, setSize] = useState(type === 'col' ? defaultColWidth : defaultRowHeight);
+
+  // Sync type/size when the initialType or default dimensions change
+  // while the modal stays mounted.
+  useEffect(() => {
+    setType(initialType);
+    setSize(initialType === 'col' ? defaultColWidth : defaultRowHeight);
+  }, [initialType, defaultColWidth, defaultRowHeight]);
 
   const handleApply = useCallback(() => {
     const clamped = Math.min(MAX_SIZE, Math.max(MIN_SIZE, size));
