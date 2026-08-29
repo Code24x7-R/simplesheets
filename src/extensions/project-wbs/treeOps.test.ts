@@ -32,6 +32,7 @@ import {
   computeTaskCost,
   setBaseline,
   captureBaseline,
+  reorderTask,
 } from './treeOps';
 import type { WBSTask, Resource } from '../types';
 
@@ -257,6 +258,57 @@ describe('treeOps', () => {
       const tree = buildSampleTree();
       const result = moveTask(tree, 'A', 'D', 0);
       expect(result).toEqual(tree);
+    });
+  });
+
+  describe('reorderTask', () => {
+    it('moves a task up among its siblings', () => {
+      const tree = buildSampleTree();
+      // B and C are children of A. Move C up → C should come before B.
+      const result = reorderTask(tree, 'C', 'up');
+      const a = findTask(result, 'A')!;
+      expect(a.children.map((c) => c.id)).toEqual(['C', 'B']);
+    });
+
+    it('moves a task down among its siblings', () => {
+      const tree = buildSampleTree();
+      // B and C are children of A. Move B down → C should come before B.
+      const result = reorderTask(tree, 'B', 'down');
+      const a = findTask(result, 'A')!;
+      expect(a.children.map((c) => c.id)).toEqual(['C', 'B']);
+    });
+
+    it('moves a nested task up among its siblings', () => {
+      const tree = buildSampleTree();
+      // D and E are children of B. Move E up → E should come before D.
+      const result = reorderTask(tree, 'E', 'up');
+      const b = findTask(result, 'B')!;
+      expect(b.children.map((c) => c.id)).toEqual(['E', 'D']);
+    });
+
+    it('does not move the first sibling up', () => {
+      const tree = buildSampleTree();
+      const result = reorderTask(tree, 'B', 'up');
+      expect(result).toBe(tree);
+    });
+
+    it('does not move the last sibling down', () => {
+      const tree = buildSampleTree();
+      const result = reorderTask(tree, 'C', 'down');
+      expect(result).toBe(tree);
+    });
+
+    it('does not mutate the original tree', () => {
+      const tree = buildSampleTree();
+      const original = JSON.stringify(tree);
+      reorderTask(tree, 'C', 'up');
+      expect(JSON.stringify(tree)).toBe(original);
+    });
+
+    it('returns same reference for non-existent task', () => {
+      const tree = buildSampleTree();
+      const result = reorderTask(tree, 'nonexistent', 'up');
+      expect(result).toBe(tree);
     });
   });
 

@@ -233,6 +233,35 @@ function insertAt(tree: WBSTask, parentId: string, task: WBSTask, index: number)
   return tree;
 }
 
+// ─── Resequence ─────────────────────────────────────────────────────────────
+
+/**
+ * Reorder a task within its current parent's children.
+ * @param tree - Array of root-level tasks.
+ * @param id - Task ID to reorder.
+ * @param direction - 'up' to move earlier, 'down' to move later.
+ * @returns New tree with the task reordered. Returns original if no change.
+ */
+export function reorderTask(tree: WBSTask[], id: string, direction: 'up' | 'down'): WBSTask[] {
+  const parent = findParent(tree, id);
+  const siblings = parent ? parent.children : tree;
+  const index = siblings.findIndex((t) => t.id === id);
+  if (index === -1) return tree;
+
+  const newIndex = direction === 'up' ? index - 1 : index + 1;
+  if (newIndex < 0 || newIndex >= siblings.length) return tree;
+
+  // Swap positions
+  const newSiblings = [...siblings];
+  [newSiblings[index], newSiblings[newIndex]] = [newSiblings[newIndex], newSiblings[index]];
+
+  // Apply the reordered children back
+  if (parent) {
+    return updateTask(tree, parent.id, (p) => ({ ...p, children: newSiblings }));
+  }
+  return newSiblings;
+}
+
 // ─── Collapse / Expand ──────────────────────────────────────────────────────
 
 /**

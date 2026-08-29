@@ -15,6 +15,7 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import type { WBSTask } from '../types';
+import { findParent } from './treeOps';
 import { ContextMenu, type ContextMenuItem } from './ContextMenu';
 
 const STATUS_CYCLE: Record<string, WBSTask['status']> = {
@@ -45,6 +46,8 @@ interface WBSTreePanelProps {
   onToggleCollapse: (taskId: string) => void;
   onOpenDependencies?: (taskId: string) => void;
   onTaskStatusChange?: (taskId: string, status: WBSTask['status']) => void;
+  onMoveTaskUp?: (taskId: string) => void;
+  onMoveTaskDown?: (taskId: string) => void;
 }
 
 /**
@@ -77,6 +80,8 @@ export function WBSTreePanel({
   onToggleCollapse,
   onOpenDependencies,
   onTaskStatusChange,
+  onMoveTaskUp,
+  onMoveTaskDown,
 }: WBSTreePanelProps) {
   const [collapsedSet, setCollapsedSet] = useState<Set<string>>(new Set());
   const [contextMenu, setContextMenu] = useState<{
@@ -206,6 +211,13 @@ export function WBSTreePanel({
         )}
         {rows.map(({ task, depth, hasChildren, isCollapsed }) => {
           const isSelected = task.id === selectedTaskId;
+
+          // Find sibling position to determine if move up/down is possible
+          const parent = findParent(tasks, task.id);
+          const siblings = parent ? parent.children : tasks;
+          const siblingIndex = siblings.findIndex((t) => t.id === task.id);
+          const canMoveUp = siblingIndex > 0;
+          const canMoveDown = siblingIndex >= 0 && siblingIndex < siblings.length - 1;
           return (
             <div
               key={task.id}
@@ -271,6 +283,32 @@ export function WBSTreePanel({
                   isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
                 }`}
               >
+                {onMoveTaskUp && (
+                  <button
+                    className="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-blue-600 text-xs rounded hover:bg-blue-50 disabled:opacity-30 disabled:cursor-not-allowed"
+                    title="Move task up"
+                    disabled={!canMoveUp}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onMoveTaskUp(task.id);
+                    }}
+                  >
+                    ▲
+                  </button>
+                )}
+                {onMoveTaskDown && (
+                  <button
+                    className="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-blue-600 text-xs rounded hover:bg-blue-50 disabled:opacity-30 disabled:cursor-not-allowed"
+                    title="Move task down"
+                    disabled={!canMoveDown}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onMoveTaskDown(task.id);
+                    }}
+                  >
+                    ▼
+                  </button>
+                )}
                 <button
                   className="w-5 h-5 flex items-center justify-center text-gray-500 hover:text-blue-600 text-xs rounded hover:bg-blue-50"
                   title="Add child task"

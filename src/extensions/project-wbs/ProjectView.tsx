@@ -40,7 +40,7 @@ import { generateStatusNotifications } from './dependencyWorkflows';
 import type { ActualSpendEntry, MaterialAllocation, MaterialConsumption, ChangeLogEntry } from '../types';
 import { sheetToProject, projectModelToProject } from './sheetToProject';
 import { projectToModel, createBlankProject, importProjectFromJSON } from './projectConverter';
-import { addTask, removeTask, updateTask, toggleCollapsed, findTask, getAllTasks, addResource, updateResource, removeResource, syncResourceCosts } from './treeOps';
+import { addTask, removeTask, updateTask, toggleCollapsed, findTask, getAllTasks, addResource, updateResource, removeResource, syncResourceCosts, reorderTask } from './treeOps';
 import { addRisk, updateRisk, removeRisk, getRiskSummary, linkRiskToTask, unlinkRiskFromTask } from './risks';
 import { recomputeRollups } from './rollups';
 import { autoScheduleSuccessors, updateTaskStatuses } from './dependencyWorkflows';
@@ -291,6 +291,14 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
   function handleToggleCollapse(taskId: string) {
     // UI-only change: collapse/expand does not need to persist to workbook
     setProjectUI((prev) => ({ ...prev, wbs: toggleCollapsed(prev.wbs, taskId) }));
+  }
+
+  function handleMoveTaskUp(taskId: string) {
+    handleProjectChange((prev) => ({ ...prev, wbs: reorderTask(prev.wbs, taskId, 'up') }));
+  }
+
+  function handleMoveTaskDown(taskId: string) {
+    handleProjectChange((prev) => ({ ...prev, wbs: reorderTask(prev.wbs, taskId, 'down') }));
   }
 
   // ─── Dependency Management ──────────────────────────────────────────
@@ -989,6 +997,8 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
                 wbs: updateTask(prev.wbs, taskId, (t) => ({ ...t, status })),
               }));
             }}
+            onMoveTaskUp={handleMoveTaskUp}
+            onMoveTaskDown={handleMoveTaskDown}
           />
         )}
 
