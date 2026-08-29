@@ -56,6 +56,8 @@ export function TaskEditorModal({
       effortUnit: 'hours',
       cost: 0,
       costCurrency: 'USD',
+      baselineCost: 0,
+      baselineDuration: 1,
       responsibleResourceId: null,
       dependencies: [],
       isMilestone: false,

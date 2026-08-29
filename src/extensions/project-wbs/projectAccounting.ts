@@ -204,21 +204,25 @@ export function computeTaskAccounting(
   actualSpendEntries: ActualSpendEntry[],
   resourceCostRate: number = 0,
 ): TaskAccounting {
+  // Baseline falls back to the live cost/duration when not explicitly set
+  // (e.g. for tasks created before the baseline feature existed).
+  const baselineCost = task.baselineCost ?? task.cost;
+  const baselineDuration = task.baselineDuration ?? task.duration;
+
   const actualSpend = actualSpendEntries.reduce((sum, e) => sum + e.amount, 0);
-  const ev = earnedValue(task.cost, task.progress);
-  const pv = plannedValue(task.cost, task.startDate, task.endDate);
+  const ev = earnedValue(baselineCost, task.progress);
+  const pv = plannedValue(baselineCost, task.startDate, task.endDate);
   const cpi = costPerformanceIndex(ev, actualSpend);
   const spi = schedulePerformanceIndex(ev, pv);
-  const etc = estimateToComplete(task.cost, ev);
+  const etc = estimateToComplete(baselineCost, ev);
   const eac = estimateAtCompletion(etc, actualSpend);
-  const remainingDays = Math.max(0, task.duration * (1 - task.progress / 100));
+  const remainingDays = Math.max(0, baselineDuration * (1 - task.progress / 100));
 
   // Duration calculations
-  const baselineDuration = task.duration;
   // Current duration: if task is in progress, use original (could be updated by dependencies)
   const currentDuration = task.duration;
   // Actual duration: elapsed working days since start (simplified: proportional to progress)
-  const actualDuration = task.progress > 0 ? Math.round(task.duration * (task.progress / 100)) : 0;
+  const actualDuration = task.progress > 0 ? Math.round(baselineDuration * (task.progress / 100)) : 0;
   // Remaining duration: working days left
   const remainingDuration = Math.max(0, currentDuration - actualDuration);
   // Duration variance: difference between current estimate and baseline
@@ -229,12 +233,12 @@ export function computeTaskAccounting(
     taskName: task.name,
     progress: task.progress,
     // Cost
-    baselineCost: task.cost,
-    allocatedBudget: task.cost, // Default allocation = baseline
+    baselineCost,
+    allocatedBudget: baselineCost, // Default allocation = baseline
     currentEstimate: eac,
     actualSpend,
     etc,
-    costVariance: eac - task.cost,
+    costVariance: eac - baselineCost,
     materialCost: 0,
     // Duration
     baselineDuration,

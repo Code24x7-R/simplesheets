@@ -21,6 +21,8 @@ function createTask(overrides: Partial<WBSTask> = {}): WBSTask {
     effortUnit: 'hours',
     cost: 1000,
     costCurrency: 'USD',
+    baselineCost: 1000,
+    baselineDuration: 5,
     responsibleResourceId: null,
     dependencies: [],
     status: 'in_progress',
@@ -71,8 +73,8 @@ describe('AccountingDashboard', () => {
   it('shows baseline total in header', () => {
     const project = createProject({
       wbs: [
-        createTask({ id: 't1', name: 'Task 1', cost: 1000 }),
-        createTask({ id: 't2', name: 'Task 2', cost: 2000 }),
+        createTask({ id: 't1', name: 'Task 1', cost: 1000, baselineCost: 1000 }),
+        createTask({ id: 't2', name: 'Task 2', cost: 2000, baselineCost: 2000 }),
       ],
     });
     render(<AccountingDashboard project={project} />);

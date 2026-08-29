@@ -165,6 +165,8 @@ export interface WBSTask {
   effortUnit: EffortUnit;
   cost: number;             // Allocated cost
   costCurrency: string;
+  baselineCost?: number;     // Original approved estimate (snapshot for baseline)
+  baselineDuration?: number; // Original approved duration (snapshot for baseline)
   responsibleResourceId: string | null;
   dependencies: TaskDependency[];
   status?: TaskStatus;      // Current task state (optional for backward compat)

@@ -30,6 +30,8 @@ import {
   getTreeDepth,
   syncResourceCosts,
   computeTaskCost,
+  setBaseline,
+  captureBaseline,
 } from './treeOps';
 import type { WBSTask, Resource } from '../types';
 
@@ -618,5 +620,68 @@ describe('treeOps', () => {
       syncResourceCosts(original, resources);
       expect(original[0].cost).toBe(0);
     });
+  });
+});
+
+describe('setBaseline', () => {
+  it('sets baselineCost and baselineDuration on a task', () => {
+    const tree = [task('t1'), task('t2')];
+    const result = setBaseline(tree, 't1', 5000, 10);
+
+    const updated = findTask(result, 't1');
+    expect(updated?.baselineCost).toBe(5000);
+    expect(updated?.baselineDuration).toBe(10);
+
+    // Other task unchanged
+    const other = findTask(result, 't2');
+    expect(other?.baselineCost).toBeUndefined();
+  });
+
+  it('does not mutate the original tree', () => {
+    const tree = [task('t1')];
+    const original = JSON.parse(JSON.stringify(tree));
+    setBaseline(tree, 't1', 5000, 10);
+    expect(tree[0].baselineCost).toBe(original[0].baselineCost);
+  });
+
+  it('works on nested tasks', () => {
+    const child = task('t2', 't1', 1);
+    const tree = [task('t1', null, 0, [child])];
+    const result = setBaseline(tree, 't2', 3000, 5);
+
+    const updated = findTask(result, 't2');
+    expect(updated?.baselineCost).toBe(3000);
+    expect(updated?.baselineDuration).toBe(5);
+  });
+});
+
+describe('captureBaseline', () => {
+  it('captures cost and duration as baseline for all tasks', () => {
+    const t1 = task('t1');
+    t1.cost = 1000;
+    t1.duration = 5;
+    const t2 = task('t2');
+    t2.cost = 2000;
+    t2.duration = 10;
+    const tree = [t1, t2];
+
+    const result = captureBaseline(tree);
+
+    expect(findTask(result, 't1')?.baselineCost).toBe(1000);
+    expect(findTask(result, 't1')?.baselineDuration).toBe(5);
+    expect(findTask(result, 't2')?.baselineCost).toBe(2000);
+    expect(findTask(result, 't2')?.baselineDuration).toBe(10);
+  });
+
+  it('captures baseline recursively for children', () => {
+    const child = task('t2', 't1', 1);
+    child.cost = 500;
+    child.duration = 3;
+    const tree = [task('t1', null, 0, [child])];
+
+    const result = captureBaseline(tree);
+
+    expect(findTask(result, 't2')?.baselineCost).toBe(500);
+    expect(findTask(result, 't2')?.baselineDuration).toBe(3);
   });
 });

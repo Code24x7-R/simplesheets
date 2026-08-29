@@ -267,6 +267,41 @@ describe('computeTaskAccounting', () => {
     expect(result.actualDuration).toBe(6);
     expect(result.remainingDuration).toBe(0);
   });
+
+  it('uses baselineCost when set instead of live cost', () => {
+    const task = createTask({ cost: 2000, baselineCost: 1000, progress: 50 });
+    const result = computeTaskAccounting(task, [], 100);
+
+    expect(result.baselineCost).toBe(1000);
+    expect(result.allocatedBudget).toBe(1000);
+    // EV = baselineCost * progress% = 1000 * 0.5 = 500
+    // ETC = baselineCost - EV = 500
+    // EAC = ETC + actualSpend(0) = 500
+    expect(result.currentEstimate).toBe(500);
+    expect(result.costVariance).toBe(-500); // 500 - 1000
+  });
+
+  it('uses baselineDuration when set instead of live duration', () => {
+    const task = createTask({ duration: 20, baselineDuration: 10, progress: 50 });
+    const result = computeTaskAccounting(task, [], 100);
+
+    expect(result.baselineDuration).toBe(10);
+    expect(result.currentDuration).toBe(20);
+    expect(result.actualDuration).toBe(5); // 50% of baselineDuration(10)
+    expect(result.remainingDuration).toBe(15); // currentDuration(20) - actualDuration(5)
+    expect(result.durationVariance).toBe(10); // currentDuration(20) - baselineDuration(10)
+  });
+
+  it('falls back to cost/duration when baseline fields are undefined', () => {
+    const task = createTask({ cost: 1000, duration: 5 });
+    // Ensure baseline fields are undefined
+    delete (task as Partial<WBSTask>).baselineCost;
+    delete (task as Partial<WBSTask>).baselineDuration;
+    const result = computeTaskAccounting(task, [], 100);
+
+    expect(result.baselineCost).toBe(1000);
+    expect(result.baselineDuration).toBe(5);
+  });
 });
 
 describe('computeProjectAccounting', () => {

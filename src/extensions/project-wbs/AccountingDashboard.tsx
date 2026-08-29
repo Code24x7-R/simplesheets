@@ -12,13 +12,15 @@
  * Shows variance columns and earned value metrics (CPI/SPI).
  */
 
-import { useState, useMemo } from 'react';
-import type { Project } from '../types';
+import { useState, useMemo, useCallback } from 'react';
+import type { Project, TaskAccounting } from '../types';
 import {
   computeProjectAccounting,
   formatVariance,
   formatPerformanceIndex,
 } from './projectAccounting';
+import { setBaseline, captureBaseline } from './treeOps';
+import { BaselineEditorModal } from './BaselineEditorModal';
 
 
 interface AccountingDashboardProps {
@@ -30,12 +32,27 @@ interface AccountingDashboardProps {
   onAddChange?: () => void;
   onEditChange?: (entryId: string) => void;
   onDeleteChange?: (entryId: string) => void;
+  onBaselineChange?: (project: Project) => void;
 }
 
 type AccountingTab = 'baseline' | 'allocation' | 'estimate' | 'actual' | 'changelog';
 
-export function AccountingDashboard({ project, onEditSpend, onDeleteSpend, onEditAllocation, onTaskClick, onAddChange, onEditChange, onDeleteChange }: AccountingDashboardProps) {
+export function AccountingDashboard({ project, onEditSpend, onDeleteSpend, onEditAllocation, onTaskClick, onAddChange, onEditChange, onDeleteChange, onBaselineChange }: AccountingDashboardProps) {
   const [activeTab, setActiveTab] = useState<AccountingTab>('estimate');
+  const [baselineEditTask, setBaselineEditTask] = useState<TaskAccounting | null>(null);
+
+  const handleBaselineSave = useCallback((taskId: string, baselineCost: number, baselineDuration: number) => {
+    if (!onBaselineChange) return;
+    const updatedWbs = setBaseline(project.wbs, taskId, baselineCost, baselineDuration);
+    onBaselineChange({ ...project, wbs: updatedWbs });
+    setBaselineEditTask(null);
+  }, [project, onBaselineChange]);
+
+  const handleCaptureBaseline = useCallback(() => {
+    if (!onBaselineChange) return;
+    const updatedWbs = captureBaseline(project.wbs);
+    onBaselineChange({ ...project, wbs: updatedWbs });
+  }, [project, onBaselineChange]);
 
   const accounting = useMemo(() => computeProjectAccounting(project), [project]);
   const currency = accounting.currency;
@@ -146,7 +163,15 @@ export function AccountingDashboard({ project, onEditSpend, onDeleteSpend, onEdi
 
       {/* Table content */}
       <div className="overflow-x-auto">
-        {activeTab === 'baseline' && <BaselineTable accounting={accounting} currency={currency} onTaskClick={onTaskClick} />}
+        {activeTab === 'baseline' && (
+          <BaselineTable
+            accounting={accounting}
+            currency={currency}
+            onTaskClick={onTaskClick}
+            onEditBaseline={setBaselineEditTask}
+            onCaptureBaseline={handleCaptureBaseline}
+          />
+        )}
         {activeTab === 'allocation' && (
           <AllocationTable accounting={accounting} currency={currency} onEdit={onEditAllocation} onTaskClick={onTaskClick} />
         )}
@@ -174,6 +199,16 @@ export function AccountingDashboard({ project, onEditSpend, onDeleteSpend, onEdi
           </span>
         </div>
       </div>
+
+      {/* Baseline Editor Modal */}
+      {baselineEditTask && (
+        <BaselineEditorModal
+          task={baselineEditTask}
+          currency={currency}
+          onClose={() => setBaselineEditTask(null)}
+          onSave={handleBaselineSave}
+        />
+      )}
     </div>
   );
 }
@@ -196,54 +231,99 @@ function KpiBadge({ label, value, status }: { label: string; value: string; stat
 
 // ─── Baseline Table ──────────────────────────────────────────────────────────
 
-function BaselineTable({ accounting, currency, onTaskClick }: { accounting: ReturnType<typeof computeProjectAccounting>; currency: string; onTaskClick?: (taskId: string) => void }) {
+function BaselineTable({
+  accounting,
+  currency,
+  onTaskClick,
+  onEditBaseline,
+  onCaptureBaseline,
+}: {
+  accounting: ReturnType<typeof computeProjectAccounting>;
+  currency: string;
+  onTaskClick?: (taskId: string) => void;
+  onEditBaseline?: (task: TaskAccounting) => void;
+  onCaptureBaseline?: () => void;
+}) {
   return (
-    <table className="w-full text-xs">
-      <thead>
-        <tr className="bg-gray-50 text-gray-600">
-          <th className="px-3 py-2 text-left font-medium">Task</th>
-          <th className="px-3 py-2 text-right font-medium">Cost</th>
-          <th className="px-3 py-2 text-right font-medium">Duration</th>
-          <th className="px-3 py-2 text-right font-medium">Resource</th>
-          <th className="px-3 py-2 text-left font-medium">Start</th>
-          <th className="px-3 py-2 text-left font-medium">End</th>
-        </tr>
-      </thead>
-      <tbody>
-        {accounting.taskAccounting.map((row) => (
-          <tr key={row.taskId} className="border-t border-gray-100 hover:bg-gray-50">
-            <td className="px-3 py-2">
-              {onTaskClick ? (
-                <button
-                  onClick={() => onTaskClick(row.taskId)}
-                  className="text-blue-600 hover:text-blue-800 hover:underline text-left"
-                  title="View task in Gantt chart"
-                >
-                  {row.taskName}
-                </button>
-              ) : (
-                <span className="text-gray-800">{row.taskName}</span>
-              )}
-            </td>
-            <td className="px-3 py-2 text-right font-mono">{currency} {row.baselineCost.toLocaleString()}</td>
-            <td className="px-3 py-2 text-right">{row.baselineDuration}d</td>
-            <td className="px-3 py-2 text-right text-gray-500">
-              {row.resourceCostRate > 0 ? `${currency}${row.resourceCostRate}/day` : '—'}
-            </td>
-            <td className="px-3 py-2 text-gray-500">—</td>
-            <td className="px-3 py-2 text-gray-500">—</td>
+    <div>
+      {/* Toolbar with Capture Baseline action */}
+      <div className="flex items-center justify-between p-3 border-b border-gray-200 bg-gray-50">
+        <span className="text-xs text-gray-500">
+          {accounting.taskAccounting.length} task(s) — baseline is the approved plan used for variance tracking
+        </span>
+        {onCaptureBaseline && (
+          <button
+            onClick={onCaptureBaseline}
+            className="px-3 py-1 text-xs font-medium text-white bg-blue-600 rounded hover:bg-blue-700 flex items-center gap-1"
+            title="Set baseline to current cost and duration for all tasks"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Capture Baseline
+          </button>
+        )}
+      </div>
+
+      <table className="w-full text-xs">
+        <thead>
+          <tr className="bg-gray-50 text-gray-600">
+            <th className="px-3 py-2 text-left font-medium">Task</th>
+            <th className="px-3 py-2 text-right font-medium">Cost</th>
+            <th className="px-3 py-2 text-right font-medium">Duration</th>
+            <th className="px-3 py-2 text-right font-medium">Resource</th>
+            <th className="px-3 py-2 text-left font-medium">Start</th>
+            <th className="px-3 py-2 text-left font-medium">End</th>
+            <th className="px-3 py-2 text-center font-medium"></th>
           </tr>
-        ))}
-      </tbody>
-      <tfoot>
-        <tr className="border-t-2 border-gray-200 bg-gray-50 font-medium">
-          <td className="px-3 py-2">Total</td>
-          <td className="px-3 py-2 text-right font-mono">{currency} {accounting.baselineTotal.toLocaleString()}</td>
-          <td className="px-3 py-2 text-right">{accounting.taskAccounting.reduce((s, r) => s + r.baselineDuration, 0)}d</td>
-          <td colSpan={3} className="px-3 py-2" />
-        </tr>
-      </tfoot>
-    </table>
+        </thead>
+        <tbody>
+          {accounting.taskAccounting.map((row) => (
+            <tr key={row.taskId} className="border-t border-gray-100 hover:bg-gray-50">
+              <td className="px-3 py-2">
+                {onTaskClick ? (
+                  <button
+                    onClick={() => onTaskClick(row.taskId)}
+                    className="text-blue-600 hover:text-blue-800 hover:underline text-left"
+                    title="View task in Gantt chart"
+                  >
+                    {row.taskName}
+                  </button>
+                ) : (
+                  <span className="text-gray-800">{row.taskName}</span>
+                )}
+              </td>
+              <td className="px-3 py-2 text-right font-mono">{currency} {row.baselineCost.toLocaleString()}</td>
+              <td className="px-3 py-2 text-right">{row.baselineDuration}d</td>
+              <td className="px-3 py-2 text-right text-gray-500">
+                {row.resourceCostRate > 0 ? `${currency}${row.resourceCostRate}/day` : '—'}
+              </td>
+              <td className="px-3 py-2 text-gray-500">—</td>
+              <td className="px-3 py-2 text-gray-500">—</td>
+              <td className="px-3 py-2 text-center">
+                {onEditBaseline && (
+                  <button
+                    onClick={() => onEditBaseline(row)}
+                    className="text-blue-600 hover:text-blue-800 text-xs"
+                    title="Edit baseline"
+                  >
+                    Edit
+                  </button>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+        <tfoot>
+          <tr className="border-t-2 border-gray-200 bg-gray-50 font-medium">
+            <td className="px-3 py-2">Total</td>
+            <td className="px-3 py-2 text-right font-mono">{currency} {accounting.baselineTotal.toLocaleString()}</td>
+            <td className="px-3 py-2 text-right">{accounting.taskAccounting.reduce((s, r) => s + r.baselineDuration, 0)}d</td>
+            <td colSpan={4} className="px-3 py-2" />
+          </tr>
+        </tfoot>
+      </table>
+    </div>
   );
 }
 

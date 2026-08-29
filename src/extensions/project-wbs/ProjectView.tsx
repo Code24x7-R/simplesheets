@@ -1083,6 +1083,9 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
               onDeleteChange={(entryId) => {
                 handleChangeLogDelete(entryId);
               }}
+              onBaselineChange={(updatedProject) => {
+                handleProjectChange(() => updatedProject);
+              }}
             />
           )}
           {viewMode === 'evm-report' && (

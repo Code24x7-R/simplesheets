@@ -446,6 +446,38 @@ export function updateTask(
   return changed ? result : tree;
 }
 
+// ─── Baseline ───────────────────────────────────────────────────────────────
+
+/**
+ * Set the baseline cost and duration for a task.
+ * Returns a new tree with the task's baseline fields updated.
+ */
+export function setBaseline(
+  tree: WBSTask[],
+  taskId: string,
+  baselineCost: number,
+  baselineDuration: number,
+): WBSTask[] {
+  return updateTask(tree, taskId, (task) => ({
+    ...task,
+    baselineCost,
+    baselineDuration,
+  }));
+}
+
+/**
+ * Capture the current cost and duration of every task as its baseline.
+ * Returns a new tree with baselineCost/baselineDuration set on all tasks.
+ */
+export function captureBaseline(tree: WBSTask[]): WBSTask[] {
+  return tree.map((task) => ({
+    ...task,
+    baselineCost: task.cost,
+    baselineDuration: task.duration,
+    children: captureBaseline(task.children),
+  }));
+}
+
 // ─── Resource CRUD ──────────────────────────────────────────────────────────
 
 /**
