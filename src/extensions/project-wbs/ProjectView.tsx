@@ -685,6 +685,13 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
         ...(prev.materialConsumptions ?? []),
         consumption,
       ],
+      // Update the matching allocation's consumedQuantity so the
+      // allocation table reflects what has been used.
+      materialAllocations: (prev.materialAllocations ?? []).map((a) =>
+        a.materialId === consumption.materialId && a.taskId === consumption.taskId
+          ? { ...a, consumedQuantity: a.consumedQuantity + consumption.quantity }
+          : a,
+      ),
     }));
     setAllocationModal({ open: false, materialId: null });
   }

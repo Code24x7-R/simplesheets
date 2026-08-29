@@ -586,6 +586,80 @@ describe('ProjectView', () => {
     });
   });
 
+  describe('Material consumption updates allocation', () => {
+    it('updates consumedQuantity on matching allocation when consumption is recorded', () => {
+      const proj = createSimpleWBS();
+      // Give the project one material allocation
+      proj.materials = [{
+        id: 'mat-1', name: 'Steel', description: '', classification: 'consumable',
+        unit: 'kg', unitCost: 10, quantity: 100, currency: 'USD', vendor: null,
+        depreciationMethod: 'none', usefulLifeMonths: 0, salvageValue: 0,
+        acquisitionDate: null, billingPeriod: 'fixed', rentalRate: 0,
+        leaseStartDate: null, leaseEndDate: null, wastageRate: 0,
+        reorderPoint: 0, carryingCostPerUnit: 0, allocatedQuantity: 0,
+        consumedQuantity: 0, status: 'delivered',
+      }];
+      proj.materialAllocations = [{
+        id: 'alloc-1', materialId: 'mat-1', taskId: proj.wbs[0].id,
+        allocatedQuantity: 50, consumedQuantity: 0,
+        allocationDate: '2025-01-01', expectedReturnDate: null,
+        actualCost: 500, notes: '',
+      }];
+      proj.materialConsumptions = [];
+
+      const onProjectChange = jest.fn();
+      render(
+        <ProjectView
+          project={proj}
+          activeSheet={mockSheet}
+          columnMapping={mockMapping}
+          onSaveProject={jest.fn()}
+          onProjectChange={onProjectChange}
+        />
+      );
+
+      // Switch to Materials view
+      fireEvent.click(screen.getByText('Materials'));
+
+      // Open the allocation modal for the material via the Allocate button
+      const allocateButtons = screen.getAllByRole('button', { name: 'Allocate' });
+      fireEvent.click(allocateButtons[0]);
+      expect(screen.getByTestId('material-allocation-modal')).toBeInTheDocument();
+
+      // Switch to the Record Consumption tab in the modal
+      // (the modal tab is the one with class "flex-1", not the orange dashboard button)
+      const recordTab = screen.getAllByText('Record Consumption').find((el) => el.classList.contains('flex-1'));
+      fireEvent.click(recordTab!);
+
+      // Select a task (use the first one)
+      const taskSelect = screen.getByLabelText(/task/i);
+      fireEvent.change(taskSelect, { target: { value: proj.wbs[0].id } });
+
+      // Enter consumption quantity
+      const usedInput = screen.getByLabelText(/used/i);
+      fireEvent.change(usedInput, { target: { value: '15' } });
+      fireEvent.blur(usedInput);
+
+      // Click the Record Consumption action button (green one)
+      const buttons = screen.getAllByRole('button', { name: /record consumption/i });
+      const consumeButton = buttons.find((b) => b.classList.contains('bg-green-600'));
+      fireEvent.click(consumeButton!);
+
+      // onProjectChange should have been called
+      expect(onProjectChange).toHaveBeenCalled();
+      const updatedProject = onProjectChange.mock.calls[0][0];
+
+      // The consumption should be recorded
+      expect(updatedProject.materialConsumptions).toHaveLength(1);
+      expect(updatedProject.materialConsumptions[0].quantity).toBe(15);
+
+      // The matching allocation's consumedQuantity should be updated
+      const allocation = updatedProject.materialAllocations?.find((a: import('../types').MaterialAllocation) => a.id === 'alloc-1');
+      expect(allocation).toBeDefined();
+      expect(allocation!.consumedQuantity).toBe(15);
+    });
+  });
+
   describe('Task CRUD', () => {
     it('opens task editor modal when + Add Task is clicked in toolbar', () => {
       render(<ProjectView project={project} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />);
