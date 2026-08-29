@@ -2796,20 +2796,19 @@ function WorkbookView() {
         onCopySheet={handleCopySheet}
         onDeleteSheet={handleDeleteSheet}
         onShowProjectView={() => {
-          // Re-convert workbook to project to pick up any edits made in sheet view
-          // But preserve current project state if it exists (avoids discarding unsaved changes)
-          if (!currentProject) {
-            const tasksSheet = workbook.sheets.find((s) => s.name === TASKS_SHEET_NAME);
-            if (tasksSheet) {
-              // Multi-sheet project format
-              const extData = workbook.extensions?.['project-wbs'];
-              const mapping = extData?.data
-                ? (extData.data as { columnMapping?: ColumnMapping }).columnMapping
-                : undefined;
-              const model = workbookToProject(workbook, TASKS_SHEET_NAME, mapping ?? undefined);
-              const project = projectModelToProject(model);
-              setCurrentProject(project);
-            }
+          // Always re-convert workbook to project to pick up any edits made in sheet view.
+          // Changes made in Project view are already synced to the workbook via syncProjectToSheet,
+          // so re-converting here is safe and ensures sheet edits (resources, risks, etc.) are reflected.
+          const tasksSheet = workbook.sheets.find((s) => s.name === TASKS_SHEET_NAME);
+          if (tasksSheet) {
+            // Multi-sheet project format
+            const extData = workbook.extensions?.['project-wbs'];
+            const mapping = extData?.data
+              ? (extData.data as { columnMapping?: ColumnMapping }).columnMapping
+              : undefined;
+            const model = workbookToProject(workbook, TASKS_SHEET_NAME, mapping ?? undefined);
+            const project = projectModelToProject(model);
+            setCurrentProject(project);
           }
           setShowProjectView(true);
         }}

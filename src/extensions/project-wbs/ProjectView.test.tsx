@@ -1130,6 +1130,42 @@ describe('ProjectView', () => {
       expect(screen.queryByTestId('gantt-chart')).not.toBeInTheDocument();
     });
 
+    it('syncs internal state when project prop changes (resources added externally)', () => {
+      // Regression test: simulates the workflow where the parent re-reads
+      // the workbook (after the user edits the Resources sheet) and passes
+      // a new project prop with resources.  The internal state must update.
+      const proj = createSimpleWBS();
+      proj.resources = [];
+
+      const { rerender } = render(
+        <ProjectView project={proj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />
+      );
+
+      // Switch to Resources view — should show empty state
+      fireEvent.click(screen.getByText('Resources'));
+      expect(screen.queryByTestId('gantt-chart')).not.toBeInTheDocument();
+      expect(screen.getByText('No Resources Defined')).toBeInTheDocument();
+
+      // Simulate parent re-reading workbook and passing updated project
+      const updatedProj = { ...proj };
+      updatedProj.resources = [
+        { id: 'res-1', name: 'Alice', role: 'Developer', costRate: 100, costCurrency: 'USD', availability: 100, color: '#3B82F6' },
+        { id: 'res-2', name: 'Bob', role: 'Designer', costRate: 90, costCurrency: 'USD', availability: 80, color: '#10B981' },
+        { id: 'res-3', name: 'Carol', role: 'PM', costRate: 120, costCurrency: 'USD', availability: 50, color: '#F59E0B' },
+      ];
+
+      rerender(
+        <ProjectView project={updatedProj} activeSheet={mockSheet} columnMapping={mockMapping} onSaveProject={jest.fn()} />
+      );
+
+      // The empty-state message should be gone and the resource names
+      // should now be rendered in the heatmap rows.
+      expect(screen.queryByText('No Resources Defined')).not.toBeInTheDocument();
+      expect(screen.getByText('Alice')).toBeInTheDocument();
+      expect(screen.getByText('Bob')).toBeInTheDocument();
+      expect(screen.getByText('Carol')).toBeInTheDocument();
+    });
+
     it('renders Materials view with no materials', () => {
       const proj = createSimpleWBS();
       proj.materials = [];

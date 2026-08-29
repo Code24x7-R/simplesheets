@@ -46,6 +46,14 @@ export function CalendarConfigModal({ calendar, onClose, onSave }: CalendarConfi
   const [hoursPerDay, setHoursPerDay] = useState(calendar.hoursPerDay ?? 8);
   const [newHoliday, setNewHoliday] = useState('');
 
+  // Sync local state when the calendar prop changes (e.g. parent re-reads
+  // the workbook and passes a fresh calendar object).
+  useEffect(() => {
+    setWorkingDays(calendar.workingDays ? Array.from(calendar.workingDays) : [1, 2, 3, 4, 5]);
+    setHolidays(calendar.holidays ? Array.from(calendar.holidays) : []);
+    setHoursPerDay(calendar.hoursPerDay ?? 8);
+  }, [calendar]);
+
   useEffect(() => {
     // Set default date for new holiday on mount
     const today = new Date();

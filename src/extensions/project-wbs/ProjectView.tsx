@@ -62,6 +62,15 @@ interface ProjectViewProps {
 export function ProjectView({ project: initialProject, activeSheet, columnMapping, onSaveProject, onProjectChange }: ProjectViewProps) {
   const [project, setProject] = useState(initialProject);
 
+  // ─── Sync internal state when the prop changes ─────────────────────
+  // When the parent re-reads the workbook (e.g. onShowProjectView after
+  // the user edits the Resources/Risks sheets), the new project object
+  // is passed in as a prop.  useState only seeds the state on first
+  // mount, so without this effect the internal state would stay stale.
+  useEffect(() => {
+    setProject(initialProject);
+  }, [initialProject]);
+
   // ─── Sync to Sheet ──────────────────────────────────────────────────
 
   /**
