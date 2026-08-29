@@ -65,7 +65,7 @@ import { createDemoWorkbook } from './utils/demoWorkbook';
 import { useChartSettings } from './hooks/useChartSettings';
 import { SheetLinkProvider } from './components/SheetLink';
 import { ProjectView } from './extensions/project-wbs/ProjectView';
-import { createBlankTasksSheet, createWorkbookFromTemplate, createRisksSheet, createResourcesSheet, createMaterialsSheet, createActualsSheet, workbookToProject, projectModelToProject, projectModelToWorkbook } from './extensions/project-wbs/sheetToProject';
+import { createBlankTasksSheet, createWorkbookFromTemplate, createRisksSheet, createResourcesSheet, createMaterialsSheet, createActualsSheet, createAllocationsSheet, createConsumptionsSheet, workbookToProject, projectModelToProject, projectModelToWorkbook } from './extensions/project-wbs/sheetToProject';
 import { TASKS_SHEET_NAME, RISKS_SHEET_NAME, RESOURCES_SHEET_NAME, MATERIALS_SHEET_NAME, ACTUALS_SHEET_NAME, ALLOCATIONS_SHEET_NAME, CONSUMPTIONS_SHEET_NAME } from './extensions/project-wbs/sheetToProject';
 import type { Project } from './extensions/types';
 import type { ProjectModel, ColumnMapping } from './types';
@@ -1869,14 +1869,16 @@ function WorkbookView() {
   }, [workbook, pushHistory]);
 
   const handleProjectNewSheet = useCallback(() => {
-    // Create a blank project workbook with 5 sheets (tasks, risks, resources, materials, actuals)
+    // Create a blank project workbook with all 7 project sheets
     const tasksSheet = createBlankTasksSheet();
     const risksSheet = createRisksSheet();
     const resourcesSheet = createResourcesSheet();
     const materialsSheet = createMaterialsSheet();
     const actualsSheet = createActualsSheet();
+    const allocationsSheet = createAllocationsSheet();
+    const consumptionsSheet = createConsumptionsSheet();
 
-    const newSheets = [tasksSheet, risksSheet, resourcesSheet, materialsSheet, actualsSheet];
+    const newSheets = [tasksSheet, risksSheet, resourcesSheet, materialsSheet, actualsSheet, allocationsSheet, consumptionsSheet];
     const updatedWb = {
       ...workbook,
       sheets: newSheets,

@@ -1979,6 +1979,60 @@ export function createActualsSheet(): Sheet {
 }
 
 /**
+ * Create a blank allocations sheet with headers.
+ */
+export function createAllocationsSheet(): Sheet {
+  const cells: Record<string, Cell> = {};
+  for (let col = 0; col < ALLOCATION_HEADERS.length; col++) {
+    cells[`0:${col}`] = {
+      rawValue: ALLOCATION_HEADERS[col],
+      computedValue: ALLOCATION_HEADERS[col],
+      style: { fontWeight: 'bold', backgroundColor: '#EDE9FE', color: '#5B21B6' },
+    };
+  }
+  return {
+    id: `sheet-allocations-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    name: ALLOCATIONS_SHEET_NAME,
+    cells,
+    defaultColWidth: 110,
+    defaultRowHeight: 24,
+    columnWidths: { 0: 120, 1: 100 },
+    rowHeights: {},
+    columnCount: ALLOCATION_HEADERS.length,
+    rowCount: 10,
+    frozenColumns: 0,
+    frozenRows: 1,
+  };
+}
+
+/**
+ * Create a blank consumptions sheet with headers.
+ */
+export function createConsumptionsSheet(): Sheet {
+  const cells: Record<string, Cell> = {};
+  for (let col = 0; col < CONSUMPTION_HEADERS.length; col++) {
+    cells[`0:${col}`] = {
+      rawValue: CONSUMPTION_HEADERS[col],
+      computedValue: CONSUMPTION_HEADERS[col],
+      style: { fontWeight: 'bold', backgroundColor: '#FCE7F3', color: '#9D174D' },
+    };
+  }
+  return {
+    id: `sheet-consumptions-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    name: CONSUMPTIONS_SHEET_NAME,
+    cells,
+    defaultColWidth: 110,
+    defaultRowHeight: 24,
+    columnWidths: { 0: 120, 1: 100 },
+    rowHeights: {},
+    columnCount: CONSUMPTION_HEADERS.length,
+    rowCount: 10,
+    frozenColumns: 0,
+    frozenRows: 1,
+  };
+}
+
+/**
  * Create a blank tasks sheet with headers (multi-sheet format).
  */
 export function createBlankTasksSheet(): Sheet {
