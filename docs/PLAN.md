@@ -186,6 +186,13 @@ Implemented the normalized Creator Canvas schema foundation and immutable domain
 
 Added the first Creator Canvas starter seed for the New Creator Canvas workflow. The seed includes a welcome note, reference link, linked starter task, collection frame, tags, and a relationship connection. It is validated through the same schema integrity checks as imported workbook data, while the extension's generic view fallback remains blank for externally supplied models.
 
+### Creator Canvas Extension — Phase 45.5 Complete ✅ (Interaction, Presets & Workflow Bubble)
+
+- **Drag & Drop + Viewport Navigation**: Added node drag-and-drop with grid snapping, viewport zooming, and empty-background panning.
+- **Visual Connections & Collections**: Rendered SVG connection paths with directional arrowheads, hover transitions, and collection boundary boxes.
+- **Template Library Presets (Phase 46 Complete ✅)**: Added five starter presets (`film-video-shot-list`, `moodboard`, `novel-outline`, `web-design`, `marketing-campaign`) integrated into `MenuBar` and registered under `SheetExtension.getTemplates()`.
+- **Context Bubble Menu & Common Workflows**: Added a floating action bubble for nodes and connectors supporting Copy, Paste, Duplicate, Delete, and keyboard shortcuts (`Ctrl+C`, `Ctrl+V`, `Del/Backspace`).
+
 ## Future Extensions
 
 The extensions architecture supports adding new extensions without modifying core:
@@ -199,7 +206,7 @@ The extensions architecture supports adding new extensions without modifying cor
 | Budget Tracker | Cost tracking with variance analysis | 🔄 In Progress (Phase 40) |
 | Earned Value Chart | S-curve visualization of PV, EV, AC over time | Medium |
 | What-If Scenarios | Save/compare multiple schedule scenarios | Low |
-| Creator Canvas | Visual creative projects backed by normalized sheets | 🔄 Phase 45.1 complete |
+| Creator Canvas | Visual creative projects backed by normalized sheets | ✅ Phase 45 complete |
 
 ---
 

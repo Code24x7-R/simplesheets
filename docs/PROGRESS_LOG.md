@@ -945,3 +945,14 @@
 - **Integrity**: Added tests confirming the seed passes Creator Canvas schema validation and supports custom project domains.
 - **Tests**: Targeted App and Creator Canvas suites pass (94 tests).
 - **Verification**: `npm run lint` and `npm run type-check` pass.
+
+## 2026-09-07 [FEATURE] Creator Canvas — Interaction, Template Presets & Workflow Bubble
+
+- Added drag-and-drop node positioning with grid snapping, locked-node protection, zoom-aware movement, and workspace panning.
+- Added SVG relationship rendering with directional arrowheads, connection selection, and connector deletion.
+- Added five Creator Canvas presets: Film / Video Shot List, Moodboard, Novel Outline, Web Design, and Marketing Campaign.
+- Integrated preset creation with workbook persistence, the Extensions menu, and the extension template contract.
+- Added a floating node/connector bubble menu for Copy, Paste, Duplicate, Delete, and close-selection workflows.
+- Added keyboard shortcuts for copy, paste, and deletion of the active canvas selection.
+- Added targeted tests for interactions, templates, extension registration, and workflow actions.
+- Verification: Creator Canvas suites pass, lint/type-check/build pass.
