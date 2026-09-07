@@ -964,3 +964,10 @@
 - Connector deletion remains available from the bubble menu and Delete/Backspace shortcuts.
 - Added component and domain-operation tests for connector editing.
 - Verification: Creator Canvas tests, type-check, and lint pass.
+
+## 2026-09-07 [BUGFIX] Creator Canvas — Connector Hit Testing and Selection
+
+- **Issue**: Connectors could not be reliably selected in the UI due to layer stacking, thin hit targets, and full-layer pointer interception.
+- **Fix**: Elevated the SVG connections layer (`z-10`), set `pointer-events: none` on the overlay containers with `pointer-events: auto` scoped to individual connector hitboxes/lines/midpoints and node cards, and added a dedicated wide hit area (`canvas-connection-hitbox-*`) on every connector for smooth click selection.
+- **Tests**: Added explicit connector selection hit area test in `CreatorCanvasView.test.tsx`.
+- **Verification**: All 9 Creator Canvas test suites pass (57 tests), type check clean, lint clean.

@@ -160,10 +160,26 @@ describe('CreatorCanvasView Component', () => {
     const onProjectChange = jest.fn();
 
     render(<CreatorCanvasView project={model} onProjectChange={onProjectChange} />);
-    fireEvent.click(screen.getByTestId('canvas-connection-connection'));
+    fireEvent.click(screen.getByTestId('canvas-connection-hitbox-connection'));
     expect(screen.getByTestId('canvas-bubble-menu')).toHaveTextContent('Connector');
     fireEvent.click(screen.getByTitle('Delete selection'));
     expect(onProjectChange.mock.calls[0][0].connections).toHaveLength(0);
+  });
+
+  it('selects a connector through its hit area without selecting a node', () => {
+    const model = createEmptyCreatorCanvasModel('p1', 'Connector Hit Area Test');
+    model.nodes = [
+      createDefaultCanvasNode('from', 'note'),
+      createDefaultCanvasNode('to', 'note', { position: { x: 400, y: 0 } }),
+    ];
+    model.connections = [{ id: 'connection', fromNodeId: 'from', toNodeId: 'to', relationship: 'sequence' }];
+    const onProjectChange = jest.fn();
+
+    render(<CreatorCanvasView project={model} onProjectChange={onProjectChange} />);
+    fireEvent.click(screen.getByTestId('canvas-connection-hitbox-connection'));
+
+    expect(screen.getByTestId('canvas-bubble-menu')).toHaveTextContent('Connector');
+    expect(screen.queryByText('Edit Node')).not.toBeInTheDocument();
   });
 
   it('pans the workspace when dragging its empty background', () => {

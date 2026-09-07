@@ -388,9 +388,9 @@ export const CreatorCanvasView: React.FC<CreatorCanvasViewProps> = ({
 
           {/* SVG Connections Layer */}
           <svg
-            className="absolute inset-0 pointer-events-none w-full h-full"
+            data-testid="canvas-connections-layer"
+            className="absolute inset-0 pointer-events-none w-full h-full z-10"
             style={{
-              pointerEvents: 'auto',
               transform: `translate(${project.canvas.panX}px, ${project.canvas.panY}px) scale(${project.canvas.zoom})`,
               transformOrigin: '0 0',
               overflow: 'visible',
@@ -420,6 +420,22 @@ export const CreatorCanvasView: React.FC<CreatorCanvasViewProps> = ({
 
               return (
                 <g key={conn.id} className="pointer-events-auto group">
+                  {/* Invisible thick stroke for easy hit-testing/selection */}
+                  <line
+                    data-testid={`canvas-connection-hitbox-${conn.id}`}
+                    x1={x1}
+                    y1={y1}
+                    x2={x2}
+                    y2={y2}
+                    stroke="transparent"
+                    strokeWidth={Math.max(16, (conn.style?.strokeWidth || 2) + 12)}
+                    className="cursor-pointer pointer-events-auto"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedConnectionId(conn.id);
+                      setSelectedNodeId(null);
+                    }}
+                  />
                   <line
                     data-testid={`canvas-connection-${conn.id}`}
                     x1={x1}
@@ -431,7 +447,7 @@ export const CreatorCanvasView: React.FC<CreatorCanvasViewProps> = ({
                     markerStart={conn.style?.arrowStart ? 'url(#arrowhead)' : undefined}
                     markerEnd={conn.style?.arrowEnd === false ? undefined : 'url(#arrowhead)'}
                     strokeDasharray={conn.style?.strokeDash === 'dashed' ? '5,5' : conn.style?.strokeDash === 'dotted' ? '2,3' : undefined}
-                    className={`hover:stroke-indigo-600 transition-colors cursor-pointer ${selectedConnectionId === conn.id ? 'stroke-indigo-600' : ''}`}
+                    className={`hover:stroke-indigo-600 transition-colors cursor-pointer pointer-events-auto ${selectedConnectionId === conn.id ? 'stroke-indigo-600' : ''}`}
                     onClick={(e) => {
                       e.stopPropagation();
                       setSelectedConnectionId(conn.id);
@@ -440,13 +456,14 @@ export const CreatorCanvasView: React.FC<CreatorCanvasViewProps> = ({
                   />
                   {/* Midpoint Label or Delete trigger */}
                   <circle
+                    data-testid={`canvas-connection-midpoint-${conn.id}`}
                     cx={(x1 + x2) / 2}
                     cy={(y1 + y2) / 2}
                     r="8"
                     fill="#fff"
                     stroke="#94a3b8"
                     strokeWidth="1.5"
-                    className="hover:stroke-red-500 hover:fill-red-50 cursor-pointer"
+                    className="hover:stroke-red-500 hover:fill-red-50 cursor-pointer pointer-events-auto"
                     onClick={(e) => {
                       e.stopPropagation();
                       setSelectedConnectionId(conn.id);
@@ -458,7 +475,7 @@ export const CreatorCanvasView: React.FC<CreatorCanvasViewProps> = ({
                       x={(x1 + x2) / 2}
                       y={(y1 + y2) / 2 - 12}
                       textAnchor="middle"
-                      className="text-[10px] fill-slate-600 font-sans font-medium bg-white px-1"
+                      className="text-[10px] fill-slate-600 font-sans font-medium bg-white px-1 pointer-events-none"
                     >
                       {conn.label}
                     </text>
@@ -470,7 +487,8 @@ export const CreatorCanvasView: React.FC<CreatorCanvasViewProps> = ({
 
           {/* Nodes Layer */}
           <div
-            className="absolute inset-0 origin-top-left"
+            data-testid="canvas-nodes-layer"
+            className="absolute inset-0 origin-top-left pointer-events-none"
             style={{
               transform: `translate(${project.canvas.panX}px, ${project.canvas.panY}px) scale(${project.canvas.zoom})`,
             }}
@@ -510,7 +528,7 @@ export const CreatorCanvasView: React.FC<CreatorCanvasViewProps> = ({
                     setSelectedNodeId(node.id);
                     setSelectedConnectionId(null);
                   }}
-                  className={`absolute rounded-lg border shadow-sm p-3 flex flex-col transition-shadow cursor-move ${getNodeColor(
+                  className={`absolute rounded-lg border shadow-sm p-3 flex flex-col transition-shadow cursor-move pointer-events-auto ${getNodeColor(
                     node.type
                   )} ${
                     isSelected
