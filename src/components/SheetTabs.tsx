@@ -14,6 +14,9 @@ interface SheetTabsProps {
   onCopySheet: (index: number) => void;
   onDeleteSheet: (index: number) => void;
   onShowProjectView: () => void;
+  showCreatorCanvas?: boolean;
+  showCreatorCanvasTab?: boolean;
+  onShowCreatorCanvas?: () => void;
 }
 
 /**
@@ -30,6 +33,9 @@ export function SheetTabs({
   onCopySheet,
   onDeleteSheet,
   onShowProjectView,
+  showCreatorCanvas = false,
+  showCreatorCanvasTab = false,
+  onShowCreatorCanvas,
 }: SheetTabsProps) {
   const [renamingIndex, setRenamingIndex] = useState<number | null>(null);
   const [renameValue, setRenameValue] = useState('');
@@ -217,6 +223,19 @@ export function SheetTabs({
       </button>
 
       {/* Project View Tab — only shown when extension is activated */}
+      {showCreatorCanvasTab && (
+        <button
+          className={`ml-2 px-3 py-1 text-sm rounded-t border border-b-0 whitespace-nowrap transition-colors ${
+            showCreatorCanvas
+              ? 'bg-white border-gray-300 font-medium text-gray-900 -mb-px'
+              : 'bg-amber-50 border-transparent text-amber-700 hover:bg-amber-100 hover:text-amber-900'
+          }`}
+          onClick={onShowCreatorCanvas}
+          title="View Creator Canvas"
+        >
+          🎨 Canvas
+        </button>
+      )}
       {showProjectTab && (
         <button
           className={`ml-4 px-3 py-1 text-sm rounded-t border border-b-0 whitespace-nowrap transition-colors ${

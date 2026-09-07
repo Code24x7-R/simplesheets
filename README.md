@@ -27,7 +27,7 @@ A lightweight, browser-based spreadsheet — fully client-side, reads and writes
 
 ## Architecture
 
-SimpleSheet is a client-side SPA with no backend. State lives in React Context + `useReducer`, with a formula engine operating on sparse cell maps. An extensions architecture provides project management capabilities.
+SimpleSheet is a client-side SPA with no backend. State lives in React Context + `useReducer`, with a formula engine operating on sparse cell maps. An extensions architecture provides project management and visual project-organization capabilities. The built-in Project/WBS extension supports structured planning, while Creator Canvas provides a visual surface for notes, links, images, videos, sketches, project information, collections, tags, and tasks.
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -63,6 +63,10 @@ SimpleSheet is a client-side SPA with no backend. State lives in React Context +
 │    ├─ AccountingDashboard (4-table cost tracking)               │
 │    ├─ EvmReport (earned value management metrics)              │
 │    └─ MaterialDashboard (CapEx/OpEx/consumable tracking)        │
+│  ExtensionRegistry → Creator Canvas Extension                   │
+│    ├─ CreatorCanvasView (visual note/link/image/task canvas)    │
+│    ├─ NodeEditorPanel (per-node inspector/editor)               │
+│    └─ sheetConverter (bidirectional sheet ↔ model persistence)  │
 ├─────────────────────────────────────────────────────────────────┤
 │                   Service Layer                                  │
 │  excelImport/Export │ csvService │ jsonService │ pdfExport      │
@@ -186,6 +190,33 @@ Current targets: **≥95% line coverage**, **≥85% branch coverage**, **0 lint 
 ---
 
 ## Extensions Architecture
+
+SimpleSheet currently includes two complementary extensions:
+
+### Creator Canvas
+
+Creator Canvas is a visual project-organization surface backed by normalized spreadsheet data. It lets users arrange and edit project nodes while keeping the workbook as the persistence boundary and source of truth.
+
+| Component | Purpose |
+|-----------|---------|
+| `CreatorCanvasView.tsx` | Canvas workspace with node cards, zoom controls, selection, locking, and deletion |
+| `NodeEditorPanel.tsx` | Inspector for editing node titles, descriptions, tags, and type-specific payloads |
+| `canvasOps.ts` | Immutable node, connection, task, collection, and tag operations |
+| `sheetConverter.ts` | Bidirectional model ↔ workbook conversion and extension persistence |
+| `types.ts` | Normalized node, connection, task, collection, tag, and project models |
+
+Creator Canvas uses six managed sheets:
+
+- `Creator Project` — project metadata
+- `Canvas Items` — canvas nodes and serialized payloads
+- `Canvas Links` — relationships and serialized connection styles
+- `Creator Tasks` — task records
+- `Creator Collections` — collection/group records
+- `Creator Tags` — tag definitions
+
+The extension also stores a compact `workbook.extensions['creator-canvas']` payload for fast loading. When extension metadata is unavailable, the managed sheets are used to reconstruct the canvas model. Unrelated workbook sheets are preserved during synchronization.
+
+### Project / WBS
 
 The WBS/Project extension provides full project management capabilities:
 
@@ -338,6 +369,14 @@ simplesheets/
 │       ├── types.ts               # Extension contract interfaces
 │       ├── ExtensionRegistry.ts   # Plugin registration system
 │       ├── types.test.ts
+│       ├── creator-canvas/        # Visual project organization extension
+│       │   ├── CreatorCanvasView.tsx
+│       │   ├── NodeEditorPanel.tsx
+│       │   ├── canvasOps.ts
+│       │   ├── sheetConverter.ts
+│       │   ├── schema.ts
+│       │   ├── types.ts
+│       │   └── *.test.ts(x)
 │       └── project-wbs/           # WBS/Project extension
 │           ├── GanttChart.tsx      # Pure SVG timeline with zoom/nav
 │           ├── RiskMatrix.tsx      # 5×5 probability/impact dashboard

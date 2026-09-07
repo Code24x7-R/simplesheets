@@ -141,6 +141,7 @@ interface MenuBarProps {
   // Extensions
   onProjectNew?: (templateId: string) => void;
   onProjectNewSheet?: () => void;
+  onCreatorCanvasNew?: () => void;
   onProjectOpen?: () => void;
   // Recent files (MRU)
   recentFiles: MRUEntry[];
@@ -256,6 +257,7 @@ export function MenuBar(props: MenuBarProps) {
         'ext-project-mining': () => props.onProjectNew?.('mining'),
         'ext-project-realestate-photo': () => props.onProjectNew?.('realestate-photo'),
         'ext-project-new-sheet': () => props.onProjectNewSheet?.(),
+        'ext-creator-canvas-new': () => props.onCreatorCanvasNew?.(),
         // Help
         'help-about': props.onAbout,
         'help-shortcuts': props.onShortcuts,
@@ -460,6 +462,14 @@ export function MenuBar(props: MenuBarProps) {
   const extensionsItems: MenuItem[] = [
     {
       id: 'ext-project',
+      label: 'Creator Canvas',
+      icon: FolderKanban,
+      submenu: [
+        { id: 'ext-creator-canvas-new', label: 'New Creator Canvas', icon: FolderKanban },
+      ],
+    },
+    {
+      id: 'ext-project-wbs',
       label: 'Project / WBS',
       icon: FolderKanban,
       submenu: [

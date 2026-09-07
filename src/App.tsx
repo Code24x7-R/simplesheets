@@ -65,6 +65,12 @@ import { createDemoWorkbook } from './utils/demoWorkbook';
 import { useChartSettings } from './hooks/useChartSettings';
 import { SheetLinkProvider } from './components/SheetLink';
 import { ProjectView } from './extensions/project-wbs/ProjectView';
+import { CreatorCanvasView } from './extensions/creator-canvas/CreatorCanvasView';
+import { createEmptyCreatorCanvasModel } from './extensions/creator-canvas/schema';
+import { CREATOR_CANVAS_SHEET_NAMES, loadCreatorCanvasFromWorkbook, syncCreatorCanvasToWorkbook } from './extensions/creator-canvas/sheetConverter';
+
+const CREATOR_CANVAS_SHEET_NAMES_SET = new Set<string>(Object.values(CREATOR_CANVAS_SHEET_NAMES));
+import type { CreatorCanvasModel } from './extensions/creator-canvas/types';
 import { createBlankTasksSheet, createWorkbookFromTemplate, createRisksSheet, createResourcesSheet, createMaterialsSheet, createActualsSheet, createAllocationsSheet, createConsumptionsSheet, workbookToProject, projectModelToProject, projectModelToWorkbook } from './extensions/project-wbs/sheetToProject';
 import { TASKS_SHEET_NAME, RISKS_SHEET_NAME, RESOURCES_SHEET_NAME, MATERIALS_SHEET_NAME, ACTUALS_SHEET_NAME, ALLOCATIONS_SHEET_NAME, CONSUMPTIONS_SHEET_NAME } from './extensions/project-wbs/sheetToProject';
 import type { Project } from './extensions/types';
@@ -281,6 +287,9 @@ function WorkbookView() {
   const [showProjectView, setShowProjectView] = useState(false);
   const [showProjectTab, setShowProjectTab] = useState(false);
   const [currentProject, setCurrentProject] = useState<Project | null>(null);
+  const [showCreatorCanvas, setShowCreatorCanvas] = useState(false);
+  const [showCreatorCanvasTab, setShowCreatorCanvasTab] = useState(false);
+  const [currentCreatorCanvas, setCurrentCreatorCanvas] = useState<CreatorCanvasModel | null>(null);
 
   // Chart state
   const [showChartDialog, setShowChartDialog] = useState(false);
@@ -1114,6 +1123,19 @@ function WorkbookView() {
       if (hasProjectData) {
         setShowProjectTab(true);
       }
+
+      const hasCreatorCanvasData = importedWb.extensions?.['creator-canvas'] ||
+        importedWb.sheets.some((s) => CREATOR_CANVAS_SHEET_NAMES_SET.has(s.name));
+      if (hasCreatorCanvasData) {
+        const canvas = loadCreatorCanvasFromWorkbook(importedWb);
+        setCurrentCreatorCanvas(canvas);
+        setShowCreatorCanvasTab(true);
+        setShowCreatorCanvas(Boolean(canvas));
+      } else {
+        setCurrentCreatorCanvas(null);
+        setShowCreatorCanvas(false);
+        setShowCreatorCanvasTab(false);
+      }
     },
     [pushHistory, recordOpenMRU]
   );
@@ -1129,6 +1151,9 @@ function WorkbookView() {
       setCurrentProject(null);
       setShowProjectView(false);
       setShowProjectTab(false);
+      setCurrentCreatorCanvas(null);
+      setShowCreatorCanvas(false);
+      setShowCreatorCanvasTab(false);
       setStatusMessage('Created new workbook');
       gridRef.current?.focus();
     },
@@ -1956,6 +1981,21 @@ function WorkbookView() {
     [workbook, pushHistory],
   );
 
+  const handleCreatorCanvasNew = useCallback(() => {
+    const model = createEmptyCreatorCanvasModel(`canvas-${Date.now()}`, 'Untitled Creator Canvas');
+    const updatedWb = syncCreatorCanvasToWorkbook(workbook, model);
+    pushHistory(updatedWb, 'New Creator Canvas');
+    setCurrentCreatorCanvas(model);
+    setShowCreatorCanvas(true);
+    setShowCreatorCanvasTab(true);
+  }, [workbook, pushHistory]);
+
+  const handleSaveCreatorCanvas = useCallback((model: CreatorCanvasModel) => {
+    const updatedWb = syncCreatorCanvasToWorkbook(workbook, model);
+    pushHistory(updatedWb, 'Update Creator Canvas');
+    setCurrentCreatorCanvas(model);
+  }, [workbook, pushHistory]);
+
   // ─── Conditional Formatting Handlers ────────────────────────────────
 
   const handleOpenConditionalFormat = useCallback(() => {
@@ -2709,6 +2749,7 @@ function WorkbookView() {
           onSearchReplace={handleSearchReplace}
           onProjectNew={handleProjectNew}
           onProjectNewSheet={handleProjectNewSheet}
+          onCreatorCanvasNew={handleCreatorCanvasNew}
           recentFiles={recentFiles}
           onOpenRecent={handleOpenRecent}
           onRemoveRecent={removeMRU}
@@ -2806,10 +2847,21 @@ function WorkbookView() {
         workbook={workbook}
         showProjectView={showProjectView}
         showProjectTab={showProjectTab}
+        showCreatorCanvas={showCreatorCanvas}
+        showCreatorCanvasTab={showCreatorCanvasTab}
+        onShowCreatorCanvas={() => {
+          const model = loadCreatorCanvasFromWorkbook(workbook);
+          if (model) {
+            setCurrentCreatorCanvas(model);
+            setShowCreatorCanvas(true);
+            setShowCreatorCanvasTab(true);
+          }
+        }}
         onSwitchSheet={(idx) => {
           handleSwitchSheet(idx);
           // Switching to a sheet tab exits project view
           if (showProjectView) setShowProjectView(false);
+          if (showCreatorCanvas) setShowCreatorCanvas(false);
         }}
         onAddSheet={handleAddSheet}
         onRenameSheet={handleRenameSheet}
@@ -2834,8 +2886,17 @@ function WorkbookView() {
         }}
       />
 
+      {showCreatorCanvas && currentCreatorCanvas && (
+        <div className="flex-1 overflow-hidden">
+          <CreatorCanvasView
+            project={currentCreatorCanvas}
+            onProjectChange={handleSaveCreatorCanvas}
+          />
+        </div>
+      )}
+
       {/* Project View (shown when Project tab is active) */}
-      {showProjectView && currentProject && (
+      {!showCreatorCanvas && showProjectView && currentProject && (
         <div className="flex-1 overflow-hidden">
           <ProjectView
             project={currentProject}
@@ -2847,7 +2908,7 @@ function WorkbookView() {
         </div>
       )}
       {/* Grid — shown when Project tab is not active */}
-      {!showProjectView && (
+      {!showCreatorCanvas && !showProjectView && (
       <div className="flex-1 overflow-hidden">
         <Grid
           ref={gridRef}

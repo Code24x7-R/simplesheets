@@ -143,6 +143,44 @@ The WBS/Project extension is actively being expanded. See [EXTENSIONS_ARCHITECTU
 
 ---
 
+## Creator Canvas Extension — Phase 45.1 Complete ✅
+
+Defined the scope and extension boundary for the new `creator-canvas` extension. See [CREATOR_CANVAS_ARCHITECTURE.md](./CREATOR_CANVAS_ARCHITECTURE.md).
+
+**Boundary decisions:**
+- Stable extension ID: `creator-canvas`, schema version `1.0.0`.
+- Visual canvas is a structured projection of workbook-persisted normalized data.
+- Core foundation includes notes, links, images, videos, sketches, references, collections, connections, and linked creator tasks.
+- Creator Canvas owns its model, canvas operations, editors, sheet converters, and future templates.
+- Project/WBS remains responsible for detailed scheduling, dependencies, resources, risks, EVM, accounting, and materials.
+- Domain-specific template seed data is deferred to a separate Phase 46 template-library effort.
+- Large binary media, collaboration, accounts, and third-party editing are out of scope for the foundation.
+
+### Creator Canvas Extension — Phases 45.2–45.3 Complete ✅
+
+Implemented the normalized Creator Canvas schema foundation and immutable domain operations under `src/extensions/creator-canvas/`.
+
+- Added typed project, technique, node, payload, connection, task, collection, tag, settings, and extension-persistence contracts.
+- Added default factories for blank projects and all core canvas entities.
+- Added model validation with dangling relationship detection.
+- Added sanitization for partial/malformed persisted data.
+- Added schema migration entry point for legacy/unversioned payloads.
+- Added 14 focused schema tests.
+- Added immutable canvas operations for nodes, connections, tasks, collections, tags, viewport settings, and project metadata.
+- Node removal cascades to connections and task links; collection/tag removal cleans up references.
+- Added 9 focused domain-operation tests.
+- Added six managed-sheet definitions with stable centralized names: Creator Project, Canvas Items, Canvas Links, Creator Tasks, Creator Collections, and Creator Tags.
+- Added bidirectional model/sheet conversion with JSON payload preservation and workbook sync/load helpers.
+- Managed-sheet sync deduplicates extension sheets while preserving unrelated user sheets.
+- Added 4 round-trip, sync, and fallback-loading tests.
+- Added the initial `CreatorCanvasView` with a blank grid canvas, node rendering, add-note/link/image/task actions, selection, deletion, lock toggling, zoom controls, and reset-view behavior.
+- Added 5 component tests for the blank state, node creation, rendering, deletion, and zoom.
+- Added `NodeEditorPanel` with controlled editing for title, description, tags, and type-specific link/image/video/quote payload fields.
+- Integrated the editor panel into `CreatorCanvasView` for selected-node editing and immutable save/cancel behavior.
+- Added 4 node-editor tests. Creator Canvas tests now total 36 passing.
+- Registered Creator Canvas in the application shell with a Creator Canvas menu action, Canvas tab, workbook-backed model loading, save/history integration, and view switching alongside Project/WBS.
+- Added shell integration without replacing or mutating unrelated workbook sheets.
+
 ## Future Extensions
 
 The extensions architecture supports adding new extensions without modifying core:
@@ -156,6 +194,7 @@ The extensions architecture supports adding new extensions without modifying cor
 | Budget Tracker | Cost tracking with variance analysis | 🔄 In Progress (Phase 40) |
 | Earned Value Chart | S-curve visualization of PV, EV, AC over time | Medium |
 | What-If Scenarios | Save/compare multiple schedule scenarios | Low |
+| Creator Canvas | Visual creative projects backed by normalized sheets | 🔄 Phase 45.1 complete |
 
 ---
 
