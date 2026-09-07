@@ -10,9 +10,11 @@ import {
   updateCanvasSettings,
   addCanvasConnection,
   removeCanvasConnection,
+  updateCanvasConnection,
 } from './canvasOps';
 import { createDefaultCanvasNode, createDefaultCanvasConnection } from './schema';
 import { NodeEditorPanel } from './NodeEditorPanel';
+import { ConnectionEditorPanel } from './ConnectionEditorPanel';
 import {
   Plus,
   StickyNote,
@@ -426,8 +428,9 @@ export const CreatorCanvasView: React.FC<CreatorCanvasViewProps> = ({
                     y2={y2}
                     stroke={conn.style?.color || '#64748b'}
                     strokeWidth={conn.style?.strokeWidth || 2}
-                    strokeDasharray={conn.style?.strokeDash === 'dashed' ? '5,5' : undefined}
-                    markerEnd="url(#arrowhead)"
+                    markerStart={conn.style?.arrowStart ? 'url(#arrowhead)' : undefined}
+                    markerEnd={conn.style?.arrowEnd === false ? undefined : 'url(#arrowhead)'}
+                    strokeDasharray={conn.style?.strokeDash === 'dashed' ? '5,5' : conn.style?.strokeDash === 'dotted' ? '2,3' : undefined}
                     className={`hover:stroke-indigo-600 transition-colors cursor-pointer ${selectedConnectionId === conn.id ? 'stroke-indigo-600' : ''}`}
                     onClick={(e) => {
                       e.stopPropagation();
@@ -645,6 +648,16 @@ export const CreatorCanvasView: React.FC<CreatorCanvasViewProps> = ({
               Duplicate
             </button>
             <button
+              title="Edit selection"
+              className="rounded-full px-2 py-1 text-xs text-indigo-600 hover:bg-indigo-50"
+              onClick={() => {
+                if (selectedNodeId) return;
+                if (selectedConnectionId) setSelectedConnectionId(selectedConnectionId);
+              }}
+            >
+              Edit
+            </button>
+            <button
               title="Delete selection"
               className="rounded-full px-2 py-1 text-xs text-red-600 hover:bg-red-50"
               onClick={() => {
@@ -665,6 +678,20 @@ export const CreatorCanvasView: React.FC<CreatorCanvasViewProps> = ({
               ×
             </button>
           </div>
+        )}
+
+        {/* Selected Connector Inspector */}
+        {selectedConnectionId && project.connections.find((connection) => connection.id === selectedConnectionId) && (
+          <ConnectionEditorPanel
+            connection={project.connections.find((connection) => connection.id === selectedConnectionId)!}
+            fromNodeTitle={nodeMap.get(project.connections.find((connection) => connection.id === selectedConnectionId)!.fromNodeId)?.title || 'Unknown'}
+            toNodeTitle={nodeMap.get(project.connections.find((connection) => connection.id === selectedConnectionId)!.toNodeId)?.title || 'Unknown'}
+            onSave={(updatedConnection) => {
+              onProjectChange(updateCanvasConnection(project, updatedConnection.id, updatedConnection));
+              setSelectedConnectionId(null);
+            }}
+            onClose={() => setSelectedConnectionId(null)}
+          />
         )}
 
         {/* Selected Node Inspector */}

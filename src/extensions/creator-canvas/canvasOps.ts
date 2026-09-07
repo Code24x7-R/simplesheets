@@ -87,6 +87,23 @@ export function removeCanvasConnection(
 }
 
 /**
+ * Immutably updates connector attributes while preserving its stable ID.
+ */
+export function updateCanvasConnection(
+  model: CreatorCanvasModel,
+  connectionId: string,
+  updates: Partial<Omit<CanvasConnection, 'id'>>
+): CreatorCanvasModel {
+  return {
+    ...model,
+    connections: model.connections.map((connection) =>
+      connection.id === connectionId ? { ...connection, ...updates } : connection
+    ),
+    modifiedDate: touchModified(),
+  };
+}
+
+/**
  * Immutably adds a task.
  */
 export function addCreatorTask(model: CreatorCanvasModel, task: CreatorTaskRow): CreatorCanvasModel {

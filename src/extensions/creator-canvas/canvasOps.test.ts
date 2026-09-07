@@ -7,6 +7,7 @@ import {
   removeCanvasNode,
   addCanvasConnection,
   removeCanvasConnection,
+  updateCanvasConnection,
   addCreatorTask,
   updateCreatorTask,
   removeCreatorTask,
@@ -93,6 +94,27 @@ describe('Creator Canvas Operations (canvasOps)', () => {
 
       const next = removeCanvasConnection(model, 'c1');
       expect(next.connections).toHaveLength(0);
+    });
+
+    it('updates connection attributes immutably', () => {
+      const n1 = createDefaultCanvasNode('n1', 'note');
+      const n2 = createDefaultCanvasNode('n2', 'note');
+      const conn = createDefaultCanvasConnection('c1', 'n1', 'n2', { relationship: 'sequence' });
+
+      let model = addCanvasNode(initialModel, n1);
+      model = addCanvasNode(model, n2);
+      model = addCanvasConnection(model, conn);
+
+      const next = updateCanvasConnection(model, 'c1', {
+        relationship: 'dependency',
+        label: 'blocks',
+        style: { color: '#ef4444', strokeWidth: 3, strokeDash: 'dashed', arrowStart: true, arrowEnd: false },
+      });
+
+      expect(next.connections[0].relationship).toBe('dependency');
+      expect(next.connections[0].label).toBe('blocks');
+      expect(next.connections[0].style?.strokeDash).toBe('dashed');
+      expect(next.connections[0].style?.arrowStart).toBe(true);
     });
   });
 
