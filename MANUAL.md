@@ -1,6 +1,6 @@
 # SimpleSheet User Manual
 
-> **Version:** 0.1.0 — Last updated: August 2026
+> **Version:** 0.1.0 — Last updated: September 2026
 
 ## Table of Contents
 
@@ -30,7 +30,8 @@
 24. [Cost Accounting](#cost-accounting)
 25. [EVM Performance Reporting](#evm-performance-reporting)
 26. [Material Management](#material-management)
-27. [Planned Features](#planned-features)
+27. [Creator Canvas](#creator-canvas)
+28. [Planned Features](#planned-features)
 
 ---
 
@@ -1263,6 +1264,85 @@ The Materials tab shows:
 - **Usage Progress Bar**: Visual indicator of consumption
 
 ---
+
+## Creator Canvas
+
+Creator Canvas is a visual workspace for collecting ideas, references, creative notes, and production relationships. It is available from **Extensions → Creator Canvas** and is backed by workbook data, so canvas projects remain part of the saved workbook.
+
+### Create a Canvas
+
+| Method | Action |
+|--------|--------|
+| Blank canvas | **Extensions → Creator Canvas → New Creator Canvas** |
+| Film preset | **Extensions → Creator Canvas → Templates → Film / Video Shot List** |
+| Moodboard preset | **Extensions → Creator Canvas → Templates → Moodboard** |
+| Novel preset | **Extensions → Creator Canvas → Templates → Novel Outline** |
+| Web preset | **Extensions → Creator Canvas → Templates → Web Design** |
+| Marketing preset | **Extensions → Creator Canvas → Templates → Marketing Campaign** |
+
+Presets create starter nodes and a relationship connector that you can edit or remove.
+
+### Add and Arrange Nodes
+
+Use the buttons in the canvas toolbar to add notes, links, images, and tasks. Select a node to open its editor. Node editors support titles, descriptions, tags, and type-specific information.
+
+- Drag a node to reposition it.
+- Nodes snap to the canvas grid while dragging.
+- Locked nodes can be selected but cannot be moved.
+- Use the zoom controls to change the canvas scale.
+- Drag the empty canvas background to pan the workspace.
+- Use reset view to return to the default zoom and pan.
+
+### Connect Nodes
+
+1. Select **Connect to another node** (the link/share icon) on the first node.
+2. Click or drag onto the second node.
+3. A connector appears between the nodes.
+4. Click the connector line or midpoint to select it.
+
+### Edit Connector Attributes
+
+With a connector selected, use the floating bubble menu and choose **Edit**. The connector inspector provides:
+
+| Attribute | Description |
+|-----------|-------------|
+| Relationship | Sequence, inspiration, dependency, reference, or custom |
+| Label | Optional text shown near the connector |
+| Color | Connector stroke color |
+| Stroke width | Line thickness |
+| Line style | Solid, dashed, or dotted |
+| Arrow at start | Shows or hides the starting arrow |
+| Arrow at end | Shows or hides the ending arrow |
+
+Click **Save Connector** to apply changes. The connector keeps its existing ID and endpoint nodes.
+
+### Copy, Duplicate, and Remove Canvas Items
+
+Select a node or connector to open the bubble menu:
+
+| Action | Result |
+|--------|--------|
+| **Copy** | Copies the selected node or connector to the canvas clipboard |
+| **Paste** | Creates a new copy; pasted nodes are offset from the original |
+| **Duplicate** | Immediately creates an offset copy |
+| **Edit** | Opens the node or connector editor |
+| **Delete** | Removes the selected item; deleting a node also removes its connectors |
+| **×** | Closes the selection and bubble menu |
+
+Keyboard shortcuts apply when a canvas node or connector is selected:
+
+| Shortcut | Action |
+|----------|--------|
+| `Ctrl/Cmd + C` | Copy selected node or connector |
+| `Ctrl/Cmd + V` | Paste from the canvas clipboard |
+| `Delete` / `Backspace` | Remove selected node or connector |
+
+### Canvas Tips
+
+- Connector labels are useful for documenting workflow intent, dependencies, or references.
+- Use dashed or dotted styles to distinguish optional or non-linear relationships.
+- Use the connector editor to turn off the end arrow when a relationship is bidirectional or purely associative.
+- Canvas edits are persisted with the workbook through the Creator Canvas extension sheets.
 
 ## Planned Features
 
