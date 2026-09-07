@@ -236,6 +236,8 @@ export interface CanvasNode {
   tagIds?: string[];
   collectionId?: string;
   payload?: CanvasNodePayload;
+  /** Explicit opt-in link to a Project/WBS task ID for task nodes. */
+  linkedWbsTaskId?: string;
   createdDate: string;
   modifiedDate: string;
 }
@@ -274,6 +276,8 @@ export interface CreatorTaskRow {
   actualHours?: number;
   cost?: number;
   linkedNodeId?: string;
+  /** Explicit opt-in link to a Project/WBS task ID. */
+  linkedWbsTaskId?: string;
   tagIds?: string[];
   createdDate: string;
   modifiedDate: string;

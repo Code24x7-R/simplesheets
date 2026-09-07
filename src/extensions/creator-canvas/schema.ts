@@ -112,6 +112,7 @@ export function createDefaultCanvasNode(
     collectionId: overrides.collectionId,
     style: overrides.style ?? {},
     payload: overrides.payload,
+    linkedWbsTaskId: overrides.linkedWbsTaskId,
     createdDate: overrides.createdDate ?? now,
     modifiedDate: overrides.modifiedDate ?? now,
   };
@@ -158,6 +159,7 @@ export function createDefaultCreatorTask(
     actualHours: overrides.actualHours,
     cost: overrides.cost,
     linkedNodeId: overrides.linkedNodeId,
+    linkedWbsTaskId: overrides.linkedWbsTaskId,
     tagIds: overrides.tagIds ?? [],
     createdDate: overrides.createdDate ?? now,
     modifiedDate: overrides.modifiedDate ?? now,

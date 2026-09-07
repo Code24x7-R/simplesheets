@@ -127,6 +127,7 @@ export function modelToCreatorSheets(model: CreatorCanvasModel): Sheet[] {
     'Collection ID',
     'Tag IDs',
     'Payload JSON',
+    'Linked WBS Task ID',
     'Created Date',
     'Modified Date',
   ];
@@ -146,6 +147,7 @@ export function modelToCreatorSheets(model: CreatorCanvasModel): Sheet[] {
     node.collectionId || '',
     (node.tagIds || []).join(', '),
     node.payload ? JSON.stringify(node.payload) : '',
+    node.linkedWbsTaskId || '',
     node.createdDate,
     node.modifiedDate,
   ]);
@@ -176,6 +178,7 @@ export function modelToCreatorSheets(model: CreatorCanvasModel): Sheet[] {
     'Act Hours',
     'Cost',
     'Linked Node ID',
+    'Linked WBS Task ID',
     'Tag IDs',
     'Description',
     'Created Date',
@@ -193,6 +196,7 @@ export function modelToCreatorSheets(model: CreatorCanvasModel): Sheet[] {
     task.actualHours ?? '',
     task.cost ?? '',
     task.linkedNodeId || '',
+    task.linkedWbsTaskId || '',
     (task.tagIds || []).join(', '),
     task.description || '',
     task.createdDate,
@@ -374,8 +378,9 @@ export function sheetsToCreatorModel(sheets: Sheet[]): CreatorCanvasModel {
             collectionId,
             tagIds,
             payload,
-            createdDate: row[15]?.value ? String(row[15].value).trim() : undefined,
-            modifiedDate: row[16]?.value ? String(row[16].value).trim() : undefined,
+            linkedWbsTaskId: row[15]?.value ? String(row[15].value).trim() : undefined,
+            createdDate: row[16]?.value ? String(row[16].value).trim() : undefined,
+            modifiedDate: row[17]?.value ? String(row[17].value).trim() : undefined,
           })
         );
       }
@@ -397,6 +402,15 @@ export function sheetsToCreatorModel(sheets: Sheet[]): CreatorCanvasModel {
             {
               relationship: (String(row[3]?.value || 'sequence').trim() as CanvasConnection['relationship']),
               label: row[4]?.value ? String(row[4].value).trim() : undefined,
+              style: row[5]?.value
+                ? (() => {
+                    try {
+                      return JSON.parse(String(row[5].value));
+                    } catch {
+                      return undefined;
+                    }
+                  })()
+                : undefined,
             }
           )
         );
@@ -422,15 +436,16 @@ export function sheetsToCreatorModel(sheets: Sheet[]): CreatorCanvasModel {
             actualHours: row[8]?.value ? parseFloat(String(row[8].value)) || undefined : undefined,
             cost: row[9]?.value ? parseFloat(String(row[9].value)) || undefined : undefined,
             linkedNodeId: row[10]?.value ? String(row[10].value).trim() : undefined,
-            tagIds: row[11]?.value
-              ? String(row[11].value)
+            linkedWbsTaskId: row[11]?.value ? String(row[11].value).trim() : undefined,
+            tagIds: row[12]?.value
+              ? String(row[12].value)
                   .split(',')
                   .map((t) => t.trim())
                   .filter(Boolean)
               : [],
-            description: row[12]?.value ? String(row[12].value).trim() : undefined,
-            createdDate: row[13]?.value ? String(row[13].value).trim() : undefined,
-            modifiedDate: row[14]?.value ? String(row[14].value).trim() : undefined,
+            description: row[13]?.value ? String(row[13].value).trim() : undefined,
+            createdDate: row[14]?.value ? String(row[14].value).trim() : undefined,
+            modifiedDate: row[15]?.value ? String(row[15].value).trim() : undefined,
           })
         );
       }

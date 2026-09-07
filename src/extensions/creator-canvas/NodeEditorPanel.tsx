@@ -91,6 +91,18 @@ export const NodeEditorPanel: React.FC<NodeEditorPanelProps> = ({ node, onSave, 
         </div>
 
         <div>
+          <label htmlFor="node-wbs-task" className="block text-xs font-medium text-slate-700 mb-1">Project/WBS Task ID</label>
+          <input
+            id="node-wbs-task"
+            value={draft.linkedWbsTaskId || ''}
+            onChange={(e) => updateDraft({ linkedWbsTaskId: e.target.value.trim() || undefined })}
+            placeholder="Optional explicit WBS link"
+            className="w-full px-2.5 py-2 text-sm border border-slate-300 rounded focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 outline-none"
+          />
+          <p className="mt-1 text-[10px] text-slate-500">Only linked nodes participate in Canvas/WBS synchronization.</p>
+        </div>
+
+        <div>
           <label htmlFor="node-tags" className="block text-xs font-medium text-slate-700 mb-1">Tags</label>
           <input
             id="node-tags"

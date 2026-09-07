@@ -15,6 +15,7 @@ import {
 import { createDefaultCanvasNode, createDefaultCanvasConnection } from './schema';
 import { NodeEditorPanel } from './NodeEditorPanel';
 import { ConnectionEditorPanel } from './ConnectionEditorPanel';
+import { getDockedConnectionEndpoints } from './geometry';
 import {
   Plus,
   StickyNote,
@@ -413,10 +414,14 @@ export const CreatorCanvasView: React.FC<CreatorCanvasViewProps> = ({
               const toNode = nodeMap.get(conn.toNodeId);
               if (!fromNode || !toNode) return null;
 
-              const x1 = fromNode.position.x + fromNode.width / 2;
-              const y1 = fromNode.position.y + fromNode.height / 2;
-              const x2 = toNode.position.x + toNode.width / 2;
-              const y2 = toNode.position.y + toNode.height / 2;
+              const { start, end } = getDockedConnectionEndpoints(
+                { ...fromNode.position, width: fromNode.width, height: fromNode.height },
+                { ...toNode.position, width: toNode.width, height: toNode.height }
+              );
+              const x1 = start.x;
+              const y1 = start.y;
+              const x2 = end.x;
+              const y2 = end.y;
 
               return (
                 <g key={conn.id} className="pointer-events-auto group">
@@ -588,6 +593,15 @@ export const CreatorCanvasView: React.FC<CreatorCanvasViewProps> = ({
                         {node.payload.data.url || 'No URL'}
                       </span>
                       <ExternalLink className="w-3 h-3 text-blue-500 shrink-0" />
+                    </div>
+                  )}
+
+                  {node.linkedWbsTaskId && (
+                    <div
+                      data-testid={`canvas-node-wbs-badge-${node.id}`}
+                      className="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded border border-purple-200 mb-2 font-mono flex items-center justify-between"
+                    >
+                      <span>WBS: {node.linkedWbsTaskId}</span>
                     </div>
                   )}
 

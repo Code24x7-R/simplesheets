@@ -72,6 +72,7 @@ import { CREATOR_CANVAS_SHEET_NAMES, loadCreatorCanvasFromWorkbook, syncCreatorC
 
 const CREATOR_CANVAS_SHEET_NAMES_SET = new Set<string>(Object.values(CREATOR_CANVAS_SHEET_NAMES));
 import type { CreatorCanvasModel } from './extensions/creator-canvas/types';
+import { syncCanvasToProjectModel, syncProjectModelToCanvas } from './extensions/creator-canvas/projectSync';
 import { ExtensionRegistry } from './extensions/ExtensionRegistry';
 import { registerCreatorCanvasExtension } from './extensions/creator-canvas/extension';
 import { createBlankTasksSheet, createWorkbookFromTemplate, createRisksSheet, createResourcesSheet, createMaterialsSheet, createActualsSheet, createAllocationsSheet, createConsumptionsSheet, workbookToProject, projectModelToProject, projectModelToWorkbook } from './extensions/project-wbs/sheetToProject';
@@ -311,7 +312,11 @@ function WorkbookView() {
   useEffect(() => {
     const model = loadCreatorCanvasFromWorkbook(workbook);
     if (model) {
-      setCurrentCreatorCanvas(model);
+      const projectExtension = workbook.extensions?.['project-wbs'] as { data?: { project?: ProjectModel | null } } | undefined;
+      const syncedModel = projectExtension?.data?.project
+        ? syncProjectModelToCanvas(projectExtension.data.project, model)
+        : model;
+      setCurrentCreatorCanvas(syncedModel);
       setShowCreatorCanvasTab(true);
       setShowCreatorCanvas(true);
     }
@@ -2029,9 +2034,53 @@ function WorkbookView() {
   }, [workbook, pushHistory]);
 
   const handleSaveCreatorCanvas = useCallback((model: CreatorCanvasModel) => {
-    const updatedWb = syncCreatorCanvasToWorkbook(workbook, model);
+    const nextModel = model;
+    let updatedWb = syncCreatorCanvasToWorkbook(workbook, model);
+
+    // Canvas/WBS synchronization is opt-in through linkedWbsTaskId. Keep the
+    // WBS model authoritative for scheduling, dependencies, costs, and reports.
+    const projectExtension = workbook.extensions?.['project-wbs'] as {
+      data?: { project?: ProjectModel | null; columnMapping?: ColumnMapping | null; sourceSheetId?: string | null };
+    } | undefined;
+    const projectModel = projectExtension?.data?.project;
+    if (projectModel) {
+      const syncResult = syncCanvasToProjectModel(model, projectModel);
+      const hasCycle = syncResult.issues.some((issue) => issue.code === 'cycle');
+      if (!hasCycle && syncResult.changed) {
+        const projectWorkbook = projectModelToWorkbook(syncResult.model, projectExtension?.data?.columnMapping ?? null);
+        const projectSheetNames = new Set([
+          TASKS_SHEET_NAME,
+          RISKS_SHEET_NAME,
+          RESOURCES_SHEET_NAME,
+          MATERIALS_SHEET_NAME,
+          ACTUALS_SHEET_NAME,
+          ALLOCATIONS_SHEET_NAME,
+          CONSUMPTIONS_SHEET_NAME,
+        ]);
+        updatedWb = {
+          ...updatedWb,
+          sheets: [
+            ...updatedWb.sheets.filter((sheet) => !projectSheetNames.has(sheet.name)),
+            ...projectWorkbook.sheets,
+          ],
+          extensions: {
+            ...updatedWb.extensions,
+            'project-wbs': {
+              extensionId: 'project-wbs',
+              schemaVersion: '1.0.0',
+              data: {
+                project: syncResult.model,
+                columnMapping: projectExtension?.data?.columnMapping ?? null,
+                sourceSheetId: projectExtension?.data?.sourceSheetId ?? null,
+              },
+            },
+          },
+        };
+      }
+    }
+
     pushHistory(updatedWb, 'Update Creator Canvas');
-    setCurrentCreatorCanvas(model);
+    setCurrentCreatorCanvas(nextModel);
   }, [workbook, pushHistory]);
 
   // ─── Conditional Formatting Handlers ────────────────────────────────
@@ -2891,7 +2940,11 @@ function WorkbookView() {
         onShowCreatorCanvas={() => {
           const model = loadCreatorCanvasFromWorkbook(workbook);
           if (model) {
-            setCurrentCreatorCanvas(model);
+            const projectExtension = workbook.extensions?.['project-wbs'] as { data?: { project?: ProjectModel | null } } | undefined;
+            const syncedModel = projectExtension?.data?.project
+              ? syncProjectModelToCanvas(projectExtension.data.project, model)
+              : model;
+            setCurrentCreatorCanvas(syncedModel);
             setShowCreatorCanvas(true);
             setShowCreatorCanvasTab(true);
           }
