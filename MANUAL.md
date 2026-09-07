@@ -1286,6 +1286,8 @@ Presets create starter nodes and a relationship connector that you can edit or r
 
 Use the buttons in the canvas toolbar to add notes, links, images, and tasks. Select a node to open its editor. Node editors support titles, descriptions, tags, and type-specific information.
 
+Creator Canvas nodes can optionally be linked to a formal Project/WBS task. The link is explicit and opt-in; ordinary notes and creative references remain Canvas-only unless you assign a WBS task ID.
+
 - Drag a node to reposition it.
 - Nodes snap to the canvas grid while dragging.
 - Locked nodes can be selected but cannot be moved.
@@ -1297,8 +1299,35 @@ Use the buttons in the canvas toolbar to add notes, links, images, and tasks. Se
 
 1. Select **Connect to another node** (the link/share icon) on the first node.
 2. Click or drag onto the second node.
-3. A connector appears between the nodes.
+3. A connector appears between the nodes. Connectors dock to the edges of the node cards rather than passing underneath their centers.
 4. Click the connector line or midpoint to select it.
+
+### Link Canvas Items to Project/WBS Tasks
+
+Use this workflow when a creative Canvas item also needs formal scheduling, dependencies, resources, cost tracking, EVM, or project reporting.
+
+1. Open or create the project in **Extensions → Project**.
+2. Identify the ID of the WBS task that should represent the Canvas item. Use the task's stable ID, not merely its display name; IDs distinguish tasks with similar names.
+3. Open the Creator Canvas and select the corresponding node.
+4. In the node editor, enter the WBS task ID in **Project/WBS Task ID** and save the node.
+5. Repeat for each Canvas task that should be managed in the Project/WBS extension.
+6. To connect schedule dependencies, create a connector from the predecessor node to the successor node and set its **Relationship** to **dependency**.
+7. Save the Canvas/workbook. Linked task fields and supported dependency links are synchronized into the Project/WBS model in the same workbook update.
+
+#### Synchronization Rules
+
+| Area | Authority / behavior |
+|------|----------------------|
+| Canvas position, size, colors, tags, and visual layout | Creator Canvas |
+| WBS hierarchy, calendar, scheduled dates, duration, resources, costs, actuals, baselines, EVM, and reports | Project/WBS |
+| Linked task title and description | Canvas updates the linked WBS task; Project/WBS updates are reflected back when the Canvas is reopened |
+| Progress/status and start/end dates | Shared through the supported Canvas/WBS mapping; Project/WBS remains authoritative for formal reporting |
+| Canvas **dependency** connectors | Become WBS predecessor relationships when both endpoints are linked |
+| Sequence, inspiration, reference, and custom connectors | Canvas-only |
+
+Canvas dependency connectors currently map conservatively to the Project/WBS predecessor relationship. Advanced connector semantics such as SS, FF, SF, or lag are not inferred from Canvas connectors. A Canvas item with an invalid or missing WBS task ID remains visible and produces no formal project task.
+
+Synchronization does not automatically delete WBS tasks when a Canvas node or connector is removed. This protects project actuals, baselines, and reporting history. Review and remove formal WBS tasks separately in the Project view when appropriate.
 
 ### Edit Connector Attributes
 
@@ -1335,11 +1364,15 @@ Keyboard shortcuts apply when a canvas node or connector is selected:
 |----------|--------|
 | `Ctrl/Cmd + C` | Copy selected node or connector |
 | `Ctrl/Cmd + V` | Paste from the canvas clipboard |
-| `Delete` / `Backspace` | Remove selected node or connector |
+| `Delete` / `Backspace` | Remove selected node or connector when the canvas itself has focus |
+
+> **Editing safeguard:** `Delete` and `Backspace` are ignored while focus is inside a node editor field. You can safely erase text from a title, description, tags, or WBS link without deleting the selected Canvas item.
 
 ### Canvas Tips
 
 - Connector labels are useful for documenting workflow intent, dependencies, or references.
+- Link only real project work to WBS tasks. Keep brainstorming notes and reference material unlinked so they do not affect formal project planning.
+- Use stable WBS task IDs rather than task names when linking; names can change and may not be unique.
 - Use dashed or dotted styles to distinguish optional or non-linear relationships.
 - Use the connector editor to turn off the end arrow when a relationship is bidirectional or purely associative.
 - Canvas edits are persisted with the workbook through the Creator Canvas extension sheets.
