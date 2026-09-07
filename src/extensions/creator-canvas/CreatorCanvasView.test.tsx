@@ -78,4 +78,76 @@ describe('CreatorCanvasView Component', () => {
     expect(onProjectChange).toHaveBeenCalledTimes(1);
     expect(onProjectChange.mock.calls[0][0].canvas.zoom).toBeGreaterThan(1);
   });
+
+  it('drags an unlocked node and snaps its position to the grid', () => {
+    const model = createEmptyCreatorCanvasModel('p1', 'Drag Test');
+    const node = createDefaultCanvasNode('drag-node', 'note', {
+      position: { x: 100, y: 100 },
+    });
+    model.nodes = [node];
+    const onProjectChange = jest.fn();
+
+    render(<CreatorCanvasView project={model} onProjectChange={onProjectChange} />);
+    const nodeElement = screen.getByTestId('canvas-node-drag-node');
+
+    fireEvent.mouseDown(nodeElement, { button: 0, clientX: 100, clientY: 100 });
+    fireEvent.mouseMove(screen.getByTestId('canvas-workspace'), { clientX: 133, clientY: 147 });
+    fireEvent.mouseUp(screen.getByTestId('canvas-workspace'));
+
+    const updates = onProjectChange.mock.calls.map(([next]) => next);
+    expect(updates[updates.length - 1].nodes[0].position).toEqual({ x: 140, y: 140 });
+  });
+
+  it('does not drag a locked node', () => {
+    const model = createEmptyCreatorCanvasModel('p1', 'Locked Test');
+    model.nodes = [createDefaultCanvasNode('locked-node', 'note', {
+      position: { x: 100, y: 100 },
+      locked: true,
+    })];
+    const onProjectChange = jest.fn();
+
+    render(<CreatorCanvasView project={model} onProjectChange={onProjectChange} />);
+    const nodeElement = screen.getByTestId('canvas-node-locked-node');
+    fireEvent.mouseDown(nodeElement, { button: 0, clientX: 100, clientY: 100 });
+    fireEvent.mouseMove(screen.getByTestId('canvas-workspace'), { clientX: 200, clientY: 200 });
+
+    expect(onProjectChange).not.toHaveBeenCalled();
+  });
+
+  it('creates and renders a connection between two nodes', () => {
+    const model = createEmptyCreatorCanvasModel('p1', 'Connection Test');
+    model.nodes = [
+      createDefaultCanvasNode('from-node', 'note', { title: 'From' }),
+      createDefaultCanvasNode('to-node', 'task', { title: 'To', position: { x: 400, y: 100 } }),
+    ];
+    const onProjectChange = jest.fn();
+
+    render(<CreatorCanvasView project={model} onProjectChange={onProjectChange} />);
+    fireEvent.click(screen.getAllByTitle('Connect to another node')[0]);
+    fireEvent.mouseDown(screen.getByTestId('canvas-node-to-node'), { button: 0, clientX: 400, clientY: 100 });
+
+    expect(onProjectChange).toHaveBeenCalledTimes(1);
+    const updated = onProjectChange.mock.calls[0][0];
+    expect(updated.connections).toHaveLength(1);
+    expect(updated.connections[0].fromNodeId).toBe('from-node');
+    expect(updated.connections[0].toNodeId).toBe('to-node');
+
+    // A connection is represented by an SVG line and midpoint delete control.
+    expect(document.querySelector('svg line')).toBeInTheDocument();
+    expect(document.querySelector('svg circle')).toBeInTheDocument();
+  });
+
+  it('pans the workspace when dragging its empty background', () => {
+    const model = createEmptyCreatorCanvasModel('p1', 'Pan Test');
+    const onProjectChange = jest.fn();
+
+    render(<CreatorCanvasView project={model} onProjectChange={onProjectChange} />);
+    const workspace = screen.getByTestId('canvas-workspace');
+    fireEvent.mouseDown(workspace, { button: 0, clientX: 10, clientY: 10 });
+    fireEvent.mouseMove(workspace, { clientX: 45, clientY: 55 });
+
+    const updated = onProjectChange.mock.calls[onProjectChange.mock.calls.length - 1][0];
+    expect(updated.canvas.panX).toBe(35);
+    expect(updated.canvas.panY).toBe(45);
+  });
 });
