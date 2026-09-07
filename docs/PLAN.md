@@ -180,6 +180,7 @@ Implemented the normalized Creator Canvas schema foundation and immutable domain
 - Added 4 node-editor tests. Creator Canvas tests now total 36 passing.
 - Registered Creator Canvas in the application shell with a Creator Canvas menu action, Canvas tab, workbook-backed model loading, save/history integration, and view switching alongside Project/WBS.
 - Added shell integration without replacing or mutating unrelated workbook sheets.
+- Added a standard `SheetExtension` implementation and registered Creator Canvas with `ExtensionRegistry`, including its tab view and Creator Task model.
 
 ## Future Extensions
 

@@ -203,6 +203,7 @@ Creator Canvas is a visual project-organization surface backed by normalized spr
 | `NodeEditorPanel.tsx` | Inspector for editing node titles, descriptions, tags, and type-specific payloads |
 | `canvasOps.ts` | Immutable node, connection, task, collection, and tag operations |
 | `sheetConverter.ts` | Bidirectional model ↔ workbook conversion and extension persistence |
+| `extension.tsx` | Standard `SheetExtension` contract and registry registration |
 | `types.ts` | Normalized node, connection, task, collection, tag, and project models |
 
 Creator Canvas uses six managed sheets:

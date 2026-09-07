@@ -71,6 +71,8 @@ import { CREATOR_CANVAS_SHEET_NAMES, loadCreatorCanvasFromWorkbook, syncCreatorC
 
 const CREATOR_CANVAS_SHEET_NAMES_SET = new Set<string>(Object.values(CREATOR_CANVAS_SHEET_NAMES));
 import type { CreatorCanvasModel } from './extensions/creator-canvas/types';
+import { ExtensionRegistry } from './extensions/ExtensionRegistry';
+import { registerCreatorCanvasExtension } from './extensions/creator-canvas/extension';
 import { createBlankTasksSheet, createWorkbookFromTemplate, createRisksSheet, createResourcesSheet, createMaterialsSheet, createActualsSheet, createAllocationsSheet, createConsumptionsSheet, workbookToProject, projectModelToProject, projectModelToWorkbook } from './extensions/project-wbs/sheetToProject';
 import { TASKS_SHEET_NAME, RISKS_SHEET_NAME, RESOURCES_SHEET_NAME, MATERIALS_SHEET_NAME, ACTUALS_SHEET_NAME, ALLOCATIONS_SHEET_NAME, CONSUMPTIONS_SHEET_NAME } from './extensions/project-wbs/sheetToProject';
 import type { Project } from './extensions/types';
@@ -290,6 +292,12 @@ function WorkbookView() {
   const [showCreatorCanvas, setShowCreatorCanvas] = useState(false);
   const [showCreatorCanvasTab, setShowCreatorCanvasTab] = useState(false);
   const [currentCreatorCanvas, setCurrentCreatorCanvas] = useState<CreatorCanvasModel | null>(null);
+
+  useEffect(() => {
+    ExtensionRegistry.setWorkbookProvider(() => workbook);
+    registerCreatorCanvasExtension(ExtensionRegistry);
+    ExtensionRegistry.initialize('creator-canvas');
+  }, [workbook]);
 
   // Chart state
   const [showChartDialog, setShowChartDialog] = useState(false);

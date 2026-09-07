@@ -931,3 +931,10 @@
 - **Implementation**: `Copy`/`Check` icons from lucide-react; `navigator.clipboard.writeText` with textarea fallback; visual feedback (green check) for 2s after copy; state resets on modal reopen.
 - **Files**: `AboutModal.tsx`, `AboutModal.test.tsx`
 - **Tests**: +4 new tests (2860 total)
+
+## 2026-09-07 [FEATURE] Creator Canvas Extension — Registry Registration
+- **Contract**: Added `src/extensions/creator-canvas/extension.tsx` implementing the standard `SheetExtension` contract.
+- **Registration**: Creator Canvas now registers idempotently with `ExtensionRegistry` and initializes through the application lifecycle.
+- **Metadata**: Exposes a tab view, Creator Task model definition, extension identity, icon, and version metadata.
+- **Tests**: Added registry/contract coverage; targeted Creator Canvas and App tests now pass (92 tests).
+- **Verification**: `npm run lint` and `npm run type-check` pass.
