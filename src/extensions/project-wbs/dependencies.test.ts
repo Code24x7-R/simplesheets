@@ -239,7 +239,7 @@ describe('dependencies', () => {
       pred.startDate = '2026-01-05'; // Monday
       pred.endDate = '2026-01-09';   // Friday
       const dep = { predecessorId: 'A', type: 'FS' as const, lag: 0 };
-      const result = calculateDependencyDate(pred, dep, '2026-01-05', calendar);
+      const result = calculateDependencyDate(pred, dep, '2026-01-05', 3, calendar);
       // FS: successor starts day after predecessor ends
       expect(result).toBe('2026-01-12'); // Next Monday
     });
@@ -249,7 +249,7 @@ describe('dependencies', () => {
       pred.startDate = '2026-01-05';
       pred.endDate = '2026-01-09';
       const dep = { predecessorId: 'A', type: 'FS' as const, lag: 2 };
-      const result = calculateDependencyDate(pred, dep, '2026-01-05', calendar);
+      const result = calculateDependencyDate(pred, dep, '2026-01-05', 3, calendar);
       // FS with 2-day lag: successor starts 2 working days after predecessor ends
       expect(result).toBe('2026-01-14'); // Wed
     });
@@ -258,8 +258,25 @@ describe('dependencies', () => {
       const pred = task('A', 5);
       pred.startDate = '2026-01-05';
       const dep = { predecessorId: 'A', type: 'SS' as const, lag: 0 };
-      const result = calculateDependencyDate(pred, dep, '2026-01-05', calendar);
+      const result = calculateDependencyDate(pred, dep, '2026-01-05', 3, calendar);
       expect(result).toBe('2026-01-05');
+    });
+
+    it('FF uses successor duration rather than predecessor duration', () => {
+      const pred = task('A', 10);
+      pred.startDate = '2026-01-05';
+      pred.endDate = '2026-01-16';
+      const dep = { predecessorId: 'A', type: 'FF' as const, lag: 0 };
+      const result = calculateDependencyDate(pred, dep, '2026-01-05', 3, calendar);
+      expect(result).toBe('2026-01-14');
+    });
+
+    it('SF uses successor duration rather than predecessor duration', () => {
+      const pred = task('A', 10);
+      pred.startDate = '2026-01-05';
+      const dep = { predecessorId: 'A', type: 'SF' as const, lag: 0 };
+      const result = calculateDependencyDate(pred, dep, '2026-01-05', 3, calendar);
+      expect(result).toBe('2026-01-01');
     });
   });
 });

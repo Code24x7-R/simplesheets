@@ -332,6 +332,7 @@ export function calculateTotalFloat(
  * @param predecessor - The predecessor task.
  * @param dependency - The dependency relationship.
  * @param projectStart - ISO date string of project start.
+ * @param successorDuration - Duration of the successor task.
  * @param calendar - Working calendar.
  * @returns ISO date string for the calculated date.
  */
@@ -339,6 +340,7 @@ export function calculateDependencyDate(
   predecessor: WBSTask,
   dependency: TaskDependency,
   projectStart: string,
+  successorDuration: number,
   calendar: WorkingCalendar = createDefaultCalendar(),
 ): string {
   const predStartOffset = workingDaysBetween(projectStart, predecessor.startDate, calendar);
@@ -350,9 +352,9 @@ export function calculateDependencyDate(
     case 'SS': // Start-to-Start: successor starts after predecessor starts + lag
       return addWorkingDays(projectStart, predStartOffset + dependency.lag, calendar);
     case 'FF': // Finish-to-Finish: successor ends after predecessor ends + lag
-      return addWorkingDays(projectStart, predEndOffset + dependency.lag - predecessor.duration + 1, calendar);
+      return addWorkingDays(projectStart, predEndOffset + dependency.lag - successorDuration + 1, calendar);
     case 'SF': // Start-to-Finish: successor ends after predecessor starts + lag
-      return addWorkingDays(projectStart, predStartOffset + dependency.lag - predecessor.duration + 1, calendar);
+      return addWorkingDays(projectStart, predStartOffset + dependency.lag - successorDuration + 1, calendar);
     default:
       return predecessor.endDate;
   }

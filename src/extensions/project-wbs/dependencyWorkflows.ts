@@ -39,21 +39,7 @@ export function isTaskBlocked(task: WBSTask, allTasks: WBSTask[]): boolean {
  * Check if a task is ready to start (all predecessors complete).
  */
 export function isTaskReady(task: WBSTask, allTasks: WBSTask[]): boolean {
-  if (task.dependencies.length === 0) return true;
-
-  const taskMap = new Map(allTasks.map((t) => [t.id, t]));
-
-  for (const dep of task.dependencies) {
-    const predecessor = taskMap.get(dep.predecessorId);
-    if (!predecessor) continue;
-
-    // Task is not ready if predecessor is not done
-    if (predecessor.status !== 'done') {
-      return false;
-    }
-  }
-
-  return true;
+  return !isTaskBlocked(task, allTasks);
 }
 
 // ─── Workflow 1: Dynamic Auto-Scheduling ───────────────────────────────────
@@ -83,7 +69,7 @@ export function autoScheduleSuccessors(
     // Check if this task depends on the modified task (directly or transitively)
     const updatedTask = taskMap.get(task.id)!;
     let needsUpdate = false;
-    let newStartDate = updatedTask.startDate;
+    let newStartDate = '';
 
     for (const dep of updatedTask.dependencies) {
       const predecessor = taskMap.get(dep.predecessorId);
@@ -109,13 +95,13 @@ export function autoScheduleSuccessors(
           expectedStart = newStartDate;
       }
 
-      // Update if this predecessor requires a later start
-      if (expectedStart > newStartDate) {
+      // The task must satisfy every predecessor, so use the strict maximum.
+      if (!newStartDate || expectedStart > newStartDate) {
         newStartDate = expectedStart;
-        needsUpdate = true;
       }
     }
 
+    needsUpdate = Boolean(newStartDate && newStartDate !== updatedTask.startDate);
     if (needsUpdate) {
       const duration = updatedTask.duration;
       updatedTask.startDate = newStartDate;

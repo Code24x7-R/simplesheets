@@ -405,9 +405,27 @@ function WorkbookView() {
           rawValue: value,
           style: existingCell?.style,
         };
+        const lines = value.split('\n');
+        const width = s.columnWidths[col] ?? s.defaultColWidth;
+        let visualLines = lines.length;
+        try {
+          const canvas = document.createElement('canvas');
+          const context = canvas.getContext('2d');
+          if (context) {
+            context.font = '14px Arial';
+            visualLines = lines.reduce((total, line) => total + Math.max(1, Math.ceil(context.measureText(line).width / Math.max(1, width - 12))), 0);
+          }
+        } catch {
+          // Newline count remains the safe fallback outside a measurable DOM.
+        }
+        const measuredHeight = Math.max(s.defaultRowHeight, visualLines * 20 + 8);
+        const currentHeight = s.rowHeights[row] ?? s.defaultRowHeight;
         return {
           ...s,
           cells: { ...s.cells, [key]: newCell },
+          rowHeights: measuredHeight > currentHeight
+            ? { ...s.rowHeights, [row]: measuredHeight }
+            : s.rowHeights,
         };
       });
       const newWorkbook: Workbook = {

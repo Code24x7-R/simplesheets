@@ -1715,6 +1715,15 @@ describe('Formula Engine', () => {
       expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['5:0'].computedValue).toBe(100);
     });
 
+    it('HLOOKUP returns #N/A when approximate lookup is below the first key', () => {
+      const sheet = createSheet({
+        '0:0': '10', '0:1': '20',
+        '1:0': '100', '1:1': '200',
+        '5:0': '=HLOOKUP(5, A1:B2, 2)',
+      });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['5:0'].computedValue).toBe('#N/A');
+    });
+
     it('HLOOKUP returns #REF! when row index exceeds range', () => {
       const sheet = createSheet({
         '0:0': '10', '0:1': '20',
@@ -1758,6 +1767,15 @@ describe('Formula Engine', () => {
       });
       // 20 <= 20, next value doesn't exist, return 20's column → 200
       expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['5:0'].computedValue).toBe(200);
+    });
+
+    it('VLOOKUP returns #N/A when approximate lookup is below the first key', () => {
+      const sheet = createSheet({
+        '0:0': '10', '0:1': '100',
+        '1:0': '20', '1:1': '200',
+        '5:0': '=VLOOKUP(5, A1:B2, 2)',
+      });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['5:0'].computedValue).toBe('#N/A');
     });
 
     it('VLOOKUP returns #REF! when column index exceeds range', () => {
@@ -3214,18 +3232,19 @@ describe('evaluateWorkbook - cross-sheet references', () => {
   });
 
   describe('INDIRECT Function', () => {
-    it('INDIRECT returns numeric value from text', () => {
+    it('INDIRECT rejects a numeric literal as an invalid reference', () => {
       const sheet = createSheet({
         '0:0': '=INDIRECT("42")',
       });
-      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue).toBe(42);
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue).toBe('#REF!');
     });
 
-    it('INDIRECT returns text for non-numeric', () => {
+    it('INDIRECT resolves a cell reference', () => {
       const sheet = createSheet({
-        '0:0': '=INDIRECT("hello")',
+        '0:0': '42',
+        '1:0': '=INDIRECT("A1")',
       });
-      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue).toBe('hello');
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['1:0'].computedValue).toBe(42);
     });
 
     it('INDIRECT returns #VALUE! for no args', () => {
@@ -3248,7 +3267,7 @@ describe('evaluateWorkbook - cross-sheet references', () => {
       const sheet = createSheet({
         '0:0': '10',
         '0:1': '=OFFSET(A1, 10, 10)',
-      });
+      }, { rowCount: 1, columnCount: 1 });
       expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:1'].computedValue).toBe('#REF!');
     });
   });
@@ -3344,13 +3363,12 @@ describe('evaluateWorkbook - cross-sheet references', () => {
       expect(result.cells['1:0'].computedValue).toBe('#REF!');
     });
 
-    it('INDIRECT with numeric text returns number', () => {
+    it('INDIRECT with numeric text returns #REF!', () => {
       const sheet = createSheet({
         '0:0': '=INDIRECT("100")',
       });
       const result = evaluateWorkbook(sheetToWorkbook(sheet), 0);
-      // INDIRECT with numeric text returns the number
-      expect(result.cells['0:0'].computedValue).toBe(100);
+      expect(result.cells['0:0'].computedValue).toBe('#REF!');
     });
 
     it('INDIRECT with empty text returns #REF!', () => {
@@ -3514,12 +3532,12 @@ describe('evaluateWorkbook - cross-sheet references', () => {
       expect(result.cells['2:0'].computedValue).toBe('#VALUE!');
     });
 
-    it('INDIRECT with non-numeric text returns text', () => {
+    it('INDIRECT with invalid reference returns #REF!', () => {
       const sheet = createSheet({
         '0:0': '=INDIRECT("hello")',
       });
       const result = evaluateWorkbook(sheetToWorkbook(sheet), 0);
-      expect(result.cells['0:0'].computedValue).toBe('hello');
+      expect(result.cells['0:0'].computedValue).toBe('#REF!');
     });
 
     it('SUBTOTAL with invalid function code returns #VALUE!', () => {

@@ -36,7 +36,7 @@ import {
 import type { Workbook } from '../types';
 import type { CloudProvider, CloudFile } from '../cloud/types';
 import { encodeDocToUrl, estimateShareSize, canShareViaUrl } from '../utils/shareUrl';
-import { shareDocument } from '../utils/webShare';
+import { downloadDocument, shareDocument } from '../utils/webShare';
 import { readWorkbookFile, ACCEPTED_FILE_TYPES } from '../utils/fileIO';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -208,14 +208,11 @@ export function CloudStorageModal({
   const handleSaveToFile = useCallback(() => {
     setError(null);
     const name = fileName.trim() || 'Untitled';
-    // Import here to avoid circular deps; reuses the download logic
-    import('../utils/webShare').then(({ downloadDocument }) => {
-      downloadDocument(workbook, name);
-      onStatusMessage?.(`Saved "${name}.ssjson" — download started`);
-      // Notify host app for MRU recording, title update, and history push
-      onSaveFile?.(name, JSON.stringify(workbook).length);
-      onClose();
-    });
+    downloadDocument(workbook, name);
+    onStatusMessage?.(`Saved "${name}.ssjson" — download started`);
+    // Notify host app for MRU recording, title update, and history push
+    onSaveFile?.(name, JSON.stringify(workbook).length);
+    onClose();
   }, [workbook, fileName, onClose, onStatusMessage, onSaveFile]);
 
   const handleOpenFile = useCallback(() => {

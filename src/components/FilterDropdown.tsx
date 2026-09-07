@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import type { Sheet } from '../types';
 import { getUniqueValues } from '../utils/sheetFilter';
 import type { ColumnFilter, FilterCondition } from '../utils/sheetFilter';
@@ -33,7 +33,7 @@ export function FilterDropdown({
   onClose,
 }: FilterDropdownProps) {
   // Determine if the existing filter is a custom condition
-  const getInitialCustomCondition = (): { type: string; value: string } | null => {
+  const getInitialCustomCondition = useCallback((): { type: string; value: string } | null => {
     if (!currentFilter) return null;
     const customCond = currentFilter.conditions.find(
       (c): c is FilterCondition =>
@@ -59,7 +59,7 @@ export function FilterDropdown({
       default:
         return null;
     }
-  };
+  }, [currentFilter]);
 
   const initialCustom = getInitialCustomCondition();
   const [selectedValues, setSelectedValues] = useState<Set<string>>(() => {
@@ -99,7 +99,7 @@ export function FilterDropdown({
     } else {
       setSelectedValues(new Set());
     }
-  }, [currentFilter]);
+  }, [currentFilter, getInitialCustomCondition]);
 
   // Get unique values for this column
   const allUniqueValues = getUniqueValues(sheet, column, headerRow);

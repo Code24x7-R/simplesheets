@@ -1420,30 +1420,37 @@ function evaluateFunction(node: Extract<ASTNode, { type: 'function' }>, ctx: Eva
     }
 
     case 'OFFSET': {
-      // Simplified: returns a value from a flat range at given row/col offset
       if (argValues.length < 3) return ERR_VALUE;
-      const baseRange = argValues[0] ?? [];
+      const base = node.args[0];
       const rowOffset = toNumber(argValues[1]?.[0] ?? 0);
       const colOffset = toNumber(argValues[2]?.[0] ?? 0);
-      if (baseRange.length === 0) return ERR_REF;
-      const cols = Math.max(1, Math.floor(Math.sqrt(baseRange.length)));
-      const baseRow = 0;
-      const baseCol = 0;
-      const targetIdx = (baseRow + rowOffset) * cols + (baseCol + colOffset);
-      if (targetIdx < 0 || targetIdx >= baseRange.length) return ERR_REF;
-      return baseRange[targetIdx];
+      if (!Number.isInteger(rowOffset) || !Number.isInteger(colOffset)) return ERR_VALUE;
+
+      let origin: { row: number; col: number; sheetName?: string } | null = null;
+      if (base.type === 'cell') origin = base;
+      else if (base.type === 'range') origin = base.start;
+      if (!origin) return ERR_REF;
+
+      const targetRow = origin.row + rowOffset;
+      const targetCol = origin.col + colOffset;
+      const targetSheetIndex = resolveSheetIndex(origin.sheetName, ctx) ?? ctx.activeSheetIndex;
+      const targetSheet = ctx.allSheets[targetSheetIndex];
+      if (targetRow < 0 || targetCol < 0 || targetRow >= (targetSheet?.rowCount ?? ctx.rowCount) || targetCol >= (targetSheet?.columnCount ?? ctx.colCount)) return ERR_REF;
+      return evaluateCell(targetRow, targetCol, ctx, targetSheetIndex);
     }
 
     case 'INDIRECT': {
-      // Simplified: resolves a text reference to a value from the sheet context
       if (argValues.length < 1) return ERR_VALUE;
-      const refText = toString(argValues[0]?.[0] ?? '');
+      const refText = toString(argValues[0]?.[0] ?? '').trim();
       if (!refText) return ERR_REF;
-      // If the refText matches a value in the sheet, return it
-      // Full implementation would resolve cell refs from text — this is a stub
-      const asNum = Number(refText);
-      if (!isNaN(asNum)) return asNum;
-      return refText;
+
+      try {
+        const parsed = parseFormula(refText);
+        if (parsed.type === 'cell' || parsed.type === 'range') return evaluateNode(parsed, ctx);
+        return ERR_REF;
+      } catch {
+        return ERR_REF;
+      }
     }
 
     case 'RANK': {
@@ -1586,10 +1593,14 @@ function evaluateFunction(node: Extract<ASTNode, { type: 'function' }>, ctx: Eva
     case 'INDEX': {
       if (argValues.length < 2) return ERR_VALUE;
       const range = argValues[0] ?? [];
-      const row = toNumber(argValues[1]?.[0] ?? 1) - 1;
-      const col = argValues.length >= 3 ? toNumber(argValues[2]?.[0] ?? 1) - 1 : 0;
-      if (col === 0 && range.length > row) return range[row];
-      return ERR_REF;
+      const row = toNumber(argValues[1]?.[0] ?? 1);
+      const col = argValues.length >= 3 ? toNumber(argValues[2]?.[0] ?? 1) : 1;
+      const shape = getArgShape(0);
+      if (!Number.isInteger(row) || !Number.isInteger(col) || row < 1 || col < 1) return ERR_VALUE;
+      const cols = shape?.cols ?? 1;
+      const rows = shape?.rows ?? range.length;
+      if (row > rows || col > cols) return ERR_REF;
+      return range[(row - 1) * cols + (col - 1)] ?? ERR_REF;
     }
 
     case 'MATCH': {

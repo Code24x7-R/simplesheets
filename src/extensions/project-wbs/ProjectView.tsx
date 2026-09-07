@@ -44,7 +44,7 @@ import { addTask, removeTask, updateTask, toggleCollapsed, findTask, getAllTasks
 import { addRisk, updateRisk, removeRisk, getRiskSummary, linkRiskToTask, unlinkRiskFromTask } from './risks';
 import { recomputeRollups } from './rollups';
 import { autoScheduleSuccessors, updateTaskStatuses } from './dependencyWorkflows';
-import { getCriticalPath } from './dependencies';
+import { getCriticalPath, detectDependencyCycles } from './dependencies';
 import { getEffectiveCurrency } from '../../utils/currency';
 import { CountrySelector } from './CountrySelector';
 import { ProjectAnalyzerPanel } from './analyzer';
@@ -317,6 +317,17 @@ export function ProjectView({ project: initialProject, activeSheet, columnMappin
   }
 
   function handleSaveDependencies(taskId: string, dependencies: TaskDependency[]) {
+    const candidateTasks = getAllTasks(
+      updateTask(project.wbs, taskId, (task) => ({ ...task, dependencies })),
+    );
+    const cycleIds = detectDependencyCycles(candidateTasks);
+    if (cycleIds.length > 0) {
+      const cycleNames = new Map(candidateTasks.map((task) => [task.id, task.name]));
+      const details = cycleIds.map((id) => `${id} (${cycleNames.get(id) ?? 'Unknown task'})`).join(', ');
+      window.alert(`Circular dependency detected: ${details}`);
+      return;
+    }
+
     handleProjectChange((prev) => {
       // Update the task's dependencies in the tree
       let next = { ...prev, wbs: updateTask(prev.wbs, taskId, (t) => ({ ...t, dependencies })) };

@@ -197,7 +197,6 @@ function buildPrintableHtml(
       img.height = chart.height;
       img.style.maxWidth = '100%';
       chartContainer.appendChild(img);
-      chartContainer.appendChild(img);
       container.appendChild(chartContainer);
     }
   }

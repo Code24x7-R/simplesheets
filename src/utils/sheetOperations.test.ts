@@ -275,4 +275,18 @@ describe('adjustFormulaForStructuralChange edge cases', () => {
     // A$1 stays as A$1 (absolute row ref)
     expect(result.cells['2:0']?.rawValue).toBe('=A$1');
   });
+
+  it('does not adjust cross-sheet references during local row edits', () => {
+    const sheet = createTestSheet();
+    sheet.cells['0:2'] = { rawValue: '=A2+Sheet2!B5+\'My Sheet\'!C7' };
+    const result = insertRow(sheet, 0);
+    expect(result.cells['1:2']?.rawValue).toBe('=A3+Sheet2!B5+\'My Sheet\'!C7');
+  });
+
+  it('does not adjust cross-sheet references during local column edits', () => {
+    const sheet = createTestSheet();
+    sheet.cells['0:2'] = { rawValue: '=B1+Sheet2!C5+\'My Sheet\'!D7' };
+    const result = insertCol(sheet, 0);
+    expect(result.cells['0:3']?.rawValue).toBe('=C1+Sheet2!C5+\'My Sheet\'!D7');
+  });
 });

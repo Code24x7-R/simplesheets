@@ -32,11 +32,24 @@ function adjustFormulaForStructuralChange(
 ): string {
   if (!formula.startsWith('=')) return formula;
 
+  // Protect sheet prefixes before matching cell references. Without this, the
+  // `2` in `Sheet2!B5` is mistaken for the row of a local `Sheet2` cell, and
+  // the `B5` portion is incorrectly shifted during a local sheet edit.
+  const protectedPrefixes: string[] = [];
+  const protectedFormula = formula.replace(
+    /(?:'[^']+'|[A-Za-z_][A-Za-z0-9_.]*)!\$?[A-Za-z]+\$?\d+(?::(?:(?:'[^']+'|[A-Za-z_][A-Za-z0-9_.]*)!)?\$?[A-Za-z]+\$?\d+)?/g,
+    (prefix) => {
+      const placeholder = `§§@${protectedPrefixes.length}@§§`;
+      protectedPrefixes.push(prefix);
+      return placeholder;
+    },
+  );
+
   // Match cell refs: optional $ col, column letters, optional $ row, row digits.
   // Negative lookbehind avoids matching scientific notation (e.g. 1e5).
   const cellRefRegex = /(?<![0-9])(\$?)([A-Za-z]+)(\$?)(\d+)/gi;
 
-  return formula.replace(cellRefRegex, (match, dollarCol: string, colLetters: string, dollarRow: string, rowStr: string) => {
+  const adjustedFormula = protectedFormula.replace(cellRefRegex, (match, dollarCol: string, colLetters: string, dollarRow: string, rowStr: string) => {
     if (axis === 'row') {
       const absRow = dollarRow === '$';
       const absCol = dollarCol === '$';
@@ -103,6 +116,8 @@ function adjustFormulaForStructuralChange(
       return `${dollarCol}${colLetters.toUpperCase()}${absRow ? '$' : ''}${rowStr}`;
     }
   });
+
+  return adjustedFormula.replace(/§§@(\d+)@§§/g, (_match, index: string) => protectedPrefixes[Number(index)]);
 }
 
 /**
