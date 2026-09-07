@@ -8,7 +8,14 @@ describe('creatorCanvasExtension', () => {
     expect(creatorCanvasExtension.id).toBe('creator-canvas');
     expect(creatorCanvasExtension.getViews()[0].position).toBe('tab');
     expect(creatorCanvasExtension.getTaskModels()[0].id).toBe('creator-task');
-    expect(creatorCanvasExtension.getTemplates()).toEqual([]);
+    expect(creatorCanvasExtension.getTemplates()).toHaveLength(5);
+    expect(creatorCanvasExtension.getTemplates().map((template) => template.id)).toEqual([
+      'film-video-shot-list',
+      'moodboard',
+      'novel-outline',
+      'web-design',
+      'marketing-campaign',
+    ]);
   });
 
   it('registers only when absent', () => {

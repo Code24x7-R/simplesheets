@@ -142,6 +142,7 @@ interface MenuBarProps {
   onProjectNew?: (templateId: string) => void;
   onProjectNewSheet?: () => void;
   onCreatorCanvasNew?: () => void;
+  onCreatorCanvasTemplate?: (templateId: string) => void;
   onProjectOpen?: () => void;
   // Recent files (MRU)
   recentFiles: MRUEntry[];
@@ -258,6 +259,11 @@ export function MenuBar(props: MenuBarProps) {
         'ext-project-realestate-photo': () => props.onProjectNew?.('realestate-photo'),
         'ext-project-new-sheet': () => props.onProjectNewSheet?.(),
         'ext-creator-canvas-new': () => props.onCreatorCanvasNew?.(),
+        'ext-creator-canvas-film': () => props.onCreatorCanvasTemplate?.('film-video-shot-list'),
+        'ext-creator-canvas-moodboard': () => props.onCreatorCanvasTemplate?.('moodboard'),
+        'ext-creator-canvas-novel': () => props.onCreatorCanvasTemplate?.('novel-outline'),
+        'ext-creator-canvas-web': () => props.onCreatorCanvasTemplate?.('web-design'),
+        'ext-creator-canvas-marketing': () => props.onCreatorCanvasTemplate?.('marketing-campaign'),
         // Help
         'help-about': props.onAbout,
         'help-shortcuts': props.onShortcuts,
@@ -466,6 +472,13 @@ export function MenuBar(props: MenuBarProps) {
       icon: FolderKanban,
       submenu: [
         { id: 'ext-creator-canvas-new', label: 'New Creator Canvas', icon: FolderKanban },
+        { id: 'sep-ext-canvas-templates', label: '', separator: true },
+        { id: 'ext-canvas-template-label', label: 'Templates', separator: true },
+        { id: 'ext-creator-canvas-film', label: 'Film / Video Shot List', icon: FolderKanban },
+        { id: 'ext-creator-canvas-moodboard', label: 'Moodboard', icon: Palette },
+        { id: 'ext-creator-canvas-novel', label: 'Novel Outline', icon: Tag },
+        { id: 'ext-creator-canvas-web', label: 'Web Design', icon: FolderKanban },
+        { id: 'ext-creator-canvas-marketing', label: 'Marketing Campaign', icon: FolderKanban },
       ],
     },
     {

@@ -6,6 +6,7 @@ import { CreatorCanvasView } from './CreatorCanvasView';
 import { createEmptyCreatorCanvasModel } from './schema';
 import type { CreatorCanvasModel } from './types';
 import type { ExtensionContext, ExtensionView, SheetExtension, TaskModelDefinition } from '../types';
+import { creatorCanvasTemplates } from './templates';
 
 const EXTENSION_ID = 'creator-canvas' as const;
 
@@ -57,7 +58,7 @@ export const creatorCanvasExtension: SheetExtension = {
   },
   getTaskModels: () => taskModels,
   getViews: () => views,
-  getTemplates: () => [],
+  getTemplates: () => creatorCanvasTemplates,
 };
 
 export function registerCreatorCanvasExtension(registry: { has: (id: string) => boolean; register: (extension: SheetExtension) => void }): void {

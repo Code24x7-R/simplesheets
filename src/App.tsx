@@ -67,6 +67,7 @@ import { SheetLinkProvider } from './components/SheetLink';
 import { ProjectView } from './extensions/project-wbs/ProjectView';
 import { CreatorCanvasView } from './extensions/creator-canvas/CreatorCanvasView';
 import { createStarterCreatorCanvasModel } from './extensions/creator-canvas/starterSeed';
+import { createCreatorCanvasTemplateModel } from './extensions/creator-canvas/templates';
 import { CREATOR_CANVAS_SHEET_NAMES, loadCreatorCanvasFromWorkbook, syncCreatorCanvasToWorkbook } from './extensions/creator-canvas/sheetConverter';
 
 const CREATOR_CANVAS_SHEET_NAMES_SET = new Set<string>(Object.values(CREATOR_CANVAS_SHEET_NAMES));
@@ -2018,6 +2019,15 @@ function WorkbookView() {
     setShowCreatorCanvasTab(true);
   }, [workbook, pushHistory]);
 
+  const handleCreatorCanvasTemplate = useCallback((templateId: string) => {
+    const model = createCreatorCanvasTemplateModel(templateId, `canvas-${Date.now()}`);
+    const updatedWb = syncCreatorCanvasToWorkbook(workbook, model);
+    pushHistory(updatedWb, `New Creator Canvas: ${model.name}`);
+    setCurrentCreatorCanvas(model);
+    setShowCreatorCanvas(true);
+    setShowCreatorCanvasTab(true);
+  }, [workbook, pushHistory]);
+
   const handleSaveCreatorCanvas = useCallback((model: CreatorCanvasModel) => {
     const updatedWb = syncCreatorCanvasToWorkbook(workbook, model);
     pushHistory(updatedWb, 'Update Creator Canvas');
@@ -2778,6 +2788,7 @@ function WorkbookView() {
           onProjectNew={handleProjectNew}
           onProjectNewSheet={handleProjectNewSheet}
           onCreatorCanvasNew={handleCreatorCanvasNew}
+          onCreatorCanvasTemplate={handleCreatorCanvasTemplate}
           recentFiles={recentFiles}
           onOpenRecent={handleOpenRecent}
           onRemoveRecent={removeMRU}
