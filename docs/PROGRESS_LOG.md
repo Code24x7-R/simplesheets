@@ -938,3 +938,10 @@
 - **Metadata**: Exposes a tab view, Creator Task model definition, extension identity, icon, and version metadata.
 - **Tests**: Added registry/contract coverage; targeted Creator Canvas and App tests now pass (92 tests).
 - **Verification**: `npm run lint` and `npm run type-check` pass.
+
+## 2026-09-07 [FEATURE] Creator Canvas Extension — Starter Canvas Seed
+- **Seed**: Added `starterSeed.ts` and switched New Creator Canvas to create a guided starter workspace instead of a completely empty model.
+- **Contents**: The seed includes a welcome note, reference link, linked starter task, collection frame, tags, and a relationship connection.
+- **Integrity**: Added tests confirming the seed passes Creator Canvas schema validation and supports custom project domains.
+- **Tests**: Targeted App and Creator Canvas suites pass (94 tests).
+- **Verification**: `npm run lint` and `npm run type-check` pass.

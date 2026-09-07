@@ -66,7 +66,7 @@ import { useChartSettings } from './hooks/useChartSettings';
 import { SheetLinkProvider } from './components/SheetLink';
 import { ProjectView } from './extensions/project-wbs/ProjectView';
 import { CreatorCanvasView } from './extensions/creator-canvas/CreatorCanvasView';
-import { createEmptyCreatorCanvasModel } from './extensions/creator-canvas/schema';
+import { createStarterCreatorCanvasModel } from './extensions/creator-canvas/starterSeed';
 import { CREATOR_CANVAS_SHEET_NAMES, loadCreatorCanvasFromWorkbook, syncCreatorCanvasToWorkbook } from './extensions/creator-canvas/sheetConverter';
 
 const CREATOR_CANVAS_SHEET_NAMES_SET = new Set<string>(Object.values(CREATOR_CANVAS_SHEET_NAMES));
@@ -1990,7 +1990,7 @@ function WorkbookView() {
   );
 
   const handleCreatorCanvasNew = useCallback(() => {
-    const model = createEmptyCreatorCanvasModel(`canvas-${Date.now()}`, 'Untitled Creator Canvas');
+    const model = createStarterCreatorCanvasModel(`canvas-${Date.now()}`);
     const updatedWb = syncCreatorCanvasToWorkbook(workbook, model);
     pushHistory(updatedWb, 'New Creator Canvas');
     setCurrentCreatorCanvas(model);
