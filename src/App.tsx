@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
-import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef, lazy, Suspense } from 'react';
 import type { Workbook } from './types';
 import { cellKey, colToLetter } from './types';
 import { HistoryProvider, useHistory } from './context/HistoryContext';
@@ -64,17 +64,28 @@ import type { ChartConfig } from './types';
 import { createDemoWorkbook } from './utils/demoWorkbook';
 import { useChartSettings } from './hooks/useChartSettings';
 import { SheetLinkProvider } from './components/SheetLink';
-import { ProjectView } from './extensions/project-wbs/ProjectView';
-import { CreatorCanvasView } from './extensions/creator-canvas/CreatorCanvasView';
+const ProjectView = lazy(() => import('./extensions/project-wbs/ProjectView').then((module) => ({ default: module.ProjectView })));
+const CreatorCanvasView = lazy(() => import('./extensions/creator-canvas/CreatorCanvasView').then((module) => ({ default: module.CreatorCanvasView })));
 import { createStarterCreatorCanvasModel } from './extensions/creator-canvas/starterSeed';
 import { createCreatorCanvasTemplateModel } from './extensions/creator-canvas/templates';
 import { CREATOR_CANVAS_SHEET_NAMES, loadCreatorCanvasFromWorkbook, syncCreatorCanvasToWorkbook } from './extensions/creator-canvas/sheetConverter';
 
 const CREATOR_CANVAS_SHEET_NAMES_SET = new Set<string>(Object.values(CREATOR_CANVAS_SHEET_NAMES));
+
+function ExtensionLoadingState({ name }: { name: string }) {
+  return (
+    <div
+      className="flex h-full items-center justify-center text-sm text-gray-500"
+      data-testid={name === 'Project view' ? 'project-view' : 'creator-canvas-view'}
+    >
+      Loading {name}…
+    </div>
+  );
+}
+
 import type { CreatorCanvasModel } from './extensions/creator-canvas/types';
 import { syncCanvasToProjectModel, syncProjectModelToCanvas } from './extensions/creator-canvas/projectSync';
 import { ExtensionRegistry } from './extensions/ExtensionRegistry';
-import { registerCreatorCanvasExtension } from './extensions/creator-canvas/extension';
 import { createBlankTasksSheet, createWorkbookFromTemplate, createRisksSheet, createResourcesSheet, createMaterialsSheet, createActualsSheet, createAllocationsSheet, createConsumptionsSheet, workbookToProject, projectModelToProject, projectModelToWorkbook } from './extensions/project-wbs/sheetToProject';
 import { TASKS_SHEET_NAME, RISKS_SHEET_NAME, RESOURCES_SHEET_NAME, MATERIALS_SHEET_NAME, ACTUALS_SHEET_NAME, ALLOCATIONS_SHEET_NAME, CONSUMPTIONS_SHEET_NAME } from './extensions/project-wbs/sheetToProject';
 import type { Project } from './extensions/types';
@@ -303,8 +314,7 @@ function WorkbookView() {
 
   useEffect(() => {
     ExtensionRegistry.setWorkbookProvider(() => workbook);
-    registerCreatorCanvasExtension(ExtensionRegistry);
-    ExtensionRegistry.initialize('creator-canvas');
+    // Extension views are loaded lazily when their workbook tab is opened.
   }, [workbook]);
 
   // Restore Creator Canvas when the app is opened with a workbook that already
@@ -2980,23 +2990,27 @@ function WorkbookView() {
 
       {showCreatorCanvas && currentCreatorCanvas && (
         <div className="flex-1 overflow-hidden">
-          <CreatorCanvasView
-            project={currentCreatorCanvas}
-            onProjectChange={handleSaveCreatorCanvas}
-          />
+          <Suspense fallback={<ExtensionLoadingState name="Creator Canvas" />}>
+            <CreatorCanvasView
+              project={currentCreatorCanvas}
+              onProjectChange={handleSaveCreatorCanvas}
+            />
+          </Suspense>
         </div>
       )}
 
       {/* Project View (shown when Project tab is active) */}
       {!showCreatorCanvas && showProjectView && currentProject && (
         <div className="flex-1 overflow-hidden">
-          <ProjectView
-            project={currentProject}
-            activeSheet={sheet}
-            columnMapping={getProjectColumnMapping()}
-            onSaveProject={handleSaveProjectData}
-            onProjectChange={(project) => setCurrentProject(project)}
-          />
+          <Suspense fallback={<ExtensionLoadingState name="Project view" />}>
+            <ProjectView
+              project={currentProject}
+              activeSheet={sheet}
+              columnMapping={getProjectColumnMapping()}
+              onSaveProject={handleSaveProjectData}
+              onProjectChange={(project) => setCurrentProject(project)}
+            />
+          </Suspense>
         </div>
       )}
       {/* Grid — shown when Project tab is not active */}
