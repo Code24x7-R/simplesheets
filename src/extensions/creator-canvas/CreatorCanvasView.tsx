@@ -168,8 +168,15 @@ export const CreatorCanvasView: React.FC<CreatorCanvasViewProps> = ({
   };
 
   useEffect(() => {
+    const isEditableTarget = (target: EventTarget | null): boolean => {
+      if (!(target instanceof HTMLElement)) return false;
+      const tag = target.tagName;
+      return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target.isContentEditable;
+    };
+
     const handleKeyDown = (event: KeyboardEvent) => {
       if (!selectedNodeId && !selectedConnectionId) return;
+      if (isEditableTarget(event.target)) return;
       const modifier = event.ctrlKey || event.metaKey;
       if (modifier && event.key.toLowerCase() === 'c') {
         event.preventDefault();

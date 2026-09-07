@@ -4,6 +4,7 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { CreatorCanvasView } from './CreatorCanvasView';
 import { createEmptyCreatorCanvasModel, createDefaultCanvasNode } from './schema';
+import { NodeEditorPanel } from './NodeEditorPanel';
 
 describe('CreatorCanvasView Component', () => {
   it('renders blank canvas header, toolbar, and empty state', () => {
@@ -64,6 +65,24 @@ describe('CreatorCanvasView Component', () => {
     expect(onProjectChange).toHaveBeenCalledTimes(1);
     const updated = onProjectChange.mock.calls[0][0];
     expect(updated.nodes).toHaveLength(0);
+  });
+
+  it('does not delete the selected node when Backspace is pressed in a note editor', () => {
+    const model = createEmptyCreatorCanvasModel('p1', 'Editor Test');
+    const node = createDefaultCanvasNode('n1', 'note', { title: 'Editable note' });
+    model.nodes = [node];
+    const onProjectChange = jest.fn();
+    render(
+      <>
+        <CreatorCanvasView project={model} onProjectChange={onProjectChange} />
+        <NodeEditorPanel node={node} onSave={jest.fn()} onClose={jest.fn()} />
+      </>
+    );
+
+    const description = screen.getByLabelText('Description');
+    fireEvent.keyDown(description, { key: 'Backspace' });
+
+    expect(onProjectChange).not.toHaveBeenCalled();
   });
 
   it('handles zoom controls', () => {
