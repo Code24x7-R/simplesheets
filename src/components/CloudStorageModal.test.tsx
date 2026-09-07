@@ -326,6 +326,29 @@ describe('CloudStorageModal', () => {
   });
 
   describe('Save to File', () => {
+    it('allows editing the filename before downloading', async () => {
+      const onSaveFile = jest.fn();
+      render(
+        <CloudStorageModal
+          isOpen={true}
+          onClose={jest.fn()}
+          mode="save"
+          workbook={makeWorkbook()}
+          onOpenDocument={jest.fn()}
+          onStatusMessage={jest.fn()}
+          onSaveFile={onSaveFile}
+        />,
+      );
+
+      const input = screen.getByLabelText('Filename');
+      fireEvent.change(input, { target: { value: 'Quarterly Report' } });
+      fireEvent.click(screen.getByText('Save to File'));
+
+      await waitFor(() => {
+        expect(onSaveFile).toHaveBeenCalledWith('Quarterly Report', expect.any(Number));
+      });
+    });
+
     it('triggers a download and closes the modal', async () => {
       const onClose = jest.fn();
       const onStatusMessage = jest.fn();

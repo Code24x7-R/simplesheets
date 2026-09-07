@@ -191,7 +191,8 @@ export function CloudStorageModal({
   const handleShareFile = useCallback(async () => {
     setError(null);
     try {
-      const result = await shareDocument(workbook, workbook.title || 'Untitled');
+      const name = fileName.trim() || 'Untitled';
+      const result = await shareDocument(workbook, name);
       if (result === 'shared') {
         onStatusMessage?.('Share sheet opened');
         onClose();
@@ -203,7 +204,7 @@ export function CloudStorageModal({
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to share file');
     }
-  }, [workbook, onClose, onStatusMessage]);
+  }, [workbook, fileName, onClose, onStatusMessage]);
 
   const handleSaveToFile = useCallback(() => {
     setError(null);
@@ -321,6 +322,8 @@ export function CloudStorageModal({
               linkCopied={linkCopied}
               advancedOpen={advancedOpen}
               busy={busy}
+              fileName={fileName}
+              onFileNameChange={setFileName}
               onCopyLink={handleCopyLink}
               onShareFile={handleShareFile}
               onSaveToFile={handleSaveToFile}
@@ -377,6 +380,8 @@ export function CloudStorageModal({
 
 interface HomeViewProps {
   mode: 'save' | 'open';
+  fileName: string;
+  onFileNameChange: (name: string) => void;
   linkTooLarge: boolean;
   linkSizeLabel: string;
   linkCopied: boolean;
@@ -392,6 +397,8 @@ interface HomeViewProps {
 
 function HomeView({
   mode,
+  fileName,
+  onFileNameChange,
   linkTooLarge,
   linkSizeLabel,
   linkCopied,
@@ -406,6 +413,28 @@ function HomeView({
 }: HomeViewProps) {
   return (
     <div className="space-y-2">
+      {/* Filename — save mode only */}
+      {mode === 'save' && (
+        <div className="mb-3">
+          <label htmlFor="cloud-filename" className="block text-xs font-medium text-gray-600 mb-1">
+            Filename
+          </label>
+          <div className="flex items-center gap-2">
+            <input
+              id="cloud-filename"
+              type="text"
+              value={fileName}
+              onChange={(e) => onFileNameChange(e.target.value)}
+              onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => e.stopPropagation()}
+              className="flex-1 px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Enter filename"
+            />
+            <span className="text-sm text-gray-400 font-mono">.ssjson</span>
+          </div>
+        </div>
+      )}
+
       {/* Copy Link — save mode only */}
       {mode === 'save' && (
         <button
