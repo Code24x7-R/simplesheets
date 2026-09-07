@@ -106,9 +106,15 @@ function createEmptyWorkbook(): Workbook {
 
 // ─── Main App (with providers) ───────────────────────────────────────────────
 
-export default function App() {
+export interface AppProps {
+  /** Optional workbook injection for integrations and deterministic tests. */
+  initialWorkbook?: Workbook;
+}
+
+export default function App({ initialWorkbook: providedWorkbook }: AppProps = {}) {
   const [initialWorkbook] = useState<Workbook>(() => {
     // Restore from auto-save if available, otherwise start with a blank workbook
+    if (providedWorkbook) return providedWorkbook;
     const saved = loadAutosave();
     return saved ?? createEmptyWorkbook();
   });
@@ -298,6 +304,20 @@ function WorkbookView() {
     registerCreatorCanvasExtension(ExtensionRegistry);
     ExtensionRegistry.initialize('creator-canvas');
   }, [workbook]);
+
+  // Restore Creator Canvas when the app is opened with a workbook that already
+  // contains the extension payload or its managed sheets.
+  useEffect(() => {
+    const model = loadCreatorCanvasFromWorkbook(workbook);
+    if (model) {
+      setCurrentCreatorCanvas(model);
+      setShowCreatorCanvasTab(true);
+      setShowCreatorCanvas(true);
+    }
+  // This is intentionally an initialization-only restore. Subsequent edits are
+  // applied through handleSaveCreatorCanvas rather than reloading the model.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Chart state
   const [showChartDialog, setShowChartDialog] = useState(false);

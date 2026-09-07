@@ -71,6 +71,7 @@ describe('MenuBar', () => {
     onSearchReplace: jest.fn(),
     onPasteSpecial: jest.fn(),
     onProjectNew: jest.fn(),
+    onCreatorCanvasNew: jest.fn(),
     recentFiles: [],
     onOpenRecent: jest.fn(),
     onRemoveRecent: jest.fn(),
@@ -450,6 +451,16 @@ describe('MenuBar', () => {
     render(<MenuBar {...defaultProps} onProjectNew={onProjectNew} />);
     fireEvent.click(screen.getByText('Extensions'));
     expect(screen.getByText('Project / WBS')).toBeTruthy();
+  });
+
+  it('Extensions menu shows and triggers Creator Canvas creation', () => {
+    const onCreatorCanvasNew = jest.fn();
+    render(<MenuBar {...defaultProps} onCreatorCanvasNew={onCreatorCanvasNew} />);
+    fireEvent.click(screen.getByText('Extensions'));
+    expect(screen.getByText('Creator Canvas')).toBeTruthy();
+    fireEvent.click(screen.getByText('Creator Canvas'));
+    fireEvent.click(screen.getByText('New Creator Canvas'));
+    expect(onCreatorCanvasNew).toHaveBeenCalledTimes(1);
   });
 
   it('Extensions menu triggers onProjectNew with correct template ID', () => {
