@@ -956,3 +956,11 @@
 - Added keyboard shortcuts for copy, paste, and deletion of the active canvas selection.
 - Added targeted tests for interactions, templates, extension registration, and workflow actions.
 - Verification: Creator Canvas suites pass, lint/type-check/build pass.
+
+## 2026-09-07 [FEATURE] Creator Canvas — Connector Attribute Editing
+
+- Added a connector inspector for relationship, label, color, stroke width, line style, and start/end arrow attributes.
+- Added immutable `updateCanvasConnection` operations while preserving stable connector IDs.
+- Connector deletion remains available from the bubble menu and Delete/Backspace shortcuts.
+- Added component and domain-operation tests for connector editing.
+- Verification: Creator Canvas tests, type-check, and lint pass.

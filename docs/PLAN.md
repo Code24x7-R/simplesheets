@@ -191,7 +191,8 @@ Added the first Creator Canvas starter seed for the New Creator Canvas workflow.
 - **Drag & Drop + Viewport Navigation**: Added node drag-and-drop with grid snapping, viewport zooming, and empty-background panning.
 - **Visual Connections & Collections**: Rendered SVG connection paths with directional arrowheads, hover transitions, and collection boundary boxes.
 - **Template Library Presets (Phase 46 Complete ✅)**: Added five starter presets (`film-video-shot-list`, `moodboard`, `novel-outline`, `web-design`, `marketing-campaign`) integrated into `MenuBar` and registered under `SheetExtension.getTemplates()`.
-- **Context Bubble Menu & Common Workflows**: Added a floating action bubble for nodes and connectors supporting Copy, Paste, Duplicate, Delete, and keyboard shortcuts (`Ctrl+C`, `Ctrl+V`, `Del/Backspace`).
+- **Context Bubble Menu & Common Workflows**: Added a floating action bubble for nodes and connectors supporting Copy, Paste, Duplicate, Edit, Delete, and keyboard shortcuts (`Ctrl+C`, `Ctrl+V`, `Del/Backspace`).
+- **Connector Editing**: Added a connector inspector for relationship, label, color, line width/style, and arrow-end attributes, with immutable updates and connector removal.
 
 ## Future Extensions
 
