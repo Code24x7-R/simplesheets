@@ -137,6 +137,35 @@ describe('CreatorCanvasView Component', () => {
     expect(document.querySelector('svg circle')).toBeInTheDocument();
   });
 
+  it('shows a bubble menu and duplicates a selected node', () => {
+    const model = createEmptyCreatorCanvasModel('p1', 'Bubble Test');
+    model.nodes = [createDefaultCanvasNode('bubble-node', 'note', { title: 'Bubble Node' })];
+    const onProjectChange = jest.fn();
+
+    render(<CreatorCanvasView project={model} onProjectChange={onProjectChange} />);
+    fireEvent.click(screen.getByTestId('canvas-node-bubble-node'));
+    expect(screen.getByTestId('canvas-bubble-menu')).toBeInTheDocument();
+    fireEvent.click(screen.getByTitle('Duplicate selection'));
+
+    expect(onProjectChange.mock.calls[0][0].nodes).toHaveLength(2);
+  });
+
+  it('deletes a selected connector from the bubble menu', () => {
+    const model = createEmptyCreatorCanvasModel('p1', 'Connector Bubble Test');
+    model.nodes = [
+      createDefaultCanvasNode('from', 'note'),
+      createDefaultCanvasNode('to', 'task', { position: { x: 400, y: 0 } }),
+    ];
+    model.connections = [{ id: 'connection', fromNodeId: 'from', toNodeId: 'to', relationship: 'reference' }];
+    const onProjectChange = jest.fn();
+
+    render(<CreatorCanvasView project={model} onProjectChange={onProjectChange} />);
+    fireEvent.click(screen.getByTestId('canvas-connection-connection'));
+    expect(screen.getByTestId('canvas-bubble-menu')).toHaveTextContent('Connector');
+    fireEvent.click(screen.getByTitle('Delete selection'));
+    expect(onProjectChange.mock.calls[0][0].connections).toHaveLength(0);
+  });
+
   it('pans the workspace when dragging its empty background', () => {
     const model = createEmptyCreatorCanvasModel('p1', 'Pan Test');
     const onProjectChange = jest.fn();

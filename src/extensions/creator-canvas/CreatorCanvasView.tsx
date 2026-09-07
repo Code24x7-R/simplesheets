@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
 
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import type { CreatorCanvasModel, CanvasNode, CanvasNodeType, CanvasConnection } from './types';
 import {
   addCanvasNode,
@@ -41,7 +41,9 @@ export const CreatorCanvasView: React.FC<CreatorCanvasViewProps> = ({
   className = '',
 }) => {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [selectedConnectionId, setSelectedConnectionId] = useState<string | null>(null);
   const [connectingFromNodeId, setConnectingFromNodeId] = useState<string | null>(null);
+  const [clipboard, setClipboard] = useState<{ type: 'node' | 'connection'; value: CanvasNode | CanvasConnection } | null>(null);
 
   // Dragging state
   const [draggingNodeId, setDraggingNodeId] = useState<string | null>(null);
@@ -63,11 +65,68 @@ export const CreatorCanvasView: React.FC<CreatorCanvasViewProps> = ({
     setSelectedNodeId(id);
   };
 
-  const handleDeleteNode = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleDeleteNode = useCallback((id: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
     onProjectChange(removeCanvasNode(project, id));
     if (selectedNodeId === id) setSelectedNodeId(null);
     if (connectingFromNodeId === id) setConnectingFromNodeId(null);
+  }, [project, selectedNodeId, connectingFromNodeId, onProjectChange]);
+
+  const handleCopyNode = (node: CanvasNode) => {
+    setClipboard({ type: 'node', value: { ...node, position: { ...node.position } } });
+  };
+
+  const handlePaste = useCallback(() => {
+    if (!clipboard) return;
+    if (clipboard.type === 'node') {
+      const source = clipboard.value as CanvasNode;
+      const id = `node-${Date.now()}`;
+      const pasted = {
+        ...source,
+        id,
+        position: { x: source.position.x + 32, y: source.position.y + 32 },
+        createdDate: new Date().toISOString(),
+        modifiedDate: new Date().toISOString(),
+      };
+      onProjectChange(addCanvasNode(project, pasted));
+      setSelectedNodeId(id);
+      return;
+    }
+    const source = clipboard.value as CanvasConnection;
+    const fromExists = project.nodes.some((node) => node.id === source.fromNodeId);
+    const toExists = project.nodes.some((node) => node.id === source.toNodeId);
+    if (fromExists && toExists) {
+      onProjectChange(addCanvasConnection(project, { ...source, id: `conn-${Date.now()}` }));
+    }
+  }, [clipboard, project, onProjectChange]);
+
+  const handleDuplicateNode = (node: CanvasNode) => {
+    handleCopyNode(node);
+    const id = `node-${Date.now()}`;
+    const duplicate = {
+      ...node,
+      id,
+      position: { x: node.position.x + 32, y: node.position.y + 32 },
+      createdDate: new Date().toISOString(),
+      modifiedDate: new Date().toISOString(),
+    };
+    onProjectChange(addCanvasNode(project, duplicate));
+    setSelectedNodeId(id);
+  };
+
+  const handleDeleteConnection = useCallback((connId: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    onProjectChange(removeCanvasConnection(project, connId));
+    if (selectedConnectionId === connId) setSelectedConnectionId(null);
+  }, [project, selectedConnectionId, onProjectChange]);
+
+  const handleCopyConnection = (connection: CanvasConnection) => {
+    setClipboard({ type: 'connection', value: { ...connection } });
+  };
+
+  const handleDuplicateConnection = (connection: CanvasConnection) => {
+    handleCopyConnection(connection);
+    onProjectChange(addCanvasConnection(project, { ...connection, id: `conn-${Date.now()}` }));
   };
 
   const handleToggleLock = (node: CanvasNode, e: React.MouseEvent) => {
@@ -96,11 +155,6 @@ export const CreatorCanvasView: React.FC<CreatorCanvasViewProps> = ({
     }
   };
 
-  const handleDeleteConnection = (connId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    onProjectChange(removeCanvasConnection(project, connId));
-  };
-
   const handleZoom = (delta: number) => {
     const nextZoom = Math.min(Math.max(project.canvas.zoom + delta, 0.25), 3);
     onProjectChange(updateCanvasSettings(project, { zoom: nextZoom }));
@@ -109,6 +163,32 @@ export const CreatorCanvasView: React.FC<CreatorCanvasViewProps> = ({
   const handleResetView = () => {
     onProjectChange(updateCanvasSettings(project, { zoom: 1, panX: 0, panY: 0 }));
   };
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (!selectedNodeId && !selectedConnectionId) return;
+      const modifier = event.ctrlKey || event.metaKey;
+      if (modifier && event.key.toLowerCase() === 'c') {
+        event.preventDefault();
+        if (selectedNodeId) {
+          const node = project.nodes.find((item) => item.id === selectedNodeId);
+          if (node) handleCopyNode(node);
+        } else if (selectedConnectionId) {
+          const connection = project.connections.find((item) => item.id === selectedConnectionId);
+          if (connection) handleCopyConnection(connection);
+        }
+      } else if (modifier && event.key.toLowerCase() === 'v') {
+        event.preventDefault();
+        handlePaste();
+      } else if (event.key === 'Delete' || event.key === 'Backspace') {
+        event.preventDefault();
+        if (selectedNodeId) handleDeleteNode(selectedNodeId);
+        if (selectedConnectionId) handleDeleteConnection(selectedConnectionId);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedNodeId, selectedConnectionId, project, clipboard, handleDeleteConnection, handleDeleteNode, handlePaste]);
 
   // Node Drag handlers
   const handleNodeMouseDown = (node: CanvasNode, e: React.MouseEvent) => {
@@ -141,6 +221,7 @@ export const CreatorCanvasView: React.FC<CreatorCanvasViewProps> = ({
   const handleCanvasMouseDown = (e: React.MouseEvent) => {
     if (e.button !== 0) return;
     setSelectedNodeId(null);
+    setSelectedConnectionId(null);
     setConnectingFromNodeId(null);
     setIsPanning(true);
     panStartRef.current = {
@@ -307,6 +388,7 @@ export const CreatorCanvasView: React.FC<CreatorCanvasViewProps> = ({
           <svg
             className="absolute inset-0 pointer-events-none w-full h-full"
             style={{
+              pointerEvents: 'auto',
               transform: `translate(${project.canvas.panX}px, ${project.canvas.panY}px) scale(${project.canvas.zoom})`,
               transformOrigin: '0 0',
               overflow: 'visible',
@@ -337,6 +419,7 @@ export const CreatorCanvasView: React.FC<CreatorCanvasViewProps> = ({
               return (
                 <g key={conn.id} className="pointer-events-auto group">
                   <line
+                    data-testid={`canvas-connection-${conn.id}`}
                     x1={x1}
                     y1={y1}
                     x2={x2}
@@ -345,7 +428,12 @@ export const CreatorCanvasView: React.FC<CreatorCanvasViewProps> = ({
                     strokeWidth={conn.style?.strokeWidth || 2}
                     strokeDasharray={conn.style?.strokeDash === 'dashed' ? '5,5' : undefined}
                     markerEnd="url(#arrowhead)"
-                    className="hover:stroke-indigo-600 transition-colors cursor-pointer"
+                    className={`hover:stroke-indigo-600 transition-colors cursor-pointer ${selectedConnectionId === conn.id ? 'stroke-indigo-600' : ''}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedConnectionId(conn.id);
+                      setSelectedNodeId(null);
+                    }}
                   />
                   {/* Midpoint Label or Delete trigger */}
                   <circle
@@ -356,7 +444,11 @@ export const CreatorCanvasView: React.FC<CreatorCanvasViewProps> = ({
                     stroke="#94a3b8"
                     strokeWidth="1.5"
                     className="hover:stroke-red-500 hover:fill-red-50 cursor-pointer"
-                    onClick={(e) => handleDeleteConnection(conn.id, e)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedConnectionId(conn.id);
+                      setSelectedNodeId(null);
+                    }}
                   />
                   {conn.label && (
                     <text
@@ -410,6 +502,11 @@ export const CreatorCanvasView: React.FC<CreatorCanvasViewProps> = ({
                   key={node.id}
                   data-testid={`canvas-node-${node.id}`}
                   onMouseDown={(e) => handleNodeMouseDown(node, e)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedNodeId(node.id);
+                    setSelectedConnectionId(null);
+                  }}
                   className={`absolute rounded-lg border shadow-sm p-3 flex flex-col transition-shadow cursor-move ${getNodeColor(
                     node.type
                   )} ${
@@ -419,6 +516,12 @@ export const CreatorCanvasView: React.FC<CreatorCanvasViewProps> = ({
                       ? 'ring-2 ring-amber-500 shadow-md'
                       : 'hover:shadow'
                   }`}
+                  onContextMenu={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setSelectedNodeId(node.id);
+                    setSelectedConnectionId(null);
+                  }}
                   style={{
                     left: `${node.position.x}px`,
                     top: `${node.position.y}px`,
@@ -492,6 +595,77 @@ export const CreatorCanvasView: React.FC<CreatorCanvasViewProps> = ({
             })}
           </div>
         </div>
+
+        {/* Context bubble menu for common canvas workflows */}
+        {(selectedNodeId || selectedConnectionId) && (
+          <div
+            data-testid="canvas-bubble-menu"
+            className="absolute bottom-4 left-1/2 z-30 flex -translate-x-1/2 items-center gap-1 rounded-full border border-slate-200 bg-white/95 px-2 py-1.5 shadow-lg backdrop-blur"
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <span className="px-2 text-[11px] font-semibold text-slate-500">
+              {selectedNodeId ? 'Node' : 'Connector'}
+            </span>
+            <button
+              title="Copy selection"
+              className="rounded-full px-2 py-1 text-xs text-slate-600 hover:bg-slate-100"
+              onClick={() => {
+                if (selectedNodeId) {
+                  const node = project.nodes.find((item) => item.id === selectedNodeId);
+                  if (node) handleCopyNode(node);
+                } else if (selectedConnectionId) {
+                  const connection = project.connections.find((item) => item.id === selectedConnectionId);
+                  if (connection) handleCopyConnection(connection);
+                }
+              }}
+            >
+              Copy
+            </button>
+            <button
+              title="Paste selection"
+              disabled={!clipboard}
+              className="rounded-full px-2 py-1 text-xs text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
+              onClick={handlePaste}
+            >
+              Paste
+            </button>
+            <button
+              title="Duplicate selection"
+              className="rounded-full px-2 py-1 text-xs text-slate-600 hover:bg-slate-100"
+              onClick={() => {
+                if (selectedNodeId) {
+                  const node = project.nodes.find((item) => item.id === selectedNodeId);
+                  if (node) handleDuplicateNode(node);
+                } else if (selectedConnectionId) {
+                  const connection = project.connections.find((item) => item.id === selectedConnectionId);
+                  if (connection) handleDuplicateConnection(connection);
+                }
+              }}
+            >
+              Duplicate
+            </button>
+            <button
+              title="Delete selection"
+              className="rounded-full px-2 py-1 text-xs text-red-600 hover:bg-red-50"
+              onClick={() => {
+                if (selectedNodeId) handleDeleteNode(selectedNodeId);
+                if (selectedConnectionId) handleDeleteConnection(selectedConnectionId);
+              }}
+            >
+              Delete
+            </button>
+            <button
+              title="Close selection"
+              className="rounded-full px-2 py-1 text-xs text-slate-400 hover:bg-slate-100"
+              onClick={() => {
+                setSelectedNodeId(null);
+                setSelectedConnectionId(null);
+              }}
+            >
+              ×
+            </button>
+          </div>
+        )}
 
         {/* Selected Node Inspector */}
         {selectedNodeId && project.nodes.find((node) => node.id === selectedNodeId) && (
