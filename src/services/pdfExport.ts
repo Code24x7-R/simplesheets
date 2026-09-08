@@ -126,8 +126,46 @@ function buildPrintableHtml(
   table.style.borderCollapse = 'collapse';
   table.style.width = 'auto';
 
+  // Render header row (column letters) if showHeaders is enabled
+  if (showHeaders) {
+    const headerTr = document.createElement('tr');
+
+    // Empty top-left corner cell
+    const cornerTd = document.createElement('td');
+    cornerTd.style.padding = '2px 6px';
+    cornerTd.style.backgroundColor = '#f0f0f0';
+    if (showGrid) cornerTd.style.border = '1px solid #ccc';
+    headerTr.appendChild(cornerTd);
+
+    // Column letter headers (A, B, C...)
+    for (let c = minCol; c <= maxCol; c++) {
+      const th = document.createElement('td');
+      th.style.padding = '2px 6px';
+      th.style.minWidth = '60px';
+      th.style.backgroundColor = '#f0f0f0';
+      th.style.fontWeight = 'bold';
+      if (showGrid) th.style.border = '1px solid #ccc';
+      th.textContent = colToLetter(c);
+      headerTr.appendChild(th);
+    }
+
+    table.appendChild(headerTr);
+  }
+
+  // Render data rows
   for (let r = minRow; r <= maxRow; r++) {
     const tr = document.createElement('tr');
+
+    // Row number header (if showHeaders is enabled)
+    if (showHeaders) {
+      const rowHeaderTd = document.createElement('td');
+      rowHeaderTd.style.padding = '2px 6px';
+      rowHeaderTd.style.backgroundColor = '#f0f0f0';
+      rowHeaderTd.style.fontWeight = 'bold';
+      if (showGrid) rowHeaderTd.style.border = '1px solid #ccc';
+      rowHeaderTd.textContent = String(r + 1);
+      tr.appendChild(rowHeaderTd);
+    }
 
     for (let c = minCol; c <= maxCol; c++) {
       const cell = sheet.cells[`${r}:${c}`];
@@ -140,28 +178,18 @@ function buildPrintableHtml(
         td.style.border = '1px solid #ccc';
       }
 
-      if (showHeaders && r === minRow) {
-        td.style.backgroundColor = '#f0f0f0';
-        td.style.fontWeight = 'bold';
-        td.textContent = colToLetter(c);
-      } else if (showHeaders && c === minCol) {
-        td.style.backgroundColor = '#f0f0f0';
-        td.style.fontWeight = 'bold';
-        td.textContent = String(r + 1);
-      } else {
-        const value = cell?.computedValue !== undefined && cell?.computedValue !== null
-          ? String(cell.computedValue)
-          : cell?.rawValue ?? '';
-        td.textContent = value;
+      const value = cell?.computedValue !== undefined && cell?.computedValue !== null
+        ? String(cell.computedValue)
+        : cell?.rawValue ?? '';
+      td.textContent = value;
 
-        // Apply basic formatting
-        if (cell?.style) {
-          if (cell.style.fontWeight === 'bold') td.style.fontWeight = 'bold';
-          if (cell.style.fontStyle === 'italic') td.style.fontStyle = 'italic';
-          if (cell.style.color) td.style.color = cell.style.color;
-          if (cell.style.backgroundColor) td.style.backgroundColor = cell.style.backgroundColor;
-          if (cell.style.textAlign) td.style.textAlign = cell.style.textAlign;
-        }
+      // Apply basic formatting
+      if (cell?.style) {
+        if (cell.style.fontWeight === 'bold') td.style.fontWeight = 'bold';
+        if (cell.style.fontStyle === 'italic') td.style.fontStyle = 'italic';
+        if (cell.style.color) td.style.color = cell.style.color;
+        if (cell.style.backgroundColor) td.style.backgroundColor = cell.style.backgroundColor;
+        if (cell.style.textAlign) td.style.textAlign = cell.style.textAlign;
       }
 
       tr.appendChild(td);

@@ -5,18 +5,10 @@
  *
  * Validates cell values against data validation rules.
  */
-import type { DataValidationRule } from '../types';
+import type { DataValidationRule, CellValidationResult } from '../types';
 
-/** Result of validating a cell value. */
-export interface ValidationResult {
-  /** Whether the value is valid. */
-  isValid: boolean;
-  /** Error message if invalid. */
-  errorMessage?: string;
-  /** Error title if invalid. */
-  errorTitle?: string;
-  /** Error style (stop, warning, information). */
-  errorStyle?: 'stop' | 'warning' | 'information';
+/** Result of validating a cell value (extends the stored type with UI-only fields). */
+export interface ValidationResult extends CellValidationResult {
   /** Whether to show a dropdown for list type. */
   showDropdown?: boolean;
   /** List values for dropdown. */

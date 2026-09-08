@@ -2012,6 +2012,12 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
                           {isNumberStoredAsText(cell) && (
                             <span className="number-as-text-indicator" title="Number stored as text" />
                           )}
+                          {sheet.validationErrors?.[`${row}:${col}`] && (
+                            <span
+                              className="validation-error-indicator"
+                              title={sheet.validationErrors[`${row}:${col}`].errorMessage}
+                            />
+                          )}
                         </>
                       )}
                     </div>
@@ -2383,6 +2389,12 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
                   })()}
                   {isNumberStoredAsText(cell) && (
                     <span className="number-as-text-indicator" title="Number stored as text" />
+                  )}
+                  {sheet.validationErrors?.[`${actualRowIndex}:${col}`] && (
+                    <span
+                      className="validation-error-indicator"
+                      title={sheet.validationErrors[`${actualRowIndex}:${col}`].errorMessage}
+                    />
                   )}
                 </div>
               );

@@ -83,6 +83,18 @@ function isError(val: CellValue): boolean {
   return typeof val === 'string' && val.startsWith('#') && val.endsWith('!');
 }
 
+/**
+ * Extracts a scalar value from a node evaluation result.
+ * Functions like INDIRECT/OFFSET can return arrays (range results).
+ * In scalar contexts, we take the first element (implicit intersection).
+ */
+function toScalar(val: CellValue | CellValue[]): CellValue {
+  if (Array.isArray(val)) {
+    return val[0] ?? null;
+  }
+  return val;
+}
+
 // ─── AST Evaluation ──────────────────────────────────────────────────────────
 
 /**
@@ -102,7 +114,7 @@ function resolveSheetIndex(sheetName: string | undefined, ctx: EvalContext): num
  * Evaluates SUBTOTAL, skipping hidden rows (codes 101-111) and nested SUBTOTAL formulas.
  */
 function evaluateSubtotal(node: Extract<ASTNode, { type: 'function' }>, ctx: EvalContext): CellValue {
-  const rawCode = toNumber(evaluateNode(node.args[0], ctx));
+  const rawCode = toNumber(toScalar(evaluateNode(node.args[0], ctx)));
   if (isNaN(rawCode)) return ERR_VALUE;
   // Excel codes: 1-11 include hidden rows, 101-111 ignore them
   const ignoreHidden = rawCode >= 101;
@@ -131,7 +143,7 @@ function evaluateSubtotal(node: Extract<ASTNode, { type: 'function' }>, ctx: Eva
         }
       }
     } else {
-      const num = toNumber(evaluateNode(arg, ctx));
+      const num = toNumber(toScalar(evaluateNode(arg, ctx)));
       if (!isNaN(num)) values.push(num);
     }
   }
@@ -192,7 +204,7 @@ function applySubtotalOp(code: number, values: number[]): CellValue {
 }
 
 
-function evaluateNode(node: ASTNode, ctx: EvalContext): CellValue {
+function evaluateNode(node: ASTNode, ctx: EvalContext): CellValue | CellValue[] {
   switch (node.type) {
     case 'number':
       return node.value;
@@ -222,7 +234,7 @@ function evaluateNode(node: ASTNode, ctx: EvalContext): CellValue {
       return evaluateBinary(node, ctx);
 
     case 'unary': {
-      const val = evaluateNode(node.operand, ctx);
+      const val = toScalar(evaluateNode(node.operand, ctx));
       if (isError(val)) return val;
       const num = toNumber(val);
       if (isNaN(num)) return ERR_VALUE;
@@ -294,7 +306,7 @@ function evaluateCell(row: number, col: number, ctx: EvalContext, sheetIndex?: n
         activeSheetIndex: targetIndex,
         activeSheetId: targetSheet.id,
       };
-      const result = evaluateNode(ast, subCtx);
+      const result = toScalar(evaluateNode(ast, subCtx));
       ctx.cache.set(cacheKey, result);
       return result;
     } catch {
@@ -406,13 +418,13 @@ function autoDetectType(raw: string): CellValue {
 function evaluateBinary(node: Extract<ASTNode, { type: 'binary' }>, ctx: EvalContext): CellValue {
   // String concatenation
   if (node.op === '&') {
-    const left = toString(evaluateNode(node.left, ctx));
-    const right = toString(evaluateNode(node.right, ctx));
+    const left = toString(toScalar(evaluateNode(node.left, ctx)));
+    const right = toString(toScalar(evaluateNode(node.right, ctx)));
     return left + right;
   }
 
-  const left = evaluateNode(node.left, ctx);
-  const right = evaluateNode(node.right, ctx);
+  const left = toScalar(evaluateNode(node.left, ctx));
+  const right = toScalar(evaluateNode(node.right, ctx));
 
   // Propagate errors
   if (isError(left)) return left;
@@ -623,7 +635,7 @@ function formatDate(d: Date, fmt: string): string {
 /**
  * Evaluates a function call node.
  */
-function evaluateFunction(node: Extract<ASTNode, { type: 'function' }>, ctx: EvalContext): CellValue {
+function evaluateFunction(node: Extract<ASTNode, { type: 'function' }>, ctx: EvalContext): CellValue | CellValue[] {
   // SUBTOTAL requires special handling: skip hidden rows and nested SUBTOTALs.
   // Must intercept before generic arg flattening to preserve row position info.
   if (node.name === 'SUBTOTAL') {
@@ -657,7 +669,14 @@ function evaluateFunction(node: Extract<ASTNode, { type: 'function' }>, ctx: Eva
       argValues.push(collectSheetRangeValues(resolvedArg as Extract<ASTNode, { type: 'sheet_range' }>, ctx));
       argShapes.push(null); // 3D ranges don't have simple shape
     } else {
-      argValues.push([evaluateNode(resolvedArg, ctx)]);
+      const evaluated = evaluateNode(resolvedArg, ctx);
+      // Functions like INDIRECT/OFFSET can return arrays (range results).
+      // Spread them into argValues so aggregate functions expand them correctly.
+      if (Array.isArray(evaluated)) {
+        argValues.push(evaluated);
+      } else {
+        argValues.push([evaluated]);
+      }
       argShapes.push(null);
     }
   }
@@ -1424,19 +1443,40 @@ function evaluateFunction(node: Extract<ASTNode, { type: 'function' }>, ctx: Eva
       const base = node.args[0];
       const rowOffset = toNumber(argValues[1]?.[0] ?? 0);
       const colOffset = toNumber(argValues[2]?.[0] ?? 0);
-      if (!Number.isInteger(rowOffset) || !Number.isInteger(colOffset)) return ERR_VALUE;
+      const height = argValues.length >= 4 ? toNumber(argValues[3]?.[0] ?? 1) : 1;
+      const width = argValues.length >= 5 ? toNumber(argValues[4]?.[0] ?? 1) : 1;
+      if (!Number.isInteger(rowOffset) || !Number.isInteger(colOffset) || !Number.isInteger(height) || !Number.isInteger(width)) return ERR_VALUE;
+      if (height < 1 || width < 1) return ERR_VALUE;
 
       let origin: { row: number; col: number; sheetName?: string } | null = null;
       if (base.type === 'cell') origin = base;
       else if (base.type === 'range') origin = base.start;
       if (!origin) return ERR_REF;
 
-      const targetRow = origin.row + rowOffset;
-      const targetCol = origin.col + colOffset;
+      const startRow = origin.row + rowOffset;
+      const startCol = origin.col + colOffset;
       const targetSheetIndex = resolveSheetIndex(origin.sheetName, ctx) ?? ctx.activeSheetIndex;
       const targetSheet = ctx.allSheets[targetSheetIndex];
-      if (targetRow < 0 || targetCol < 0 || targetRow >= (targetSheet?.rowCount ?? ctx.rowCount) || targetCol >= (targetSheet?.columnCount ?? ctx.colCount)) return ERR_REF;
-      return evaluateCell(targetRow, targetCol, ctx, targetSheetIndex);
+      const maxRow = targetSheet?.rowCount ?? ctx.rowCount;
+      const maxCol = targetSheet?.columnCount ?? ctx.colCount;
+
+      // Collect all values in the offset range
+      const result: CellValue[] = [];
+      for (let r = 0; r < height; r++) {
+        for (let c = 0; c < width; c++) {
+          const targetRow = startRow + r;
+          const targetCol = startCol + c;
+          if (targetRow < 0 || targetCol < 0 || targetRow >= maxRow || targetCol >= maxCol) {
+            result.push(ERR_REF);
+          } else {
+            result.push(evaluateCell(targetRow, targetCol, ctx, targetSheetIndex));
+          }
+        }
+      }
+      // Return array for aggregate functions (SUM, AVERAGE, etc.)
+      // For scalar context (height=width=1), return the single value
+      if (result.length === 1) return result[0];
+      return result;
     }
 
     case 'INDIRECT': {
@@ -1446,7 +1486,17 @@ function evaluateFunction(node: Extract<ASTNode, { type: 'function' }>, ctx: Eva
 
       try {
         const parsed = parseFormula(refText);
-        if (parsed.type === 'cell' || parsed.type === 'range') return evaluateNode(parsed, ctx);
+        if (parsed.type === 'cell') {
+          return evaluateNode(parsed, ctx);
+        }
+        if (parsed.type === 'range') {
+          // Collect range values so aggregate functions (SUM, etc.) can expand them
+          const rangeData = collectRangeValuesWithShape(parsed as Extract<ASTNode, { type: 'range' }>, ctx);
+          if (rangeData.rows === 1 && rangeData.cols === 1) {
+            return rangeData.values[0];
+          }
+          return rangeData.values;
+        }
         return ERR_REF;
       } catch {
         return ERR_REF;
@@ -1816,7 +1866,7 @@ export function evaluateWorkbook(workbook: import('../types').Workbook, activeSh
       if (cell?.rawValue.startsWith('=')) {
         try {
           const ast = parseFormula(cell.rawValue.slice(1));
-          const result = evaluateNode(ast, ctx);
+          const result = toScalar(evaluateNode(ast, ctx));
           cell.computedValue = result;
         } catch {
           cell.computedValue = ERR_VALUE;
@@ -1906,7 +1956,7 @@ export function evaluateFormulaPreview(
       if (cell?.rawValue.startsWith('=')) {
         try {
           const ast = parseFormula(cell.rawValue.slice(1));
-          const result = evaluateNode(ast, ctx);
+          const result = toScalar(evaluateNode(ast, ctx));
           sharedCache.set(`${i}:${key}`, result);
         } catch {
           /* istanbul ignore next - defensive: evaluateNode catches parse errors internally */
@@ -1935,7 +1985,7 @@ export function evaluateFormulaPreview(
 
   try {
     const ast = parseFormula(formula);
-    return evaluateNode(ast, previewCtx);
+    return toScalar(evaluateNode(ast, previewCtx));
   } catch {
     return null;
   }

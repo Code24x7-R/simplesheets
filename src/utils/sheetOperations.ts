@@ -45,9 +45,11 @@ function adjustFormulaForStructuralChange(
     },
   );
 
-  // Match cell refs: optional $ col, column letters, optional $ row, row digits.
+  // Match cell refs: optional $ col, column letters (1-3), optional $ row, row digits.
   // Negative lookbehind avoids matching scientific notation (e.g. 1e5).
-  const cellRefRegex = /(?<![0-9])(\$?)([A-Za-z]+)(\$?)(\d+)/gi;
+  // Restricted to 1-3 letters to avoid matching named ranges with digits (e.g. Sales2026, Q1_Sales).
+  // Word boundary checks prevent partial matches within longer words (e.g. 'les2026' in 'Sales2026').
+  const cellRefRegex = /(?<![A-Za-z0-9_])(\$?)([A-Za-z]{1,3})(\$?)(\d+)(?![A-Za-z0-9_])/gi;
 
   const adjustedFormula = protectedFormula.replace(cellRefRegex, (match, dollarCol: string, colLetters: string, dollarRow: string, rowStr: string) => {
     if (axis === 'row') {

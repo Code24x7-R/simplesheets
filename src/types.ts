@@ -239,6 +239,17 @@ export interface Sheet {
 
   /** Data validation rules for this sheet. */
   dataValidations?: DataValidationRule[];
+
+  /** Validation errors by cell key (row:col). */
+  validationErrors?: Record<string, CellValidationResult>;
+}
+
+/** Result of validating a cell value (stored on sheet for error display). */
+export interface CellValidationResult {
+  isValid: boolean;
+  errorMessage?: string;
+  errorTitle?: string;
+  errorStyle?: 'stop' | 'warning' | 'information';
 }
 
 /**

@@ -600,6 +600,33 @@ describe('Formula Parser', () => {
     });
   });
 
+  describe('adjustFormulaRefs — named range protection (1-3 letter column restriction)', () => {
+    it('does NOT corrupt named range Sales2026 during offset adjustment', () => {
+      expect(adjustFormulaRefs('Sales2026 + A1', 0, 1)).toBe('Sales2026 + B1');
+    });
+
+    it('does NOT corrupt named range Q1_Sales during offset adjustment', () => {
+      expect(adjustFormulaRefs('Q1_Sales + A1', 1, 0)).toBe('Q1_Sales + A2');
+    });
+
+    it('does NOT corrupt named range Quarter4 during offset adjustment', () => {
+      expect(adjustFormulaRefs('Quarter4 + B2', 0, 1)).toBe('Quarter4 + C2');
+    });
+
+    it('still adjusts valid cell references correctly', () => {
+      expect(adjustFormulaRefs('A1 + B2', 1, 1)).toBe('B2 + C3');
+    });
+
+    it('handles named range that looks like column+row (AB1 pattern)', () => {
+      // AB1 is a valid cell ref (column AB, row 1), should be adjusted
+      expect(adjustFormulaRefs('AB1', 1, 0)).toBe('AB2');
+    });
+
+    it('does NOT corrupt 4+ letter named ranges', () => {
+      expect(adjustFormulaRefs('TotalSales + A1', 0, 1)).toBe('TotalSales + B1');
+    });
+  });
+
   describe('Case-insensitive parsing', () => {
     it('parses lowercase function names', () => {
       const ast = parseFormula('sum(A1:A10)');

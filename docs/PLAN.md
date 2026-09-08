@@ -4,7 +4,7 @@
 Achieve a clean, clutter-free UI with standardized dropdown menus, formula wizard, formula bar, R1C1 reference format, and extensible project management capabilities.
 
 ## Current State
-- **3960 tests** across **164 suites**, All passing
+- **4205 tests** across **180 suites**, All passing
 - Lint clean (0 warnings), Type-check clean, Build clean
 - Phases 1-33 complete ✅ (see [HISTORY.md](./HISTORY.md))
 - Phases 34-39 complete ✅ (Extensions Architecture — see below)
@@ -14,7 +14,8 @@ Achieve a clean, clutter-free UI with standardized dropdown menus, formula wizar
 - **Save to Cloud complete ✅ (Copy Link, Share File, Save/Open File, cloud provider scaffolding)**
 - **MRU File List complete ✅ (recent files with .ssjson + cloud source tracking)**
 - **Menu simplification complete ✅ (removed redundant Save/Open, unified around cloud modal)**
-- Phases 22-23 planned 📋 (Conditional Formatting, Data Validation)
+- **Phases 22-23 complete ✅ (Conditional Formatting, Data Validation)**
+- **Review Plan v2 Stages 1-5 complete ✅ (Formula Engine, CPM Scheduling, PDF Export, Data Validation Integration, Verification)**
 
 ---
 

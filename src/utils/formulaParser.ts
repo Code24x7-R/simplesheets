@@ -870,9 +870,11 @@ export function adjustFormulaRefs(formula: string, rowOffset: number, colOffset:
     return placeholder;
   });
 
-  // Regex to match cell references: optional $ column, column letters, optional $ row, row digits
+  // Regex to match cell references: optional $ column, column letters (1-3), optional $ row, row digits
   // Case-insensitive but NOT preceded by a digit (to avoid matching scientific notation like 1e5)
-  const cellRefRegex = /(?<![0-9])(\$?)([A-Za-z]+)(\$?)(\d+)/gi;
+  // Restricted to 1-3 letters to avoid matching named ranges with digits (e.g. Sales2026, Q1_Sales)
+  // Word boundary checks prevent partial matches within longer words (e.g. 'les2026' in 'Sales2026')
+  const cellRefRegex = /(?<![A-Za-z0-9_])(\$?)([A-Za-z]{1,3})(\$?)(\d+)(?![A-Za-z0-9_])/gi;
 
   protectedFormula = protectedFormula.replace(cellRefRegex, (match, dollarCol: string, col: string, dollarRow: string, row: string) => {
     const absoluteCol = dollarCol === '$';
@@ -951,7 +953,8 @@ export function prefixRefsWithSheet(formula: string, sheetName: string): string 
   });
 
   // Now prefix all remaining relative references
-  const cellRefRegex = /(?<![0-9])(\$?[A-Za-z]+\$?\d+)/gi;
+  // Restricted to 1-3 letters with word boundary checks to protect named ranges
+  const cellRefRegex = /(?<![A-Za-z0-9_])(\$?[A-Za-z]{1,3}\$?\d+)(?![A-Za-z0-9_])/gi;
   protectedFormula = protectedFormula.replace(cellRefRegex, (match) => {
     return `${sheetPrefix}${match}`;
   });

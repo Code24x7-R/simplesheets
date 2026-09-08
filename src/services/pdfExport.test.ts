@@ -136,6 +136,94 @@ describe('pdfExport', () => {
 
       expect(result).toBeInstanceOf(Blob);
     });
+
+    it('preserves first row/column data when showHeaders is true', async () => {
+      // Regression test: showHeaders must NOT overwrite data cells
+      const sheet = createTestSheet();
+      // Capture the HTML passed to html2pdf
+      let capturedHtml: HTMLElement | null = null;
+      mockFrom.mockImplementation((el: HTMLElement) => {
+        capturedHtml = el;
+        return mockHtml2pdf();
+      });
+
+      await generatePdf(sheet, {
+        setup: {
+          orientation: 'portrait',
+          pageSize: 'A4',
+          scaling: 'fit-to-page',
+          margins: { top: 10, right: 10, bottom: 10, left: 10 },
+        },
+        showHeaders: true,
+      });
+
+      expect(capturedHtml).not.toBeNull();
+      const table = capturedHtml!.querySelector('table');
+      expect(table).not.toBeNull();
+      const rows = table!.querySelectorAll('tr');
+
+      // With showHeaders: 1 header row + 3 data rows = 4 rows total
+      expect(rows.length).toBe(4);
+
+      // Header row should have empty corner + column letters (A, B)
+      const headerCells = rows[0].querySelectorAll('td');
+      expect(headerCells.length).toBe(3); // corner + 2 columns
+      expect(headerCells[0].textContent).toBe(''); // empty corner
+      expect(headerCells[1].textContent).toBe('A');
+      expect(headerCells[2].textContent).toBe('B');
+
+      // First data row should have row number + original data (Name, Age)
+      const firstDataRow = rows[1].querySelectorAll('td');
+      expect(firstDataRow.length).toBe(3); // row header + 2 columns
+      expect(firstDataRow[0].textContent).toBe('1'); // row number
+      expect(firstDataRow[1].textContent).toBe('Name'); // preserved data!
+      expect(firstDataRow[2].textContent).toBe('Age'); // preserved data!
+
+      // Second data row
+      const secondDataRow = rows[2].querySelectorAll('td');
+      expect(secondDataRow[0].textContent).toBe('2');
+      expect(secondDataRow[1].textContent).toBe('Alice');
+      expect(secondDataRow[2].textContent).toBe('30');
+
+      // Third data row
+      const thirdDataRow = rows[3].querySelectorAll('td');
+      expect(thirdDataRow[0].textContent).toBe('3');
+      expect(thirdDataRow[1].textContent).toBe('Bob');
+      expect(thirdDataRow[2].textContent).toBe('25');
+    });
+
+    it('does not add header row/column when showHeaders is false', async () => {
+      const sheet = createTestSheet();
+      let capturedHtml: HTMLElement | null = null;
+      mockFrom.mockImplementation((el: HTMLElement) => {
+        capturedHtml = el;
+        return mockHtml2pdf();
+      });
+
+      await generatePdf(sheet, {
+        setup: {
+          orientation: 'portrait',
+          pageSize: 'A4',
+          scaling: 'fit-to-page',
+          margins: { top: 10, right: 10, bottom: 10, left: 10 },
+        },
+        showHeaders: false,
+      });
+
+      expect(capturedHtml).not.toBeNull();
+      const table = capturedHtml!.querySelector('table');
+      expect(table).not.toBeNull();
+      const rows = table!.querySelectorAll('tr');
+
+      // Without headers: just 3 data rows
+      expect(rows.length).toBe(3);
+
+      // Each row should have only 2 data cells (no row number column)
+      const firstRow = rows[0].querySelectorAll('td');
+      expect(firstRow.length).toBe(2);
+      expect(firstRow[0].textContent).toBe('Name');
+      expect(firstRow[1].textContent).toBe('Age');
+    });
   });
 
   describe('downloadPdf', () => {

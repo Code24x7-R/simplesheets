@@ -289,4 +289,28 @@ describe('adjustFormulaForStructuralChange edge cases', () => {
     const result = insertCol(sheet, 0);
     expect(result.cells['0:3']?.rawValue).toBe('=C1+Sheet2!C5+\'My Sheet\'!D7');
   });
+
+  it('does NOT corrupt named ranges with digits during row insert', () => {
+    const sheet = createTestSheet();
+    sheet.cells['0:2'] = { rawValue: '=Sales2026+A1' };
+    const result = insertRow(sheet, 0);
+    // Sales2026 should remain unchanged, A1 should shift to A2
+    expect(result.cells['1:2']?.rawValue).toBe('=Sales2026+A2');
+  });
+
+  it('does NOT corrupt named ranges with digits during column insert', () => {
+    const sheet = createTestSheet();
+    sheet.cells['0:2'] = { rawValue: '=Q1_Sales+A1' };
+    const result = insertCol(sheet, 0);
+    // Q1_Sales should remain unchanged, A1 should shift to B1
+    expect(result.cells['0:3']?.rawValue).toBe('=Q1_Sales+B1');
+  });
+
+  it('does NOT corrupt 4+ letter named ranges during structural changes', () => {
+    const sheet = createTestSheet();
+    sheet.cells['0:2'] = { rawValue: '=TotalSales+B2' };
+    const result = insertRow(sheet, 0);
+    // TotalSales should remain unchanged, B2 should shift to B3
+    expect(result.cells['1:2']?.rawValue).toBe('=TotalSales+B3');
+  });
 });

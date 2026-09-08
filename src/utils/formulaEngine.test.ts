@@ -3251,6 +3251,24 @@ describe('evaluateWorkbook - cross-sheet references', () => {
       const sheet = createSheet({ '0:0': '=INDIRECT()' });
       expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:0'].computedValue).toBe('#VALUE!');
     });
+
+    it('INDIRECT resolves a range reference inside SUM', () => {
+      const sheet = createSheet({
+        '0:0': '1', '0:1': '2', '0:2': '3',
+        '1:0': '4', '1:1': '5', '1:2': '6',
+        '2:0': '7', '2:1': '8', '2:2': '9',
+        '3:0': '=SUM(INDIRECT("A1:C3"))',
+      });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['3:0'].computedValue).toBe(45);
+    });
+
+    it('INDIRECT resolves a 1x1 range as scalar', () => {
+      const sheet = createSheet({
+        '0:0': '42',
+        '1:0': '=INDIRECT("A1:A1")',
+      });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['1:0'].computedValue).toBe(42);
+    });
   });
 
   describe('OFFSET Function', () => {
@@ -3269,6 +3287,24 @@ describe('evaluateWorkbook - cross-sheet references', () => {
         '0:1': '=OFFSET(A1, 10, 10)',
       }, { rowCount: 1, columnCount: 1 });
       expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['0:1'].computedValue).toBe('#REF!');
+    });
+
+    it('OFFSET with height and width returns array for SUM', () => {
+      const sheet = createSheet({
+        '0:0': '1', '0:1': '2', '0:2': '3',
+        '1:0': '4', '1:1': '5', '1:2': '6',
+        '2:0': '7', '2:1': '8', '2:2': '9',
+        '3:0': '=SUM(OFFSET(A1, 0, 0, 3, 3))',
+      });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['3:0'].computedValue).toBe(45);
+    });
+
+    it('OFFSET with height 2 and width 1 returns column array for SUM', () => {
+      const sheet = createSheet({
+        '0:0': '10', '1:0': '20', '2:0': '30',
+        '3:0': '=SUM(OFFSET(A1, 0, 0, 2, 1))',
+      });
+      expect(evaluateWorkbook(sheetToWorkbook(sheet), 0).cells['3:0'].computedValue).toBe(30);
     });
   });
 

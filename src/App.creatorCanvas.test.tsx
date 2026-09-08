@@ -49,7 +49,7 @@ jest.mock('@tanstack/react-virtual', () => ({
 }));
 
 describe('App Creator Canvas Integration', () => {
-  it('creates a starter Creator Canvas from the Extensions menu and shows the canvas view', () => {
+  it('creates a starter Creator Canvas from the Extensions menu and shows the canvas view', async () => {
     render(<App />);
 
     // Trigger New Creator Canvas
@@ -58,20 +58,20 @@ describe('App Creator Canvas Integration', () => {
     fireEvent.click(screen.getByText('New Creator Canvas'));
 
     // The Starter seed nodes and Canvas tab should be present
-    expect(screen.getByRole('button', { name: '🎨 Canvas' })).toBeInTheDocument();
-    expect(screen.getByText('Welcome to Canvas!')).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: '🎨 Canvas' })).toBeInTheDocument();
+    expect(await screen.findByText('Welcome to Canvas!')).toBeInTheDocument();
     expect(screen.getByText('Reference & Links')).toBeInTheDocument();
     expect(screen.getByText('Plan Next Deliverable')).toBeInTheDocument();
   });
 
-  it('switches between worksheet and Creator Canvas tab views', () => {
+  it('switches between worksheet and Creator Canvas tab views', async () => {
     render(<App />);
 
     // Create a new canvas
     fireEvent.click(screen.getByText('Extensions'));
     fireEvent.click(screen.getByText('Creator Canvas'));
     fireEvent.click(screen.getByText('New Creator Canvas'));
-    expect(screen.getByText('Welcome to Canvas!')).toBeInTheDocument();
+    expect(await screen.findByText('Welcome to Canvas!')).toBeInTheDocument();
 
     // Switch back to normal sheet tab
     const sheetTab = screen.getByRole('button', { name: 'Sheet1' });

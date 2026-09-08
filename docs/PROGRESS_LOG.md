@@ -6,6 +6,16 @@
 
 ---
 
+### 2026-09-08 [BUGFIX] Review Plan v2 — Stages 1-5 Complete
+- **What**: Completed all tasks from `docs/simplesheets-review-plan-v2.md`:
+  - **Stage 1**: Verified formula engine regex robustness (1-3 letter column matcher, cross-sheet prefix protection, INDIRECT/OFFSET/INDEX handlers)
+  - **Stage 2**: Verified CPM scheduling corrections (successor duration in FF/SF, bidirectional schedule contraction, summary rollup closure, blocked/ready consolidation, circular dependency detection)
+  - **Stage 3**: Fixed PDF export grid header overwriting data destruction bug; verified auto-expanding row heights for multiline text
+  - **Stage 4**: Integrated data validation into all cell update paths (paste, external paste, single-cell edit, bulk edit) with red validation error indicator
+  - **Stage 5**: Full verification pass — 4205 tests, lint clean, type-check clean, build success
+- **Files modified**: `src/services/pdfExport.ts`, `src/services/pdfExport.test.ts`, `src/App.tsx`, `src/App.test.tsx`, `src/components/Grid.tsx`, `src/index.css`, `src/types.ts`, `src/utils/dataValidationEngine.ts`, `src/utils/formulaEngine.ts`, `src/utils/formulaEngine.test.ts`, `src/utils/formulaParser.ts`, `src/utils/formulaParser.test.ts`, `src/utils/sheetOperations.ts`, `src/utils/sheetOperations.test.ts`, `src/extensions/project-wbs/rollups.ts`, `src/extensions/project-wbs/rollups.test.ts`
+- **Results**: 4205 tests pass, lint clean, type-check clean, build success.
+
 ### 2026-08-27 [FEATURE] Project/WBS Extension — Normalization & Data Flow Repair
 - **What**: Comprehensive review and normalization of the Project/WBS extension (`src/extensions/project-wbs/`). Identified and fixed **3 bugs**, removed **5 duplications**, and wired **3 missing data flows** between views and sheets. See `docs/PROJECT_WBS_NORMALIZATION_PLAN.md` for the full analysis.
 - **Bug Fixes**:

@@ -24,6 +24,13 @@ This file tracks bugs in **existing** code, functions, and UI elements. New feat
 
 <!-- Bugs resolved in this session or recent past. Newest first. -->
 
+### 2026-09-08: B-032 — PDF export grid header overwrites data (data destruction) ✅ VERIFIED
+- **Symptom**: When exporting to PDF with headers enabled, the first row of data was overwritten with column letters (A, B, C...) and the first column was overwritten with row numbers (1, 2, 3...). This destroyed user data in the exported PDF.
+- **Root cause**: In `buildPrintableHtml` (`src/services/pdfExport.ts`), the header rendering loop overwrote cells where `r === minRow` (replacing data with column letters) and `c === minCol` (replacing data with row numbers). The top-left corner cell was doubly overwritten.
+- **Fix**: Restructured table generation to add a dedicated header row (with empty corner cell + column letters) above the data, and a leading row number cell in each data row. All original data cells are now preserved.
+- **Files**: `src/services/pdfExport.ts`, `src/services/pdfExport.test.ts`
+- **Tests**: +2 new tests: `preserves first row/column data when showHeaders is true`, `does not add header row/column when showHeaders is false`
+
 ### 2026-08-13: B-031 — Active cell position not preserved when switching sheets ✅ VERIFIED
 - **Symptom**: Selecting a cell on Sheet1 (e.g. B17), switching to Sheet2, moving to A3, then switching back to Sheet1 shows A3 as the active cell instead of B17. The active cell position bled across sheets. Additionally, when switching to a sheet whose saved active cell was far from the origin (e.g. B220), the viewport stayed at top-left — the restored cell wasn't visible until the user navigated.
 - **Root cause**: `activeCell` was a single global `useState` in `src/App.tsx` — not tracked per-sheet. On sheet switch, `handleSwitchSheet` called `setActiveCell(null)`. The `Grid` component is not remounted on sheet switch (no `key` prop), so its internal selection state persisted. Grid's sync effect (`Grid.tsx` line ~307) only fires when `selectedCell` is truthy, so a `null` activeCell left the stale selection in place. When the user navigated on Sheet2, the global `activeCell` updated to that position, and switching back left Sheet2's position showing on Sheet1. The virtualizer scroll position was never adjusted on sheet change, so a restored distant cell remained off-screen.

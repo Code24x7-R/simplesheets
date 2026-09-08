@@ -31,6 +31,8 @@ import { ImportExportBridge } from './components/ImportExportBridge';
 import { evaluateWorkbook, evaluateFormulaPreview, buildDependencyGraph } from './utils/formulaEngine';
 import { copyRange, cutRange as clipCutRange, getClipboard, clearClipboard, hasClipboardData, writeClipboardToSystem } from './utils/clipboard';
 import { adjustFormulaRefs, prefixRefsWithSheet } from './utils/formulaParser';
+import { validateCellValue } from './utils/dataValidationEngine';
+import type { CellValidationResult } from './types';
 import { useAutosave } from './hooks/useAutosave';
 import { useCellEditing } from './hooks/useCellEditing';
 import { useCellStyles } from './hooks/useCellStyles';
@@ -303,6 +305,8 @@ function WorkbookView() {
   // Ref to always capture current gridSelection for pushHistory calls
   const gridSelectionRef = useRef<Selection | null>(null);
   gridSelectionRef.current = gridSelection;
+  // Ref to pass validation error count from handleCellChange map callback to status message
+  const validationErrorCountRef = useRef(0);
 
   // Project / WBS extension state
   const [showProjectView, setShowProjectView] = useState(false);
@@ -473,12 +477,34 @@ function WorkbookView() {
         }
         const measuredHeight = Math.max(s.defaultRowHeight, visualLines * 20 + 8);
         const currentHeight = s.rowHeights[row] ?? s.defaultRowHeight;
+
+        // Validate cell against data validation rules
+        const validations = s.dataValidations;
+        const newValidationErrors: Record<string, CellValidationResult> = { ...s.validationErrors };
+        let cellValidationErrorCount = 0;
+        if (validations && validations.length > 0) {
+          const valResult = validateCellValue(validations, value);
+          if (!valResult.isValid) {
+            newValidationErrors[key] = {
+              isValid: false,
+              errorMessage: valResult.errorMessage,
+              errorTitle: valResult.errorTitle,
+              errorStyle: valResult.errorStyle,
+            };
+            cellValidationErrorCount++;
+          } else {
+            delete newValidationErrors[key];
+          }
+        }
+
+        validationErrorCountRef.current = cellValidationErrorCount;
         return {
           ...s,
           cells: { ...s.cells, [key]: newCell },
           rowHeights: measuredHeight > currentHeight
             ? { ...s.rowHeights, [row]: measuredHeight }
             : s.rowHeights,
+          validationErrors: Object.keys(newValidationErrors).length > 0 ? newValidationErrors : undefined,
         };
       });
       const newWorkbook: Workbook = {
@@ -491,7 +517,11 @@ function WorkbookView() {
       };
       const cellRef = `${colToLetter(col)}${row + 1}`;
       pushHistory(newWorkbook, `Edit ${cellRef}`, filterStateRef.current, gridSelectionRef.current);
-      setStatusMessage(`Updated ${cellRef}`);
+      let statusMsg = `Updated ${cellRef}`;
+      if (validationErrorCountRef.current > 0) {
+        statusMsg += ` — ${validationErrorCountRef.current} validation error(s)`;
+      }
+      setStatusMessage(statusMsg);
     },
     [workbook, pushHistory]
   );
@@ -500,6 +530,7 @@ function WorkbookView() {
     (changes: Array<{ row: number; col: number; value: string }>) => {
       if (changes.length === 0) return;
       // Create a new workbook with all updated cells
+      let validationErrorCount = 0;
       const newSheets = workbook.sheets.map((s, idx) => {
         if (idx !== workbook.activeSheetIndex) return s;
         const newCells = { ...s.cells };
@@ -516,9 +547,34 @@ function WorkbookView() {
             };
           }
         }
+        // Validate changed cells against data validation rules
+        const validations = s.dataValidations;
+        const newValidationErrors: Record<string, CellValidationResult> = { ...s.validationErrors };
+        if (validations && validations.length > 0) {
+          for (const change of changes) {
+            const key = cellKey(change.row, change.col);
+            if (change.value === '') {
+              delete newValidationErrors[key];
+            } else {
+              const valResult = validateCellValue(validations, change.value);
+              if (!valResult.isValid) {
+                newValidationErrors[key] = {
+                  isValid: false,
+                  errorMessage: valResult.errorMessage,
+                  errorTitle: valResult.errorTitle,
+                  errorStyle: valResult.errorStyle,
+                };
+                validationErrorCount++;
+              } else {
+                delete newValidationErrors[key];
+              }
+            }
+          }
+        }
         return {
           ...s,
           cells: newCells,
+          validationErrors: Object.keys(newValidationErrors).length > 0 ? newValidationErrors : undefined,
         };
       });
       const newWorkbook: Workbook = {
@@ -528,7 +584,11 @@ function WorkbookView() {
       };
       const cellCount = changes.length;
       pushHistory(newWorkbook, `Updated ${cellCount} cell(s)`, filterStateRef.current, gridSelectionRef.current);
-      setStatusMessage(`Updated ${cellCount} cell(s)`);
+      let statusMsg = `Updated ${cellCount} cell(s)`;
+      if (validationErrorCount > 0) {
+        statusMsg += ` — ${validationErrorCount} validation error(s)`;
+      }
+      setStatusMessage(statusMsg);
     },
     [workbook, pushHistory]
   );
@@ -1634,10 +1694,42 @@ function WorkbookView() {
         setPendingCutRange(null);
       }
 
+      // Validate pasted cells against data validation rules
+      const validations = sheet.dataValidations;
+      let validationErrorCount = 0;
+      const newValidationErrors: Record<string, CellValidationResult> = { ...sheet.validationErrors };
+      if (validations && validations.length > 0) {
+        for (let r = 0; r < destRowCount; r++) {
+          for (let c = 0; c < destColCount; c++) {
+            const destRow = targetRow + r;
+            const destCol = targetCol + c;
+            const destKey = cellKey(destRow, destCol);
+            const destCell = newCells[destKey];
+            if (!destCell) continue;
+            const valResult = validateCellValue(validations, destCell.rawValue);
+            if (!valResult.isValid) {
+              newValidationErrors[destKey] = {
+                isValid: false,
+                errorMessage: valResult.errorMessage,
+                errorTitle: valResult.errorTitle,
+                errorStyle: valResult.errorStyle,
+              };
+              validationErrorCount++;
+            } else {
+              delete newValidationErrors[destKey];
+            }
+          }
+        }
+      }
+
       // Update workbook
       let newSheets = workbook.sheets.map((s, idx) => {
         if (idx !== workbook.activeSheetIndex) return s;
-        return { ...s, cells: newCells };
+        return {
+          ...s,
+          cells: newCells,
+          validationErrors: Object.keys(newValidationErrors).length > 0 ? newValidationErrors : undefined,
+        };
       });
 
       // Cross-sheet paste: carry column widths from source range
@@ -1670,10 +1762,13 @@ function WorkbookView() {
           : isCut ? `Cut ${cellsUpdated} cell(s)` : `Paste ${cellsUpdated} cell(s)`;
       pushHistory(newWorkbook, actionLabel, filterStateRef.current, gridSelectionRef.current);
 
-      // Build status message with skip info (blanks + hidden rows)
+      // Build status message with skip info (blanks + hidden rows) and validation errors
       let statusMsg = `${isCut ? 'Moved' : 'Pasted'} ${cellsUpdated} cell(s)`;
       if (cellsSkipped > 0) {
         statusMsg += ` (${cellsSkipped} skipped — hidden rows / blanks)`;
+      }
+      if (validationErrorCount > 0) {
+        statusMsg += ` — ${validationErrorCount} validation error(s)`;
       }
       setStatusMessage(statusMsg);
       // Clear marching ants after paste
@@ -2497,8 +2592,42 @@ function WorkbookView() {
 
       if (cellsUpdated === 0) return;
 
+      // Validate pasted cells against data validation rules
+      const validations = sheet.dataValidations;
+      let validationErrorCount = 0;
+      const newValidationErrors: Record<string, CellValidationResult> = { ...sheet.validationErrors };
+      if (validations && validations.length > 0) {
+        for (let r = 0; r < rowsToPaste; r++) {
+          for (let c = 0; c < colsToPaste; c++) {
+            const destRow = targetRow + r;
+            const destCol = targetCol + c;
+            const destKey = cellKey(destRow, destCol);
+            const destCell = newCells[destKey];
+            if (!destCell) continue;
+            const valResult = validateCellValue(validations, destCell.rawValue);
+            if (!valResult.isValid) {
+              newValidationErrors[destKey] = {
+                isValid: false,
+                errorMessage: valResult.errorMessage,
+                errorTitle: valResult.errorTitle,
+                errorStyle: valResult.errorStyle,
+              };
+              validationErrorCount++;
+            } else {
+              delete newValidationErrors[destKey];
+            }
+          }
+        }
+      }
+
       const newSheets = workbook.sheets.map((s, idx) =>
-        idx === workbook.activeSheetIndex ? { ...s, cells: newCells } : s
+        idx === workbook.activeSheetIndex
+          ? {
+              ...s,
+              cells: newCells,
+              validationErrors: Object.keys(newValidationErrors).length > 0 ? newValidationErrors : undefined,
+            }
+          : s
       );
       const newWb: Workbook = {
         ...workbook,
@@ -2514,6 +2643,9 @@ function WorkbookView() {
         if (rowsClipped > 0) parts.push(`${rowsClipped} row(s) clipped`);
         if (colsClipped > 0) parts.push(`${colsClipped} col(s) clipped`);
         statusMsg += ` (${parts.join(', ')} — sheet boundary)`;
+      }
+      if (validationErrorCount > 0) {
+        statusMsg += ` — ${validationErrorCount} validation error(s)`;
       }
       setStatusMessage(statusMsg);
 

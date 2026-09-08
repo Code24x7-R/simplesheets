@@ -223,6 +223,12 @@ function recomputeTaskRollup(task: WBSTask, risks: Risk[]): WBSTask {
     const progress = rollUpProgress(updatedChildren);
     const duration = calculateDuration(start, end, createDefaultCalendar());
 
+    // Sum children's already-rolled-up costs/effort directly.
+    // Using rollUpCost(task) here would double-count because children's
+    // costs already include their own descendants (stale closure bug).
+    const cost = updatedChildren.reduce((sum, child) => sum + child.cost, task.cost);
+    const effort = updatedChildren.reduce((sum, child) => sum + child.effort, task.effort);
+
     return {
       ...task,
       children: updatedChildren,
@@ -230,8 +236,8 @@ function recomputeTaskRollup(task: WBSTask, risks: Risk[]): WBSTask {
       endDate: end,
       duration: duration || task.duration,
       progress,
-      cost: rollUpCost(task),
-      effort: rollUpEffort(task),
+      cost,
+      effort,
     };
   }
 

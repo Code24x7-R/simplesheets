@@ -4,6 +4,13 @@
 
 ---
 
+## 2026-09-08 — Review Plan v2: Stages 1-5 Complete
+- **Stage 1**: Verified formula engine regex robustness (1-3 letter column matcher, cross-sheet prefix protection, INDIRECT/OFFSET/INDEX handlers)
+- **Stage 2**: Verified CPM scheduling corrections (successor duration in FF/SF, bidirectional schedule contraction, summary rollup closure, blocked/ready consolidation, circular dependency detection)
+- **Stage 3**: Fixed PDF export grid header overwriting data destruction bug; verified auto-expanding row heights for multiline text
+- **Stage 4**: Integrated data validation into all cell update paths (paste, external paste, single-cell edit, bulk edit) with red validation error indicator
+- **Stage 5**: Full verification pass — 4205 tests, lint clean, type-check clean, build success
+
 ## 2026-08-15 — Phase 38: Normalized Schema & Complete Sync
 - Added `ResourceRow` type and `resources[]` to `ProjectModel`
 - Added conversion functions: `resourceToRow`, `rowToResource`, `riskToRow`, `rowToRisk`

@@ -310,6 +310,45 @@ describe('rollups', () => {
       recomputeRollups(tree, risks);
       expect(tree[0].progress).toBe(0);
     });
+
+    it('rolls up nested grandchild costs to root summary (stale closure fix)', () => {
+      // Root → Mid (summary) → Leaf tasks
+      // Verifies that recomputeRollups uses updated children (not stale ones)
+      // when computing cost/effort roll-ups on parent summary tasks.
+      const tree = [
+        task({
+          id: 'root',
+          isSummary: true,
+          cost: 0,
+          effort: 0,
+          children: [
+            task({
+              id: 'mid',
+              isSummary: true,
+              cost: 0,
+              effort: 0,
+              children: [
+                task({ id: 'leaf1', cost: 100, effort: 10, duration: 2 }),
+                task({ id: 'leaf2', cost: 200, effort: 20, duration: 3 }),
+              ],
+            }),
+            task({ id: 'leaf3', cost: 50, effort: 5, duration: 1 }),
+          ],
+        }),
+      ];
+      const result = recomputeRollups(tree, risks);
+      const root = result[0];
+      const mid = root.children[0];
+
+      // Mid should roll up leaf1 + leaf2
+      expect(mid.cost).toBe(300); // 100 + 200
+      expect(mid.effort).toBe(30); // 10 + 20
+
+      // Root should roll up mid (300) + leaf3 (50) = 350
+      // Before the fix, this would return 0 (stale closure used original children)
+      expect(root.cost).toBe(350); // 300 (mid) + 50 (leaf3)
+      expect(root.effort).toBe(35); // 30 (mid) + 5 (leaf3)
+    });
   });
 
   describe('getProjectSummary', () => {
