@@ -898,7 +898,7 @@ describe('Grid Component', () => {
 
     // Click cell B1 (0:1)
     fireEvent.mouseDown(screen.getByText('B1'));
-    expect(onCellPick).toHaveBeenCalledWith(0, 1, false);
+    expect(onCellPick).toHaveBeenCalledWith(0, 1, false, undefined);
   });
 
   // ─── Copy / Cut / Paste Keyboard ──────────────────────────────────

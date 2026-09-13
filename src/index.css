@@ -33,6 +33,18 @@
     @apply bg-grid-frozen;
   }
 
+  /* Prevent text selection while drag-selecting a range */
+  .grid-drag-selecting {
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  /* Re-selectable text inside the cell editor input/textarea */
+  .grid-drag-selecting input,
+  .grid-drag-selecting textarea {
+    user-select: text;
+    -webkit-user-select: text;
+  }
+
   .number-as-text-indicator {
     position: absolute;
     top: 0;

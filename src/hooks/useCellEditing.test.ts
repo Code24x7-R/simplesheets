@@ -249,6 +249,8 @@ function createHook(options: Partial<Parameters<typeof useCellEditing>[0]> = {})
     cellValue: 'Hello',
     rowCount: 100,
     colCount: 26,
+    activeSheetIndex: 0,
+    sheetNames: ['Sheet1', 'Sheet2'],
     onCommit: jest.fn(),
     onNavigate: jest.fn(),
   };
@@ -1289,6 +1291,138 @@ describe('useCellEditing - direct actions', () => {
     });
     expect(result.current.pointSession?.currentRow).toBe(7);
     expect(result.current.pointSession?.currentCol).toBe(3);
+  });
+
+  it('handleCellClick without shift moves both anchor and current (single-cell ref)', () => {
+    const { result } = createHook();
+    // Enter POINT mode
+    act(() => { result.current.handleKey('=', false, false); });
+    act(() => { result.current.handleKey('S', false, false); });
+    act(() => { result.current.handleKey('U', false, false); });
+    act(() => { result.current.handleKey('M', false, false); });
+    act(() => { result.current.handleKey('(', false, false); });
+    // Click a cell without shift — anchor should move to clicked cell
+    act(() => { result.current.handleCellClick(7, 3, false); });
+    expect(result.current.pointSession?.anchorRow).toBe(7);
+    expect(result.current.pointSession?.anchorCol).toBe(3);
+    expect(result.current.pointSession?.currentRow).toBe(7);
+    expect(result.current.pointSession?.currentCol).toBe(3);
+  });
+
+  it('handleCellClick with shift extends range from anchor to clicked cell', () => {
+    const { result } = createHook();
+    // Enter POINT mode
+    act(() => { result.current.handleKey('=', false, false); });
+    act(() => { result.current.handleKey('S', false, false); });
+    act(() => { result.current.handleKey('U', false, false); });
+    act(() => { result.current.handleKey('M', false, false); });
+    act(() => { result.current.handleKey('(', false, false); });
+    // First click sets anchor = current = (7, 3)
+    act(() => { result.current.handleCellClick(7, 3, false); });
+    // Second click with shift extends current to (5, 1), anchor stays at (7, 3)
+    act(() => { result.current.handleCellClick(5, 1, true); });
+    expect(result.current.pointSession?.anchorRow).toBe(7);
+    expect(result.current.pointSession?.anchorCol).toBe(3);
+    expect(result.current.pointSession?.currentRow).toBe(5);
+    expect(result.current.pointSession?.currentCol).toBe(1);
+  });
+
+  it('handleCellClick replaces previous reference on subsequent clicks (no duplication)', () => {
+    const { result } = createHook();
+    // Enter POINT mode: =SUM(
+    act(() => { result.current.handleKey('=', false, false); });
+    act(() => { result.current.handleKey('S', false, false); });
+    act(() => { result.current.handleKey('U', false, false); });
+    act(() => { result.current.handleKey('M', false, false); });
+    act(() => { result.current.handleKey('(', false, false); });
+    // First click selects D4 (row 3, col 3) -> buffer = "=SUM(D4"
+    act(() => { result.current.handleCellClick(3, 3, false); });
+    expect(result.current.session.buffer).toBe('=SUM(D4');
+    expect(result.current.session.caretPos).toBe(7);
+    // Shift+click extends to B2 (row 1, col 1) -> buffer = "=SUM(B2:D4" (replaces D4, not duplicates)
+    act(() => { result.current.handleCellClick(1, 1, true); });
+    expect(result.current.session.buffer).toBe('=SUM(B2:D4');
+    expect(result.current.session.caretPos).toBe(10);
+    // Another click without shift selects F6 (row 5, col 5) -> buffer = "=SUM(F6"
+    act(() => { result.current.handleCellClick(5, 5, false); });
+    expect(result.current.session.buffer).toBe('=SUM(F6');
+    expect(result.current.session.caretPos).toBe(7);
+  });
+
+  it('startEditAt preserves buffer when in POINT mode (shift key refocus scenario)', () => {
+    const { result } = createHook();
+    // Enter POINT mode: =SUM(
+    act(() => { result.current.handleKey('=', false, false); });
+    act(() => { result.current.handleKey('S', false, false); });
+    act(() => { result.current.handleKey('U', false, false); });
+    act(() => { result.current.handleKey('M', false, false); });
+    act(() => { result.current.handleKey('(', false, false); });
+    expect(result.current.session.state).toBe('POINT');
+    expect(result.current.session.buffer).toBe('=SUM(');
+    // Simulate: user presses shift while grid has focus, grid forwards key
+    // and calls onRefocusEditor which triggers startEditAt
+    act(() => { result.current.startEditAt(5); });
+    // Buffer should be preserved (not cleared to cellValue)
+    expect(result.current.session.buffer).toBe('=SUM(');
+    expect(result.current.session.state).toBe('EDIT');
+    // Point session should be cleared
+    expect(result.current.pointSession).toBeNull();
+  });
+});
+
+describe('useCellEditing - POINT mode cross-sheet references', () => {
+  it('formats reference without sheet prefix when on same sheet', () => {
+    const { result } = createHook({ cellValue: '', sheetNames: ['Sheet1', 'Sheet2'], activeSheetIndex: 0 });
+    // Enter POINT mode: =SUM(
+    act(() => { result.current.handleKey('=', false, false); });
+    act(() => { result.current.handleKey('S', false, false); });
+    act(() => { result.current.handleKey('U', false, false); });
+    act(() => { result.current.handleKey('M', false, false); });
+    act(() => { result.current.handleKey('(', false, false); });
+    // Click cell on same sheet (index 0)
+    act(() => { result.current.handleCellClick(0, 0, false, 0); });
+    expect(result.current.session.buffer).toBe('=SUM(A1');
+  });
+
+  it('formats reference with sheet prefix when on different sheet', () => {
+    const { result } = createHook({ cellValue: '', sheetNames: ['Sheet1', 'Sheet2'], activeSheetIndex: 0 });
+    // Enter POINT mode: =SUM(
+    act(() => { result.current.handleKey('=', false, false); });
+    act(() => { result.current.handleKey('S', false, false); });
+    act(() => { result.current.handleKey('U', false, false); });
+    act(() => { result.current.handleKey('M', false, false); });
+    act(() => { result.current.handleKey('(', false, false); });
+    // Click cell on different sheet (index 1 = Sheet2)
+    act(() => { result.current.handleCellClick(0, 0, false, 1); });
+    expect(result.current.session.buffer).toBe('=SUM(Sheet2!A1');
+  });
+
+  it('formats range with sheet prefix when on different sheet', () => {
+    const { result } = createHook({ cellValue: '', sheetNames: ['Sheet1', 'Sheet2'], activeSheetIndex: 0 });
+    // Enter POINT mode: =SUM(
+    act(() => { result.current.handleKey('=', false, false); });
+    act(() => { result.current.handleKey('S', false, false); });
+    act(() => { result.current.handleKey('U', false, false); });
+    act(() => { result.current.handleKey('M', false, false); });
+    act(() => { result.current.handleKey('(', false, false); });
+    // First click on Sheet2 sets anchor
+    act(() => { result.current.handleCellClick(0, 0, false, 1); });
+    // Second click with shift on Sheet2 extends range
+    act(() => { result.current.handleCellClick(1, 1, true, 1); });
+    expect(result.current.session.buffer).toBe('=SUM(Sheet2!A1:B2');
+  });
+
+  it('quotes sheet name with spaces', () => {
+    const { result } = createHook({ cellValue: '', sheetNames: ['My Sheet', 'Other Sheet'], activeSheetIndex: 0 });
+    // Enter POINT mode: =SUM(
+    act(() => { result.current.handleKey('=', false, false); });
+    act(() => { result.current.handleKey('S', false, false); });
+    act(() => { result.current.handleKey('U', false, false); });
+    act(() => { result.current.handleKey('M', false, false); });
+    act(() => { result.current.handleKey('(', false, false); });
+    // Click cell on sheet with spaces in name
+    act(() => { result.current.handleCellClick(0, 0, false, 1); });
+    expect(result.current.session.buffer).toBe("=SUM('Other Sheet'!A1");
   });
 });
 

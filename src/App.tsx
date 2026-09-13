@@ -381,6 +381,8 @@ function WorkbookView() {
       : '',
     rowCount: sheet.rowCount,
     colCount: sheet.columnCount,
+    activeSheetIndex: workbook.activeSheetIndex,
+    sheetNames: workbook.sheets.map((s) => s.name),
     onCommit: (row, col, value, batch) => {
       if (batch && selection && (selection.startRow !== selection.endRow || selection.startCol !== selection.endCol)) {
         // Batch entry: apply value to all cells in selection
@@ -826,8 +828,8 @@ function WorkbookView() {
 
   // Cell pick during POINT mode - FSM handles it
   const handleFormulaCellPick = useCallback(
-    (row: number, col: number, shiftKey: boolean) => {
-      handleEditingCellClick(row, col, shiftKey);
+    (row: number, col: number, shiftKey: boolean, sheetIndex?: number) => {
+      handleEditingCellClick(row, col, shiftKey, sheetIndex);
     },
     [handleEditingCellClick],
   );
@@ -3156,6 +3158,7 @@ function WorkbookView() {
           onSelect={handleCellSelect}
           selectedCell={activeCell}
           highlightedRanges={highlightedRanges}
+          sheetIndex={workbook.activeSheetIndex}
           isPointMode={isPointMode}
           pointSelection={pointSelection}
           onCellPick={handleFormulaCellPick}
@@ -3179,6 +3182,7 @@ function WorkbookView() {
           onStartEdit={handleGridStartEdit}
           onRawKeyDown={handleRawKeyDown}
           onRawChange={handleRawChange}
+          onRefocusEditor={() => formulaBarRef.current?.focusInput()}
           onFillSeries={handleFillSeries}
           filterState={filterState}
           onApplyFilter={handleApplyFilter}

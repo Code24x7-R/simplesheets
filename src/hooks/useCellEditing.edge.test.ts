@@ -11,6 +11,8 @@ function createHook(options: Partial<Parameters<typeof useCellEditing>[0]> = {})
     cellValue: 'Hello World',
     rowCount: 100,
     colCount: 26,
+    activeSheetIndex: 0,
+    sheetNames: ['Sheet1', 'Sheet2'],
     onCommit: jest.fn(),
     onNavigate: jest.fn(),
   };

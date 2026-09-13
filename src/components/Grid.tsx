@@ -54,8 +54,10 @@ interface GridProps {
   isPointMode?: boolean;
   /** Current point mode selection for visual feedback. */
   pointSelection?: PointModeSelection | null;
+  /** The index of the sheet this grid is rendering. */
+  sheetIndex?: number;
   /** Callback when a cell is picked during point mode. */
-  onCellPick?: (row: number, col: number, shiftKey: boolean) => void;
+  onCellPick?: (row: number, col: number, shiftKey: boolean, sheetIndex?: number) => void;
   /** Callback when a row or column header is clicked. */
   onHeaderSelect?: (selection: HeaderSelection) => void;
   /** Callback when a column is resized (index, newWidth). */
@@ -101,6 +103,10 @@ interface GridProps {
   onRawKeyDown?: (e: React.KeyboardEvent) => void;
   /** Forward a raw change event to the FSM (value + caret position). */
   onRawChange?: (value: string, caretPos: number) => void;
+  /** Request that the external editor (formula bar) regain focus. Called when
+   * the grid forwards a key to the FSM during editing (e.g., after the user
+   * clicked a grid cell during POINT mode, stealing focus from the formula bar). */
+  onRefocusEditor?: () => void;
   /** Callback when the fill handle is dragged.
    * Provides the source range (the selection being extended) and the target end cell.
    * The parent computes the fill values based on pattern detection. */
@@ -158,7 +164,7 @@ export interface GridHandle {
  * Supports 10,000+ rows with smooth scrolling.
  */
 export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
-  { sheet, onCellChange, onCellsChange, onSelect, selectedCell, highlightedRanges = [], isPointMode = false, pointSelection = null, onCellPick, onHeaderSelect, onSelectionChange, onColumnResize, onRowResize, referenceFormat = 'A1', onInsertRowAbove, onInsertRowBelow, onDeleteRow, onInsertColLeft, onInsertColRight, onDeleteCol, clipboardRange, onClearClipboard, showFormulas = false, conditionalFormats = [], session, onStartEnter, onStartEdit, onRawKeyDown, onRawChange, onFillSeries, onMoveRange, filterState = null, onApplyFilter, autoComplete, onAcceptAutoComplete, onNavigateAutoComplete, onDismissAutoComplete, wizardPointMode = false, onWizardPointSelection },
+  { sheet, sheetIndex, onCellChange, onCellsChange, onSelect, selectedCell, highlightedRanges = [], isPointMode = false, pointSelection = null, onCellPick, onHeaderSelect, onSelectionChange, onColumnResize, onRowResize, referenceFormat = 'A1', onInsertRowAbove, onInsertRowBelow, onDeleteRow, onInsertColLeft, onInsertColRight, onDeleteCol, clipboardRange, onClearClipboard, showFormulas = false, conditionalFormats = [], session, onStartEnter, onStartEdit, onRawKeyDown, onRawChange, onRefocusEditor, onFillSeries, onMoveRange, filterState = null, onApplyFilter, autoComplete, onAcceptAutoComplete, onNavigateAutoComplete, onDismissAutoComplete, wizardPointMode = false, onWizardPointSelection },
   ref
 ) {
   const parentRef = useRef<HTMLDivElement>(null);
@@ -276,6 +282,17 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
 
     return { style, dataBar: result.dataBar, icon: result.icon };
   }
+
+  // ─── Drag-select state ────────────────────────────────────────────
+  // Tracks click-and-drag range selection. When the user presses mouse down
+  // on a cell and drags to another cell, the selection spans from the anchor
+  // to the current hover cell. Uses a ref (not state) to avoid re-renders on
+  // every mousemove; we force a re-render via forceDragSelectRender.
+  const dragSelectRef = useRef<{ anchorRow: number; anchorCol: number } | null>(null);
+  const [, forceDragSelectRender] = useState(0);
+  // Suppresses text-selection CSS while drag-selecting so the browser doesn't
+  // highlight cell contents during the drag.
+  const [isDragSelecting, setIsDragSelecting] = useState(false);
 
   // ─── Drag-move state ───────────────────────────────────────────────
   // Tracks when the user is dragging a range to move it (drag handle on selection border).
@@ -872,14 +889,17 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [headerContextMenu]);
 
-  /**
-   * Handles range selection with shift-click.
+ /**
+   * Handles range selection with shift-click and initiates click-and-drag
+   * range selection. When the user presses the mouse button on a cell and
+   * drags to another cell, the selection spans from the anchor to the
+   * hovered cell.
    */
   const handleCellMouseDown = useCallback(
     (row: number, col: number, shiftKey: boolean) => {
       // In point mode, clicking a cell picks it for the formula
       if (isPointMode && onCellPick) {
-        onCellPick(row, col, shiftKey);
+        onCellPick(row, col, shiftKey, sheetIndex);
         return;
       }
 
@@ -922,11 +942,57 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
           endCol: col,
         });
       } else {
+        // Start drag-select: record the anchor cell and set initial selection.
+        // The selection will be extended on mouseEnter and finalized on mouseUp.
+        dragSelectRef.current = { anchorRow: row, anchorCol: col };
+        setIsDragSelecting(true);
         handleCellSelect(row, col);
       }
     },
-    [selection, handleCellSelect, columnCount, rowCount, onSelect, isPointMode, onCellPick]
+    [selection, handleCellSelect, columnCount, rowCount, onSelect, isPointMode, onCellPick, sheetIndex]
   );
+
+  /**
+   * Handles mouse entering a cell during drag-select. Extends the selection
+   * from the anchor cell to the hovered cell.
+   */
+  const handleCellMouseEnter = useCallback(
+    (row: number, col: number) => {
+      const anchor = dragSelectRef.current;
+      if (!anchor) return;
+      // Don't react to mouseEnter on the anchor cell itself (already selected)
+      if (row === anchor.anchorRow && col === anchor.anchorCol) return;
+      setSelection({
+        type: 'cell',
+        startRow: Math.min(anchor.anchorRow, row),
+        startCol: Math.min(anchor.anchorCol, col),
+        endRow: Math.max(anchor.anchorRow, row),
+        endCol: Math.max(anchor.anchorCol, col),
+        anchorRow: anchor.anchorRow,
+        anchorCol: anchor.anchorCol,
+      });
+      forceDragSelectRender((n) => n + 1);
+    },
+    []
+  );
+
+  /**
+   * Finalizes drag-select when the mouse button is released. Cleans up the
+   * drag state and removes the global listener.
+   */
+  const handleDragSelectEnd = useCallback(() => {
+    dragSelectRef.current = null;
+    setIsDragSelecting(false);
+  }, []);
+
+  // ─── Global mouseup listener for drag-select ──────────────────────
+  // When drag-select is active, listen for mouseup on the window so the
+  // selection is finalized even if the cursor leaves the grid.
+  useEffect(() => {
+    if (!isDragSelecting) return;
+    window.addEventListener('mouseup', handleDragSelectEnd);
+    return () => window.removeEventListener('mouseup', handleDragSelectEnd);
+  }, [isDragSelecting, handleDragSelectEnd]);
 
   /**
    * Checks if a cell is within the current selection.
@@ -1337,8 +1403,27 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
    */
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
-      // If the FSM is handling editing (ENTER/EDIT/POINT), let the cell input handle keys
-      if (isEditing) return;
+      // If the FSM is handling editing (ENTER/EDIT/POINT), let the cell input handle keys.
+      // However, if the grid itself has focus (e.g., user clicked a cell during POINT
+      // mode while editing in the formula bar), forward the key to the FSM so that
+      // keys like ')' can commit the reference. Without this, clicking a grid cell
+      // during POINT mode steals focus from the formula bar and swallows all keys.
+      if (isEditing) {
+        const target = e.target as HTMLElement;
+        const isCellInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA';
+        if (!isCellInput && onRawKeyDown) {
+          onRawKeyDown(e);
+          // Regain focus in the external editor (formula bar) so the user
+          // can continue typing after the grid forwarded the key.
+          // Skip refocus for modifier-only keys (Shift, Ctrl, Alt, Meta)
+          // so that shift+click range selection in POINT mode works without
+          // the formula bar stealing focus.
+          if (!['Shift', 'Control', 'Alt', 'Meta'].includes(e.key)) {
+            onRefocusEditor?.();
+          }
+        }
+        return;
+      }
 
       // Ctrl+ shortcuts handled by global listeners in App.tsx (works regardless of focus).
       // Skip them here to avoid double-firing (e.g., Ctrl+B toggling bold AND typing 'b').
@@ -1707,7 +1792,7 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
   return (
     <div
       ref={parentRef}
-      className="relative overflow-auto h-full w-full outline-none"
+      className={`relative overflow-auto h-full w-full outline-none${isDragSelecting ? ' grid-drag-selecting' : ''}`}
       tabIndex={0}
       onKeyDown={handleKeyDown}
     >
@@ -1976,6 +2061,7 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
                       className={`grid-cell ${cellFrozen ? 'grid-cell-frozen' : 'absolute'} ${isSelected ? 'grid-cell-selected' : ''}`}
                       style={cellStyle}
                       onMouseDown={(e) => handleCellMouseDown(row, col, e.shiftKey)}
+                      onMouseEnter={() => handleCellMouseEnter(row, col)}
                       onDoubleClick={() => onStartEdit?.(row, col)}
                     >
                       {cellEditing ? (
@@ -2338,6 +2424,7 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
                   className={`grid-cell ${cellFrozen ? 'grid-cell-frozen' : 'absolute'} ${isSelected ? 'grid-cell-selected' : ''}${cellClipClass}`}
                   style={cellStyle}
                   onMouseDown={(e) => handleCellMouseDown(row, col, e.shiftKey)}
+                  onMouseEnter={() => handleCellMouseEnter(row, col)}
                   onDoubleClick={() => onStartEdit?.(row, col)}
                 >
                   {cellEditing ? (
@@ -2415,7 +2502,7 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
           onResize={(newSelection) => {
             // Update the point session via the parent callback
             if (onCellPick) {
-              onCellPick(newSelection.endRow, newSelection.endCol, false);
+              onCellPick(newSelection.endRow, newSelection.endCol, false, sheetIndex);
             }
           }}
         />

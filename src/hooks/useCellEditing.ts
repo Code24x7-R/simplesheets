@@ -85,6 +85,12 @@ export interface PointSession {
   insertPos: number;
   /** The character that triggered POINT mode. */
   triggerChar: string;
+  /** Index of the sheet where the formula is being constructed. */
+  sourceSheetIndex: number;
+  /** Index of the sheet where the anchor cell is located. */
+  anchorSheetIndex: number;
+  /** Index of the sheet where the current cell is located. */
+  currentSheetIndex: number;
 }
 
 /** Result of a key handling operation. */
@@ -351,6 +357,10 @@ interface UseCellEditingOptions {
   rowCount: number;
   /** Total column count (for bounds checking). */
   colCount: number;
+  /** Index of the currently active sheet (for cross-sheet references). */
+  activeSheetIndex: number;
+  /** Names of all sheets in the workbook (for cross-sheet reference formatting). */
+  sheetNames: string[];
   /** Callback when a cell value is committed. */
   onCommit: (row: number, col: number, value: string, batch?: boolean) => void;
   /** Callback when navigation occurs (returns whether it was handled). */
@@ -364,8 +374,9 @@ interface UseCellEditingReturn {
   pointSession: PointSession | null;
   /** Handle a keyboard event — returns navigation delta if any. */
   handleKey: (key: string, shiftKey: boolean, ctrlKey: boolean, altKey?: boolean) => KeyHandlingResult;
-  /** Handle a cell click (for POINT mode). */
-  handleCellClick: (row: number, col: number, shiftKey: boolean) => KeyHandlingResult;
+  /** Handle a cell click (for POINT mode).
+   * @param sheetIndex - Index of the sheet where the cell was clicked (for cross-sheet references). */
+  handleCellClick: (row: number, col: number, shiftKey: boolean, sheetIndex?: number) => KeyHandlingResult;
   /** Start editing a cell (ENTER mode — replaces content).
    * @param row - Optional row override (uses activeRow if not provided).
    * @param col - Optional column override (uses activeCol if not provided). */
@@ -423,6 +434,8 @@ export function useCellEditing({
   cellValue,
   rowCount,
   colCount,
+  activeSheetIndex,
+  sheetNames,
   onCommit,
   onNavigate,
 }: UseCellEditingOptions): UseCellEditingReturn {
@@ -537,7 +550,7 @@ export function useCellEditing({
     // If already editing (ENTER/EDIT/POINT), preserve the existing buffer
     // to avoid discarding typed content when clicking from grid to formula bar
     const currentSession = sessionRef.current;
-    const alreadyEditing = currentSession.state === 'ENTER' || currentSession.state === 'EDIT';
+    const alreadyEditing = currentSession.state === 'ENTER' || currentSession.state === 'EDIT' || currentSession.state === 'POINT';
     const buffer = alreadyEditing ? currentSession.buffer : cellValue;
     const clampedCaret = Math.max(0, Math.min(buffer.length, caretPosition));
     setSession({
@@ -624,10 +637,13 @@ export function useCellEditing({
       currentCol: s.col,
       insertPos: pos,
       triggerChar: lastChar,
+      sourceSheetIndex: activeSheetIndex,
+      anchorSheetIndex: activeSheetIndex,
+      currentSheetIndex: activeSheetIndex,
     });
 
     setSession((prev) => ({ ...prev, state: 'POINT' }));
-  }, [setPointSession]);
+  }, [setPointSession, activeSheetIndex]);
 
   // ─── Set Buffer ────────────────────────────────────────────────────────
   const setBuffer = useCallback((buffer: string, caretPos: number) => {
@@ -1242,7 +1258,7 @@ export function useCellEditing({
           // No existing reference in buffer — insert one from the point session
           const ps = pointRef.current;
           if (ps) {
-            const refStr = formatPointRef(ps);
+            const refStr = formatPointRef(ps, sheetNames);
             const cycled = cycleReference(refStr);
             const newBuffer = insertRefAt(s.buffer, ps.insertPos, cycled, s.caretPos);
             setSession((prev) => ({ ...prev, buffer: newBuffer, caretPos: ps.insertPos + cycled.length }));
@@ -1301,7 +1317,7 @@ export function useCellEditing({
             setPointSession(newPs);
             result.pointSession = newPs;
 
-            const refStr = formatPointRef(newPs);
+            const refStr = formatPointRef(newPs, sheetNames);
             const beforeRef = s.buffer.slice(0, ps.insertPos);
             const afterRef = s.buffer.slice(s.caretPos);
             const newBuffer = beforeRef + refStr + afterRef;
@@ -1330,7 +1346,7 @@ export function useCellEditing({
       if (key === ')') {
         const ps = pointRef.current;
         if (ps) {
-          const refStr = formatPointRef(ps);
+          const refStr = formatPointRef(ps, sheetNames);
           const beforeRef = s.buffer.slice(0, ps.insertPos);
           const newBuffer = beforeRef + refStr + ')';
           const newCaret = newBuffer.length;
@@ -1368,7 +1384,7 @@ export function useCellEditing({
         // =SUM(A1, B1, C1) and =A1+B1*C1.
         const ps = pointRef.current;
         if (ps) {
-          const refStr = formatPointRef(ps);
+          const refStr = formatPointRef(ps, sheetNames);
           const beforeRef = s.buffer.slice(0, ps.insertPos);
           // Replace from insertPos onward with the committed ref + operator
           const newBuffer = beforeRef + refStr + key;
@@ -1377,6 +1393,7 @@ export function useCellEditing({
           if (POINT_CONTINUATION_CHARS.has(key)) {
             // Re-enter POINT mode for the next parameter/reference
             setSession((prev) => ({ ...prev, state: 'POINT', buffer: newBuffer, caretPos: newCaret }));
+            const ps = pointRef.current;
             const newPointSession: PointSession = {
               isActive: true,
               anchorRow: s.row,
@@ -1385,6 +1402,9 @@ export function useCellEditing({
               currentCol: s.col,
               insertPos: newCaret,
               triggerChar: key,
+              sourceSheetIndex: ps?.sourceSheetIndex ?? activeSheetIndex,
+              anchorSheetIndex: activeSheetIndex,
+              currentSheetIndex: activeSheetIndex,
             };
             setPointSession(newPointSession);
             result.session = { ...s, state: 'POINT', buffer: newBuffer, caretPos: newCaret };
@@ -1406,7 +1426,7 @@ export function useCellEditing({
         // Commit reference AND commit cell value
         const ps = pointRef.current;
         if (ps) {
-          const refStr = formatPointRef(ps);
+          const refStr = formatPointRef(ps, sheetNames);
           const newBuffer = s.buffer.slice(0, ps.insertPos) + refStr;
           // Determine direction: Enter=down, Shift+Enter=up, Tab=right, Shift+Tab=left
           let direction: { dRow: number; dCol: number };
@@ -1451,11 +1471,11 @@ export function useCellEditing({
 
     /* istanbul ignore next - defensive return for unknown state */
     return result;
-  }, [cellValue, rowCount, colCount, onCommit, onNavigate, startEnter, startEdit, commit, cancel, enterPointMode, setPointSession]);
+  }, [cellValue, rowCount, colCount, onCommit, onNavigate, startEnter, startEdit, commit, cancel, enterPointMode, setPointSession, sheetNames, activeSheetIndex]);
 
   // ─── Cell Click Handler (for POINT mode) ──────────────────────────────
 
-  const handleCellClick = useCallback((row: number, col: number, shiftKey: boolean): KeyHandlingResult => {
+  const handleCellClick = useCallback((row: number, col: number, shiftKey: boolean, sheetIndex?: number): KeyHandlingResult => {
     const s = sessionRef.current;
     const result: KeyHandlingResult = {
       session: s,
@@ -1468,18 +1488,27 @@ export function useCellEditing({
     if (s.state === 'POINT') {
       const ps = pointRef.current;
       if (ps) {
-        // Update the pointed-to cell
-        const newCurrentRow = shiftKey ? ps.currentRow : row;
-        const newCurrentCol = shiftKey ? ps.currentCol : col;
-        const newPs = { ...ps, currentRow: newCurrentRow, currentCol: newCurrentCol };
+        // Determine the sheet index for this click. If not provided, assume
+        // the source sheet (same sheet as the formula being constructed).
+        const clickSheet = sheetIndex ?? ps.sourceSheetIndex;
+
+        // Match arrow key behavior: without shift, move both anchor and current
+        // to the clicked cell (single-cell selection); with shift, extend the
+        // range from the anchor to the clicked cell.
+        const newRow = Math.max(0, Math.min(rowCount - 1, row));
+        const newCol = Math.max(0, Math.min(colCount - 1, col));
+        const newPs = shiftKey
+          ? { ...ps, currentRow: newRow, currentCol: newCol, currentSheetIndex: clickSheet }
+          : { ...ps, anchorRow: newRow, anchorCol: newCol, currentRow: newRow, currentCol: newCol, anchorSheetIndex: clickSheet, currentSheetIndex: clickSheet };
         setPointSession(newPs);
         result.pointSession = newPs;
 
-        // Insert the reference into the buffer at the insert position
-        const refStr = formatPointRef(newPs);
+        // Insert the reference into the buffer at the insert position.
+        // Use caretPos (not insertPos) as the end boundary so the previous
+        // reference is replaced rather than appended to.
+        const refStr = formatPointRef(newPs, sheetNames);
         const beforeRef = s.buffer.slice(0, ps.insertPos);
-        const afterRef = s.buffer.slice(ps.insertPos);
-        // Don't duplicate if the reference is already there
+        const afterRef = s.buffer.slice(s.caretPos);
         const newBuffer = beforeRef + refStr + afterRef;
         const newCaret = ps.insertPos + refStr.length;
 
@@ -1488,12 +1517,13 @@ export function useCellEditing({
           buffer: newBuffer,
           caretPos: newCaret,
         }));
+        sessionRef.current = { ...s, buffer: newBuffer, caretPos: newCaret };
         result.session = { ...s, buffer: newBuffer, caretPos: newCaret };
       }
     }
 
     return result;
-  }, [setPointSession]);
+  }, [setPointSession, rowCount, colCount, sheetNames]);
 
   return {
     session,
@@ -1576,15 +1606,31 @@ function getNavigationDelta(key: string, _shiftKey: boolean): { dRow: number; dC
   }
 }
 
-function formatPointRef(ps: PointSession): string {
-  if (ps.anchorRow === ps.currentRow && ps.anchorCol === ps.currentCol) {
-    return `${colToLetter(ps.anchorCol)}${ps.anchorRow + 1}`;
+function formatPointRef(ps: PointSession, sheetNames: string[]): string {
+  const srcName = sheetNames[ps.sourceSheetIndex];
+  const anchorName = sheetNames[ps.anchorSheetIndex];
+  const currentName = sheetNames[ps.currentSheetIndex];
+
+  // Determine if we need sheet prefixes. If anchor and current are on the
+  // same sheet AND that sheet matches the source sheet, no prefix needed.
+  const singleCell = ps.anchorRow === ps.currentRow && ps.anchorCol === ps.currentCol;
+  const anchorIsSource = anchorName === srcName;
+  const currentIsSource = currentName === srcName;
+
+  const cellRef = singleCell
+    ? `${colToLetter(ps.anchorCol)}${ps.anchorRow + 1}`
+    : `${colToLetter(Math.min(ps.anchorCol, ps.currentCol))}${Math.min(ps.anchorRow, ps.currentRow) + 1}:${colToLetter(Math.max(ps.anchorCol, ps.currentCol))}${Math.max(ps.anchorRow, ps.currentRow) + 1}`;
+
+  // Add sheet prefix if the reference is on a different sheet than the source
+  if (!anchorIsSource || (!singleCell && !currentIsSource)) {
+    // Use the anchor's sheet name for the prefix (they should match in most cases)
+    const prefixName = !anchorIsSource ? anchorName : currentName;
+    // Quote the name if it contains spaces or special characters
+    const quotedName = /[\s']/.test(prefixName) ? `'${prefixName}'` : prefixName;
+    return `${quotedName}!${cellRef}`;
   }
-  const r1 = Math.min(ps.anchorRow, ps.currentRow);
-  const c1 = Math.min(ps.anchorCol, ps.currentCol);
-  const r2 = Math.max(ps.anchorRow, ps.currentRow);
-  const c2 = Math.max(ps.anchorCol, ps.currentCol);
-  return `${colToLetter(c1)}${r1 + 1}:${colToLetter(c2)}${r2 + 1}`;
+
+  return cellRef;
 }
 
 function insertRefAt(buffer: string, insertPos: number, ref: string, caretPos: number): string {
