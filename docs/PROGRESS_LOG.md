@@ -6,6 +6,15 @@
 
 ---
 
+### 2026-10-24 [BUGFIX] B-033 — Row heights not saved to Excel; imported column widths mangled
+- **What**: Row heights were silently dropped on .xlsx export; imported column widths were assigned to a random column; SheetJS dimension parsing was gated behind `includeFormatting`.
+  - `excelExport.ts`: now writes `ws['!rows']` (`{ hpx }` per row, falling back to `defaultRowHeight`) alongside `!cols`.
+  - `excelImport.ts`: reads `!cols`/`!rows` by array index (was `Math.floor(Math.random() * colCount)`), sets `cellStyles: true` so SheetJS parses dimension data, and returns the populated `rowHeights`.
+  - `jsonService.ts`: import now defaults missing `columnWidths`/`rowHeights` to `{}` (older/hand-edited JSON no longer crashes the Grid).
+- **Tests**: +4 (export `!cols`/`!rows`, export default row heights, import widths+heights by index, JSON dimension-map defaults); `jsonService` round-trip now asserts `rowHeights`. Total: 4239 passing / 182 suites.
+- **Files**: `src/services/excelExport.ts`, `src/services/excelImport.ts`, `src/services/jsonService.ts`, their tests, `docs/BUGFIX.md`.
+- **Results**: lint clean, type-check clean, 4239 tests pass.
+
 ### 2026-10-24 [FEATURE] Standardise text/fill color palette to the common Excel 16
 - **What**: Replaced the text/fill/border color pickers with a single canonical 16-color palette matching Excel's color picker (the 10 Excel "Standard Colors" + 6 Excel theme neutrals), laid out as two rows of eight to match the picker's `repeat(8)` grid.
   - `src/hooks/useCellStyle.ts`: renamed `BORDER_COLORS` → `COLOR_PALETTE` and set it to the Excel 16; deleted the unused 80-color `COLOR_PALETTE` (dead code referenced only by its own test).

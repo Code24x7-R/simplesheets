@@ -49,6 +49,13 @@ export function exportExcel(workbook: Workbook, options: ExportOptions = {}): Bl
       ws['!cols'].push({ wpx: width });
     }
 
+    // Add row heights
+    ws['!rows'] = [];
+    for (let r = 0; r < sheet.rowCount; r++) {
+      const height = sheet.rowHeights[r] ?? sheet.defaultRowHeight;
+      ws['!rows'].push({ hpx: height });
+    }
+
     XLSX.utils.book_append_sheet(wb, ws, sheet.name);
   }
 

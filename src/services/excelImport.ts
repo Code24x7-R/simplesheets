@@ -54,7 +54,9 @@ export function importExcel(
     const wb = XLSX.read(data, {
       type: 'array',
       cellFormula: includeFormulas,
-      cellStyles: includeFormatting,
+      // SheetJS only parses the <cols>/<row ht> dimension data when cellStyles
+      // is enabled, so enable it unconditionally to preserve widths/heights.
+      cellStyles: true,
       cellDates: true,
     });
 
@@ -74,15 +76,24 @@ export function importExcel(
       const colCount = range.e.c + 1;
       const cells: Record<string, Cell> = {};
 
-      // Extract column widths
+      // Extract column widths (array index === column index)
       const columnWidths: Record<number, number> = {};
-      /* istanbul ignore next - column width extraction */
       if (ws['!cols']) {
-        for (const colInfo of ws['!cols']) {
+        ws['!cols'].forEach((colInfo, c) => {
           if (colInfo && colInfo.wpx) {
-            columnWidths[Math.floor(Math.random() * colCount)] = colInfo.wpx;
+            columnWidths[c] = colInfo.wpx;
           }
-        }
+        });
+      }
+
+      // Extract row heights (array index === row index)
+      const rowHeights: Record<number, number> = {};
+      if (ws['!rows']) {
+        ws['!rows'].forEach((rowInfo, r) => {
+          if (rowInfo && rowInfo.hpx) {
+            rowHeights[r] = rowInfo.hpx;
+          }
+        });
       }
 
       // Iterate over all cells in the range
@@ -154,7 +165,7 @@ export function importExcel(
         defaultColWidth: 100,
         defaultRowHeight: 28,
         columnWidths,
-        rowHeights: {},
+        rowHeights,
         columnCount: Math.max(colCount, 26),
         rowCount: Math.max(rowCount, 100),
         frozenColumns: 0,

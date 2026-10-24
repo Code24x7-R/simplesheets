@@ -21,7 +21,7 @@ describe('JSON Service', () => {
         defaultColWidth: 100,
         defaultRowHeight: 28,
         columnWidths: { 0: 150 },
-        rowHeights: {},
+        rowHeights: { 0: 45 },
         columnCount: 26,
         rowCount: 100,
         frozenColumns: 0,
@@ -96,6 +96,33 @@ describe('JSON Service', () => {
     });
   });
 
+  describe('dimension map defaults', () => {
+    it('defaults missing columnWidths/rowHeights to empty objects', () => {
+      const minimal = {
+        id: 'x',
+        title: 'Minimal',
+        sheets: [
+          {
+            id: 's1',
+            name: 'S1',
+            cells: {},
+            defaultColWidth: 100,
+            defaultRowHeight: 28,
+            columnCount: 26,
+            rowCount: 100,
+          },
+        ],
+        activeSheetIndex: 0,
+        lastModified: 0,
+      };
+
+      const result = importJson(JSON.stringify(minimal));
+      expect(result.success).toBe(true);
+      expect(result.workbook!.sheets[0].columnWidths).toEqual({});
+      expect(result.workbook!.sheets[0].rowHeights).toEqual({});
+    });
+  });
+
   describe('round-trip', () => {
     it('preserves all data through export and import', () => {
       const json = exportJson(testWorkbook);
@@ -104,6 +131,7 @@ describe('JSON Service', () => {
 
       const imported = result.workbook!;
       expect(imported.sheets[0].columnWidths[0]).toBe(150);
+      expect(imported.sheets[0].rowHeights[0]).toBe(45);
       expect(imported.sheets[0].cells['0:1']?.rawValue).toBe('42');
       expect(imported.activeSheetIndex).toBe(0);
     });

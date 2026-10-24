@@ -24,6 +24,13 @@ This file tracks bugs in **existing** code, functions, and UI elements. New feat
 
 <!-- Bugs resolved in this session or recent past. Newest first. -->
 
+### 2026-10-24: B-033 — Row heights not saved to Excel; imported column widths mangled ✅ VERIFIED
+- **Symptom**: Resizing a row (or importing an .xlsx with custom column widths) and saving/reopening did not preserve the dimensions. Row heights were silently dropped on Excel export; imported column widths landed on a *random* column instead of their real index.
+- **Root cause**: (1) `excelExport.ts` wrote `ws['!cols']` but never wrote `ws['!rows']`. (2) `excelImport.ts` read `columnWidths[Math.floor(Math.random() * colCount)] = colInfo.wpx` — the index was random, not the array index. (3) SheetJS only parses `<cols>`/`<row ht>` dimension data when `cellStyles: true`, so `importExcel` (which passed `cellStyles: includeFormatting`) only read dimensions when formatting was enabled.
+- **Fix**: `excelExport.ts` now writes `ws['!rows']` (`{ hpx }` per row, falling back to `defaultRowHeight`). `excelImport.ts` now reads `!cols`/`!rows` by array index into `columnWidths`/`rowHeights`, and `XLSX.read` sets `cellStyles: true` unconditionally so dimensions are always parsed (cell-style extraction still gated on `includeFormatting`). JSON import hardened to default missing `columnWidths`/`rowHeights` to `{}`.
+- **Files**: `src/services/excelExport.ts`, `src/services/excelImport.ts`, `src/services/jsonService.ts` (+ tests)
+- **Tests**: +4 new tests: export writes `!cols`/`!rows`, export writes default row heights, import extracts widths+heights by index, JSON defaults missing dimension maps to `{}`; `jsonService` round-trip now asserts `rowHeights`.
+
 ### 2026-09-08: B-032 — PDF export grid header overwrites data (data destruction) ✅ VERIFIED
 - **Symptom**: When exporting to PDF with headers enabled, the first row of data was overwritten with column letters (A, B, C...) and the first column was overwritten with row numbers (1, 2, 3...). This destroyed user data in the exported PDF.
 - **Root cause**: In `buildPrintableHtml` (`src/services/pdfExport.ts`), the header rendering loop overwrote cells where `r === minRow` (replacing data with column letters) and `c === minCol` (replacing data with row numbers). The top-left corner cell was doubly overwritten.

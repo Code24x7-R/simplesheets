@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Richard Robertson
 import { exportExcel, downloadExcel } from './excelExport';
 import type { Workbook } from '../types';
+import * as XLSX from 'xlsx';
 
 function createTestWorkbook(): Workbook {
   return {
@@ -112,6 +113,50 @@ describe('Excel Export Service', () => {
     const smallBlob = exportExcel(smallWb);
     const largeBlob = exportExcel(largeWb);
     expect(largeBlob.size).toBeGreaterThanOrEqual(smallBlob.size);
+  });
+
+  it('writes column widths and row heights to the worksheet', () => {
+    const workbook = createTestWorkbook();
+    workbook.sheets[0].columnWidths = { 0: 150 };
+    workbook.sheets[0].rowHeights = { 0: 45 };
+
+    let data: ArrayBuffer | Uint8Array | undefined;
+    const blobSpy = jest.spyOn(global, 'Blob').mockImplementation((parts?: BlobPart[]) => {
+      data = parts?.[0] as ArrayBuffer | Uint8Array;
+      return { size: 0 } as Blob;
+    });
+
+    try {
+      exportExcel(workbook);
+      // cellStyles is required for SheetJS to parse the dimension data back.
+      const wb = XLSX.read(data!, { type: 'array', cellStyles: true });
+      const ws = wb.Sheets['Sheet1'];
+      expect(ws['!cols']?.[0]).toMatchObject({ wpx: 150 });
+      expect(ws['!rows']?.[0]).toMatchObject({ hpx: 45 });
+    } finally {
+      blobSpy.mockRestore();
+    }
+  });
+
+  it('writes default row heights for rows without an override', () => {
+    const workbook = createTestWorkbook();
+    workbook.sheets[0].rowHeights = { 0: 45 };
+
+    let data: ArrayBuffer | Uint8Array | undefined;
+    const blobSpy = jest.spyOn(global, 'Blob').mockImplementation((parts?: BlobPart[]) => {
+      data = parts?.[0] as ArrayBuffer | Uint8Array;
+      return { size: 0 } as Blob;
+    });
+
+    try {
+      exportExcel(workbook);
+      const wb = XLSX.read(data!, { type: 'array', cellStyles: true });
+      const ws = wb.Sheets['Sheet1'];
+      expect(ws['!rows']?.length).toBe(workbook.sheets[0].rowCount);
+      expect(ws['!rows']?.[1]).toMatchObject({ hpx: 28 });
+    } finally {
+      blobSpy.mockRestore();
+    }
   });
 
   it('downloadExcel triggers a download', () => {

@@ -84,6 +84,24 @@ describe('Excel Import Service', () => {
     expect(result.workbook!.lastModified).toBeGreaterThan(0);
   });
 
+  it('extracts column widths and row heights', () => {
+    const ws = XLSX.utils.aoa_to_sheet([['A', 'B'], ['1', '2']]);
+    ws['!cols'] = [{ wpx: 150 }, { wpx: 90 }];
+    ws['!rows'] = [{ hpx: 45 }, { hpx: 60 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
+    const wbout = XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
+
+    const result = importExcel(wbout);
+    expect(result.success).toBe(true);
+
+    const sheet = result.workbook!.sheets[0];
+    expect(sheet.columnWidths[0]).toBeCloseTo(150, 0);
+    expect(sheet.columnWidths[1]).toBeCloseTo(90, 0);
+    expect(sheet.rowHeights[0]).toBe(45);
+    expect(sheet.rowHeights[1]).toBe(60);
+  });
+
   it('sets correct sheet dimensions', () => {
     const buffer = createXlsxMatrix(5, 3);
     const result = importExcel(buffer);

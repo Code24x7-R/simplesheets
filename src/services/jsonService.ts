@@ -50,11 +50,18 @@ export function importJson(json: string): JsonImportResult {
       return { success: false, error: 'Invalid workbook format: missing required fields' };
     }
 
-    // Restore the workbook with a new ID
+    // Restore the workbook with a new ID. Older/hand-edited files may omit the
+    // per-column/row dimension maps; default them to empty so the Grid never
+    // dereferences undefined.
     const workbook: Workbook = {
       ...parsed,
       id: `json-wb-${Date.now()}`,
       lastModified: Date.now(),
+      sheets: parsed.sheets.map((sheet) => ({
+        ...sheet,
+        columnWidths: sheet.columnWidths ?? {},
+        rowHeights: sheet.rowHeights ?? {},
+      })),
     };
 
     return { success: true, workbook };
