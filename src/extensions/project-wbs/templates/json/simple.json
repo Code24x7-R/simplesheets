@@ -168,7 +168,10 @@
           "approvedDate": null,
           "notes": "Final sign-off required from sponsor"
         }
-      ]
+      ],
+      "effort": 8,
+      "effortUnit": "hours",
+      "cost": 1200
     }
   ],
   "risks": [

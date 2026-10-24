@@ -322,8 +322,16 @@ export interface ProjectModel {
   tasks: TaskRow[];
   risks: RiskRow[];
   resources: ResourceRow[];
-  materials: MaterialRow[];
-  actuals: ActualRow[];
+  /**
+   * Material rows. Optional: older/partial persisted models may omit it.
+   * Conversion helpers default a missing value to an empty array.
+   */
+  materials?: MaterialRow[];
+  /**
+   * Actual spend rows. Optional: older/partial persisted models may omit it.
+   * Conversion helpers default a missing value to an empty array.
+   */
+  actuals?: ActualRow[];
   allocations: AllocationRow[];
   consumptions: ConsumptionRow[];
 }

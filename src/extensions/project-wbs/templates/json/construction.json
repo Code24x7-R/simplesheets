@@ -401,7 +401,10 @@
       "endDate": "2027-03-28",
       "isMilestone": true,
       "progress": 0,
-      "status": "not_started"
+      "status": "not_started",
+      "effort": 4,
+      "effortUnit": "hours",
+      "cost": 600
     },
     {
       "id": "closure",

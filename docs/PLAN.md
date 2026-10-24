@@ -4,12 +4,15 @@
 Achieve a clean, clutter-free UI with standardized dropdown menus, formula wizard, formula bar, R1C1 reference format, and extensible project management capabilities.
 
 ## Current State
-- **4205 tests** across **180 suites**, All passing
+- **4229 tests** across **182 suites** (4228 passing, 1 skipped)
 - Lint clean (0 warnings), Type-check clean, Build clean
+- Coverage: **88.31% lines**, **76.75% branches**, **82.00% functions** (targets: ≥95% lines / ≥85% branches — see [AGENTS.md](../AGENTS.md))
 - Phases 1-33 complete ✅ (see [HISTORY.md](./HISTORY.md))
 - Phases 34-39 complete ✅ (Extensions Architecture — see below)
 - Phases 40-42 complete ✅ (Accounting, Dependency Workflow, EVM Reporting)
 - **Phase 43 complete ✅ (Material Management — CapEx/OpEx/Consumption)**
+- **Phase 44 complete ✅ (Change Log & Material Cost Integration — dependency tracking, capitalization config)**
+- **Phases 45-46 complete ✅ (Creator Canvas extension — schema, canvas ops, starter seed, interactions/presets, template library)**
 - **Named Ranges complete ✅ (single cell to matrix, full CRUD, range picker + delete in edit form)**
 - **Save to Cloud complete ✅ (Copy Link, Share File, Save/Open File, cloud provider scaffolding)**
 - **MRU File List complete ✅ (recent files with .ssjson + cloud source tracking)**
@@ -21,9 +24,11 @@ Achieve a clean, clutter-free UI with standardized dropdown menus, formula wizar
 
 ## Active Work
 
-### Extensions Architecture (Phases 34-39) — IN PROGRESS 🔄
+None — all planned extension work is complete. See [Future Extensions](#future-extensions) for planned items and [PROJECT_EXTENSION_AUDIT.md](./PROJECT_EXTENSION_AUDIT.md) for remaining low-priority audit items.
 
-The WBS/Project extension is actively being expanded. See [EXTENSIONS_ARCHITECTURE.md](./EXTENSIONS_ARCHITECTURE.md) for technical details.
+### Extensions Architecture (Phases 34-44) — ✅ COMPLETE
+
+The WBS/Project extension is feature-complete. See [EXTENSIONS_ARCHITECTURE.md](./EXTENSIONS_ARCHITECTURE.md) for technical details.
 
 | Phase | Description | Status |
 |-------|-------------|--------|
@@ -32,7 +37,7 @@ The WBS/Project extension is actively being expanded. See [EXTENSIONS_ARCHITECTU
 | 36 | Tab-Based Project View — "📊 Project" tab as peer to sheet tabs | ✅ Complete |
 | 37 | Enhanced Project Functions — resource CRUD, dependency lines, collapse/expand | ✅ Complete |
 | 38 | Normalized Schema & Complete Sync — all data persisted and synced | ✅ Complete |
-| 39 | Template Library Expansion — all 16 templates implemented | ✅ Complete |
+| 39 | Template Library Expansion — all 13 JSON templates implemented | ✅ Complete |
 | 40 | Project Accounting Dashboard — baseline, allocation, estimate, actual spend | ✅ Complete |
 | 41 | Dependency Workflow Drawer — tree + right panel with impact preview | ✅ Complete |
 | 42 | EVM Cost Performance Reporting — CV, VAC, CPI, SPI, EAC, ETC | ✅ Complete |
@@ -48,9 +53,9 @@ The WBS/Project extension is actively being expanded. See [EXTENSIONS_ARCHITECTU
 - Working calendar with holidays
 - Roll-up calculations for summary tasks
 - Sheet-as-source with bidirectional sync
-- 12 pre-built templates across 8 categories
+- 13 pre-built templates across 10 categories
 
-**Templates (16 of 16):**
+**Templates (13 of 13):**
 | Category | Templates |
 |----------|----------|
 | Generic | Simple WBS |
@@ -64,7 +69,7 @@ The WBS/Project extension is actively being expanded. See [EXTENSIONS_ARCHITECTU
 | Real Estate | Real Estate Photography |
 | Mining | Mining Consulting |
 
-### Phase 40: Project Accounting Dashboard — IN PROGRESS 🔄
+### Phase 40: Project Accounting Dashboard — ✅ COMPLETE
 *Four-table cost tracking with variance analysis.*
 
 **Tables:**
@@ -82,7 +87,7 @@ The WBS/Project extension is actively being expanded. See [EXTENSIONS_ARCHITECTU
 - SPI (Schedule Performance Index) = Earned Value / Planned Value
 - Change log for dependency-driven cost/timeline shifts
 
-### Phase 43: Material Management — IN PROGRESS 🔄
+### Phase 43: Material Management — ✅ COMPLETE
 *CapEx/OpEx classification, material allocation, consumption tracking.*
 
 **Material Categories:**
@@ -117,7 +122,7 @@ The WBS/Project extension is actively being expanded. See [EXTENSIONS_ARCHITECTU
 
 ---
 
-## Planned Phases
+## Completed Phases (Historical Record)
 
 ### Phase 22: Conditional Formatting — ✅ Complete
 *Format cells based on their values or formulas.*
@@ -205,10 +210,10 @@ The extensions architecture supports adding new extensions without modifying cor
 | Mind Map | Radiative tree visualization of project scope | Low |
 | PERT Chart | Probabilistic task duration with three-point estimates | Medium |
 | Resource Heatmap | Calendar view of resource allocation | ✅ Complete |
-| Budget Tracker | Cost tracking with variance analysis | 🔄 In Progress (Phase 40) |
+| Budget Tracker | Cost tracking with variance analysis | ✅ Complete (Phase 40) |
 | Earned Value Chart | S-curve visualization of PV, EV, AC over time | Medium |
 | What-If Scenarios | Save/compare multiple schedule scenarios | Low |
-| Creator Canvas | Visual creative projects backed by normalized sheets | ✅ Phase 45 complete |
+| Creator Canvas | Visual creative projects backed by normalized sheets | ✅ Phase 45-46 complete |
 
 ---
 

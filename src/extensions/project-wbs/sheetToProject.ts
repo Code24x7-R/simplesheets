@@ -29,6 +29,31 @@ export const ACTUALS_SHEET_NAME = 'Actuals';
 export const ALLOCATIONS_SHEET_NAME = 'Allocations';
 export const CONSUMPTIONS_SHEET_NAME = 'Consumptions';
 
+// ─── Sheet ID Generation ───────────────────────────────────────────────────
+
+/**
+ * Monotonic counter for collision-free sheet IDs.
+ *
+ * Replaces the previous `Date.now() + Math.random()` scheme, which is not
+ * guaranteed unique: two sheets created in the same millisecond could collide
+ * when the random suffix is truncated to the same short string.
+ */
+let sheetIdCounter = 0;
+
+/**
+ * Generate a unique sheet ID with the given semantic prefix.
+ *
+ * IDs are unique within a session and do not depend on `Date.now()` or
+ * `Math.random()`, so rapid successive calls never produce duplicates.
+ *
+ * @example
+ * createSheetId('sheet-tasks'); // 'sheet-tasks-1'
+ */
+export function createSheetId(prefix: string): string {
+  sheetIdCounter += 1;
+  return `${prefix}-${sheetIdCounter}`;
+}
+
 // ─── Risk & Resource Column Layouts ───────────────────────────────────────
 
 const RISK_HEADERS = ['Risk', 'Category', 'Probability', 'Impact', 'Status', 'Owner', 'Mitigation Plan', 'Notes', 'Linked Task'];
@@ -1072,7 +1097,7 @@ function createTasksSheet(model: ProjectModel, mapping: ColumnMapping): Sheet {
   }
 
   return {
-    id: `sheet-tasks-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    id: createSheetId('sheet-tasks'),
     name: TASKS_SHEET_NAME,
     cells,
     defaultColWidth: 120,
@@ -1131,7 +1156,7 @@ export function createRisksSheetFromModel(model: ProjectModel): Sheet {
   }
 
   return {
-    id: `sheet-risks-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    id: createSheetId('sheet-risks'),
     name: RISKS_SHEET_NAME,
     cells,
     defaultColWidth: 120,
@@ -1184,7 +1209,7 @@ function createResourcesSheetFromModel(model: ProjectModel): Sheet {
   }
 
   return {
-    id: `sheet-resources-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    id: createSheetId('sheet-resources'),
     name: RESOURCES_SHEET_NAME,
     cells,
     defaultColWidth: 120,
@@ -1202,8 +1227,9 @@ function createResourcesSheetFromModel(model: ProjectModel): Sheet {
  * Create the materials sheet from a ProjectModel.
  */
 function createMaterialsSheetFromModel(model: ProjectModel): Sheet {
+  const materials = model.materials ?? [];
   const colCount = MATERIAL_HEADERS.length;
-  const rowCount = 1 + model.materials.length + 2;
+  const rowCount = 1 + materials.length + 2;
   const cells: Record<string, Cell> = {};
 
   // Headers
@@ -1216,8 +1242,8 @@ function createMaterialsSheetFromModel(model: ProjectModel): Sheet {
   }
 
   // Data rows
-  for (let i = 0; i < model.materials.length; i++) {
-    const material = model.materials[i];
+  for (let i = 0; i < materials.length; i++) {
+    const material = materials[i];
     const row = 1 + i;
     cells[`${row}:0`] = { rawValue: material.name, computedValue: material.name };
     cells[`${row}:1`] = { rawValue: material.classification, computedValue: material.classification };
@@ -1240,7 +1266,7 @@ function createMaterialsSheetFromModel(model: ProjectModel): Sheet {
   }
 
   return {
-    id: `sheet-materials-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    id: createSheetId('sheet-materials'),
     name: MATERIALS_SHEET_NAME,
     cells,
     defaultColWidth: 110,
@@ -1286,7 +1312,7 @@ function createActualsSheetFromModel(model: ProjectModel): Sheet {
   }
 
   return {
-    id: `sheet-actuals-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    id: createSheetId('sheet-actuals'),
     name: ACTUALS_SHEET_NAME,
     cells,
     defaultColWidth: 110,
@@ -1331,7 +1357,7 @@ function createAllocationsSheetFromModel(model: ProjectModel): Sheet {
   }
 
   return {
-    id: `sheet-allocations-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    id: createSheetId('sheet-allocations'),
     name: ALLOCATIONS_SHEET_NAME,
     cells,
     defaultColWidth: 110,
@@ -1375,7 +1401,7 @@ function createConsumptionsSheetFromModel(model: ProjectModel): Sheet {
   }
 
   return {
-    id: `sheet-consumptions-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    id: createSheetId('sheet-consumptions'),
     name: CONSUMPTIONS_SHEET_NAME,
     cells,
     defaultColWidth: 110,
@@ -1693,7 +1719,7 @@ export function createProjectSheet(sheetName = 'Project Plan', includeSamples = 
   }
 
   return {
-    id: `sheet-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    id: createSheetId('sheet'),
     name: sheetName,
     cells,
     defaultColWidth: 120,
@@ -1824,7 +1850,7 @@ export function createSheetFromTemplate(templateId: string, projectName?: string
   const rowCount = 1 + taskRowCount + 1 + 1 + riskRowCount + 1 + 1 + resourceRowCount + 5;
 
   return {
-    id: `sheet-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    id: createSheetId('sheet'),
     name: projectName ?? project.name,
     cells,
     defaultColWidth: 120,
@@ -1883,7 +1909,7 @@ export function createRisksSheet(): Sheet {
     };
   }
   return {
-    id: `sheet-risks-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    id: createSheetId('sheet-risks'),
     name: RISKS_SHEET_NAME,
     cells,
     defaultColWidth: 120,
@@ -1910,7 +1936,7 @@ export function createResourcesSheet(): Sheet {
     };
   }
   return {
-    id: `sheet-resources-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    id: createSheetId('sheet-resources'),
     name: RESOURCES_SHEET_NAME,
     cells,
     defaultColWidth: 120,
@@ -1937,7 +1963,7 @@ export function createMaterialsSheet(): Sheet {
     };
   }
   return {
-    id: `sheet-materials-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    id: createSheetId('sheet-materials'),
     name: MATERIALS_SHEET_NAME,
     cells,
     defaultColWidth: 110,
@@ -1964,7 +1990,7 @@ export function createActualsSheet(): Sheet {
     };
   }
   return {
-    id: `sheet-actuals-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    id: createSheetId('sheet-actuals'),
     name: ACTUALS_SHEET_NAME,
     cells,
     defaultColWidth: 110,
@@ -1991,7 +2017,7 @@ export function createAllocationsSheet(): Sheet {
     };
   }
   return {
-    id: `sheet-allocations-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    id: createSheetId('sheet-allocations'),
     name: ALLOCATIONS_SHEET_NAME,
     cells,
     defaultColWidth: 110,
@@ -2018,7 +2044,7 @@ export function createConsumptionsSheet(): Sheet {
     };
   }
   return {
-    id: `sheet-consumptions-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    id: createSheetId('sheet-consumptions'),
     name: CONSUMPTIONS_SHEET_NAME,
     cells,
     defaultColWidth: 110,
@@ -2119,7 +2145,7 @@ export function createBlankTasksSheet(): Sheet {
   }
 
   return {
-    id: `sheet-tasks-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    id: createSheetId('sheet-tasks'),
     name: TASKS_SHEET_NAME,
     cells,
     defaultColWidth: 120,

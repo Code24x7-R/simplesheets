@@ -6,6 +6,15 @@
 
 ---
 
+### 2026-10-23 [FEATURE] Audit Phase 4 (Data Schema) + Template Leaf Cost/Effort Gap
+- **What**: Closed two long-standing audit items and one template-data gap.
+  - **D1 — optional `ProjectModel.materials`/`actuals`** (`src/types.ts`): fields are now `?`-optional with doc comments; `projectModelToProject` and `createMaterialsSheetFromModel` default a missing value to `[]`. Verified via `npm run type-check`, which now flags any consumer that forgets the default.
+  - **D2 — collision-free sheet IDs** (`sheetToProject.ts`): added exported `createSheetId(prefix)` (monotonic counter, no `Date.now()`/`Math.random()`) and replaced all 16 sheet-ID call sites. Pinned `Math.random = () => 0` in a test to prove 50 sheets still get unique IDs.
+  - **Template Gap 2 — leaf tasks missing cost/effort**: added realistic `cost` + `effort`/`effortUnit` to **20 leaf tasks across 9 templates** (agile 2, business 3, construction 1, event 3, it-migration 2, marketing 1, renovation 4, simple 1, software 3). Values derived from business-day duration × PM cost rate. `docs/ALL_TEMPLATES_GAP_ANALYSIS.md` had undercounted the affected templates — `product.json` and `website.json` also have 1 missing leaf each.
+- **Tests**: +7 tests (ProjectModel optionality ×3, sheet-ID uniqueness ×3, leaf cost/effort completeness ×1). Total: 4235 passing / 182 suites.
+- **Files modified**: `src/types.ts`, `src/extensions/project-wbs/sheetToProject.ts`, `src/extensions/project-wbs/projectConverter.test.ts`, `src/extensions/project-wbs/sheetToProject.test.ts`, `src/extensions/project-wbs/templates/index.test.ts`, 9 template JSON files, `docs/PROJECT_EXTENSION_AUDIT.md`, `docs/PLAN.md`, `docs/ALL_TEMPLATES_GAP_ANALYSIS.md`, `docs/TEMPLATE_DATA_ENHANCEMENT.md`.
+- **Results**: lint clean, type-check clean, 4235 tests pass.
+
 ### 2026-09-08 [BUGFIX] Review Plan v2 — Stages 1-5 Complete
 - **What**: Completed all tasks from `docs/simplesheets-review-plan-v2.md`:
   - **Stage 1**: Verified formula engine regex robustness (1-3 letter column matcher, cross-sheet prefix protection, INDIRECT/OFFSET/INDEX handlers)

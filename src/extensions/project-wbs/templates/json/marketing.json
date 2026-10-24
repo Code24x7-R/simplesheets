@@ -94,7 +94,10 @@
               "approvedDate": "2026-07-08",
               "notes": "Campaign brief approved"
             }
-          ]
+          ],
+          "effort": 8,
+          "effortUnit": "hours",
+          "cost": 1000
         }
       ]
     },

@@ -369,4 +369,37 @@ describe('Templates', () => {
       expect(categories).toContain('Real Estate');
     });
   });
+
+  // Gap 2 remediation (docs/ALL_TEMPLATES_GAP_ANALYSIS.md): leaf tasks must
+  // carry cost + effort so budget-vs-actual views are populated.
+  describe('Leaf task cost/effort completeness', () => {
+    const cases: Array<[string, ProjectTemplateJSON]> = [
+      ['agile', agileJSON as ProjectTemplateJSON],
+      ['business', businessJSON as ProjectTemplateJSON],
+      ['construction', constructionJSON as ProjectTemplateJSON],
+      ['event', eventJSON as ProjectTemplateJSON],
+      ['it-migration', itMigrationJSON as ProjectTemplateJSON],
+      ['marketing', marketingJSON as ProjectTemplateJSON],
+      ['renovation', renovationJSON as ProjectTemplateJSON],
+      ['simple', simpleJSON as ProjectTemplateJSON],
+      ['software', softwareJSON as ProjectTemplateJSON],
+    ];
+
+    it('every leaf task has a positive cost and effort', () => {
+      const problems: string[] = [];
+      for (const [name, json] of cases) {
+        const project = templateToProject(json);
+        const leafTasks = flattenTasks(project.wbs).filter((t) => t.children.length === 0);
+        if (leafTasks.length === 0) {
+          problems.push(`${name}: expected at least one leaf task`);
+          continue;
+        }
+        for (const task of leafTasks) {
+          if (!(task.cost > 0)) problems.push(`${name}:${task.id} cost=${task.cost}`);
+          if (!(task.effort > 0)) problems.push(`${name}:${task.id} effort=${task.effort}`);
+        }
+      }
+      expect(problems).toEqual([]);
+    });
+  });
 });

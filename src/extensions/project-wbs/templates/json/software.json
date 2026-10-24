@@ -76,7 +76,10 @@
               "approvedDate": "2026-03-06",
               "notes": "All requirements approved"
             }
-          ]
+          ],
+          "effort": 8,
+          "effortUnit": "hours",
+          "cost": 1200
         }
       ]
     },
@@ -150,7 +153,10 @@
           "dependencies": [
             "des-2",
             "des-3"
-          ]
+          ],
+          "effort": 8,
+          "effortUnit": "hours",
+          "cost": 1200
         }
       ]
     },
@@ -345,7 +351,10 @@
       "status": "not_started",
       "dependencies": [
         "dep-3"
-      ]
+      ],
+      "effort": 8,
+      "effortUnit": "hours",
+      "cost": 1200
     },
     {
       "id": "closure",

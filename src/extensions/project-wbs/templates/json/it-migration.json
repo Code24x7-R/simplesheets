@@ -83,7 +83,10 @@
           "status": "done",
           "dependencies": [
             "aud-3"
-          ]
+          ],
+          "effort": 8,
+          "effortUnit": "hours",
+          "cost": 1100
         }
       ]
     },
@@ -165,7 +168,10 @@
               "approvedDate": "2026-10-17",
               "notes": "Migration plan approved"
             }
-          ]
+          ],
+          "effort": 4,
+          "effortUnit": "hours",
+          "cost": 600
         }
       ]
     },

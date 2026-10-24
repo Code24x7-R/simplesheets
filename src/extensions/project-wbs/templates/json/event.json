@@ -83,7 +83,10 @@
           "status": "done",
           "dependencies": [
             "setup-3"
-          ]
+          ],
+          "effort": 8,
+          "effortUnit": "hours",
+          "cost": 1000
         }
       ]
     },
@@ -156,7 +159,10 @@
           "status": "not_started",
           "dependencies": [
             "cat-3"
-          ]
+          ],
+          "effort": 8,
+          "effortUnit": "hours",
+          "cost": 1000
         }
       ]
     },
@@ -324,7 +330,10 @@
       "status": "not_started",
       "dependencies": [
         "log-3"
-      ]
+      ],
+      "effort": 8,
+      "effortUnit": "hours",
+      "cost": 1000
     },
     {
       "id": "closure",

@@ -11,7 +11,7 @@
 | Gap | Templates Affected | Severity |
 |-----|-------------------|----------|
 | Spend entries without material allocations | ALL 13 | 🔴 High |
-| Leaf tasks missing cost/effort | 9 of 13 | 🔴 High |
+| Leaf tasks missing cost/effort | ~~9 of 13~~ **✅ Resolved 2026-10-23** | 🔴 High |
 | Leaf tasks without dependencies | ALL 13 | 🟡 Medium |
 | Tasks without resource assignments | 5 of 13 | 🟡 Medium |
 | Risks not linked to specific tasks | 2 of 13 | 🟡 Medium |
@@ -53,7 +53,11 @@ Add allocations for:
 
 ---
 
-## Gap 2: Leaf Tasks Missing Cost/Effort
+## Gap 2: Leaf Tasks Missing Cost/Effort — ✅ RESOLVED (2026-10-23)
+
+> **Remediation:** Added `cost` + `effort`/`effortUnit` to **20 leaf tasks across 9 templates** (agile 2, business 3, construction 1, event 3, it-migration 2, marketing 1, renovation 4, simple 1, software 3). Effort = business-day duration × 8h (min 4h); cost = effort × PM cost rate. Guarded by `templates/index.test.ts` › "Leaf task cost/effort completeness".
+>
+> **Note:** The original count of "9 of 13" was an undercount — `product.json` (`dev-4` Feature complete) and `website.json` (`milestone-launch` Website Live) also had one missing leaf each. They were out of scope for this pass.
 
 ### Problem
 9 of 13 templates have leaf tasks without cost or effort values, making resource planning impossible.
@@ -230,7 +234,7 @@ Add optional `revenue` block to accounting:
 
 | Phase | Gaps | Templates | Effort |
 |-------|------|-----------|--------|
-| **Phase 1** | Missing cost/effort on leaf tasks | 9 templates | 2 hours |
+| **Phase 1** | ~~Missing cost/effort on leaf tasks~~ ✅ Done 2026-10-23 | 9 templates | 2 hours |
 | **Phase 2** | Risk-task linking | 2 templates | 1 hour |
 | **Phase 3** | Resource assignments | 5 templates | 2 hours |
 | **Phase 4** | Spend-to-allocation mapping | 13 templates | 3 hours |

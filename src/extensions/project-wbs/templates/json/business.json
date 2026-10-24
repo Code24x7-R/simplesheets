@@ -92,7 +92,10 @@
               "approvedDate": "2026-08-08",
               "notes": "Project approved to proceed"
             }
-          ]
+          ],
+          "effort": 4,
+          "effortUnit": "hours",
+          "cost": 600
         }
       ]
     },
@@ -165,7 +168,10 @@
           "status": "done",
           "dependencies": [
             "plan-3"
-          ]
+          ],
+          "effort": 4,
+          "effortUnit": "hours",
+          "cost": 600
         }
       ]
     },
@@ -298,7 +304,10 @@
           "status": "not_started",
           "dependencies": [
             "rev-2"
-          ]
+          ],
+          "effort": 4,
+          "effortUnit": "hours",
+          "cost": 600
         }
       ]
     },

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
-import { detectColumnMapping, sheetToProject, projectModelToProject, projectModelToSheetCells, createProjectSheet, createSheetFromTemplate, getDefaultColumnMapping, PROJECT_SHEET_HEADERS, rowToResource, rowToRisk, createRisksSheetFromModel, parseRiskRow, projectModelToWorkbook, ALLOCATIONS_SHEET_NAME, CONSUMPTIONS_SHEET_NAME } from './sheetToProject';
+import { detectColumnMapping, sheetToProject, projectModelToProject, projectModelToSheetCells, createProjectSheet, createSheetFromTemplate, getDefaultColumnMapping, PROJECT_SHEET_HEADERS, rowToResource, rowToRisk, createRisksSheetFromModel, parseRiskRow, projectModelToWorkbook, ALLOCATIONS_SHEET_NAME, CONSUMPTIONS_SHEET_NAME, createSheetId } from './sheetToProject';
 import { resourceToRow, riskToRow } from './projectConverter';
 import type { Resource, Risk } from '../types';
 import type { Sheet, ColumnMapping, ProjectModel } from '../../types';
@@ -389,6 +389,30 @@ describe('sheetToProject', () => {
       const sheet1 = createProjectSheet();
       const sheet2 = createProjectSheet();
       expect(sheet1.id).not.toBe(sheet2.id);
+    });
+
+    it('generates unique sheet IDs without relying on Math.random (audit D2)', () => {
+      const originalRandom = Math.random;
+      Math.random = () => 0;
+      try {
+        const ids = new Set(Array.from({ length: 50 }, () => createProjectSheet().id));
+        expect(ids.size).toBe(50);
+      } finally {
+        Math.random = originalRandom;
+      }
+    });
+  });
+
+  describe('createSheetId (audit D2)', () => {
+    it('produces monotonically increasing IDs for a prefix', () => {
+      const ids = Array.from({ length: 5 }, () => createSheetId('sheet-tasks'));
+      expect(new Set(ids).size).toBe(5);
+      expect(ids[0]).not.toBe(ids[1]);
+    });
+
+    it('keeps IDs unique across different prefixes', () => {
+      const ids = [createSheetId('sheet-tasks'), createSheetId('sheet-risks')];
+      expect(ids[0]).not.toBe(ids[1]);
     });
   });
 

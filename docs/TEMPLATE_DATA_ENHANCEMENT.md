@@ -47,7 +47,10 @@ Missing fields that prevent rich template data:
 2. Update `templates/handler.ts` to convert new fields
 3. Add validation for new fields
 
-### Phase 2: Template Data Generation
+### Phase 2: Template Data Generation — 🔄 IN PROGRESS
+
+> **2026-10-23:** "Task costs (realistic budgets)" — leaf-task cost/effort gap closed for 9 templates (see `ALL_TEMPLATES_GAP_ANALYSIS.md` Gap 2). Remaining sub-items (risk-task linking, allocations, change log, capitalization config, approval gates) are still open.
+
 Update all 13 JSON templates with:
 - Task dependencies (FS relationships)
 - Task status (not_started → done)

@@ -5,6 +5,8 @@ import { templateToProject } from './templates/handler';
 import simpleJSON from './templates/json/simple.json';
 import type { ProjectTemplateJSON } from './templates/types';
 import type { Project } from '../types';
+import { projectModelToProject } from './sheetToProject';
+import type { ProjectModel } from '../../types';
 
 const createTestProject = (): Project => templateToProject(simpleJSON as ProjectTemplateJSON);
 
@@ -280,5 +282,39 @@ describe('projectConverter import/export', () => {
       Date.now = originalDateNow;
       expect(project1.id).not.toBe(project2.id);
     });
+  });
+});
+
+describe('ProjectModel materials/actuals optionality (audit D1)', () => {
+  const baseModel: Omit<ProjectModel, 'materials' | 'actuals'> = {
+    id: 'p1',
+    name: 'Test Project',
+    description: '',
+    startDate: '2026-01-01',
+    endDate: '2026-01-31',
+    tasks: [],
+    risks: [],
+    resources: [],
+    allocations: [],
+    consumptions: [],
+  };
+
+  it('allows materials and actuals to be omitted', () => {
+    const model: ProjectModel = baseModel;
+    expect(model.materials).toBeUndefined();
+    expect(model.actuals).toBeUndefined();
+  });
+
+  it('defaults omitted materials/actuals to empty arrays when converting to Project', () => {
+    const project = projectModelToProject(baseModel as ProjectModel);
+    expect(project.materials).toEqual([]);
+    expect(project.accounting?.spendEntries).toEqual([]);
+  });
+
+  it('always emits arrays from projectToModel', () => {
+    const project = createBlankProject();
+    const model = projectToModel(project);
+    expect(model.materials).toEqual([]);
+    expect(model.actuals).toEqual([]);
   });
 });

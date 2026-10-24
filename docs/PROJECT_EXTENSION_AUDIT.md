@@ -1,8 +1,8 @@
 # Project/WBS Extension Audit Report
 
-**Date:** 2026-01-16 (Updated: 2026-08-17)
+**Date:** 2026-01-16 (Updated: 2026-10-23)
 **Scope:** Complete review of `src/extensions/project-wbs/`
-**Current Test Count:** 3,577 tests across 149 suites
+**Current Test Count:** 4,235 tests across 182 suites
 
 ---
 
@@ -14,7 +14,7 @@ The Project/WBS extension has grown organically through 15+ phases. While functi
 - Phase 1 (Logic Errors): 3/3 fixed
 - Phase 2 (Duplications): 3/3 fixed
 - Phase 3 (Workflow Gaps): 4/4 fixed
-- Phase 4 (Data Schema): 0/2 pending (low priority)
+- Phase 4 (Data Schema): 2/2 fixed (2026-10-23)
 
 ### 2026-08-17 Remediation (4 Phases)
 
@@ -203,9 +203,9 @@ data change → handleProjectChange → syncProjectToSheet → onSaveProject →
 9. **C3:** ✅ Created `ActualsEditorModal` with full CRUD
 10. **C4:** ✅ Created `MaterialAllocationModal` for allocation/consumption tracking
 
-### Phase 4: Data Schema (Pending - Low Priority)
-11. **D1:** ⏳ Make `ProjectModel.materials` and `ProjectModel.actuals` optional
-12. **D2:** ⏳ Use UUID for sheet IDs
+### Phase 4: Data Schema ✅ (2026-10-23)
+11. **D1:** ✅ Made `ProjectModel.materials` and `ProjectModel.actuals` optional in `src/types.ts`; conversion helpers (`projectModelToProject`, `createMaterialsSheetFromModel`) default missing values to `[]`. Verified via `npm run type-check` (which now flags any consumer that forgets the default).
+12. **D2:** ✅ Added `createSheetId(prefix)` (monotonic counter, no `Date.now()`/`Math.random()`) in `sheetToProject.ts` and replaced all 16 sheet-ID call sites. Added a test that pins `Math.random = () => 0` and asserts 50 sheets still get unique IDs.
 
 ---
 
