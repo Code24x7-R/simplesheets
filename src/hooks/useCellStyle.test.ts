@@ -10,10 +10,10 @@ import {
   clearStyles,
   DEFAULTCellStyle,
   COLOR_PALETTE,
+  COLOR_LABELS,
   NUMBER_FORMATS,
   makeBorder,
   BORDER_PRESETS,
-  BORDER_COLORS,
   DEFAULT_BORDER_WIDTH,
   DEFAULT_BORDER_STYLE,
   DEFAULT_BORDER_COLOR,
@@ -142,14 +142,34 @@ describe('clearStyles', () => {
 });
 
 describe('COLOR_PALETTE', () => {
-  it('contains 80 colors (10 columns x 8 rows)', () => {
-    expect(COLOR_PALETTE).toHaveLength(80);
+  it('contains the common 16 colors (2 rows x 8 columns)', () => {
+    expect(COLOR_PALETTE).toHaveLength(16);
+  });
+
+  it('matches the Excel standard color set', () => {
+    expect(COLOR_PALETTE).toEqual([
+      '#000000', '#595959', '#A6A6A6', '#D9D9D9', '#F2F2F2', '#FFFFFF', '#C00000', '#FF0000',
+      '#FFC000', '#FFFF00', '#92D050', '#00B050', '#00B0F0', '#0070C0', '#002060', '#7030A0',
+    ]);
   });
 
   it('all entries are valid hex colors', () => {
     for (const color of COLOR_PALETTE) {
       expect(color).toMatch(/^#[0-9A-Fa-f]{6}$/);
     }
+  });
+});
+
+describe('COLOR_LABELS', () => {
+  it('has a label for every palette color', () => {
+    for (const color of COLOR_PALETTE) {
+      expect(COLOR_LABELS[color]).toBeTruthy();
+    }
+  });
+
+  it('has no duplicate labels', () => {
+    const labels = COLOR_PALETTE.map((color) => COLOR_LABELS[color]);
+    expect(new Set(labels).size).toBe(labels.length);
   });
 });
 
@@ -213,22 +233,6 @@ describe('BORDER_PRESETS', () => {
       expect(preset.label).toBeTruthy();
       expect(preset.width).toBeTruthy();
       expect(preset.style).toBeTruthy();
-    }
-  });
-});
-
-describe('BORDER_COLORS', () => {
-  it('contains 16 colors', () => {
-    expect(BORDER_COLORS).toHaveLength(16);
-  });
-
-  it('first color is black', () => {
-    expect(BORDER_COLORS[0]).toBe('#000000');
-  });
-
-  it('all entries are valid hex colors', () => {
-    for (const color of BORDER_COLORS) {
-      expect(color).toMatch(/^#[0-9A-Fa-f]{6}$/);
     }
   });
 });

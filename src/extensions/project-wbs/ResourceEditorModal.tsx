@@ -11,6 +11,7 @@ import { useState, useEffect } from 'react';
 import type { Resource } from '../types';
 import { getEffectiveCurrency, SUPPORTED_CURRENCIES } from '../../utils/currency';
 import { NumericInput } from '../../components/NumericInput';
+import { COLOR_PALETTE } from '../../hooks/useCellStyle';
 
 interface ResourceEditorModalProps {
   resource: Resource | null; // null = create mode
@@ -18,19 +19,6 @@ interface ResourceEditorModalProps {
   onSave: (resource: Resource) => void;
   onDelete?: (resourceId: string) => void;
 }
-
-const COLOR_PALETTE = [
-  '#3B82F6', // blue
-  '#10B981', // green
-  '#F59E0B', // amber
-  '#EF4444', // red
-  '#8B5CF6', // purple
-  '#EC4899', // pink
-  '#06B6D4', // cyan
-  '#84CC16', // lime
-  '#F97316', // orange
-  '#6366F1', // indigo
-];
 
 export function ResourceEditorModal({
   resource,
@@ -45,7 +33,7 @@ export function ResourceEditorModal({
     costRate: 0,
     costCurrency: getEffectiveCurrency(),
     availability: 100,
-    color: '#3B82F6',
+    color: COLOR_PALETTE[13], // Blue (#0070C0)
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});

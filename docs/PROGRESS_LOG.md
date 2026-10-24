@@ -6,6 +6,18 @@
 
 ---
 
+### 2026-10-24 [FEATURE] Standardise text/fill color palette to the common Excel 16
+- **What**: Replaced the text/fill/border color pickers with a single canonical 16-color palette matching Excel's color picker (the 10 Excel "Standard Colors" + 6 Excel theme neutrals), laid out as two rows of eight to match the picker's `repeat(8)` grid.
+  - `src/hooks/useCellStyle.ts`: renamed `BORDER_COLORS` → `COLOR_PALETTE` and set it to the Excel 16; deleted the unused 80-color `COLOR_PALETTE` (dead code referenced only by its own test).
+  - `src/components/Toolbar.tsx`: text, fill, and border pickers all use the shared `COLOR_PALETTE`.
+- **Also aligned (single source of truth)**: removed every duplicate color palette so Toolbar, `MenuBar` Format ▸ Text/Fill Color, `ResourceEditorModal`, and `TaskEditorModal` all draw from the same `COLOR_PALETTE`.
+  - `MenuBar.tsx`: the two hardcoded 4-item submenus became 16-item submenus generated from the palette (via `buildColorSubmenu`/`buildColorActions`); labels come from a new `COLOR_LABELS` map in `useCellStyle.ts`.
+  - `ResourceEditorModal.tsx`: deleted its local 10-color `COLOR_PALETTE`, now imports the shared one.
+  - `TaskEditorModal.tsx`: deleted its local 8-color `DEFAULT_COLORS`, now uses the shared palette for the swatch list and random default.
+  - Left unchanged (semantic, not palettes): `RiskMatrix.LEVEL_COLORS`, `ConditionalFormatModal` color-scale defaults, and `sheetToProject.namedColors` (a name→hex import resolver).
+- **Tests**: `COLOR_PALETTE` asserts the Excel 16; new `COLOR_LABELS` tests (every color labelled, no duplicate labels); `BORDER_COLORS` block removed; Toolbar/MenuBar/ResourceEditorModal tests re-pointed to the Excel hexes. Total: 4235 passing / 182 suites.
+- **Results**: lint clean, type-check clean, 4233 tests pass.
+
 ### 2026-10-23 [FEATURE] Audit Phase 4 (Data Schema) + Template Leaf Cost/Effort Gap
 - **What**: Closed two long-standing audit items and one template-data gap.
   - **D1 — optional `ProjectModel.materials`/`actuals`** (`src/types.ts`): fields are now `?`-optional with doc comments; `projectModelToProject` and `createMaterialsSheetFromModel` default a missing value to `[]`. Verified via `npm run type-check`, which now flags any consumer that forgets the default.

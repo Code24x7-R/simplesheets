@@ -296,15 +296,15 @@ describe('Toolbar', () => {
     it('calls onSetBackgroundColor when a fill color cell is clicked', () => {
       render(<Toolbar {...defaultProps} />);
       fireEvent.click(screen.getByTitle('Fill Color'));
-      fireEvent.click(screen.getByTitle('#00FF00'));
-      expect(defaultProps.onSetBackgroundColor).toHaveBeenCalledWith('#00FF00');
+      fireEvent.click(screen.getByTitle('#00B050'));
+      expect(defaultProps.onSetBackgroundColor).toHaveBeenCalledWith('#00B050');
     });
 
     it('calls onSetBorderColor when a border color cell is clicked', () => {
       render(<Toolbar {...defaultProps} />);
       fireEvent.click(screen.getByTitle('Border Color'));
-      fireEvent.click(screen.getByTitle('#0000FF'));
-      expect(defaultProps.onSetBorderColor).toHaveBeenCalledWith('#0000FF');
+      fireEvent.click(screen.getByTitle('#0070C0'));
+      expect(defaultProps.onSetBorderColor).toHaveBeenCalledWith('#0070C0');
     });
 
     it('closes color picker when clicking a color', () => {

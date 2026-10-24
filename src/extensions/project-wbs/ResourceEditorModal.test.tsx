@@ -155,12 +155,12 @@ describe('ResourceEditorModal', () => {
     });
 
     // Click the green color swatch
-    const greenSwatch = screen.getByLabelText('Select color #10B981');
+    const greenSwatch = screen.getByLabelText('Select color #00B050');
     fireEvent.click(greenSwatch);
 
     fireEvent.click(screen.getByRole('button', { name: 'Add Resource' }));
     expect(onSave).toHaveBeenCalledWith(
-      expect.objectContaining({ color: '#10B981' }),
+      expect.objectContaining({ color: '#00B050' }),
     );
   });
 

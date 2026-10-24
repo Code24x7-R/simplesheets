@@ -31,26 +31,61 @@ export const BORDER_PRESETS: BorderPreset[] = [
 ];
 
 /**
- * Common border colors.
+ * The common 16-color palette used by the text, fill, and border color
+ * pickers.
+ *
+ * Mirrors Excel's color picker: the 10 Excel "Standard Colors" plus the 6
+ * Excel theme neutrals (black, white, and four grays). Laid out as two rows
+ * of eight to match the picker's `repeat(8)` grid.
+ *
+ * Row 1 — neutrals:
+ *   Black #000000, Dark Gray #595959, Gray #A6A6A6, Light Gray #D9D9D9,
+ *   Lighter Gray #F2F2F2, White #FFFFFF, Dark Red #C00000, Red #FF0000
+ * Row 2 — Excel Standard Colors:
+ *   Orange #FFC000, Yellow #FFFF00, Light Green #92D050, Green #00B050,
+ *   Light Blue #00B0F0, Blue #0070C0, Dark Blue #002060, Purple #7030A0
  */
-export const BORDER_COLORS = [
+export const COLOR_PALETTE = [
   '#000000',
-  '#434343',
-  '#666666',
-  '#999999',
+  '#595959',
+  '#A6A6A6',
+  '#D9D9D9',
+  '#F2F2F2',
+  '#FFFFFF',
+  '#C00000',
   '#FF0000',
-  '#FF9900',
+  '#FFC000',
   '#FFFF00',
-  '#00FF00',
-  '#00FFFF',
-  '#0000FF',
-  '#9900FF',
-  '#FF00FF',
-  '#E6B8AF',
-  '#F4CCCC',
-  '#FCE5CD',
-  '#FFF2CC',
+  '#92D050',
+  '#00B050',
+  '#00B0F0',
+  '#0070C0',
+  '#002060',
+  '#7030A0',
 ];
+
+/**
+ * Human-readable label for each palette color, keyed by hex value.
+ * Used by menus so every picker shows the same names.
+ */
+export const COLOR_LABELS: Record<string, string> = {
+  '#000000': 'Black',
+  '#595959': 'Dark Gray',
+  '#A6A6A6': 'Gray',
+  '#D9D9D9': 'Light Gray',
+  '#F2F2F2': 'Lighter Gray',
+  '#FFFFFF': 'White',
+  '#C00000': 'Dark Red',
+  '#FF0000': 'Red',
+  '#FFC000': 'Orange',
+  '#FFFF00': 'Yellow',
+  '#92D050': 'Light Green',
+  '#00B050': 'Green',
+  '#00B0F0': 'Light Blue',
+  '#0070C0': 'Blue',
+  '#002060': 'Dark Blue',
+  '#7030A0': 'Purple',
+};
 
 /**
  * Constructs a CSS border string from width, style, and color.
@@ -164,20 +199,6 @@ export function toggleWrapText(current: CellStyleState): 'normal' | 'nowrap' {
 export function clearStyles(): CellStyle {
   return {};
 }
-
-/**
- * Predefined color palette for text/fill color pickers.
- */
-export const COLOR_PALETTE = [
-  '#000000', '#434343', '#666666', '#999999', '#B7B7B7', '#CCCCCC', '#D9D9D9', '#EFEFEF', '#F3F3F3', '#FFFFFF',
-  '#980000', '#FF0000', '#FF9900', '#FFFF00', '#00FF00', '#00FFFF', '#4A86E8', '#0000FF', '#9900FF', '#FF00FF',
-  '#E6B8AF', '#F4CCCC', '#FCE5CD', '#FFF2CC', '#D9EAD3', '#D0E0E3', '#C9DAF8', '#CFE2F3', '#D9D2E9', '#EAD1DC',
-  '#DD7E6B', '#EA9999', '#F9CB9C', '#FFE599', '#B6D7A8', '#A2C4C9', '#A4C2F4', '#9FC5E8', '#B4A7D6', '#D5A6BD',
-  '#CC4125', '#E06666', '#F6B26B', '#FFD966', '#93C47D', '#76A5AF', '#6D9EEB', '#6FA8DC', '#8E7CC3', '#C27BA0',
-  '#A61C00', '#CC0000', '#E69138', '#F1C232', '#6AA84F', '#45818E', '#3C78D8', '#3D85C6', '#674EA7', '#A64D79',
-  '#85200C', '#990000', '#B45F06', '#BF9000', '#38761D', '#134F5C', '#1155CC', '#0B5394', '#351C75', '#741B47',
-  '#5B0F00', '#660000', '#783F04', '#7F6000', '#274E13', '#0C343D', '#1C4587', '#073763', '#20124D', '#4C1130',
-];
 
 /**
  * Common number format presets.

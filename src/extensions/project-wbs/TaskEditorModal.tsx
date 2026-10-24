@@ -11,6 +11,7 @@
 import { useState, useEffect } from 'react';
 import type { WBSTask, Resource, EffortUnit, ApprovalGate } from '../types';
 import { NumericInput } from '../../components/NumericInput';
+import { COLOR_PALETTE } from '../../hooks/useCellStyle';
 
 interface TaskEditorModalProps {
   task: WBSTask | null; // null = create mode
@@ -27,8 +28,6 @@ const EFFORT_UNITS: { value: EffortUnit; label: string }[] = [
   { value: 'days', label: 'Days' },
   { value: 'storyPoints', label: 'Story Points' },
 ];
-
-const DEFAULT_COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16'];
 
 export function TaskEditorModal({
   task,
@@ -63,7 +62,7 @@ export function TaskEditorModal({
       isMilestone: false,
       isSummary: false,
       collapsed: false,
-      color: DEFAULT_COLORS[Math.floor(Math.random() * DEFAULT_COLORS.length)],
+      color: COLOR_PALETTE[Math.floor(Math.random() * COLOR_PALETTE.length)],
       riskIds: [],
       approvalGates: [],
       customFields: {},
@@ -308,7 +307,7 @@ export function TaskEditorModal({
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Color</label>
               <div className="flex gap-1 flex-wrap">
-                {DEFAULT_COLORS.map((c) => (
+                {COLOR_PALETTE.map((c) => (
                   <button
                     key={c}
                     type="button"

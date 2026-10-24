@@ -65,6 +65,7 @@ import {
 import { CloudUpload, CloudDownload, FileClock } from 'lucide-react';
 import type { MRUEntry } from '../utils/mru';
 import { DropdownMenu, type MenuItem } from './DropdownMenu';
+import { COLOR_PALETTE, COLOR_LABELS } from '../hooks/useCellStyle';
 
 interface MenuBarProps {
   // File menu
@@ -156,6 +157,33 @@ interface MenuBarProps {
 }
 
 /**
+ * Builds the Format menu color actions from the shared palette so the menu,
+ * toolbar, and resource editor all offer the same colors.
+ */
+function buildColorActions(
+  onSetTextColor: (color: string) => void,
+  onSetBackgroundColor: (color: string) => void,
+): Record<string, () => void> {
+  const actions: Record<string, () => void> = {};
+  for (const color of COLOR_PALETTE) {
+    actions[`format-color-${color}`] = () => onSetTextColor(color);
+    actions[`format-fill-${color}`] = () => onSetBackgroundColor(color);
+  }
+  return actions;
+}
+
+/**
+ * Builds a Format menu color submenu from the shared palette.
+ */
+function buildColorSubmenu(prefix: string, icon: MenuItem['icon']): MenuItem[] {
+  return COLOR_PALETTE.map((color) => ({
+    id: `${prefix}-${color}`,
+    label: COLOR_LABELS[color] ?? color,
+    icon,
+  }));
+}
+
+/**
  * Top-level menu bar that consolidates all sheet actions into dropdown menus.
  * Replaces the scattered toolbar rows for a clean, clutter-free UI.
  */
@@ -211,14 +239,7 @@ export function MenuBar(props: MenuBarProps) {
         'format-align-left': () => props.onSetTextAlign('left'),
         'format-align-center': () => props.onSetTextAlign('center'),
         'format-align-right': () => props.onSetTextAlign('right'),
-        'format-color-black': () => props.onSetTextColor('#000000'),
-        'format-color-red': () => props.onSetTextColor('#FF0000'),
-        'format-color-blue': () => props.onSetTextColor('#0000FF'),
-        'format-color-green': () => props.onSetTextColor('#00FF00'),
-        'format-fill-yellow': () => props.onSetBackgroundColor('#FFFF00'),
-        'format-fill-red': () => props.onSetBackgroundColor('#FFCCCC'),
-        'format-fill-green': () => props.onSetBackgroundColor('#CCFFCC'),
-        'format-fill-blue': () => props.onSetBackgroundColor('#CCCCFF'),
+        ...buildColorActions(props.onSetTextColor, props.onSetBackgroundColor),
         'format-number-general': () => props.onSetNumberFormat('General'),
         'format-number-number': () => props.onSetNumberFormat('0.00'),
         'format-number-currency': () => props.onSetNumberFormat(getCurrencyFormatPattern(getEffectiveCurrency())),
@@ -392,23 +413,13 @@ export function MenuBar(props: MenuBarProps) {
       id: 'format-color',
       label: 'Text Color',
       icon: Palette,
-      submenu: [
-        { id: 'format-color-black', label: 'Black', icon: Palette },
-        { id: 'format-color-red', label: 'Red', icon: Palette },
-        { id: 'format-color-blue', label: 'Blue', icon: Palette },
-        { id: 'format-color-green', label: 'Green', icon: Palette },
-      ],
+      submenu: buildColorSubmenu('format-color', Palette),
     },
     {
       id: 'format-fill',
       label: 'Fill Color',
       icon: PaintBucket,
-      submenu: [
-        { id: 'format-fill-yellow', label: 'Yellow', icon: PaintBucket },
-        { id: 'format-fill-red', label: 'Red', icon: PaintBucket },
-        { id: 'format-fill-green', label: 'Green', icon: PaintBucket },
-        { id: 'format-fill-blue', label: 'Blue', icon: PaintBucket },
-      ],
+      submenu: buildColorSubmenu('format-fill', PaintBucket),
     },
     {
       id: 'format-number',

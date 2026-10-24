@@ -20,7 +20,7 @@ import {
   ChevronDown,
 } from 'lucide-react';
 import { BorderAll } from './icons/BorderIcons';
-import { BORDER_COLORS } from '../hooks/useCellStyle';
+import { COLOR_PALETTE } from '../hooks/useCellStyle';
 
 /** Border preset definition with icon pattern. */
 interface BorderPreset {
@@ -240,7 +240,7 @@ export function Toolbar(props: ToolbarProps) {
           {colorPickerOpen === 'text' && (
             <div className="color-picker-popover" onClick={(e) => e.stopPropagation()}>
               <div className="color-grid">
-                {BORDER_COLORS.map((color) => (
+                {COLOR_PALETTE.map((color) => (
                   <button
                     key={color}
                     className="color-cell"
@@ -270,7 +270,7 @@ export function Toolbar(props: ToolbarProps) {
           {colorPickerOpen === 'fill' && (
             <div className="color-picker-popover" onClick={(e) => e.stopPropagation()}>
               <div className="color-grid">
-                {BORDER_COLORS.map((color) => (
+                {COLOR_PALETTE.map((color) => (
                   <button
                     key={color}
                     className="color-cell"
@@ -300,7 +300,7 @@ export function Toolbar(props: ToolbarProps) {
           {colorPickerOpen === 'border' && (
             <div className="color-picker-popover" onClick={(e) => e.stopPropagation()}>
               <div className="color-grid">
-                {BORDER_COLORS.map((color) => (
+                {COLOR_PALETTE.map((color) => (
                   <button
                     key={color}
                     className="color-cell"

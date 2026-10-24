@@ -274,7 +274,7 @@ describe('MenuBar', () => {
     fireEvent.click(screen.getByText('Format'));
     fireEvent.mouseEnter(screen.getByText('Text Color'));
     fireEvent.click(screen.getByText('Blue'));
-    expect(defaultProps.onSetTextColor).toHaveBeenCalledWith('#0000FF');
+    expect(defaultProps.onSetTextColor).toHaveBeenCalledWith('#0070C0');
   });
 
   it('Format menu triggers text color green callback', () => {
@@ -282,7 +282,7 @@ describe('MenuBar', () => {
     fireEvent.click(screen.getByText('Format'));
     fireEvent.mouseEnter(screen.getByText('Text Color'));
     fireEvent.click(screen.getByText('Green'));
-    expect(defaultProps.onSetTextColor).toHaveBeenCalledWith('#00FF00');
+    expect(defaultProps.onSetTextColor).toHaveBeenCalledWith('#00B050');
   });
 
   it('Format menu triggers fill color yellow callback', () => {
@@ -302,7 +302,7 @@ describe('MenuBar', () => {
       (el) => el.closest('.menu-item')?.querySelector('.menu-item-label')?.textContent === 'Red'
     ) as HTMLElement;
     fireEvent.click(fillRed);
-    expect(defaultProps.onSetBackgroundColor).toHaveBeenCalledWith('#FFCCCC');
+    expect(defaultProps.onSetBackgroundColor).toHaveBeenCalledWith('#FF0000');
   });
 
   it('Format menu triggers fill color green callback', () => {
@@ -313,7 +313,7 @@ describe('MenuBar', () => {
       (el) => el.closest('.menu-item')?.querySelector('.menu-item-label')?.textContent === 'Green'
     ) as HTMLElement;
     fireEvent.click(fillGreen);
-    expect(defaultProps.onSetBackgroundColor).toHaveBeenCalledWith('#CCFFCC');
+    expect(defaultProps.onSetBackgroundColor).toHaveBeenCalledWith('#00B050');
   });
 
   it('Format menu triggers fill color blue callback', () => {
@@ -324,7 +324,7 @@ describe('MenuBar', () => {
       (el) => el.closest('.menu-item')?.querySelector('.menu-item-label')?.textContent === 'Blue'
     ) as HTMLElement;
     fireEvent.click(fillBlue);
-    expect(defaultProps.onSetBackgroundColor).toHaveBeenCalledWith('#CCCCFF');
+    expect(defaultProps.onSetBackgroundColor).toHaveBeenCalledWith('#0070C0');
   });
 
   it('Format menu triggers number format general callback', () => {
