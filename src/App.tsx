@@ -3182,6 +3182,7 @@ function WorkbookView() {
           onStartEdit={handleGridStartEdit}
           onRawKeyDown={handleRawKeyDown}
           onRawChange={handleRawChange}
+          onRawCaretMove={setCaretPos}
           onRefocusEditor={() => formulaBarRef.current?.focusInput()}
           onFillSeries={handleFillSeries}
           filterState={filterState}

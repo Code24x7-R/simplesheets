@@ -152,3 +152,37 @@ describe('Alt+Enter integration — Grid in-cell editing', () => {
     });
   });
 });
+
+describe('Grid in-cell caret click — F2 edit', () => {
+  it('inserts typed text at the clicked caret position instead of appending at the end', async () => {
+    render(<App />);
+    const grid = document.querySelector('[tabindex="0"]') as HTMLElement;
+
+    // Type "Hello" into A1 (first key starts editing; rest go to the input).
+    act(() => { fireEvent.keyDown(grid, { key: 'H' }); });
+    const editor = document.querySelector('input.border-blue-500') as HTMLInputElement;
+    for (const key of ['e', 'l', 'l', 'o']) {
+      act(() => { fireEvent.keyDown(editor, { key }); });
+    }
+    expect(editor.value).toBe('Hello');
+
+    // Commit without moving the active cell.
+    act(() => { fireEvent.keyDown(editor, { key: 'Enter', ctrlKey: true }); });
+
+    // F2 re-enters EDIT mode on the same cell (buffer = "Hello", caret at end).
+    act(() => { fireEvent.keyDown(grid, { key: 'F2' }); });
+
+    const input = document.querySelector('input.border-blue-500') as HTMLInputElement;
+    expect(input).not.toBeNull();
+    expect(input.value).toBe('Hello');
+
+    // User clicks between "He" and "llo" → caret at position 2.
+    input.focus();
+    input.selectionStart = input.selectionEnd = 2;
+    act(() => { fireEvent.click(input); });
+
+    // Typing must insert at the clicked position, not append at the end.
+    act(() => { fireEvent.keyDown(input, { key: 'X' }); });
+    expect(input.value).toBe('HeXllo');
+  });
+});

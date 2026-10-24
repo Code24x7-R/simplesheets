@@ -6,6 +6,15 @@
 
 ---
 
+### 2026-10-24 [BUGFIX] B-034 — In-cell edit (F2): caret reposition ignored, typing appends at end
+- **What**: Clicking to place the caret mid-text in a cell being edited (F2) and then typing inserted at the end instead of at the clicked position.
+  - `Grid.tsx`: added `onRawCaretMove` prop + `reportEditorCaret` handler on the editor's `onClick` (mouse caret moves); keyboard moves already handled by the FSM.
+  - `App.tsx`: passes the FSM's `setCaretPos` as `onRawCaretMove` to the Grid.
+  - Avoided React `onSelect` (fires on the focused element → clobbered FormulaBar caret tracking).
+- **Tests**: +3 (Grid single-line, Grid multiline textarea, App integration with real FSM). Test harness gained `onRawCaretMove` + Alt+Enter. Total: 4242 passing / 182 suites.
+- **Files**: `src/components/Grid.tsx`, `src/App.tsx`, `src/components/Grid.test.tsx`, `src/App.altenter.test.tsx`, `docs/BUGFIX.md`.
+- **Results**: lint clean, type-check clean, 4242 tests pass.
+
 ### 2026-10-24 [BUGFIX] B-033 — Row heights not saved to Excel; imported column widths mangled
 - **What**: Row heights were silently dropped on .xlsx export; imported column widths were assigned to a random column; SheetJS dimension parsing was gated behind `includeFormatting`.
   - `excelExport.ts`: now writes `ws['!rows']` (`{ hpx }` per row, falling back to `defaultRowHeight`) alongside `!cols`.

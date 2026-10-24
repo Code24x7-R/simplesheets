@@ -24,6 +24,13 @@ This file tracks bugs in **existing** code, functions, and UI elements. New feat
 
 <!-- Bugs resolved in this session or recent past. Newest first. -->
 
+### 2026-10-24: B-034 — In-cell edit (F2): caret reposition ignored, typing appends at end ✅ VERIFIED
+- **Symptom**: With a cell in EDIT mode (F2), clicking to place the caret mid-text and then typing inserted the character at the *end* of the cell instead of at the clicked position — the caret appeared to "jump to the end" and appended.
+- **Root cause**: The Grid cell editor is a controlled `<input>`/`<textarea>` whose `onChange` reports value+caret to the FSM. But a caret move that does not change the value (mouse click, click-drag) fires no `onChange`, so the FSM's `caretPos` stayed at whatever it was last set to (the end after `startEdit`). The FSM's printable-key handler then inserted at that stale `caretPos`. The FormulaBar already reported caret moves via `onRawCaretMove`; the Grid had no equivalent.
+- **Fix**: Added an `onRawCaretMove` prop to `Grid` and a `reportEditorCaret` handler wired to the editor's `onClick` (mouse caret moves). `App` passes the FSM's `setCaretPos`. Keyboard caret moves were already handled by the FSM's arrow-key handling. (React's `onSelect` was deliberately avoided: it fires on the *focused* element, so it interfered with FormulaBar caret tracking when the grid editor held focus.)
+- **Files**: `src/components/Grid.tsx`, `src/App.tsx`, `src/components/Grid.test.tsx`, `src/App.altenter.test.tsx`
+- **Tests**: +3 new tests: Grid inserts at clicked caret (single-line + multiline textarea), App integration inserts at clicked caret with the real FSM. Test harness gained `onRawCaretMove` + Alt+Enter handling.
+
 ### 2026-10-24: B-033 — Row heights not saved to Excel; imported column widths mangled ✅ VERIFIED
 - **Symptom**: Resizing a row (or importing an .xlsx with custom column widths) and saving/reopening did not preserve the dimensions. Row heights were silently dropped on Excel export; imported column widths landed on a *random* column instead of their real index.
 - **Root cause**: (1) `excelExport.ts` wrote `ws['!cols']` but never wrote `ws['!rows']`. (2) `excelImport.ts` read `columnWidths[Math.floor(Math.random() * colCount)] = colInfo.wpx` — the index was random, not the array index. (3) SheetJS only parses `<cols>`/`<row ht>` dimension data when `cellStyles: true`, so `importExcel` (which passed `cellStyles: includeFormatting`) only read dimensions when formatting was enabled.

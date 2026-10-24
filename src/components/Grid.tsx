@@ -103,6 +103,10 @@ interface GridProps {
   onRawKeyDown?: (e: React.KeyboardEvent) => void;
   /** Forward a raw change event to the FSM (value + caret position). */
   onRawChange?: (value: string, caretPos: number) => void;
+  /** Forward a caret-only move (click / selection change) to the FSM.
+   * Without this the FSM's caret stays stale while the user repositions the
+   * caret in the cell editor, so typed characters append at the old position. */
+  onRawCaretMove?: (caretPos: number) => void;
   /** Request that the external editor (formula bar) regain focus. Called when
    * the grid forwards a key to the FSM during editing (e.g., after the user
    * clicked a grid cell during POINT mode, stealing focus from the formula bar). */
@@ -164,7 +168,7 @@ export interface GridHandle {
  * Supports 10,000+ rows with smooth scrolling.
  */
 export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
-  { sheet, sheetIndex, onCellChange, onCellsChange, onSelect, selectedCell, highlightedRanges = [], isPointMode = false, pointSelection = null, onCellPick, onHeaderSelect, onSelectionChange, onColumnResize, onRowResize, referenceFormat = 'A1', onInsertRowAbove, onInsertRowBelow, onDeleteRow, onInsertColLeft, onInsertColRight, onDeleteCol, clipboardRange, onClearClipboard, showFormulas = false, conditionalFormats = [], session, onStartEnter, onStartEdit, onRawKeyDown, onRawChange, onRefocusEditor, onFillSeries, onMoveRange, filterState = null, onApplyFilter, autoComplete, onAcceptAutoComplete, onNavigateAutoComplete, onDismissAutoComplete, wizardPointMode = false, onWizardPointSelection },
+  { sheet, sheetIndex, onCellChange, onCellsChange, onSelect, selectedCell, highlightedRanges = [], isPointMode = false, pointSelection = null, onCellPick, onHeaderSelect, onSelectionChange, onColumnResize, onRowResize, referenceFormat = 'A1', onInsertRowAbove, onInsertRowBelow, onDeleteRow, onInsertColLeft, onInsertColRight, onDeleteCol, clipboardRange, onClearClipboard, showFormulas = false, conditionalFormats = [], session, onStartEnter, onStartEdit, onRawKeyDown, onRawChange, onRawCaretMove, onRefocusEditor, onFillSeries, onMoveRange, filterState = null, onApplyFilter, autoComplete, onAcceptAutoComplete, onNavigateAutoComplete, onDismissAutoComplete, wizardPointMode = false, onWizardPointSelection },
   ref
 ) {
   const parentRef = useRef<HTMLDivElement>(null);
@@ -632,6 +636,20 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
       syncCursorPosition();
     }
   }, [session?.caretPos, editBuffer, session, syncCursorPosition]);
+
+  // ─── Editor Caret Reporting ─────────────────────────────────────
+  // Reports a caret-only move (mouse click) to the FSM so its caretPos stays
+  // in sync with the visible editor. Without this, the FSM's caret stays
+  // wherever it was last set (e.g. the end after F2), so typing after
+  // repositioning the caret inserts at that stale position and appears to
+  // "jump to the end". Keyboard caret moves are already handled by the FSM.
+  const reportEditorCaret = useCallback(
+    (e: React.SyntheticEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+      const pos = e.currentTarget.selectionStart ?? editBuffer.length;
+      onRawCaretMove?.(pos);
+    },
+    [onRawCaretMove, editBuffer.length],
+  );
 
   // ─── Focus Management ──────────────────────────────────────────────
   // When editing ends (session transitions to SELECT), focus the grid
@@ -1955,6 +1973,7 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
                       value={editBuffer}
                       rows={Math.min(editBuffer.split('\n').length + 1, 5)}
                       onFocus={syncCursorPosition}
+                      onClick={reportEditorCaret}
                       onScroll={syncOverlayScroll}
                       onChange={(e) => {
                         const newPos = e.target.selectionStart ?? e.target.value.length;
@@ -1996,6 +2015,7 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
                       style={{ caretColor: '#000' }}
                       value={editBuffer}
                       onFocus={syncCursorPosition}
+                      onClick={reportEditorCaret}
                       onScroll={syncOverlayScroll}
                       onChange={(e) => {
                         const newPos = e.target.selectionStart ?? e.target.value.length;
@@ -2295,6 +2315,7 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
                   value={editBuffer}
                   rows={Math.min(editBuffer.split('\n').length + 1, 5)}
                   onFocus={syncCursorPosition}
+                  onClick={reportEditorCaret}
                   onScroll={syncOverlayScroll}
                   onChange={(e) => {
                     const newPos = e.target.selectionStart ?? e.target.value.length;
@@ -2353,6 +2374,7 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
                   style={{ caretColor: '#000' }}
                   value={editBuffer}
                   onFocus={syncCursorPosition}
+                  onClick={reportEditorCaret}
                   onScroll={syncOverlayScroll}
                   onChange={(e) => {
                     const newPos = e.target.selectionStart ?? e.target.value.length;

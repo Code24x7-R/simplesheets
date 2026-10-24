@@ -53,6 +53,12 @@ function useTestEditingSession() {
       return;
     }
     if (e.key === 'Enter') {
+      if (e.altKey) {
+        // Alt+Enter inserts a line break (mirrors the real FSM).
+        const nb = s.buffer.slice(0, s.caretPos) + '\n' + s.buffer.slice(s.caretPos);
+        setSession({ ...s, buffer: nb, caretPos: s.caretPos + 1 });
+        return;
+      }
       setSession({ ...s, state: 'SELECT', buffer: '', caretPos: 0, isFormula: false });
       return;
     }
@@ -93,7 +99,16 @@ function useTestEditingSession() {
     }));
   }, []);
 
-  return { session, onStartEdit, onStartEnter, onRawKeyDown, onRawChange };
+  // Mirrors the real FSM's setCaretPos: only applies in EDIT state.
+  const onRawCaretMove = useCallback((caretPos: number) => {
+    setSession((prev) => {
+      if (prev.state !== 'EDIT') return prev;
+      const clamped = Math.max(0, Math.min(prev.buffer.length, caretPos));
+      return { ...prev, caretPos: clamped };
+    });
+  }, []);
+
+  return { session, onStartEdit, onStartEnter, onRawKeyDown, onRawChange, onRawCaretMove };
 }
 
 /**
@@ -132,6 +147,7 @@ function GridWithEditing(
       onStartEnter={editing.onStartEnter}
       onRawKeyDown={handleRawKeyDown}
       onRawChange={editing.onRawChange}
+      onRawCaretMove={editing.onRawCaretMove}
     />
   );
 }
@@ -1634,6 +1650,61 @@ describe('Grid Component', () => {
     // Selection should cover the entire text
     expect(input.selectionStart).toBe(0);
     expect(input.selectionEnd).toBe(1);
+  });
+
+  // ─── Caret Position on Click During Edit ───────────────────────
+
+  it('inserts typed text at the clicked caret position during F2 edit', () => {
+    render(<GridWithEditing sheet={createTestSheet()} selectedCell={{ row: 0, col: 0 }} />);
+    const grid = document.querySelector('[tabindex="0"]') as HTMLElement;
+
+    // Enter EDIT mode (F2) — caret starts at the end of the content
+    fireEvent.keyDown(grid, { key: 'F2' });
+    const input = document.querySelector('input.border-blue-500') as HTMLInputElement;
+    expect(input).not.toBeNull();
+
+    // Existing content with the caret at the end
+    fireEvent.change(input, { target: { value: 'Hello' } });
+    expect(input.value).toBe('Hello');
+
+    // User clicks between "He" and "llo" → caret at position 2.
+    // (In a real browser the click sets the caret; here we set it explicitly
+    // and fire the click so the Grid reports the new caret to the FSM.)
+    input.focus();
+    input.selectionStart = input.selectionEnd = 2;
+    fireEvent.click(input);
+
+    // Typing must insert at the clicked position, not append at the end
+    fireEvent.keyDown(input, { key: 'X' });
+    expect(input.value).toBe('HeXllo');
+  });
+
+  it('inserts typed text at the clicked caret position in a multiline cell', () => {
+    render(<GridWithEditing sheet={createTestSheet()} selectedCell={{ row: 0, col: 0 }} />);
+    const grid = document.querySelector('[tabindex="0"]') as HTMLElement;
+
+    fireEvent.keyDown(grid, { key: 'F2' });
+    const input = document.querySelector('input.border-blue-500') as HTMLInputElement;
+    expect(input).not.toBeNull();
+
+    // Type some text, then insert a line break (Alt+Enter) so the editor
+    // switches from <input> to <textarea>.
+    fireEvent.change(input, { target: { value: 'Hello' } });
+    fireEvent.keyDown(input, { key: 'Enter', altKey: true });
+
+    const textarea = document.querySelector('textarea.border-blue-500') as HTMLTextAreaElement;
+    expect(textarea).not.toBeNull();
+
+    // Fill the second line (textarea preserves newlines; input would strip them).
+    fireEvent.change(textarea, { target: { value: 'Hello\nWorld' } });
+
+    // Click between "W" and "o" in "World" (position 7)
+    textarea.focus();
+    textarea.selectionStart = textarea.selectionEnd = 7;
+    fireEvent.click(textarea);
+
+    fireEvent.keyDown(textarea, { key: 'X' });
+    expect(textarea.value).toBe('Hello\nWXorld');
   });
 
   // ─── Inline Cell Editing Paste ───────────────────────────────────
