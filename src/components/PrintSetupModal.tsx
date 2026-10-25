@@ -1,6 +1,14 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
-import { usePrintSetup, type PageOrientation, type PageSize, type PrintScaling } from '../context/PrintSetupContext';
+import { useEffect, useState } from 'react';
+import {
+  usePrintSetup,
+  type PageOrientation,
+  type PageSize,
+  type PrintScaling,
+} from '../context/PrintSetupContext';
+import { parseRange } from '../utils/chartData';
+import { formatPrintRange } from '../services/pdfExport';
 import { NumericInput } from './NumericInput';
 
 interface PrintSetupModalProps {
@@ -9,12 +17,39 @@ interface PrintSetupModalProps {
 }
 
 /**
- * Modal for configuring page setup (orientation, size, margins, scaling).
+ * Modal for configuring page setup (orientation, size, margins, scaling,
+ * print range, headings and footer).
  */
 export function PrintSetupModal({ isOpen, onClose }: PrintSetupModalProps) {
   const { setup, updateSetup, updateMargins } = usePrintSetup();
 
+  // Draft for the A1 print-range field so the user can type freely.
+  const [rangeDraft, setRangeDraft] = useState<string>(
+    setup.range ? formatPrintRange(setup.range) : ''
+  );
+
+  // Keep the draft in sync when the range is changed elsewhere (e.g. reset).
+  useEffect(() => {
+    setRangeDraft(setup.range ? formatPrintRange(setup.range) : '');
+  }, [setup.range]);
+
   if (!isOpen) return null;
+
+  /** Parses the range field and commits it; blank clears back to the used range. */
+  const commitRange = (value: string) => {
+    setRangeDraft(value);
+    const trimmed = value.trim();
+    if (!trimmed) {
+      updateSetup({ range: null });
+      return;
+    }
+    // Ignore anything that isn't a single cell or a two-ended range.
+    if (trimmed.split(':').length > 2) return;
+    const parsed = parseRange(trimmed);
+    if (parsed.startRow >= 0 && parsed.startCol >= 0) {
+      updateSetup({ range: parsed });
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
@@ -91,6 +126,61 @@ export function PrintSetupModal({ isOpen, onClose }: PrintSetupModalProps) {
               </div>
             ))}
           </div>
+        </div>
+
+        {/* Print range */}
+        <div>
+          <label className="block text-sm font-medium mb-1">Print Range</label>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              className="flex-1 border border-gray-200 rounded px-3 py-2 text-sm"
+              placeholder="Used range (e.g. A1:D20)"
+              value={rangeDraft}
+              onChange={(e) => commitRange(e.target.value)}
+            />
+            <button
+              className="px-3 py-2 rounded border border-gray-200 hover:bg-gray-50 text-sm"
+              onClick={() => commitRange('')}
+              disabled={!setup.range}
+            >
+              Clear
+            </button>
+          </div>
+          <p className="text-xs text-gray-400 mt-1">
+            Leave blank to print the whole used range.
+          </p>
+        </div>
+
+        {/* Headings */}
+        <div>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={setup.showHeaders}
+              onChange={(e) => updateSetup({ showHeaders: e.target.checked })}
+            />
+            Row &amp; column headings
+          </label>
+          <p className="text-xs text-gray-400 mt-1">
+            Off by default. Borders print only where you have applied them to a
+            range (a table style).
+          </p>
+        </div>
+
+        {/* Footer */}
+        <div>
+          <label className="block text-sm font-medium mb-1">Footer</label>
+          <input
+            type="text"
+            className="w-full border border-gray-200 rounded px-3 py-2 text-sm"
+            placeholder="Page {page} of {total}"
+            value={setup.footer}
+            onChange={(e) => updateSetup({ footer: e.target.value })}
+          />
+          <p className="text-xs text-gray-400 mt-1">
+            {'Use {page} and {total} placeholders. Leave blank for no footer.'}
+          </p>
         </div>
 
         {/* Actions */}

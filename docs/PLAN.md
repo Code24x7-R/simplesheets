@@ -4,15 +4,16 @@
 Achieve a clean, clutter-free UI with standardized dropdown menus, formula wizard, formula bar, R1C1 reference format, and extensible project management capabilities.
 
 ## Current State
-- **4229 tests** across **182 suites** (4228 passing, 1 skipped)
+- **4367 tests** across **187 suites** (4366 passing, 1 skipped)
 - Lint clean (0 warnings), Type-check clean, Build clean
-- Coverage: **88.31% lines**, **76.75% branches**, **82.00% functions** (targets: ≥95% lines / ≥85% branches — see [AGENTS.md](../AGENTS.md))
+- Coverage: **88.94% lines**, **77.34% branches**, **82.40% functions** (targets: ≥95% lines / ≥85% branches — see [AGENTS.md](../AGENTS.md))
 - Phases 1-33 complete ✅ (see [HISTORY.md](./HISTORY.md))
 - Phases 34-39 complete ✅ (Extensions Architecture — see below)
 - Phases 40-42 complete ✅ (Accounting, Dependency Workflow, EVM Reporting)
 - **Phase 43 complete ✅ (Material Management — CapEx/OpEx/Consumption)**
 - **Phase 44 complete ✅ (Change Log & Material Cost Integration — dependency tracking, capitalization config)**
 - **Phases 45-46 complete ✅ (Creator Canvas extension — schema, canvas ops, starter seed, interactions/presets, template library)**
+- **PDF Export Rework complete ✅ (A4 default, no headings, cell-border-only, print range, footers, auto page breaks)**
 - **Named Ranges complete ✅ (single cell to matrix, full CRUD, range picker + delete in edit form)**
 - **Save to Cloud complete ✅ (Copy Link, Share File, Save/Open File, cloud provider scaffolding)**
 - **MRU File List complete ✅ (recent files with .ssjson + cloud source tracking)**
@@ -25,6 +26,19 @@ Achieve a clean, clutter-free UI with standardized dropdown menus, formula wizar
 ## Active Work
 
 None — all planned extension work is complete. See [Future Extensions](#future-extensions) for planned items and [PROJECT_EXTENSION_AUDIT.md](./PROJECT_EXTENSION_AUDIT.md) for remaining low-priority audit items.
+
+### PDF Export Rework — ✅ COMPLETE
+
+Rewrote `src/services/pdfExport.ts` to produce clean, paginated A4 output:
+
+- **No row/column headings** by default (`PrintSetup.showHeaders` defaults to `false`).
+- **No generic grid pattern.** Borders are drawn only from each cell's own style (`CellStyle.borderTop/Bottom/Left/Right`) — a "table style" is cell borders. Shared edges are deduplicated so an "all borders" range renders as a single clean grid.
+- **Print range** (`PrintSetup.range`, an A1 string or `{startRow,endRow,startCol,endCol}`) restricts the output; blank/invalid falls back to the used range.
+- **Footers** (`PrintSetup.footer`) with `{page}` / `{total}` placeholders, stamped on every page via the live jsPDF document.
+- **A4 default** with an explicit page-size map; scaling (`fit-to-page` / `fit-to-width` / `actual-size`) is measured and corrected against html2pdf's floored page height.
+- **Default scaling is `fit-to-width`** so tall sheets render at their natural size and flow across pages (readable). `fit-to-page` stays available for small sheets.
+- **Automatic page breaks** via html2pdf's pagebreak plugin (`pagebreak.avoid: ['.pdf-row']`) — each row is marked `break-inside: avoid`, so rows are never split across pages.
+- **PrintSetupModal** gained headings, print-range and footer controls; **App** now exports using the shared `usePrintSetup` context.
 
 ### Extensions Architecture (Phases 34-44) — ✅ COMPLETE
 

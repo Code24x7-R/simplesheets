@@ -4,6 +4,16 @@
 
 ---
 
+## 2026-10-25 — PDF Export Rework
+- PDF output now defaults to A4 with **no row/column headings** and **no generic grid pattern** (borders print only where a range has them applied).
+- Added **print range** (A1 string or explicit bounds) and **footers** with `{page}` / `{total}` placeholders.
+- **Automatic page breaks** between rows; scaling measured and corrected to avoid sub-pixel page spill.
+- Page Setup modal gained headings, print-range and footer controls.
+- **Default scaling is now `Fit to Width`** (natural-size render flowing across pages) so tall sheets stay readable; `Fit to Page` remains for small sheets.
+- **Tests:** 4366 passing (187 suites)
+
+---
+
 ## 2026-09-08 — Review Plan v2: Stages 1-5 Complete
 - **Stage 1**: Verified formula engine regex robustness (1-3 letter column matcher, cross-sheet prefix protection, INDIRECT/OFFSET/INDEX handlers)
 - **Stage 2**: Verified CPM scheduling corrections (successor duration in FF/SF, bidirectional schedule contraction, summary rollup closure, blocked/ready consolidation, circular dependency detection)

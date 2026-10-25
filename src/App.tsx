@@ -8,7 +8,7 @@ import { PasteModal } from './components/PasteModal';
 import { PasteSpecialModal } from './components/PasteSpecialModal';
 import { parsePlainText, parseHtmlTable, classifyPasteContent, type ParsedClipboardGrid, type PasteContentKind } from './utils/clipboardParse';
 import { FreezeProvider, useFreeze } from './context/FreezeContext';
-import { PrintSetupProvider } from './context/PrintSetupContext';
+import { PrintSetupProvider, usePrintSetup } from './context/PrintSetupContext';
 import { Grid, type GridHandle } from './components/Grid';
 import type { PointModeSelection } from './components/Grid';
 import { FormulaBar } from './components/FormulaBar';
@@ -154,6 +154,7 @@ function WorkbookView() {
 
   // Ref to hold pending extension data (set by ProjectView save, applied to next workbook push)
   const { frozenColumns, frozenRows, freeze, unfreeze } = useFreeze();
+  const { setup: printSetup } = usePrintSetup();
   const [activeCell, setActiveCell] = useState<{ row: number; col: number } | null>({ row: 0, col: 0 });
   // Tracks the full selection from Grid (including range selections via shift+click).
   // The `selection` derived below falls back to activeCell when this is null.
@@ -1025,19 +1026,11 @@ function WorkbookView() {
   const handleExportPdfMenu = useCallback(() => {
     const defaultName = (sheet.name || workbook.title).replace(/[^a-zA-Z0-9-_]/g, '_') || 'Untitled';
     openFilenameModal('Export PDF', defaultName, 'pdf', (filename) => {
-      downloadPdf(sheet, {
-        filename,
-        setup: {
-          orientation: 'portrait',
-          pageSize: 'A4',
-          scaling: 'fit-to-page',
-          margins: { top: 10, right: 10, bottom: 10, left: 10 },
-        },
-      });
+      downloadPdf(sheet, { filename, setup: printSetup });
       setStatusMessage(`Exported "${filename}.pdf" — download started`);
       closeFilenameModal();
     });
-  }, [workbook, sheet, openFilenameModal, closeFilenameModal]);
+  }, [workbook, sheet, printSetup, openFilenameModal, closeFilenameModal]);
 
   // When the active cell changes externally (e.g., clicking a different cell
   // in the grid), reset the editing FSM so it starts fresh for the new cell.

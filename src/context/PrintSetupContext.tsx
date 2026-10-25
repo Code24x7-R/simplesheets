@@ -18,6 +18,16 @@ export type PageSize = 'A4' | 'Letter' | 'Legal';
 export type PrintScaling = 'fit-to-page' | 'actual-size' | 'fit-to-width';
 
 /**
+ * Inclusive, zero-based cell bounds describing the range to print.
+ */
+export interface PrintRange {
+  startRow: number;
+  endRow: number;
+  startCol: number;
+  endCol: number;
+}
+
+/**
  * Page setup configuration.
  */
 export interface PrintSetup {
@@ -34,13 +44,35 @@ export interface PrintSetup {
     bottom: number;
     left: number;
   };
+  /**
+   * Whether to print row/column headings. Defaults to false so the output
+   * contains only the sheet data (no A/B/C column letters or 1/2/3 row numbers).
+   */
+  showHeaders: boolean;
+  /**
+   * Explicit range of cells to print. `null` means the sheet's used range.
+   * Borders come from the cells' own styles (a "table style" is cell borders),
+   * so no generic grid pattern is drawn unless a range has borders applied.
+   */
+  range: PrintRange | null;
+  /**
+   * Footer text printed at the bottom of every page. Supports `{page}` and
+   * `{total}` placeholders. An empty string disables the footer.
+   */
+  footer: string;
 }
 
 const DEFAULT_SETUP: PrintSetup = {
   orientation: 'portrait',
   pageSize: 'A4',
-  scaling: 'fit-to-page',
+  // Fit-to-width renders at the sheet's natural size and flows across pages,
+  // which keeps the text readable. Fit-to-page would shrink tall sheets until
+  // the text is only a few pixels tall.
+  scaling: 'fit-to-width',
   margins: { top: 10, right: 10, bottom: 10, left: 10 },
+  showHeaders: false,
+  range: null,
+  footer: 'Page {page} of {total}',
 };
 
 interface PrintSetupContextValue {

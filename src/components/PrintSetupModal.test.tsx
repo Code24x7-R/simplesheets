@@ -28,7 +28,7 @@ describe('PrintSetupModal', () => {
 
   it('shows scaling selector', () => {
     render(<PrintSetupProvider><PrintSetupModal isOpen={true} onClose={jest.fn()} /></PrintSetupProvider>);
-    expect(screen.getByDisplayValue('Fit to Page')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('Fit to Width')).toBeInTheDocument();
   });
 
   it('shows margin inputs', () => {
@@ -97,6 +97,66 @@ describe('PrintSetupModal', () => {
     const marginInputs = document.querySelectorAll('input[type="number"]');
     expect(marginInputs.length).toBe(4);
     fireEvent.change(marginInputs[0], { target: { value: '20' } });
+    // NumericInput commits on blur/Enter.
+    fireEvent.blur(marginInputs[0]);
     expect(marginInputs[0]).toHaveValue(20);
+  });
+
+  it('shows the headings checkbox unchecked by default', () => {
+    render(<PrintSetupProvider><PrintSetupModal isOpen={true} onClose={jest.fn()} /></PrintSetupProvider>);
+
+    const checkbox = screen.getByRole('checkbox') as HTMLInputElement;
+    expect(checkbox.checked).toBe(false);
+  });
+
+  it('toggles the headings checkbox', () => {
+    render(<PrintSetupProvider><PrintSetupModal isOpen={true} onClose={jest.fn()} /></PrintSetupProvider>);
+
+    const checkbox = screen.getByRole('checkbox') as HTMLInputElement;
+    fireEvent.click(checkbox);
+    expect(checkbox.checked).toBe(true);
+  });
+
+  it('shows the default footer text', () => {
+    render(<PrintSetupProvider><PrintSetupModal isOpen={true} onClose={jest.fn()} /></PrintSetupProvider>);
+
+    expect(screen.getByPlaceholderText('Page {page} of {total}')).toHaveValue('Page {page} of {total}');
+  });
+
+  it('edits the footer text', () => {
+    render(<PrintSetupProvider><PrintSetupModal isOpen={true} onClose={jest.fn()} /></PrintSetupProvider>);
+
+    const footer = screen.getByPlaceholderText('Page {page} of {total}');
+    fireEvent.change(footer, { target: { value: 'Draft {page}' } });
+    expect(footer).toHaveValue('Draft {page}');
+  });
+
+  it('accepts a print range', () => {
+    render(<PrintSetupProvider><PrintSetupModal isOpen={true} onClose={jest.fn()} /></PrintSetupProvider>);
+
+    const range = screen.getByPlaceholderText('Used range (e.g. A1:D20)');
+    fireEvent.change(range, { target: { value: 'A1:D20' } });
+    // The Clear button becomes enabled once a range is set.
+    expect(screen.getByText('Clear')).not.toBeDisabled();
+  });
+
+  it('clears the print range back to the used range', () => {
+    render(<PrintSetupProvider><PrintSetupModal isOpen={true} onClose={jest.fn()} /></PrintSetupProvider>);
+
+    const range = screen.getByPlaceholderText('Used range (e.g. A1:D20)');
+    fireEvent.change(range, { target: { value: 'A1:D20' } });
+    fireEvent.click(screen.getByText('Clear'));
+    expect(range).toHaveValue('');
+    expect(screen.getByText('Clear')).toBeDisabled();
+  });
+
+  it('ignores an invalid range with too many colons', () => {
+    render(<PrintSetupProvider><PrintSetupModal isOpen={true} onClose={jest.fn()} /></PrintSetupProvider>);
+
+    const range = screen.getByPlaceholderText('Used range (e.g. A1:D20)');
+    fireEvent.change(range, { target: { value: 'A1:B2:C3' } });
+    // The draft keeps the text but no range is committed.
+    expect(range).toHaveValue('A1:B2:C3');
+    expect(screen.getByText('Clear')).toBeDisabled();
   });
 });

@@ -24,6 +24,19 @@ This file tracks bugs in **existing** code, functions, and UI elements. New feat
 
 <!-- Bugs resolved in this session or recent past. Newest first. -->
 
+### 2026-10-25: B-037 — PDF `fit-to-page` rendered unreadable ~3px text (regression) ✅ VERIFIED
+- **Symptom**: Exporting the demo Formula Guide produced a single A4 page whose grid text was unreadable — only the title was legible, and it was drawn twice. File was ~28 KB instead of ~1 MB.
+- **Root cause**: The scale was applied with CSS `zoom` inside html2pdf's **full-page-width** canvas. The content was rendered at the scaled size but the canvas stayed page-width, so the PDF upscaled a tiny render. A `fit-to-page` scale of ~0.294× gave ~3 px text regardless of canvas resolution. The earlier measurement code had silently returned 0, so it never scaled (and looked fine at 4 pages) — fixing the measurement exposed this.
+- **Fix**: `PrintSetup.scaling` now defaults to **`fit-to-width`** (natural-size render, flowing across pages). `fit-to-page` remains for small sheets.
+- **Files**: `src/context/PrintSetupContext.tsx`, `src/context/PrintSetupContext.test.tsx`, `src/components/PrintSetupModal.test.tsx`, `MANUAL.md`.
+
+### 2026-10-25: B-036 — PDF download canceled because the blob URL is revoked immediately ✅ VERIFIED
+- **Symptom**: Clicking **Export PDF** started a download that was immediately canceled — no file was written.
+- **Root cause**: `downloadPdf` created a blob URL, clicked the download anchor, then called `URL.revokeObjectURL(url)` synchronously. Revoking before the browser has started the download invalidates the URL and cancels the transfer.
+- **Fix**: Defer revocation with `setTimeout(() => URL.revokeObjectURL(url), 1000)`.
+- **Files**: `src/services/pdfExport.ts`, `src/services/pdfExport.test.ts`
+- **Tests**: `downloadPdf` now waits for the deferred revocation.
+
 ### 2026-10-24: B-035 — Ctrl+V in a filename field is hijacked and pasted into a grid cell ✅ VERIFIED
 - **Symptom**: While naming a file (export modal / cloud save), pressing Ctrl+V to paste into the filename field did not insert into the field — instead the clipboard content was pasted into a grid cell.
 - **Root cause**: The Grid's window-level `handleGlobalClipboardKey` handler intercepts Ctrl+C/X/V whenever the cell FSM is not editing. It never checked the event target, so a Ctrl+V while typing in *any* text field (a modal's filename input, the formula bar, etc.) was swallowed and re-dispatched as a grid paste. The export `FilenameModal` input and the cloud `ProviderView` filename input also did not stop propagation (the cloud `HomeView` input already did).

@@ -6,6 +6,29 @@
 
 ---
 
+### 2026-10-25 [BUGFIX] PDF export: `fit-to-page` shrank content to unreadable size — default changed to `fit-to-width`
+- **Symptom**: Exporting the demo Formula Guide produced a single A4 page whose grid text was unreadable (only the title was legible, and it was drawn twice). The file was ~28 KB instead of ~1 MB.
+- **Root cause**: The PDF scale is applied with CSS `zoom` inside html2pdf's **full-page-width** canvas, so the content is rendered at the scaled size but the canvas is still page-width. A `fit-to-page` scale of ~0.294× therefore produced ~3 px text no matter what canvas resolution was used. (The earlier code had silently failed to measure the content, so it never scaled and looked fine at 4 pages.)
+- **Fix**: `PrintSetup.scaling` now defaults to **`fit-to-width`** — the sheet renders at its natural size and flows across A4 pages, keeping the text readable (matches the previously working 4-page / ~1 MB output). `fit-to-page` remains available for small sheets.
+- **Files**: `src/context/PrintSetupContext.tsx`, `src/context/PrintSetupContext.test.tsx`, `src/components/PrintSetupModal.test.tsx`, `MANUAL.md`.
+- **Results**: lint clean, type-check clean, build OK, full suite passes; verified in Chrome (4 A4 pages, footers on every page).
+
+### 2026-10-25 [FEATURE] PDF export rework (A4, no headings/grid, print range, footers, auto page breaks)
+- **What**: Reworked PDF output in `src/services/pdfExport.ts`.
+  - **No row/column headings** by default — `PrintSetup.showHeaders` defaults to `false`; the heading row/column is opt-in.
+  - **No generic grid pattern.** Borders are drawn only from each cell's own style (`borderTop/Bottom/Left/Right`); a "table style" is cell borders. Shared edges are deduplicated so an all-borders range renders as a single clean grid. The old uniform `#ccc` grid is gone.
+  - **Print range** — `PrintSetup.range` accepts an A1 string (`"A1:D20"`) or `{startRow,endRow,startCol,endCol}`; blank/invalid falls back to the used range.
+  - **Footers** — `PrintSetup.footer` with `{page}` / `{total}` placeholders, stamped on every page via the live jsPDF document (`worker.toPdf()` → `worker.get('pdf')`).
+  - **A4 default** with an explicit page-size map; scaling (`fit-to-page` / `fit-to-width` / `actual-size`) is measured via `getBoundingClientRect` and corrected against html2pdf's floored page height so no sub-pixel sliver spills onto an extra page.
+  - **Automatic page breaks** — div-based rows marked `break-inside: avoid` and `pagebreak.avoid: ['.pdf-row']`; html2pdf's plugin moves whole rows to the next page.
+  - Chart SVGs are embedded as data URLs (no blob-URL leak); `downloadPdf` defers `revokeObjectURL` so the browser can start the download.
+- **Tests**: `pdfExport.test.ts` rewritten (40 tests, 100% line/branch coverage); new `PrintSetupContext` and `PrintSetupModal` tests for the added fields. Total: 4365 passing / 187 suites.
+- **Files**: `src/services/pdfExport.ts`, `src/services/pdfExport.test.ts`, `src/context/PrintSetupContext.tsx`, `src/context/PrintSetupContext.test.tsx`, `src/components/PrintSetupModal.tsx`, `src/components/PrintSetupModal.test.tsx`, `src/App.tsx`, `src/html2pdf.d.ts`, `MANUAL.md`, `docs/PLAN.md`.
+- **Verified in Chrome**: A4 MediaBox (595.28×841.89 pt), footer on every page, 1 page for `fit-to-page`, 4 pages for `fit-to-width` with the last page partial.
+- **Results**: lint clean, type-check clean, build OK, 4365 tests pass.
+
+---
+
 ### 2026-10-24 [FEATURE] Custom font-size input (typed values snap to the standard list)
 - **What**: The toolbar font-size control is now an Excel-style editable box (field + dropdown) instead of a plain `<select>`.
   - Typing a custom value and pressing Enter (or blurring) snaps it to the nearest entry in `FONT_SIZES`; ties round up. E.g. `11.5` → `12`, `13` → `14`, `30` → `28`, `4` → `8`, `500` → `72`. The field then displays the snapped value.

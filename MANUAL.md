@@ -778,9 +778,20 @@ Open **File → Page Setup…** to configure PDF export:
 | Setting | Options |
 |---------|---------|
 | **Orientation** | Portrait, Landscape |
-| **Paper Size** | A4, Letter, Legal |
-| **Scaling** | Fit to Page, Actual Size, Fit to Width |
+| **Paper Size** | A4 (default), Letter, Legal |
+| **Scaling** | Fit to Width (default), Fit to Page, Actual Size |
 | **Margins** | Top, Bottom, Left, Right (in mm) |
+| **Print Range** | A1-style range (e.g. `A1:D20`); blank = whole used range |
+| **Row & column headings** | Off by default — the output contains only the sheet data |
+| **Footer** | Text printed at the bottom of every page; supports `{page}` and `{total}` placeholders (default: `Page {page} of {total}`) |
+
+**Output behaviour:**
+
+- **No row/column headings** are printed unless you enable the *Row & column headings* option.
+- **No grid pattern** is drawn by default. Borders print only where you have applied them to a range (a *table style* is just cell borders). Apply borders to a range and the grid appears; leave them unset and the sheet prints clean.
+- **Page breaks** are inserted automatically between rows, so a row is never split across pages.
+- The output is sized to the selected paper (A4 by default) using the chosen scaling.
+- **Fit to Width** (the default) renders the sheet at its natural size and flows it across as many A4 pages as needed — text stays readable. **Fit to Page** shrinks the whole sheet onto a single page (best for small sheets). **Actual Size** prints at 100% with no scaling.
 
 ### Auto-Save
 
