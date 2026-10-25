@@ -6,6 +6,21 @@
 
 ---
 
+### 2026-10-24 [FEATURE] Font size for cells (toolbar + menu + rendering + auto-fit)
+- **What**: Cells can now have a font size (8–72px, Excel's standard list).
+  - `CellStyle.fontSize?: number` added to the data model; `CellStyleState.fontSize` + `DEFAULT_FONT_SIZE`/`MIN_FONT_SIZE`/`MAX_FONT_SIZE`/`FONT_SIZES`/`clampFontSize` in `useCellStyle.ts`.
+  - `useCellStyles.setFontSizeStyle(size)` applies it (recomputing wrapped row heights).
+  - **Toolbar**: a `.toolbar-select` font-size dropdown showing the active size (custom sizes outside the list are shown too).
+  - **MenuBar**: Format → Font Size submenu (16 standard sizes).
+  - **Grid**: renders `fontSize` on both the frozen and scrollable cell paths, and sets an explicit `line-height` (`lineHeightForFont`) so large fonts don't overlap.
+  - **Row-height auto-fit**: `lineHeightForFont(fontSize)` (ratio 1.4, floored at 28px) now scales the per-line height, so a 36px wrapped cell reserves a taller row.
+  - **PDF export**: applies the cell font size.
+  - **Excel export/import**: `convertCellStyle` writes `font.sz` (px→pt) and the importer reads it back (pt→px).
+- **Known limitation**: SheetJS 0.18.5 hardcodes a single font in `write_sty_xml` and ignores per-cell `s` font/fill data, so font size (like all font/fill formatting) does **not** survive an Excel round-trip. JSON save/open preserves it.
+- **Tests**: +28 (font-size constants/clamp, `setFontSizeStyle`, toolbar select, menu submenu, grid rendering incl. frozen cells + line height, `lineHeightForFont`, fontSize-aware auto-fit, PDF). Total: 4310 passing / 186 suites.
+- **Files**: `src/types.ts`, `src/hooks/useCellStyle.ts`, `src/hooks/useCellStyles.ts`, `src/utils/rowHeight.ts`, `src/components/Grid.tsx`, `src/components/Toolbar.tsx`, `src/components/MenuBar.tsx`, `src/App.tsx`, `src/index.css`, `src/services/excelExport.ts`, `src/services/excelImport.ts`, `src/services/pdfExport.ts`, `MANUAL.md`, plus their tests.
+- **Results**: lint clean, type-check clean, build OK, 4310 tests pass.
+
 ### 2026-10-24 [FEATURE] Wrap Text row-height auto-fit (snap to content height)
 - **What**: When Wrap Text is enabled on a cell, the row height now snaps to the wrapped content height, which depends on the column width.
   - New `src/utils/rowHeight.ts`: `measureTextWidth`, `countWrappedLines`, `computeAutoRowHeight`, `computeAutoRowHeights`, `applyAutoRowHeights`, `isWrappedCell`. Uses canvas text measurement (28px line-height matching `.grid-cell` `leading-7`); falls back to a per-character estimate without a DOM.

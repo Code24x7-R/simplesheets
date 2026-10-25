@@ -187,6 +187,7 @@ function buildPrintableHtml(
       if (cell?.style) {
         if (cell.style.fontWeight === 'bold') td.style.fontWeight = 'bold';
         if (cell.style.fontStyle === 'italic') td.style.fontStyle = 'italic';
+        if (cell.style.fontSize) td.style.fontSize = `${cell.style.fontSize}px`;
         if (cell.style.color) td.style.color = cell.style.color;
         if (cell.style.backgroundColor) td.style.backgroundColor = cell.style.backgroundColor;
         if (cell.style.textAlign) td.style.textAlign = cell.style.textAlign;

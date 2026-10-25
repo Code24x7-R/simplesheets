@@ -137,6 +137,39 @@ describe('pdfExport', () => {
       expect(result).toBeInstanceOf(Blob);
     });
 
+    it('applies the cell font size to the data cell', async () => {
+      let capturedHtml: HTMLElement | null = null;
+      mockFrom.mockImplementation((el: HTMLElement) => {
+        capturedHtml = el;
+        return mockHtml2pdf();
+      });
+
+      const sheet: Sheet = {
+        ...createTestSheet(),
+        cells: {
+          '0:0': { rawValue: 'H1' },
+          '0:1': { rawValue: 'H2' },
+          '1:0': { rawValue: 'R1' },
+          '2:2': { rawValue: 'Big', style: { fontSize: 24 } },
+        },
+      };
+
+      await generatePdf(sheet, {
+        setup: {
+          orientation: 'portrait',
+          pageSize: 'A4',
+          scaling: 'fit-to-page',
+          margins: { top: 10, right: 10, bottom: 10, left: 10 },
+        },
+      });
+
+      const td = Array.from(capturedHtml!.querySelectorAll('td')).find(
+        (t) => t.textContent === 'Big',
+      ) as HTMLElement;
+      expect(td).toBeTruthy();
+      expect(td.style.fontSize).toBe('24px');
+    });
+
     it('preserves first row/column data when showHeaders is true', async () => {
       // Regression test: showHeaders must NOT overwrite data cells
       const sheet = createTestSheet();

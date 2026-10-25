@@ -20,7 +20,7 @@ import {
   ChevronDown,
 } from 'lucide-react';
 import { BorderAll } from './icons/BorderIcons';
-import { COLOR_PALETTE } from '../hooks/useCellStyle';
+import { COLOR_PALETTE, FONT_SIZES } from '../hooks/useCellStyle';
 
 /** Border preset definition with icon pattern. */
 interface BorderPreset {
@@ -59,6 +59,8 @@ interface ToolbarProps {
   onSetAlignCenter: () => void;
   onSetAlignRight: () => void;
   onSetNumberFormat: (format: string) => void;
+  onSetFontSize: (size: number) => void;
+  currentFontSize: number;
   // ── Border callbacks ─────────────────────────────────────────────
   onSetBorderTop: () => void;
   onSetBorderBottom: () => void;
@@ -193,6 +195,22 @@ export function Toolbar(props: ToolbarProps) {
 
       {/* ── Font Formatting Section ─────────────────────────────────── */}
       <div className="toolbar-section flex items-center gap-0.5">
+        <select
+          className="toolbar-select"
+          value={props.currentFontSize}
+          onChange={(e) => props.onSetFontSize(Number(e.target.value))}
+          onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => e.stopPropagation()}
+          title="Font Size"
+          aria-label="Font Size"
+        >
+          {!FONT_SIZES.includes(props.currentFontSize) && (
+            <option value={props.currentFontSize}>{props.currentFontSize}</option>
+          )}
+          {FONT_SIZES.map((size) => (
+            <option key={size} value={size}>{size}</option>
+          ))}
+        </select>
         <button
           className={`toolbar-btn ${props.isBold ? 'bg-blue-100 text-blue-700' : ''}`}
           onClick={props.onToggleBold}

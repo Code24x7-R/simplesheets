@@ -45,6 +45,7 @@ describe('MenuBar', () => {
     onSetBackgroundColor: jest.fn(),
     onSetTextAlign: jest.fn(),
     onSetNumberFormat: jest.fn(),
+    onSetFontSize: jest.fn(),
     onToggleWrapText: jest.fn(),
     onClearStyles: jest.fn(),
     onSetBorderTop: jest.fn(),
@@ -237,6 +238,24 @@ describe('MenuBar', () => {
     expect(screen.getByText('Left')).toBeTruthy();
     expect(screen.getByText('Center')).toBeTruthy();
     expect(screen.getByText('Right')).toBeTruthy();
+  });
+
+  it('Format menu shows Font Size submenu', () => {
+    render(<MenuBar {...defaultProps} />);
+    fireEvent.click(screen.getByText('Format'));
+    const label = screen.getByText('Font Size');
+    expect(label).toBeTruthy();
+    fireEvent.mouseEnter(label);
+    expect(screen.getByText('20')).toBeTruthy();
+    expect(screen.getByText('72')).toBeTruthy();
+  });
+
+  it('Format menu triggers font size callback', () => {
+    render(<MenuBar {...defaultProps} />);
+    fireEvent.click(screen.getByText('Format'));
+    fireEvent.mouseEnter(screen.getByText('Font Size'));
+    fireEvent.click(screen.getByText('20'));
+    expect(defaultProps.onSetFontSize).toHaveBeenCalledWith(20);
   });
 
   it('Format menu shows Clear Styles', () => {

@@ -9,9 +9,25 @@
  * measurement (the same technique the grid uses for rendering).
  */
 import type { Cell, Sheet } from '../types';
+import { DEFAULT_FONT_SIZE } from '../hooks/useCellStyle';
 
 /** Line-height of a grid cell (Tailwind `leading-7` on `.grid-cell`). */
 export const ROW_LINE_HEIGHT = 28;
+
+/**
+ * Ratio of line-height to font-size for a cell. `leading-7` (28px) on the
+ * default 14px font is 2.0, but 1.4 keeps larger fonts readable without
+ * excessive vertical padding.
+ */
+export const LINE_HEIGHT_RATIO = 1.4;
+
+/**
+ * Line-height in px for a given font size, floored at the grid's default.
+ * Grid cells set this inline so the rendered lines match the auto-fit.
+ */
+export function lineHeightForFont(fontSize: number): number {
+  return Math.max(ROW_LINE_HEIGHT, Math.round(fontSize * LINE_HEIGHT_RATIO));
+}
 
 /** Horizontal padding inside a cell (Tailwind `px-1.5` + border). */
 export const CELL_PADDING_X = 12;
@@ -122,9 +138,10 @@ export function computeAutoRowHeight(
   defaultRowHeight: number,
   font: string = CELL_FONT,
   preserveWhitespace = false,
+  fontSize: number = DEFAULT_FONT_SIZE,
 ): number {
   const lines = countWrappedLines(text, widthPx, font, preserveWhitespace);
-  return Math.max(defaultRowHeight, lines * ROW_LINE_HEIGHT);
+  return Math.max(defaultRowHeight, lines * lineHeightForFont(fontSize));
 }
 
 /**
@@ -146,6 +163,7 @@ export function computeAutoRowHeights(sheet: Sheet, font: string = CELL_FONT): R
       sheet.defaultRowHeight,
       font,
       cell.style?.whiteSpace === 'pre',
+      cell.style?.fontSize ?? DEFAULT_FONT_SIZE,
     );
     result[row] = Math.max(result[row] ?? 0, height);
   }

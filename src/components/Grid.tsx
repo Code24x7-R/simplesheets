@@ -21,6 +21,7 @@ import { hasClipboardData } from '../utils/clipboard';
 import { isEditableTarget } from '../utils/dom';
 import type { ColumnFilter } from '../utils/sheetFilter';
 import { HIGHLIGHT_COLORS, HIGHLIGHT_BORDER_COLORS } from '../utils/highlightColors';
+import { lineHeightForFont } from '../utils/rowHeight';
 
 /** Point mode selection range (for visual feedback during formula editing). */
 export interface PointModeSelection {
@@ -2064,6 +2065,7 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
                   if (cell?.style) {
                     if (cell.style.fontWeight) cellStyle.fontWeight = cell.style.fontWeight;
                     if (cell.style.fontStyle) cellStyle.fontStyle = cell.style.fontStyle;
+                    if (cell.style.fontSize) cellStyle.fontSize = cell.style.fontSize;
                     if (cell.style.textDecoration) cellStyle.textDecoration = cell.style.textDecoration;
                     if (cell.style.color) cellStyle.color = cell.style.color;
                     if (cell.style.backgroundColor) cellStyle.backgroundColor = cell.style.backgroundColor;
@@ -2110,6 +2112,8 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
                           <span
                             className={`flex items-center px-1 ${cell?.style?.whiteSpace === 'normal' ? 'whitespace-normal break-words' : cell?.style?.whiteSpace === 'pre' ? 'whitespace-pre-wrap break-words' : 'truncate'}`}
                             style={{
+                              fontSize: cell?.style?.fontSize,
+                              lineHeight: `${lineHeightForFont(cell?.style?.fontSize ?? 14)}px`,
                               fontStyle: cell?.style?.fontStyle,
                               textDecoration: cell?.style?.textDecoration,
                               color: cell?.style?.color,
@@ -2217,6 +2221,7 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
               if (cell?.style) {
                 if (cell.style.fontWeight) cellStyle.fontWeight = cell.style.fontWeight;
                 if (cell.style.fontStyle) cellStyle.fontStyle = cell.style.fontStyle;
+                if (cell.style.fontSize) cellStyle.fontSize = cell.style.fontSize;
                 if (cell.style.textDecoration) cellStyle.textDecoration = cell.style.textDecoration;
                 if (cell.style.color) cellStyle.color = cell.style.color;
                 if (cell.style.backgroundColor) cellStyle.backgroundColor = cell.style.backgroundColor;
@@ -2492,6 +2497,8 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
                             : 'overflow-hidden text-ellipsis'
                         }`}
                         style={{
+                          fontSize: cell?.style?.fontSize,
+                          lineHeight: `${lineHeightForFont(cell?.style?.fontSize ?? 14)}px`,
                           textAlign: cell?.style?.textAlign
                             ? cell.style.textAlign
                             : shouldRightAlign(cell)

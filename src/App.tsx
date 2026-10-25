@@ -1791,6 +1791,7 @@ function WorkbookView() {
     setTextAlign,
     setNumberFormat,
     toggleWrapTextStyle,
+    setFontSizeStyle,
     clearCellStyles,
     borderColor,
     setBorderColor,
@@ -2949,6 +2950,7 @@ function WorkbookView() {
           onSetBackgroundColor={setBackgroundColor}
           onSetTextAlign={setTextAlign}
           onSetNumberFormat={setNumberFormat}
+          onSetFontSize={setFontSizeStyle}
           onToggleWrapText={toggleWrapTextStyle}
           onClearStyles={clearCellStyles}
           onSetBorderTop={setBorderTop}
@@ -2999,6 +3001,8 @@ function WorkbookView() {
         onSetAlignCenter={() => setTextAlign('center')}
         onSetAlignRight={() => setTextAlign('right')}
         onSetNumberFormat={setNumberFormat}
+        onSetFontSize={setFontSizeStyle}
+        currentFontSize={styleState.fontSize}
         onSetBorderTop={setBorderTop}
         onSetBorderBottom={setBorderBottom}
         onSetBorderLeft={setBorderLeft}

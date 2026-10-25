@@ -8,6 +8,8 @@ import {
   applyAutoRowHeights,
   isWrappedCell,
   ROW_LINE_HEIGHT,
+  LINE_HEIGHT_RATIO,
+  lineHeightForFont,
 } from './rowHeight';
 import type { Sheet } from '../types';
 
@@ -121,6 +123,32 @@ describe('computeAutoRowHeight', () => {
   it('never goes below the default height', () => {
     expect(computeAutoRowHeight('', 100, 40)).toBe(40);
   });
+
+  it('uses the same line height as the grid for the default font', () => {
+    expect(computeAutoRowHeight('x'.repeat(50), 100, 28, undefined, false, 14)).toBe(5 * ROW_LINE_HEIGHT);
+  });
+
+  it('scales the line height for larger fonts', () => {
+    // 1 line at 14px -> 28px; 1 line at 36px -> 36 * 1.4 = 50px.
+    const small = computeAutoRowHeight('hello', 400, 28, undefined, false, 14);
+    const large = computeAutoRowHeight('hello', 400, 28, undefined, false, 36);
+    expect(small).toBe(ROW_LINE_HEIGHT);
+    expect(large).toBe(lineHeightForFont(36));
+    expect(large).toBeGreaterThan(small);
+  });
+});
+
+describe('lineHeightForFont', () => {
+  it('floors at the default grid line height', () => {
+    expect(lineHeightForFont(8)).toBe(ROW_LINE_HEIGHT);
+    expect(lineHeightForFont(14)).toBe(ROW_LINE_HEIGHT);
+    expect(lineHeightForFont(20)).toBe(ROW_LINE_HEIGHT);
+  });
+
+  it('scales for larger fonts', () => {
+    expect(lineHeightForFont(24)).toBe(Math.round(24 * LINE_HEIGHT_RATIO));
+    expect(lineHeightForFont(36)).toBe(Math.round(36 * LINE_HEIGHT_RATIO));
+  });
 });
 
 describe('computeAutoRowHeights', () => {
@@ -148,6 +176,15 @@ describe('computeAutoRowHeights', () => {
     });
     // 400 - 12 = 388px usable → 48 chars/line → 2 lines.
     expect(computeAutoRowHeights(sheet)[0]).toBe(2 * ROW_LINE_HEIGHT);
+  });
+
+  it('scales a row by its wrapped cell font size', () => {
+    const sheet = createSheet({
+      cells: {
+        '0:0': { rawValue: 'hello', style: { whiteSpace: 'normal', fontSize: 36 } },
+      },
+    });
+    expect(computeAutoRowHeights(sheet)[0]).toBe(lineHeightForFont(36));
   });
 
   it('takes the tallest wrapped cell in a row', () => {

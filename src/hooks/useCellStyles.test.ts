@@ -71,6 +71,7 @@ describe('useCellStyles', () => {
       expect(result.current.styleState).toEqual({
         fontWeight: 'normal',
         fontStyle: 'normal',
+        fontSize: 14,
         textDecoration: 'none',
         color: undefined,
         backgroundColor: undefined,
@@ -86,6 +87,7 @@ describe('useCellStyles', () => {
       expect(result.current.styleState).toEqual({
         fontWeight: 'normal',
         fontStyle: 'normal',
+        fontSize: 14,
         textDecoration: 'none',
         color: undefined,
         backgroundColor: undefined,
@@ -708,6 +710,62 @@ describe('useCellStyles', () => {
 
       const newWb = mockPushHistory.mock.calls[0][0];
       expect(newWb.sheets[0].cells['0:0'].style?.whiteSpace).toBe('nowrap');
+    });
+  });
+
+  describe('setFontSizeStyle', () => {
+    it('sets font size on selected cells and pushes history', () => {
+      const workbook = createTestWorkbook();
+      const selection: Selection = {
+        type: 'cell',
+        startRow: 0, startCol: 0, endRow: 0, endCol: 0,
+        anchorRow: 0, anchorCol: 0,
+      };
+      const { result } = renderCellStyles(workbook, { row: 0, col: 0 }, selection);
+
+      act(() => {
+        result.current.setFontSizeStyle(20);
+      });
+
+      const newWb = mockPushHistory.mock.calls[0][0];
+      expect(newWb.sheets[0].cells['0:0'].style?.fontSize).toBe(20);
+      expect(mockSetStatus).toHaveBeenCalledWith('Font size 20px (1 cell(s))');
+    });
+
+    it('recomputes the row height for a wrapped cell', () => {
+      const workbook = createTestWorkbook();
+      workbook.sheets[0].cells['0:0'].rawValue = 'x'.repeat(200);
+      workbook.sheets[0].cells['0:0'].style = { whiteSpace: 'normal' };
+      const selection: Selection = {
+        type: 'cell',
+        startRow: 0, startCol: 0, endRow: 0, endCol: 0,
+        anchorRow: 0, anchorCol: 0,
+      };
+      const { result } = renderCellStyles(workbook, { row: 0, col: 0 }, selection);
+
+      act(() => {
+        result.current.setFontSizeStyle(20);
+      });
+
+      const newWb = mockPushHistory.mock.calls[0][0];
+      // Larger font -> taller line height -> taller row.
+      expect(newWb.sheets[0].rowHeights[0]).toBeGreaterThan(28);
+    });
+
+    it('does nothing when no cells are selected', () => {
+      const workbook = createTestWorkbook();
+      const selection: Selection = {
+        type: 'cell',
+        startRow: 5, startCol: 5, endRow: 5, endCol: 5,
+        anchorRow: 5, anchorCol: 5,
+      };
+      const { result } = renderCellStyles(workbook, { row: 5, col: 5 }, selection);
+
+      act(() => {
+        result.current.setFontSizeStyle(20);
+      });
+
+      expect(mockPushHistory).not.toHaveBeenCalled();
     });
   });
 

@@ -4,6 +4,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { useState, useCallback } from 'react';
 import { Grid } from './Grid';
 import type { Sheet } from '../types';
+import { lineHeightForFont } from '../utils/rowHeight';
 import type { EditingSession } from '../hooks/useCellEditing';
 
 /**
@@ -340,6 +341,40 @@ describe('Grid Component', () => {
     const span = screen.getByText('Long wrapped text content');
     expect(span.classList.contains('whitespace-normal')).toBe(true);
     expect(span.classList.contains('break-words')).toBe(true);
+  });
+
+  it('renders the cell font size on the cell', () => {
+    const sheet = createTestSheet();
+    sheet.cells['1:1'] = { rawValue: 'Big', style: { fontSize: 24 } };
+    render(<Grid sheet={sheet} />);
+    const cellEl = screen.getByText('Big').closest('.grid-cell') as HTMLElement;
+    expect(cellEl.style.fontSize).toBe('24px');
+  });
+
+  it('renders the cell font size on the text span with a scaled line height', () => {
+    const sheet = createTestSheet();
+    sheet.cells['1:1'] = { rawValue: 'Big', style: { fontSize: 36, whiteSpace: 'normal' } };
+    render(<Grid sheet={sheet} />);
+    const span = screen.getByText('Big');
+    expect(span.style.fontSize).toBe('36px');
+    expect(span.style.lineHeight).toBe(`${lineHeightForFont(36)}px`);
+  });
+
+  it('renders the default line height when no font size is set', () => {
+    const sheet = createTestSheet();
+    sheet.cells['1:1'] = { rawValue: 'Plain' };
+    render(<Grid sheet={sheet} />);
+    const span = screen.getByText('Plain');
+    expect(span.style.fontSize).toBeFalsy();
+    expect(span.style.lineHeight).toBe('28px');
+  });
+
+  it('renders the font size on frozen cells', () => {
+    const sheet = createTestSheet({ frozenRows: 1, frozenColumns: 1 });
+    sheet.cells['0:0'] = { rawValue: 'Frozen', style: { fontSize: 18 } };
+    render(<Grid sheet={sheet} />);
+    const cellEl = document.querySelector('[data-row-container="0"] [data-col="0"]') as HTMLElement;
+    expect(cellEl.style.fontSize).toBe('18px');
   });
 
   it('renders pre-wrap text with whitespace-pre-wrap class', () => {

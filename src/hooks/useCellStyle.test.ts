@@ -17,6 +17,11 @@ import {
   DEFAULT_BORDER_WIDTH,
   DEFAULT_BORDER_STYLE,
   DEFAULT_BORDER_COLOR,
+  DEFAULT_FONT_SIZE,
+  MIN_FONT_SIZE,
+  MAX_FONT_SIZE,
+  FONT_SIZES,
+  clampFontSize,
 } from './useCellStyle';
 import type { CellStyle } from '../types';
 
@@ -47,6 +52,7 @@ describe('deriveCellStyleState', () => {
     const style: CellStyle = {
       fontWeight: 'bold',
       fontStyle: 'italic',
+      fontSize: 20,
       textDecoration: 'underline',
       color: '#000000',
       backgroundColor: '#FFFFFF',
@@ -58,6 +64,7 @@ describe('deriveCellStyleState', () => {
     expect(result).toEqual({
       fontWeight: 'bold',
       fontStyle: 'italic',
+      fontSize: 20,
       textDecoration: 'underline',
       color: '#000000',
       backgroundColor: '#FFFFFF',
@@ -132,6 +139,53 @@ describe('toggleUnderline', () => {
 
   it('cycles line-through to none', () => {
     expect(toggleUnderline({ ...DEFAULTCellStyle, textDecoration: 'line-through' })).toBe('none');
+  });
+});
+
+describe('font size constants', () => {
+  it('DEFAULT_FONT_SIZE matches the grid text-sm size', () => {
+    expect(DEFAULT_FONT_SIZE).toBe(14);
+  });
+
+  it('FONT_SIZES contains the Excel standard size list', () => {
+    expect(FONT_SIZES).toEqual([8, 9, 10, 11, 12, 14, 16, 18, 20, 22, 24, 26, 28, 36, 48, 72]);
+  });
+
+  it('all FONT_SIZES are within the supported range', () => {
+    for (const size of FONT_SIZES) {
+      expect(size).toBeGreaterThanOrEqual(MIN_FONT_SIZE);
+      expect(size).toBeLessThanOrEqual(MAX_FONT_SIZE);
+    }
+  });
+
+  it('FONT_SIZES is strictly increasing', () => {
+    for (let i = 1; i < FONT_SIZES.length; i++) {
+      expect(FONT_SIZES[i]).toBeGreaterThan(FONT_SIZES[i - 1]);
+    }
+  });
+});
+
+describe('clampFontSize', () => {
+  it('passes through in-range values', () => {
+    expect(clampFontSize(12)).toBe(12);
+    expect(clampFontSize(72)).toBe(72);
+  });
+
+  it('clamps below the minimum', () => {
+    expect(clampFontSize(4)).toBe(MIN_FONT_SIZE);
+  });
+
+  it('clamps above the maximum', () => {
+    expect(clampFontSize(500)).toBe(MAX_FONT_SIZE);
+  });
+
+  it('rounds fractional values', () => {
+    expect(clampFontSize(13.6)).toBe(14);
+  });
+
+  it('falls back to the default for non-finite values', () => {
+    expect(clampFontSize(NaN)).toBe(DEFAULT_FONT_SIZE);
+    expect(clampFontSize(Infinity)).toBe(DEFAULT_FONT_SIZE);
   });
 });
 

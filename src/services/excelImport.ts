@@ -138,6 +138,11 @@ export function importExcel(
                 if (s.font.bold) style.fontWeight = 'bold';
                 if (s.font.italic) style.fontStyle = 'italic';
                 if (s.font.color?.rgb) style.color = `#${s.font.color.rgb.slice(2)}`;
+                // SheetJS/Excel store font size in points; the app stores CSS pixels.
+                const sz = Number(s.font.sz);
+                if (Number.isFinite(sz) && sz > 0) {
+                  style.fontSize = Math.round(sz * (4 / 3) * 100) / 100;
+                }
               }
               /* istanbul ignore next - fill color (SheetJS doesn't preserve through write/read) */
               if (s.fill?.fgColor?.rgb) {

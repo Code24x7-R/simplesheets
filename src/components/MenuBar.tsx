@@ -65,7 +65,7 @@ import {
 import { CloudUpload, CloudDownload, FileClock } from 'lucide-react';
 import type { MRUEntry } from '../utils/mru';
 import { DropdownMenu, type MenuItem } from './DropdownMenu';
-import { COLOR_PALETTE, COLOR_LABELS } from '../hooks/useCellStyle';
+import { COLOR_PALETTE, COLOR_LABELS, FONT_SIZES } from '../hooks/useCellStyle';
 
 interface MenuBarProps {
   // File menu
@@ -118,6 +118,7 @@ interface MenuBarProps {
   onSetBackgroundColor: (color: string) => void;
   onSetTextAlign: (align: 'left' | 'center' | 'right') => void;
   onSetNumberFormat: (format: string) => void;
+  onSetFontSize: (size: number) => void;
   onToggleWrapText: () => void;
   onClearStyles: () => void;
   onSetBorderTop: () => void;
@@ -168,6 +169,30 @@ function buildColorActions(
   for (const color of COLOR_PALETTE) {
     actions[`format-color-${color}`] = () => onSetTextColor(color);
     actions[`format-fill-${color}`] = () => onSetBackgroundColor(color);
+  }
+  return actions;
+}
+
+/**
+ * Builds the Format menu font-size submenu.
+ */
+function buildFontSizeSubmenu(prefix: string, icon: MenuItem['icon']): MenuItem[] {
+  return FONT_SIZES.map((size) => ({
+    id: `${prefix}-${size}`,
+    label: `${size}`,
+    icon,
+  }));
+}
+
+/**
+ * Builds the Format menu font-size actions.
+ */
+function buildFontSizeActions(
+  onSetFontSize: (size: number) => void,
+): Record<string, () => void> {
+  const actions: Record<string, () => void> = {};
+  for (const size of FONT_SIZES) {
+    actions[`format-fontsize-${size}`] = () => onSetFontSize(size);
   }
   return actions;
 }
@@ -240,6 +265,7 @@ export function MenuBar(props: MenuBarProps) {
         'format-align-center': () => props.onSetTextAlign('center'),
         'format-align-right': () => props.onSetTextAlign('right'),
         ...buildColorActions(props.onSetTextColor, props.onSetBackgroundColor),
+        ...buildFontSizeActions(props.onSetFontSize),
         'format-number-general': () => props.onSetNumberFormat('General'),
         'format-number-number': () => props.onSetNumberFormat('0.00'),
         'format-number-currency': () => props.onSetNumberFormat(getCurrencyFormatPattern(getEffectiveCurrency())),
@@ -398,6 +424,12 @@ export function MenuBar(props: MenuBarProps) {
     { id: 'format-italic', label: 'Italic', shortcut: 'Ctrl+I', icon: Italic, active: props.isItalic },
     { id: 'format-underline', label: 'Underline', shortcut: 'Ctrl+U', icon: Underline, active: props.isUnderline },
     { id: 'format-wrap-text', label: 'Wrap Text', icon: WrapText, active: props.isWrapText },
+    {
+      id: 'format-fontsize',
+      label: 'Font Size',
+      icon: Type,
+      submenu: buildFontSizeSubmenu('format-fontsize', Type),
+    },
     { id: 'sep-format-1', label: '', separator: true },
     {
       id: 'format-align',

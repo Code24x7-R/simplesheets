@@ -87,6 +87,32 @@ export const COLOR_LABELS: Record<string, string> = {
   '#7030A0': 'Purple',
 };
 
+/** Default font size for grid cells (Tailwind `text-sm`). */
+export const DEFAULT_FONT_SIZE = 14;
+
+/** Smallest font size offered by the UI. */
+export const MIN_FONT_SIZE = 8;
+
+/** Largest font size offered by the UI. */
+export const MAX_FONT_SIZE = 72;
+
+/**
+ * Font sizes offered by the font-size pickers (menu + toolbar).
+ * Mirrors Excel's standard size list.
+ */
+export const FONT_SIZES = [
+  8, 9, 10, 11, 12, 14, 16, 18, 20, 22, 24, 26, 28, 36, 48, 72,
+];
+
+/**
+ * Clamps a font size to the supported range.
+ * Non-finite values fall back to the default.
+ */
+export function clampFontSize(size: number): number {
+  if (!Number.isFinite(size)) return DEFAULT_FONT_SIZE;
+  return Math.min(MAX_FONT_SIZE, Math.max(MIN_FONT_SIZE, Math.round(size)));
+}
+
 /**
  * Constructs a CSS border string from width, style, and color.
  */
@@ -109,6 +135,7 @@ export const DEFAULT_BORDER_COLOR = '#000000';
 export interface CellStyleState {
   fontWeight: 'normal' | 'bold' | number;
   fontStyle: 'normal' | 'italic';
+  fontSize: number;
   textDecoration: 'none' | 'underline' | 'line-through';
   color: string | undefined;
   backgroundColor: string | undefined;
@@ -121,6 +148,7 @@ export interface CellStyleState {
 export const DEFAULTCellStyle: CellStyleState = {
   fontWeight: 'normal',
   fontStyle: 'normal',
+  fontSize: DEFAULT_FONT_SIZE,
   textDecoration: 'none',
   color: undefined,
   backgroundColor: undefined,
@@ -137,6 +165,7 @@ export function deriveCellStyleState(style: CellStyle | undefined): CellStyleSta
   return {
     fontWeight: style?.fontWeight ?? 'normal',
     fontStyle: style?.fontStyle ?? 'normal',
+    fontSize: style?.fontSize ?? DEFAULT_FONT_SIZE,
     textDecoration: style?.textDecoration ?? 'none',
     color: style?.color,
     backgroundColor: style?.backgroundColor,

@@ -15,6 +15,8 @@ describe('Toolbar', () => {
     onSetAlignCenter: jest.fn(),
     onSetAlignRight: jest.fn(),
     onSetNumberFormat: jest.fn(),
+    onSetFontSize: jest.fn(),
+    currentFontSize: 14,
     onSetBorderTop: jest.fn(),
     onSetBorderBottom: jest.fn(),
     onSetBorderLeft: jest.fn(),
@@ -47,6 +49,34 @@ describe('Toolbar', () => {
     expect(screen.getByTitle('Bold (Ctrl+B)')).toBeTruthy();
     expect(screen.getByTitle('Italic (Ctrl+I)')).toBeTruthy();
     expect(screen.getByTitle('Underline (Ctrl+U)')).toBeTruthy();
+  });
+
+  it('renders the font size selector with the current size', () => {
+    render(<Toolbar {...defaultProps} currentFontSize={14} />);
+    const select = screen.getByLabelText('Font Size') as HTMLSelectElement;
+    expect(select).toBeTruthy();
+    expect(select.value).toBe('14');
+  });
+
+  it('offers the Excel standard font sizes', () => {
+    render(<Toolbar {...defaultProps} currentFontSize={14} />);
+    const select = screen.getByLabelText('Font Size') as HTMLSelectElement;
+    const options = Array.from(select.options).map((o) => Number(o.value));
+    expect(options).toContain(8);
+    expect(options).toContain(14);
+    expect(options).toContain(72);
+  });
+
+  it('shows a custom size not in the standard list', () => {
+    render(<Toolbar {...defaultProps} currentFontSize={25} />);
+    const select = screen.getByLabelText('Font Size') as HTMLSelectElement;
+    expect(select.value).toBe('25');
+  });
+
+  it('calls onSetFontSize when the font size changes', () => {
+    render(<Toolbar {...defaultProps} currentFontSize={14} />);
+    fireEvent.change(screen.getByLabelText('Font Size'), { target: { value: '20' } });
+    expect(defaultProps.onSetFontSize).toHaveBeenCalledWith(20);
   });
 
   it('calls onToggleBold when bold button is clicked', () => {

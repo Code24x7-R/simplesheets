@@ -18,6 +18,9 @@ export interface CellStyle {
   /** CSS font-style value. */
   fontStyle?: 'normal' | 'italic';
 
+  /** Font size in pixels. Unset inherits the grid default (14px). */
+  fontSize?: number;
+
   /** CSS text-decoration value. */
   textDecoration?: 'none' | 'underline' | 'line-through';
 

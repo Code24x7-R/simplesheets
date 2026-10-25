@@ -44,6 +44,7 @@ describe('App Extensions Integration', () => {
     onSetBackgroundColor: jest.fn(),
     onSetTextAlign: jest.fn(),
     onSetNumberFormat: jest.fn(),
+    onSetFontSize: jest.fn(),
     onToggleWrapText: jest.fn(),
     onClearStyles: jest.fn(),
     onSetBorderTop: jest.fn(),

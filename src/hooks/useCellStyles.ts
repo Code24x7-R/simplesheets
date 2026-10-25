@@ -47,6 +47,8 @@ interface UseCellStylesReturn {
   setNumberFormat: (format: string) => void;
   /** Toggle text wrapping on the selected cells. */
   toggleWrapTextStyle: () => void;
+  /** Set the font size (px) on the selected cells. */
+  setFontSizeStyle: (size: number) => void;
   /** Clear all styling from the selected cells. */
   clearCellStyles: () => void;
   /** Current border color for the next border application. */
@@ -216,6 +218,11 @@ export function useCellStyles({
 
   const toggleWrapTextStyle = useCallback(
     () => applyStyle((s) => ({ whiteSpace: toggleWrapText(s) }), 'Wrap text', { recomputeRowHeights: true }),
+    [applyStyle]
+  );
+
+  const setFontSizeStyle = useCallback(
+    (size: number) => applyStyle(() => ({ fontSize: size }), `Font size ${size}px`, { recomputeRowHeights: true }),
     [applyStyle]
   );
 
@@ -452,6 +459,7 @@ export function useCellStyles({
     setTextAlign,
     setNumberFormat,
     toggleWrapTextStyle,
+    setFontSizeStyle,
     clearCellStyles,
     borderColor,
     setBorderColor: setBorderColorWithRef,
