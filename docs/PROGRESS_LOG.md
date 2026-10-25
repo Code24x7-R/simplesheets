@@ -6,6 +6,16 @@
 
 ---
 
+### 2026-10-24 [FEATURE] Custom font-size input (typed values snap to the standard list)
+- **What**: The toolbar font-size control is now an Excel-style editable box (field + dropdown) instead of a plain `<select>`.
+  - Typing a custom value and pressing Enter (or blurring) snaps it to the nearest entry in `FONT_SIZES`; ties round up. E.g. `11.5` → `12`, `13` → `14`, `30` → `28`, `4` → `8`, `500` → `72`. The field then displays the snapped value.
+  - Escape reverts without applying; invalid input restores the current size; `ArrowDown` opens the size list.
+  - `useCellStyle.snapFontSize(size)` implements the snap (replaces the unused `clampFontSize`).
+  - New `src/components/FontSizeInput.tsx` (own outside-click handling; key events stop propagation so global shortcuts don't fire).
+- **Tests**: +17 (`FontSizeInput.test.tsx` ×16, `snapFontSize` tests). Total: 4327 passing / 187 suites.
+- **Files**: `src/components/FontSizeInput.tsx` (new), `src/components/Toolbar.tsx`, `src/hooks/useCellStyle.ts`, `src/index.css`, `MANUAL.md`, tests.
+- **Results**: lint clean, type-check clean, build OK, 4327 tests pass.
+
 ### 2026-10-24 [FEATURE] Font size for cells (toolbar + menu + rendering + auto-fit)
 - **What**: Cells can now have a font size (8–72px, Excel's standard list).
   - `CellStyle.fontSize?: number` added to the data model; `CellStyleState.fontSize` + `DEFAULT_FONT_SIZE`/`MIN_FONT_SIZE`/`MAX_FONT_SIZE`/`FONT_SIZES`/`clampFontSize` in `useCellStyle.ts`.

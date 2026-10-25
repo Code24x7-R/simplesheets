@@ -105,12 +105,26 @@ export const FONT_SIZES = [
 ];
 
 /**
- * Clamps a font size to the supported range.
- * Non-finite values fall back to the default.
+ * Snaps a font size to the nearest entry in `FONT_SIZES`.
+ *
+ * This is what a typed (custom) size resolves to. Values outside the range
+ * snap to the nearest bound (8 or 72), and exact midpoints round up:
+ * 11.5 → 12, 13 → 14, 30 → 28. Non-finite values fall back to the default.
  */
-export function clampFontSize(size: number): number {
+export function snapFontSize(size: number): number {
   if (!Number.isFinite(size)) return DEFAULT_FONT_SIZE;
-  return Math.min(MAX_FONT_SIZE, Math.max(MIN_FONT_SIZE, Math.round(size)));
+  let best = FONT_SIZES[0];
+  let bestDistance = Infinity;
+  for (const candidate of FONT_SIZES) {
+    const distance = Math.abs(candidate - size);
+    // `<` keeps the first (smaller) candidate on a tie; `candidate > best`
+    // then flips it to the larger one, i.e. round half up.
+    if (distance < bestDistance || (distance === bestDistance && candidate > best)) {
+      best = candidate;
+      bestDistance = distance;
+    }
+  }
+  return best;
 }
 
 /**

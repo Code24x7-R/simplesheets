@@ -21,7 +21,7 @@ import {
   MIN_FONT_SIZE,
   MAX_FONT_SIZE,
   FONT_SIZES,
-  clampFontSize,
+  snapFontSize,
 } from './useCellStyle';
 import type { CellStyle } from '../types';
 
@@ -165,27 +165,39 @@ describe('font size constants', () => {
   });
 });
 
-describe('clampFontSize', () => {
-  it('passes through in-range values', () => {
-    expect(clampFontSize(12)).toBe(12);
-    expect(clampFontSize(72)).toBe(72);
+describe('snapFontSize', () => {
+  it('keeps exact standard sizes', () => {
+    for (const size of FONT_SIZES) {
+      expect(snapFontSize(size)).toBe(size);
+    }
   });
 
-  it('clamps below the minimum', () => {
-    expect(clampFontSize(4)).toBe(MIN_FONT_SIZE);
+  it('rounds the 11/12 midpoint up (11.5 -> 12)', () => {
+    expect(snapFontSize(11.5)).toBe(12);
   });
 
-  it('clamps above the maximum', () => {
-    expect(clampFontSize(500)).toBe(MAX_FONT_SIZE);
+  it('rounds the 12/14 midpoint up (13 -> 14)', () => {
+    expect(snapFontSize(13)).toBe(14);
   });
 
-  it('rounds fractional values', () => {
-    expect(clampFontSize(13.6)).toBe(14);
+  it('picks the nearest standard size', () => {
+    expect(snapFontSize(30)).toBe(28);
+    expect(snapFontSize(33)).toBe(36);
+    expect(snapFontSize(13.6)).toBe(14);
+  });
+
+  it('snaps below the minimum to 8', () => {
+    expect(snapFontSize(4)).toBe(MIN_FONT_SIZE);
+    expect(snapFontSize(0)).toBe(MIN_FONT_SIZE);
+  });
+
+  it('snaps above the maximum to 72', () => {
+    expect(snapFontSize(500)).toBe(MAX_FONT_SIZE);
   });
 
   it('falls back to the default for non-finite values', () => {
-    expect(clampFontSize(NaN)).toBe(DEFAULT_FONT_SIZE);
-    expect(clampFontSize(Infinity)).toBe(DEFAULT_FONT_SIZE);
+    expect(snapFontSize(NaN)).toBe(DEFAULT_FONT_SIZE);
+    expect(snapFontSize(Infinity)).toBe(DEFAULT_FONT_SIZE);
   });
 });
 

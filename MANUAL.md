@@ -665,7 +665,9 @@ Open the Find & Replace dialog with **Edit → Find & Replace…** or **Ctrl + H
 | **Underline** | Toolbar U, Format → Underline | `Ctrl + U` |
 | **Strikethrough** | Toolbar S | — |
 | **Wrap Text** | Format → Wrap Text | — |
-| **Font size** | Toolbar size selector, Format → Font Size | — |
+| **Font size** | Toolbar size box (type or pick), Format → Font Size | — |
+
+> **Custom font sizes** snap to the nearest standard size: type a value in the toolbar size box and press Enter (or click away). For example `11.5` becomes `12` and `13` becomes `14`. The box then shows the snapped size.
 
 > **Auto-fit rows:** when Wrap Text is on, the row height snaps to the wrapped content. Widening or narrowing the column (or changing the font size) recomputes it; turning Wrap Text off snaps the row back to the default height.
 
