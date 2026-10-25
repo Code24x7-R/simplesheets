@@ -24,6 +24,13 @@ This file tracks bugs in **existing** code, functions, and UI elements. New feat
 
 <!-- Bugs resolved in this session or recent past. Newest first. -->
 
+### 2026-10-24: B-035 — Ctrl+V in a filename field is hijacked and pasted into a grid cell ✅ VERIFIED
+- **Symptom**: While naming a file (export modal / cloud save), pressing Ctrl+V to paste into the filename field did not insert into the field — instead the clipboard content was pasted into a grid cell.
+- **Root cause**: The Grid's window-level `handleGlobalClipboardKey` handler intercepts Ctrl+C/X/V whenever the cell FSM is not editing. It never checked the event target, so a Ctrl+V while typing in *any* text field (a modal's filename input, the formula bar, etc.) was swallowed and re-dispatched as a grid paste. The export `FilenameModal` input and the cloud `ProviderView` filename input also did not stop propagation (the cloud `HomeView` input already did).
+- **Fix**: (1) `Grid.tsx` — the global clipboard handler now returns early when `e.target` is an `INPUT`/`TEXTAREA`. (2) `FilenameModal.tsx` — the filename input stops key propagation. (3) `CloudStorageModal.tsx` `ProviderView` — added `onClick`/`onKeyDown` `stopPropagation` to match `HomeView`.
+- **Files**: `src/components/Grid.tsx`, `src/components/FilenameModal.tsx`, `src/components/CloudStorageModal.tsx` (+ tests)
+- **Tests**: +4 new tests: Grid does not dispatch paste when Ctrl+V targets a text input; FilenameModal stops Ctrl+V and Ctrl+C/X propagation; App integration — Ctrl+V in the export filename modal keeps the typed name and leaves the grid cell untouched.
+
 ### 2026-10-24: B-034 — In-cell edit (F2): caret reposition ignored, typing appends at end ✅ VERIFIED
 - **Symptom**: With a cell in EDIT mode (F2), clicking to place the caret mid-text and then typing inserted the character at the *end* of the cell instead of at the clicked position — the caret appeared to "jump to the end" and appended.
 - **Root cause**: The Grid cell editor is a controlled `<input>`/`<textarea>` whose `onChange` reports value+caret to the FSM. But a caret move that does not change the value (mouse click, click-drag) fires no `onChange`, so the FSM's `caretPos` stayed at whatever it was last set to (the end after `startEdit`). The FSM's printable-key handler then inserted at that stale `caretPos`. The FormulaBar already reported caret moves via `onRawCaretMove`; the Grid had no equivalent.

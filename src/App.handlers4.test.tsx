@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Richard Robertson
 import { render, screen, fireEvent } from '@testing-library/react';
 import App from './App';
+import { copyRange } from './utils/clipboard';
 
 // Mock pdfExport/excelExport to avoid ESM issues in tests
 jest.mock('./services/pdfExport', () => ({
@@ -126,6 +127,27 @@ describe('App - Export Menu Actions', () => {
     // Confirm the export
     fireEvent.click(screen.getByText('Save'));
     expect(screen.getByTestId('status-message')).toBeInTheDocument();
+  });
+
+  it('Ctrl+V in the filename modal pastes into the field, not a grid cell', () => {
+    render(<App />);
+    // Seed the internal clipboard so the grid's Ctrl+V handler would fire.
+    copyRange({ '0:0': { rawValue: 'PASTED' } }, 0, 0, 0, 0, 'cell');
+
+    fireEvent.click(screen.getByText('File'));
+    fireEvent.click(screen.getByText('Export'));
+    fireEvent.click(screen.getByText('JSON (.json)'));
+
+    const input = screen.getByPlaceholderText('Enter filename') as HTMLInputElement;
+    fireEvent.change(input, { target: { value: 'MyName' } });
+
+    // Paste must stay in the field (native paste), not be hijacked by the grid.
+    fireEvent.keyDown(input, { key: 'v', ctrlKey: true });
+
+    expect(input.value).toBe('MyName');
+    // The grid cell must not receive the clipboard content.
+    const a1 = document.querySelector('[data-col="0"]') as HTMLElement;
+    expect(a1?.textContent).not.toBe('PASTED');
   });
 
   it('File → Export → PDF shows filename modal', () => {

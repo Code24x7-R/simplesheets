@@ -6,6 +6,15 @@
 
 ---
 
+### 2026-10-24 [BUGFIX] B-035 — Ctrl+V in a filename field is hijacked and pasted into a grid cell
+- **What**: Ctrl+V while naming a file (export modal / cloud save) did not paste into the filename field; the clipboard content was pasted into a grid cell instead.
+  - `Grid.tsx`: the window-level Ctrl+C/X/V handler now returns early when the event target is an `INPUT`/`TEXTAREA` (root-cause fix — was swallowing clipboard shortcuts for every text field).
+  - `FilenameModal.tsx`: the filename input now stops key propagation.
+  - `CloudStorageModal.tsx` `ProviderView`: added `onClick`/`onKeyDown` `stopPropagation` (was missing, unlike `HomeView`).
+- **Tests**: +4 (Grid skips text-input targets; FilenameModal stops Ctrl+V and Ctrl+C/X; App integration keeps the typed name and leaves the grid cell untouched). Total: 4246 passing / 182 suites.
+- **Files**: `src/components/Grid.tsx`, `src/components/FilenameModal.tsx`, `src/components/CloudStorageModal.tsx`, their tests, `docs/BUGFIX.md`.
+- **Results**: lint clean, type-check clean, 4246 tests pass.
+
 ### 2026-10-24 [BUGFIX] B-034 — In-cell edit (F2): caret reposition ignored, typing appends at end
 - **What**: Clicking to place the caret mid-text in a cell being edited (F2) and then typing inserted at the end instead of at the clicked position.
   - `Grid.tsx`: added `onRawCaretMove` prop + `reportEditorCaret` handler on the editor's `onClick` (mouse caret moves); keyboard moves already handled by the FSM.

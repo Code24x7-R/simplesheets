@@ -692,6 +692,13 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
       // for text-level operations (copy/cut/paste within the cell)
       if (isEditingRef.current) return;
 
+      // Never hijack clipboard shortcuts while the user is typing in a text
+      // field (formula bar, filename modals, search/replace, etc.). Without
+      // this, Ctrl+V in a modal's filename field is intercepted and pasted
+      // into a grid cell instead.
+      const target = e.target as HTMLElement | null;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) return;
+
       const sel = selectionRef.current;
       if (!sel) return;
       switch (e.key) {

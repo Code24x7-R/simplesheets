@@ -959,6 +959,28 @@ describe('Grid Component', () => {
     clipboardMockHasData = false;
   });
 
+  it('does not dispatch paste event when Ctrl+V targets a text input', () => {
+    // Simulate internal clipboard data (from a previous copy/cut)
+    clipboardMockHasData = true;
+
+    render(<Grid sheet={createTestSheet()} selectedCell={{ row: 0, col: 0 }} />);
+
+    const handler = jest.fn();
+    window.addEventListener('simplesheets:paste', handler);
+
+    // Ctrl+V while typing in an arbitrary text field (e.g. a modal's filename
+    // input) must not be hijacked by the grid.
+    const input = document.createElement('input');
+    document.body.appendChild(input);
+    fireEvent.keyDown(input, { key: 'v', ctrlKey: true });
+
+    expect(handler).not.toHaveBeenCalled();
+
+    window.removeEventListener('simplesheets:paste', handler);
+    input.remove();
+    clipboardMockHasData = false;
+  });
+
   it('does not dispatch paste event when internal clipboard is empty', () => {
     // No internal clipboard data — Ctrl+V should fall through to native paste
     clipboardMockHasData = false;

@@ -118,4 +118,31 @@ describe('FilenameModal', () => {
     fireEvent.click(screen.getByText('Save'));
     expect(screen.getByText(/cannot start\/end with a period/)).toBeInTheDocument();
   });
+
+  it('stops Ctrl+V propagation so the grid paste handler cannot intercept', () => {
+    const windowHandler = jest.fn();
+    window.addEventListener('keydown', windowHandler);
+    try {
+      render(<FilenameModal {...defaultProps} />);
+      const input = screen.getByPlaceholderText('Enter filename');
+      fireEvent.keyDown(input, { key: 'v', ctrlKey: true });
+      expect(windowHandler).not.toHaveBeenCalled();
+    } finally {
+      window.removeEventListener('keydown', windowHandler);
+    }
+  });
+
+  it('stops Ctrl+C/Ctrl+X propagation so grid clipboard shortcuts cannot intercept', () => {
+    const windowHandler = jest.fn();
+    window.addEventListener('keydown', windowHandler);
+    try {
+      render(<FilenameModal {...defaultProps} />);
+      const input = screen.getByPlaceholderText('Enter filename');
+      fireEvent.keyDown(input, { key: 'c', ctrlKey: true });
+      fireEvent.keyDown(input, { key: 'x', ctrlKey: true });
+      expect(windowHandler).not.toHaveBeenCalled();
+    } finally {
+      window.removeEventListener('keydown', windowHandler);
+    }
+  });
 });

@@ -65,6 +65,10 @@ export function FilenameModal({
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Escape') onCancel();
+    // Stop every key from reaching the window-level handlers. Otherwise the
+    // grid's global Ctrl+C/X/V shortcut hijacks a paste into this field and
+    // writes the clipboard into a cell instead of the filename.
+    e.stopPropagation();
   };
 
   return (
