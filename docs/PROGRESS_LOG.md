@@ -6,6 +6,18 @@
 
 ---
 
+### 2026-10-24 [BUGFIX] B-035 — Global handlers hijack input in text fields (audit + remediation)
+- **What**: Audited every window/document listener for the pattern "acts on an event without checking whether it came from an editable field". Found and fixed three real instances plus two dedupes:
+  - `App.tsx` `handleNativePaste` (window `paste`): pasting into any text field was intercepted and written into a grid cell. Now returns early for editable targets.
+  - `App.tsx` `handleGlobalKeyDown`: Ctrl+Z/Y/` and Ctrl+Shift+Z/L/F/V fired while typing in fields (e.g. Ctrl+Z in a modal undid the workbook). Now gated on the target.
+  - `Grid.tsx` Ctrl+C/X/V handler: fixed earlier in B-035; now uses the shared helper.
+  - `CreatorCanvasView.tsx`: already guarded — deduped its inline check into the shared helper.
+  - `ChartOverlay.tsx` Escape: guarded so it no longer deselects a chart while typing.
+  - Added `src/utils/dom.ts` → `isEditableTarget(target)` (INPUT/TEXTAREA/SELECT/contentEditable) as the single source of truth.
+- **Tests**: +11 (`dom.test.ts` ×8, App.globalShortcuts ×3; plus the earlier Grid/FilenameModal/App.handlers4 tests). Total: 4257 passing / 184 suites.
+- **Files**: `src/utils/dom.ts` (new), `src/App.tsx`, `src/components/Grid.tsx`, `src/components/charts/ChartOverlay.tsx`, `src/components/FilenameModal.tsx`, `src/components/CloudStorageModal.tsx`, `src/extensions/creator-canvas/CreatorCanvasView.tsx`, their tests, `docs/BUGFIX.md`.
+- **Results**: lint clean, type-check clean, 4257 tests pass.
+
 ### 2026-10-24 [BUGFIX] B-035 — Ctrl+V in a filename field is hijacked and pasted into a grid cell
 - **What**: Ctrl+V while naming a file (export modal / cloud save) did not paste into the filename field; the clipboard content was pasted into a grid cell instead.
   - `Grid.tsx`: the window-level Ctrl+C/X/V handler now returns early when the event target is an `INPUT`/`TEXTAREA` (root-cause fix — was swallowing clipboard shortcuts for every text field).

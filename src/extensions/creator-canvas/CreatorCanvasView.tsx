@@ -16,6 +16,7 @@ import { createDefaultCanvasNode, createDefaultCanvasConnection } from './schema
 import { NodeEditorPanel } from './NodeEditorPanel';
 import { ConnectionEditorPanel } from './ConnectionEditorPanel';
 import { getDockedConnectionEndpoints } from './geometry';
+import { isEditableTarget } from '../../utils/dom';
 import {
   Plus,
   StickyNote,
@@ -168,12 +169,6 @@ export const CreatorCanvasView: React.FC<CreatorCanvasViewProps> = ({
   };
 
   useEffect(() => {
-    const isEditableTarget = (target: EventTarget | null): boolean => {
-      if (!(target instanceof HTMLElement)) return false;
-      const tag = target.tagName;
-      return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target.isContentEditable;
-    };
-
     const handleKeyDown = (event: KeyboardEvent) => {
       if (!selectedNodeId && !selectedConnectionId) return;
       if (isEditableTarget(event.target)) return;

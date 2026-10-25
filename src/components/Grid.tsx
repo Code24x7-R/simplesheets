@@ -18,6 +18,7 @@ import { evaluateConditionalFormats } from '../utils/conditionalFormatEngine';
 import type { ConditionalFormatRule } from '../types';
 import { isNumberStoredAsText } from '../utils/numberAsText';
 import { hasClipboardData } from '../utils/clipboard';
+import { isEditableTarget } from '../utils/dom';
 import type { ColumnFilter } from '../utils/sheetFilter';
 import { HIGHLIGHT_COLORS, HIGHLIGHT_BORDER_COLORS } from '../utils/highlightColors';
 
@@ -696,8 +697,7 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
       // field (formula bar, filename modals, search/replace, etc.). Without
       // this, Ctrl+V in a modal's filename field is intercepted and pasted
       // into a grid cell instead.
-      const target = e.target as HTMLElement | null;
-      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) return;
+      if (isEditableTarget(e.target)) return;
 
       const sel = selectionRef.current;
       if (!sel) return;

@@ -51,6 +51,7 @@ import { insertRow, deleteRow, insertCol, deleteCol } from './utils/sheetOperati
 import { computeFillSeries } from './utils/fillSeries';
 import { applyPasteOptions } from './utils/pasteSpecial';
 import type { PasteMode } from './utils/pasteSpecial';
+import { isEditableTarget } from './utils/dom';
 import { extractColumnWidths, applyColumnWidths } from './utils/pasteWidths';
 import { sortRange, getCurrentRegion } from './utils/sheetSort';
 import { SortDialog } from './components/SortDialog';
@@ -2664,6 +2665,10 @@ function WorkbookView() {
   // pastes as plain text directly.
   useEffect(() => {
     const handleNativePaste = (e: ClipboardEvent) => {
+      // Never hijack a paste that belongs to a text field (formula bar,
+      // modal inputs, etc.) — let the native paste into that field happen.
+      if (isEditableTarget(e.target)) return;
+
       // If our internal clipboard has data, the Ctrl+V keydown handler in
       // Grid.tsx already dispatched simplesheets:paste — don't double-handle.
       if (hasClipboardData()) return;
@@ -2818,9 +2823,9 @@ function WorkbookView() {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
       // Ignore shortcuts while typing in an input/textarea (formula bar, modals)
       const target = e.target as HTMLElement;
-      const isEditing = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA';
+      const isEditing = isEditableTarget(target);
 
-      if ((e.ctrlKey || e.metaKey) && !e.shiftKey) {
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !isEditing) {
         if (e.key === 'z') {
           e.preventDefault();
           handleUndo();
@@ -2834,7 +2839,7 @@ function WorkbookView() {
           e.preventDefault();
           setShowFormulas((prev) => !prev);
           return;
-        } else if (!isEditing) {
+        } else {
           // These shortcuts should not fire while typing in inputs
           switch (e.key) {
             case 'n':
@@ -2883,22 +2888,22 @@ function WorkbookView() {
         return;
       }
       // Ctrl+Shift+Z also triggers redo (common alternative)
-      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'Z') {
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && !isEditing && e.key === 'Z') {
         e.preventDefault();
         handleRedo();
       }
       // Ctrl+Shift+L toggles filter (Excel shortcut)
-      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'l' || e.key === 'L')) {
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && !isEditing && (e.key === 'l' || e.key === 'L')) {
         e.preventDefault();
         handleToggleFilter();
       }
       // Ctrl+Shift+F opens Formula Wizard
-      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'f' || e.key === 'F')) {
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && !isEditing && (e.key === 'f' || e.key === 'F')) {
         e.preventDefault();
         handleFxClick(getActiveCellValue());
       }
       // Ctrl+Shift+V opens Paste Special dialog (Excel shortcut)
-      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'v' || e.key === 'V')) {
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && !isEditing && (e.key === 'v' || e.key === 'V')) {
         e.preventDefault();
         handlePasteSpecial();
       }

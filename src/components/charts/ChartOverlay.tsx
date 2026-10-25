@@ -10,6 +10,7 @@ import { useCallback, useState, useRef, useMemo, useEffect } from 'react';
 import type { ChartConfig, Sheet, Workbook } from '../../types';
 import { ChartRenderer } from './ChartRenderer';
 import { extractChartDataFromWorkbook } from '../../utils/chartData';
+import { isEditableTarget } from '../../utils/dom';
 
 interface ChartOverlayProps {
   /** The sheet containing charts. */
@@ -102,6 +103,7 @@ export function ChartOverlay({
   // Escape key deselects the active chart
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (isEditableTarget(e.target)) return;
       if (e.key === 'Escape' && selectedChartId) {
         onSelectChart?.(null);
       }

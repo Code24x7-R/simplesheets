@@ -27,9 +27,17 @@ This file tracks bugs in **existing** code, functions, and UI elements. New feat
 ### 2026-10-24: B-035 — Ctrl+V in a filename field is hijacked and pasted into a grid cell ✅ VERIFIED
 - **Symptom**: While naming a file (export modal / cloud save), pressing Ctrl+V to paste into the filename field did not insert into the field — instead the clipboard content was pasted into a grid cell.
 - **Root cause**: The Grid's window-level `handleGlobalClipboardKey` handler intercepts Ctrl+C/X/V whenever the cell FSM is not editing. It never checked the event target, so a Ctrl+V while typing in *any* text field (a modal's filename input, the formula bar, etc.) was swallowed and re-dispatched as a grid paste. The export `FilenameModal` input and the cloud `ProviderView` filename input also did not stop propagation (the cloud `HomeView` input already did).
-- **Fix**: (1) `Grid.tsx` — the global clipboard handler now returns early when `e.target` is an `INPUT`/`TEXTAREA`. (2) `FilenameModal.tsx` — the filename input stops key propagation. (3) `CloudStorageModal.tsx` `ProviderView` — added `onClick`/`onKeyDown` `stopPropagation` to match `HomeView`.
-- **Files**: `src/components/Grid.tsx`, `src/components/FilenameModal.tsx`, `src/components/CloudStorageModal.tsx` (+ tests)
-- **Tests**: +4 new tests: Grid does not dispatch paste when Ctrl+V targets a text input; FilenameModal stops Ctrl+V and Ctrl+C/X propagation; App integration — Ctrl+V in the export filename modal keeps the typed name and leaves the grid cell untouched.
+- **Audit (same pattern elsewhere)**: The root cause is any window/document handler that acts on an event without checking whether it came from an editable field. Auditing every global listener found:
+  - `Grid.tsx` Ctrl+C/X/V handler — **no target check** (the reported bug). Fixed.
+  - `App.tsx` `handleNativePaste` (window `paste`) — **no target check**: with no internal clipboard, pasting into *any* text field was intercepted and written into a grid cell. Fixed.
+  - `App.tsx` `handleGlobalKeyDown` — Ctrl+Z/Y/` and Ctrl+Shift+Z/L/F/V were **not** gated on the target, so e.g. Ctrl+Z in a modal field undid the workbook. Fixed.
+  - `CreatorCanvasView.tsx` — already guarded, but with an inline copy of the check. Deduped.
+  - `ChartOverlay.tsx` Escape — no target check (deselected a chart while typing). Guarded.
+  - `FilterDropdown.tsx` — already stops propagation in the capture phase. OK.
+  - `DropdownMenu`/`ToolbarDropdown`/`ContextMenu` Escape — close-on-Escape only; no hijack. OK.
+- **Fix**: added a shared `isEditableTarget(target)` helper (`src/utils/dom.ts`) and used it in the Grid clipboard handler, the App `handleNativePaste` + `handleGlobalKeyDown`, `CreatorCanvasView`, and `ChartOverlay`. `FilenameModal.tsx` and `CloudStorageModal.tsx` `ProviderView` also stop key propagation (defence in depth, matching `HomeView`).
+- **Files**: `src/utils/dom.ts` (new), `src/App.tsx`, `src/components/Grid.tsx`, `src/components/charts/ChartOverlay.tsx`, `src/components/FilenameModal.tsx`, `src/components/CloudStorageModal.tsx`, `src/extensions/creator-canvas/CreatorCanvasView.tsx` (+ tests)
+- **Tests**: +11 new tests: `dom.test.ts` (8) for the helper; Grid skips text-input targets; FilenameModal stops Ctrl+V and Ctrl+C/X; App integration — Ctrl+V in the export filename modal keeps the typed name and leaves the grid cell untouched; App.globalShortcuts (3) — Ctrl+Z in a modal field does not undo, Ctrl+Shift+V does not open Paste Special, pasting into a modal field does not write into a grid cell.
 
 ### 2026-10-24: B-034 — In-cell edit (F2): caret reposition ignored, typing appends at end ✅ VERIFIED
 - **Symptom**: With a cell in EDIT mode (F2), clicking to place the caret mid-text and then typing inserted the character at the *end* of the cell instead of at the clicked position — the caret appeared to "jump to the end" and appended.
