@@ -52,6 +52,7 @@ import { computeFillSeries } from './utils/fillSeries';
 import { applyPasteOptions } from './utils/pasteSpecial';
 import type { PasteMode } from './utils/pasteSpecial';
 import { isEditableTarget } from './utils/dom';
+import { computeAutoRowHeights, applyAutoRowHeights } from './utils/rowHeight';
 import { extractColumnWidths, applyColumnWidths } from './utils/pasteWidths';
 import { sortRange, getCurrentRegion } from './utils/sheetSort';
 import { SortDialog } from './components/SortDialog';
@@ -465,21 +466,6 @@ function WorkbookView() {
           rawValue: value,
           style: existingCell?.style,
         };
-        const lines = value.split('\n');
-        const width = s.columnWidths[col] ?? s.defaultColWidth;
-        let visualLines = lines.length;
-        try {
-          const canvas = document.createElement('canvas');
-          const context = canvas.getContext('2d');
-          if (context) {
-            context.font = '14px Arial';
-            visualLines = lines.reduce((total, line) => total + Math.max(1, Math.ceil(context.measureText(line).width / Math.max(1, width - 12))), 0);
-          }
-        } catch {
-          // Newline count remains the safe fallback outside a measurable DOM.
-        }
-        const measuredHeight = Math.max(s.defaultRowHeight, visualLines * 20 + 8);
-        const currentHeight = s.rowHeights[row] ?? s.defaultRowHeight;
 
         // Validate cell against data validation rules
         const validations = s.dataValidations;
@@ -501,12 +487,17 @@ function WorkbookView() {
         }
 
         validationErrorCountRef.current = cellValidationErrorCount;
+
+        // Auto-fit row height for wrapped cells: recompute from the content
+        // and the column width, and snap back if the row no longer wraps.
+        const previousAuto = computeAutoRowHeights(s);
+        const nextSheet = applyAutoRowHeights(
+          { ...s, cells: { ...s.cells, [key]: newCell } },
+          previousAuto,
+        );
+
         return {
-          ...s,
-          cells: { ...s.cells, [key]: newCell },
-          rowHeights: measuredHeight > currentHeight
-            ? { ...s.rowHeights, [row]: measuredHeight }
-            : s.rowHeights,
+          ...nextSheet,
           validationErrors: Object.keys(newValidationErrors).length > 0 ? newValidationErrors : undefined,
         };
       });
@@ -1107,10 +1098,10 @@ function WorkbookView() {
     (col: number, newWidth: number) => {
       const newSheets = workbook.sheets.map((s, idx) => {
         if (idx !== workbook.activeSheetIndex) return s;
-        return {
-          ...s,
-          columnWidths: { ...s.columnWidths, [col]: newWidth },
-        };
+        const previousAuto = computeAutoRowHeights(s);
+        const resized = { ...s, columnWidths: { ...s.columnWidths, [col]: newWidth } };
+        // Column width changes how wrapped cells wrap — recompute row heights.
+        return applyAutoRowHeights(resized, previousAuto);
       });
       const newWorkbook: Workbook = {
         ...workbook,
@@ -1147,19 +1138,17 @@ function WorkbookView() {
       const newSheets = workbook.sheets.map((s, idx) => {
         if (idx !== workbook.activeSheetIndex) return s;
         if (applyToAll) {
-          return {
-            ...s,
-            ...(type === 'col'
-              ? { defaultColWidth: size }
-              : { defaultRowHeight: size }),
-          };
+          if (type === 'col') {
+            const previousAuto = computeAutoRowHeights(s);
+            return applyAutoRowHeights({ ...s, defaultColWidth: size }, previousAuto);
+          }
+          return { ...s, defaultRowHeight: size };
         }
-        return {
-          ...s,
-          ...(type === 'col'
-            ? { columnWidths: { ...s.columnWidths, [index]: size } }
-            : { rowHeights: { ...s.rowHeights, [index]: size } }),
-        };
+        if (type === 'col') {
+          const previousAuto = computeAutoRowHeights(s);
+          return applyAutoRowHeights({ ...s, columnWidths: { ...s.columnWidths, [index]: size } }, previousAuto);
+        }
+        return { ...s, rowHeights: { ...s.rowHeights, [index]: size } };
       });
       const newWorkbook: Workbook = {
         ...workbook,
@@ -1728,11 +1717,12 @@ function WorkbookView() {
       // Update workbook
       let newSheets = workbook.sheets.map((s, idx) => {
         if (idx !== workbook.activeSheetIndex) return s;
-        return {
+        // Paste can change which cells wrap — recompute row heights.
+        return applyAutoRowHeights({
           ...s,
           cells: newCells,
           validationErrors: Object.keys(newValidationErrors).length > 0 ? newValidationErrors : undefined,
-        };
+        });
       });
 
       // Cross-sheet paste: carry column widths from source range
@@ -2625,11 +2615,11 @@ function WorkbookView() {
 
       const newSheets = workbook.sheets.map((s, idx) =>
         idx === workbook.activeSheetIndex
-          ? {
+          ? applyAutoRowHeights({
               ...s,
               cells: newCells,
               validationErrors: Object.keys(newValidationErrors).length > 0 ? newValidationErrors : undefined,
-            }
+            })
           : s
       );
       const newWb: Workbook = {

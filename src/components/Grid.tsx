@@ -2108,7 +2108,7 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
                       ) : (
                         <>
                           <span
-                            className={`flex items-center px-1 ${cell?.style?.whiteSpace === 'normal' ? 'whitespace-normal' : cell?.style?.whiteSpace === 'pre' ? 'whitespace-pre' : 'truncate'}`}
+                            className={`flex items-center px-1 ${cell?.style?.whiteSpace === 'normal' ? 'whitespace-normal break-words' : cell?.style?.whiteSpace === 'pre' ? 'whitespace-pre-wrap break-words' : 'truncate'}`}
                             style={{
                               fontStyle: cell?.style?.fontStyle,
                               textDecoration: cell?.style?.textDecoration,

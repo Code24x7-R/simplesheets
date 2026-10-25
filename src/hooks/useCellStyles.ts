@@ -16,6 +16,7 @@ import {
   DEFAULT_BORDER_STYLE,
   DEFAULT_BORDER_COLOR,
 } from './useCellStyle';
+import { computeAutoRowHeights, applyAutoRowHeights } from '../utils/rowHeight';
 
 interface UseCellStylesParams {
   activeCell: { row: number; col: number } | null;
@@ -117,7 +118,11 @@ export function useCellStyles({
 
   /** Applies a style mutation function to all selected cells. */
   const applyStyle = useCallback(
-    (mutate: (current: CellStyleState) => Partial<CellStyle>, description: string) => {
+    (
+      mutate: (current: CellStyleState) => Partial<CellStyle>,
+      description: string,
+      options?: { recomputeRowHeights?: boolean },
+    ) => {
       if (!selection) return;
 
       const sheet = workbook.sheets[workbook.activeSheetIndex];
@@ -146,8 +151,14 @@ export function useCellStyles({
 
       if (cellsUpdated === 0) return;
 
+      // Wrap Text changes the row's auto-fit height; recompute it.
+      const previousAuto = options?.recomputeRowHeights ? computeAutoRowHeights(sheet) : undefined;
+      const styledSheet = options?.recomputeRowHeights
+        ? applyAutoRowHeights({ ...sheet, cells: newCells }, previousAuto)
+        : { ...sheet, cells: newCells };
+
       const newSheets = workbook.sheets.map((s, idx) =>
-        idx === workbook.activeSheetIndex ? { ...s, cells: newCells } : s
+        idx === workbook.activeSheetIndex ? styledSheet : s
       );
       const newWorkbook: Workbook = {
         ...workbook,
@@ -204,7 +215,7 @@ export function useCellStyles({
   );
 
   const toggleWrapTextStyle = useCallback(
-    () => applyStyle((s) => ({ whiteSpace: toggleWrapText(s) }), 'Wrap text'),
+    () => applyStyle((s) => ({ whiteSpace: toggleWrapText(s) }), 'Wrap text', { recomputeRowHeights: true }),
     [applyStyle]
   );
 

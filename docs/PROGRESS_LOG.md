@@ -6,6 +6,18 @@
 
 ---
 
+### 2026-10-24 [FEATURE] Wrap Text row-height auto-fit (snap to content height)
+- **What**: When Wrap Text is enabled on a cell, the row height now snaps to the wrapped content height, which depends on the column width.
+  - New `src/utils/rowHeight.ts`: `measureTextWidth`, `countWrappedLines`, `computeAutoRowHeight`, `computeAutoRowHeights`, `applyAutoRowHeights`, `isWrappedCell`. Uses canvas text measurement (28px line-height matching `.grid-cell` `leading-7`); falls back to a per-character estimate without a DOM.
+  - Replaces the old ad-hoc auto-fit in `handleCellChange` (which wrapped unconditionally and used a 20px line-height).
+  - Wired into: `handleCellChange` (content change), `toggleWrapTextStyle` (wrap toggle — grows on enable, reverts on disable), `handleColumnResize` + `handleColumnRowSizeApply` (column width change), and both paste paths.
+  - `applyAutoRowHeights` only touches rows that have wrapped cells (or were auto-fit and no longer are), so manual row heights on other rows are preserved.
+  - Fixed the frozen-cell wrap class (`whitespace-normal`/`whitespace-pre` now include `break-words`) to match the scrollable cells.
+- **Known limitation**: the app does not apply styles to empty cells (`applyStyle` only visits existing cells), so enabling Wrap Text on an empty cell has no effect until content is entered.
+- **Tests**: +25 (`rowHeight.test.ts` ×20, `App.rowHeight.test.tsx` ×5: grows on wrap, reverts on unwrap, shrinks on shorten, recomputes on column-width change, no auto-fit without wrap). Total: 4282 passing / 186 suites.
+- **Files**: `src/utils/rowHeight.ts` (new), `src/App.tsx`, `src/hooks/useCellStyles.ts`, `src/components/Grid.tsx`, their tests.
+- **Results**: lint clean, type-check clean, 4282 tests pass.
+
 ### 2026-10-24 [BUGFIX] B-035 — Global handlers hijack input in text fields (audit + remediation)
 - **What**: Audited every window/document listener for the pattern "acts on an event without checking whether it came from an editable field". Found and fixed three real instances plus two dedupes:
   - `App.tsx` `handleNativePaste` (window `paste`): pasting into any text field was intercepted and written into a grid cell. Now returns early for editable targets.
