@@ -27,7 +27,7 @@ A lightweight, browser-based spreadsheet — fully client-side, reads and writes
 
 ## Architecture
 
-SimpleSheet is a client-side SPA with no backend. State lives in React Context + `useReducer`, with a formula engine operating on sparse cell maps. An extensions architecture provides project management and visual project-organization capabilities. The built-in Project/WBS extension supports structured planning, while Creator Canvas provides a visual surface for notes, links, images, videos, sketches, project information, collections, tags, and tasks.
+SimpleSheets is a client-side SPA with no backend. State lives in React Context + `useReducer`, with a formula engine operating on sparse cell maps. An extensions architecture provides project management and visual project-organization capabilities. The built-in Project/WBS extension supports structured planning, while Creator Canvas provides a visual surface for notes, links, images, videos, sketches, project information, collections, tags, and tasks.
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
