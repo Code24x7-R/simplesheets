@@ -1,4 +1,4 @@
-# SimpleSheet
+# SimpleSheets
 
 A lightweight, browser-based spreadsheet — fully client-side, reads and writes Excel files.
 
