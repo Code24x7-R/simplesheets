@@ -23,6 +23,7 @@ import { colToLetter } from '../types';
 import type { PageSize, PrintRange, PrintScaling, PrintSetup } from '../context/PrintSetupContext';
 import { parseRange } from '../utils/chartData';
 import { extractChartData, getMinMax, generateColors } from '../utils/chartData';
+import { formatCellDisplayValue } from '../utils/numberFormat';
 import type { ChartConfig } from '../types';
 
 /** Millimetres → pixels (matches jsPDF's mm→pt→px conversion). */
@@ -477,14 +478,11 @@ function applyCellStyle(el: HTMLElement, cell: Cell | undefined): void {
 }
 
 /**
- * Resolves a cell's display value (computed value preferred over raw input).
+ * Resolves a cell's display value, matching the on-screen grid (number
+ * formats, ISO date auto-formatting, leading-quote text marker stripping).
  */
 function getCellValue(cell: Cell | undefined): string {
-  if (!cell) return '';
-  if (cell.computedValue !== undefined && cell.computedValue !== null) {
-    return String(cell.computedValue);
-  }
-  return cell.rawValue;
+  return formatCellDisplayValue(cell);
 }
 
 /**

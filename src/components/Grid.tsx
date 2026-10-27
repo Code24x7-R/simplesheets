@@ -13,7 +13,7 @@ import type { EditingSession } from '../hooks/useCellEditing';
 import type { FunctionInfo } from '../utils/formulaAutocomplete';
 import { ResizeHandle } from './ResizeHandle';
 import { FilterDropdown } from './FilterDropdown';
-import { formatNumberValue, isNumberFormat, isNumericValue, isAccountingFormat, shouldRightAlign } from '../utils/numberFormat';
+import { formatCellDisplayValue, isAccountingFormat, shouldRightAlign } from '../utils/numberFormat';
 import { evaluateConditionalFormats } from '../utils/conditionalFormatEngine';
 import type { ConditionalFormatRule } from '../types';
 import { isNumberStoredAsText } from '../utils/numberAsText';
@@ -444,26 +444,7 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
       if (showFormulas && cell.rawValue.startsWith('=')) {
         return cell.rawValue;
       }
-      let rawDisplay = cell.computedValue !== undefined && cell.computedValue !== null
-        ? String(cell.computedValue)
-        : cell.rawValue ?? '';
-      // Strip leading single quote (text marker) - Excel displays text without the quote
-      if (rawDisplay.startsWith("'")) {
-        rawDisplay = rawDisplay.slice(1);
-      }
-      // Apply number format if present and value is numeric
-      const format = cell.style?.numberFormat;
-      if (format && format !== 'General' && isNumberFormat(format) && isNumericValue(cell.computedValue ?? cell.rawValue)) {
-        return formatNumberValue(cell.computedValue ?? cell.rawValue, format);
-      }
-      // Auto-format ISO date strings as dd-mm-yyyy (Australian default)
-      // This applies when the cell has no explicit numberFormat and the value
-      // is a date in YYYY-MM-DD format (from autoDetectType or DATE/TODAY functions)
-      if (!format && /^\d{4}-\d{2}-\d{2}$/.test(rawDisplay)) {
-        const [yy, mm, dd] = rawDisplay.split('-');
-        return `${dd}-${mm}-${yy}`;
-      }
-      return rawDisplay;
+      return formatCellDisplayValue(cell);
     },
     [showFormulas]
   );

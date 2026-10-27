@@ -509,6 +509,50 @@ export function isNumericValue(value: unknown): boolean {
   return false;
 }
 
+/**
+ * Formats a cell for display, matching what the on-screen grid shows.
+ *
+ * - Prefers the computed value over the raw input.
+ * - Strips a leading single quote (Excel text marker).
+ * - Applies `CellStyle.numberFormat` (currency, percent, date/time, etc.) when
+ *   the value is numeric.
+ * - Auto-formats ISO date strings (`YYYY-MM-DD`) as `dd-mm-yyyy` (Australian
+ *   default) when no explicit number format is set.
+ *
+ * Used by both the grid and the PDF exporter so printed output matches the
+ * values the user sees on screen.
+ */
+export function formatCellDisplayValue(cell: {
+  rawValue: string;
+  computedValue?: string | number | boolean | null;
+  style?: { numberFormat?: string };
+} | undefined): string {
+  if (!cell) return '';
+
+  let rawDisplay = cell.computedValue !== undefined && cell.computedValue !== null
+    ? String(cell.computedValue)
+    : cell.rawValue ?? '';
+
+  // Strip leading single quote (text marker) - Excel displays text without it.
+  if (rawDisplay.startsWith("'")) {
+    rawDisplay = rawDisplay.slice(1);
+  }
+
+  // Apply number format if present and the value is numeric.
+  const format = cell.style?.numberFormat;
+  if (format && format !== 'General' && isNumberFormat(format) && isNumericValue(cell.computedValue ?? cell.rawValue)) {
+    return formatNumberValue(cell.computedValue ?? cell.rawValue, format);
+  }
+
+  // Auto-format ISO date strings as dd-mm-yyyy (Australian default).
+  if (!format && /^\d{4}-\d{2}-\d{2}$/.test(rawDisplay)) {
+    const [yy, mm, dd] = rawDisplay.split('-');
+    return `${dd}-${mm}-${yy}`;
+  }
+
+  return rawDisplay;
+}
+
 /** Known time-only format patterns (for fast lookup). */
 const TIME_FORMATS_LOWER = ['hh:mm:ss', 'hh:mm', 'h:mm:ss', 'h:mm', 'h:mm am/pm', 'h:mm:ss am/pm'];
 

@@ -203,6 +203,53 @@ describe('pdfExport', () => {
       expect(cell.style.fontSize).toBe('24px');
     });
 
+    it('applies the cell number format (currency) to the data cell', async () => {
+      const html = captureHtml();
+      const sheet: Sheet = {
+        ...createTestSheet(),
+        cells: {
+          '2:2': { rawValue: '1234.5', computedValue: 1234.5, style: { numberFormat: '$#,##0.00' } },
+        },
+      };
+
+      await generatePdf(sheet, { setup: baseSetup() });
+
+      const cell = Array.from(html.get()!.querySelectorAll('.pdf-cell')).find(
+        (t) => t.textContent === '$1,234.50'
+      ) as HTMLElement;
+      expect(cell).toBeTruthy();
+    });
+
+    it('auto-formats ISO dates as dd-mm-yyyy', async () => {
+      const html = captureHtml();
+      const sheet: Sheet = {
+        ...createTestSheet(),
+        cells: { '2:2': { rawValue: '08/08/2026', computedValue: '2026-08-08' } },
+      };
+
+      await generatePdf(sheet, { setup: baseSetup() });
+
+      const cell = Array.from(html.get()!.querySelectorAll('.pdf-cell')).find(
+        (t) => t.textContent === '08-08-2026'
+      ) as HTMLElement;
+      expect(cell).toBeTruthy();
+    });
+
+    it('strips the leading single-quote text marker', async () => {
+      const html = captureHtml();
+      const sheet: Sheet = {
+        ...createTestSheet(),
+        cells: { '2:2': { rawValue: "'12345", computedValue: "'12345" } },
+      };
+
+      await generatePdf(sheet, { setup: baseSetup() });
+
+      const cell = Array.from(html.get()!.querySelectorAll('.pdf-cell')).find(
+        (t) => t.textContent === '12345'
+      ) as HTMLElement;
+      expect(cell).toBeTruthy();
+    });
+
     it('renders without row/column headings by default', async () => {
       const html = captureHtml();
       await generatePdf(createTestSheet(), { setup: baseSetup() });
