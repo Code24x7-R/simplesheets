@@ -244,6 +244,32 @@ describe('pdfExport', () => {
       expect(cell!.style.lineHeight).toBe(row.style.height);
     });
 
+    it('right-aligns numeric values and leaves text left-aligned by default', async () => {
+      const sheet: Sheet = {
+        ...createTestSheet(),
+        cells: {
+          '0:0': { rawValue: '123' },
+          '0:1': { rawValue: 'Text' },
+        },
+      };
+
+      await generatePdf(sheet, { setup: baseSetup() });
+
+      expect(findCell('123')!.style.textAlign).toBe('right');
+      expect(findCell('Text')!.style.textAlign).toBe('');
+    });
+
+    it('respects an explicit text alignment over auto right-align', async () => {
+      const sheet: Sheet = {
+        ...createTestSheet(),
+        cells: { '0:0': { rawValue: '123', style: { textAlign: 'center' } } },
+      };
+
+      await generatePdf(sheet, { setup: baseSetup() });
+
+      expect(findCell('123')!.style.textAlign).toBe('center');
+    });
+
     it('applies the cell number format (currency) to the data cell', async () => {
       const sheet: Sheet = {
         ...createTestSheet(),

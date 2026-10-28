@@ -26,7 +26,7 @@ import { colToLetter } from '../types';
 import type { PageSize, PrintRange, PrintScaling, PrintSetup } from '../context/PrintSetupContext';
 import { parseRange } from '../utils/chartData';
 import { extractChartData, getMinMax, generateColors } from '../utils/chartData';
-import { formatCellDisplayValue } from '../utils/numberFormat';
+import { formatCellDisplayValue, shouldRightAlign } from '../utils/numberFormat';
 import { countWrappedLines, isWrappedCell } from '../utils/rowHeight';
 import type { ChartConfig } from '../types';
 
@@ -659,19 +659,27 @@ function applyCellBorders(
  */
 function applyCellStyle(el: HTMLElement, cell: Cell | undefined, fontScale: number): void {
   const style = cell?.style;
-  if (!style) return;
 
-  if (style.fontWeight !== undefined) el.style.fontWeight = String(style.fontWeight);
-  if (style.fontStyle) el.style.fontStyle = style.fontStyle;
-  if (style.fontSize) el.style.fontSize = `${style.fontSize * fontScale}px`;
-  if (style.color) el.style.color = style.color;
-  if (style.backgroundColor) el.style.backgroundColor = style.backgroundColor;
-  if (style.textAlign) el.style.textAlign = style.textAlign;
-  if (style.textDecoration) el.style.textDecoration = style.textDecoration;
-  if (style.whiteSpace === 'normal') {
-    el.style.whiteSpace = 'normal';
-    el.style.textOverflow = 'clip';
-    el.style.overflow = 'visible';
+  if (style) {
+    if (style.fontWeight !== undefined) el.style.fontWeight = String(style.fontWeight);
+    if (style.fontStyle) el.style.fontStyle = style.fontStyle;
+    if (style.fontSize) el.style.fontSize = `${style.fontSize * fontScale}px`;
+    if (style.color) el.style.color = style.color;
+    if (style.backgroundColor) el.style.backgroundColor = style.backgroundColor;
+    if (style.textAlign) el.style.textAlign = style.textAlign;
+    if (style.textDecoration) el.style.textDecoration = style.textDecoration;
+    if (style.whiteSpace === 'normal') {
+      el.style.whiteSpace = 'normal';
+      el.style.textOverflow = 'clip';
+      el.style.overflow = 'visible';
+    }
+  }
+
+  // Match the grid: numbers, dates, times, and accounting formats are
+  // right-aligned by default. `shouldRightAlign` returns false when the user
+  // has explicitly set a text alignment.
+  if (shouldRightAlign(cell)) {
+    el.style.textAlign = 'right';
   }
 }
 
