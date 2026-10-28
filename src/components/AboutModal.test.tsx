@@ -73,7 +73,7 @@ describe('AboutModal', () => {
     render(<AboutModal isOpen={true} onClose={jest.fn()} />);
     expect(screen.getByText(/Vite/)).toBeInTheDocument();
     expect(screen.getByText(/SheetJS/)).toBeInTheDocument();
-    expect(screen.getByText(/html2pdf\.js/)).toBeInTheDocument();
+    expect(screen.getByText(/html2canvas/)).toBeInTheDocument();
   });
 
   it('renders license section', () => {

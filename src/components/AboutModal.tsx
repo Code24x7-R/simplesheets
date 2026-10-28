@@ -26,7 +26,7 @@ function getBuildInfo(): { date: string; time: string; raw: string; commit: stri
 
 const ABOUT_CONTENT = `# SimpleSheet
 
-A lightweight, browser-based spreadsheet built with React, TypeScript, and Tailwind CSS. No server, no account, no bloat — just a fast, offline-capable grid that reads and writes Excel files. Powered by Vite, SheetJS, PapaParse, and html2pdf.js.
+A lightweight, browser-based spreadsheet built with React, TypeScript, and Tailwind CSS. No server, no account, no bloat — just a fast, offline-capable grid that reads and writes Excel files. Powered by Vite, SheetJS, PapaParse, html2canvas, and jsPDF.
 
 ---
 

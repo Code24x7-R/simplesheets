@@ -3,7 +3,7 @@
 /**
  * PDF Export Service
  *
- * Generates PDF documents from the spreadsheet grid using html2pdf.js.
+ * Renders the spreadsheet grid to a PDF using html2canvas + jsPDF.
  * Respects page setup settings (orientation, margins, scaling, print range,
  * footers).
  *
@@ -13,9 +13,12 @@
  *   where the cells themselves define them — a "table style" is simply cell
  *   borders (`CellStyle.borderTop/Bottom/Left/Right`). Apply borders to a
  *   range and the grid appears; leave them unset and the sheet prints clean.
- * - Page breaks are inserted automatically by html2pdf's pagebreak plugin
- *   (each row is marked `break-inside: avoid`), so rows are never split across
- *   pages without any hand-rolled pagination.
+ * - Pagination is deterministic: rows (and charts) are grouped into fixed-size
+ *   "page" blocks, each of which is rendered to its own canvas and placed on
+ *   its own PDF page. Rows are never split across pages, and the footer lives
+ *   in the bottom margin so it cannot overlap cell content.
+ * - Scaling is applied by resizing column widths / row heights / font sizes —
+ *   never with CSS `zoom` (which misaligns html2canvas output).
  */
 
 import type { Cell, Sheet } from '../types';
@@ -39,6 +42,15 @@ const PAGE_SIZES_MM: Record<PageSize, { width: number; height: number }> = {
 /** Fixed width reserved for the row-number heading column. */
 const ROW_HEADER_WIDTH_PX = 36;
 
+/** Estimated height of the sheet-title heading in pixels. */
+const TITLE_HEIGHT_PX = 28;
+
+/** Height of the column-letter heading row in pixels. */
+const HEADER_ROW_HEIGHT_PX = 24;
+
+/** Estimated height of the "Charts" section heading in pixels. */
+const CHARTS_TITLE_HEIGHT_PX = 28;
+
 /** Default footer template. */
 export const DEFAULT_FOOTER = 'Page {page} of {total}';
 
@@ -48,7 +60,7 @@ export const DEFAULT_FOOTER = 'Page {page} of {total}';
 export interface PdfExportOptions {
   /** Page setup configuration. */
   setup: PrintSetup;
-  /** Sheet title (appears in PDF header). */
+  /** Sheet title (appears at the top of the first PDF page). */
   title?: string;
   /**
    * Whether to include row/column headings. Defaults to `setup.showHeaders`
@@ -78,9 +90,14 @@ interface UsedRange {
   maxCol: number;
 }
 
+/** A renderable block (row, title, chart, …) with an estimated pixel height. */
+interface Block {
+  el: HTMLElement;
+  height: number;
+}
+
 /**
  * Minimal shape of the jsPDF document we use for footer post-processing.
- * html2pdf returns the live jsPDF instance from `outputPdf()` (no argument).
  */
 export interface JsPdfLike {
   internal: {
@@ -109,51 +126,43 @@ export async function generatePdf(
   const range = options.range ?? setup.range;
   const footer = options.footer ?? setup.footer;
 
-  // Dynamically import html2pdf.js to keep it out of the main bundle
-  const html2pdf = (await import('html2pdf.js')).default;
+  // Dynamically import rendering libraries to keep them out of the main bundle.
+  const html2canvas = (await import('html2canvas')).default;
+  const { jsPDF } = await import('jspdf');
 
-  // Build the printable HTML and scale it to the configured paper size.
-  const container = buildPrintableHtml(sheet, { title, showHeaders, range });
-  applyPrintScale(container, setup);
+  const pages = buildPrintablePages(sheet, { title, showHeaders, range, setup });
 
-  // Configure html2pdf options based on page setup. `pagebreak.avoid` marks
-  // every data row as unbreakable, which makes html2pdf insert page breaks
-  // between rows automatically.
-  const pdfOptions = {
-    margin: [
-      setup.margins.top,
-      setup.margins.right,
-      setup.margins.bottom,
+  const page = PAGE_SIZES_MM[setup.pageSize];
+  const pageWidthMm = setup.orientation === 'landscape' ? page.height : page.width;
+  const pageHeightMm = setup.orientation === 'landscape' ? page.width : page.height;
+  const innerWidthMm = pageWidthMm - setup.margins.left - setup.margins.right;
+  const innerHeightMm = pageHeightMm - setup.margins.top - setup.margins.bottom;
+
+  const pdf = new jsPDF({
+    unit: 'mm',
+    format: setup.pageSize.toLowerCase(),
+    orientation: setup.orientation,
+  });
+
+  for (let i = 0; i < pages.length; i++) {
+    if (i > 0) pdf.addPage();
+    const canvas = await renderPageToCanvas(pages[i], html2canvas);
+    const imgData = canvas.toDataURL('image/jpeg', 0.95);
+    pdf.addImage(
+      imgData,
+      'JPEG',
       setup.margins.left,
-    ],
-    filename: `${sanitizeFilename(title)}.pdf`,
-    image: { type: 'jpeg', quality: 0.95 },
-    html2canvas: {
-      scale: 2,
-      useCORS: true,
-      logging: false,
-    },
-    jsPDF: {
-      unit: 'mm',
-      format: setup.pageSize.toLowerCase(),
-      orientation: setup.orientation,
-    },
-    pagebreak: { mode: ['css', 'legacy'], avoid: ['.pdf-row'] },
-  };
-
-  // `toPdf()` renders the document and stores the live jsPDF instance on the
-  // worker; `get('pdf')` retrieves it so we can stamp footers on every page
-  // before serialising. (`outputPdf()` without a type returns the raw PDF
-  // string, not the document.)
-  const worker = html2pdf().set(pdfOptions).from(container);
-  await worker.toPdf();
-  const doc = (await worker.get('pdf')) as JsPdfLike;
-
-  if (footer && footer.trim()) {
-    addFooters(doc, { text: footer, bottomMargin: setup.margins.bottom });
+      setup.margins.top,
+      innerWidthMm,
+      innerHeightMm,
+    );
   }
 
-  return doc.output('blob') as Blob;
+  if (footer && footer.trim()) {
+    addFooters(pdf as unknown as JsPdfLike, { text: footer, bottomMargin: setup.margins.bottom });
+  }
+
+  return pdf.output('blob') as Blob;
 }
 
 /**
@@ -242,93 +251,224 @@ export function addFooters(
 }
 
 /**
- * Builds an HTML element suitable for PDF rendering.
+ * Builds one fixed-size HTML page per PDF page, each containing whole rows.
  */
-function buildPrintableHtml(
+function buildPrintablePages(
   sheet: Sheet,
-  options: { title: string; showHeaders: boolean; range?: string | PrintRange | null }
-): HTMLElement {
-  const { title, showHeaders, range } = options;
+  options: { title: string; showHeaders: boolean; range?: string | PrintRange | null; setup: PrintSetup }
+): HTMLElement[] {
+  const { title, showHeaders, range, setup } = options;
 
-  const container = document.createElement('div');
-  container.className = 'pdf-document';
-  container.style.fontFamily = 'Arial, sans-serif';
-  container.style.fontSize = '10pt';
-  container.style.color = '#000';
-  container.style.width = '100%';
-  container.style.boxSizing = 'border-box';
+  const page = PAGE_SIZES_MM[setup.pageSize];
+  const pageWidthMm = setup.orientation === 'landscape' ? page.height : page.width;
+  const pageHeightMm = setup.orientation === 'landscape' ? page.width : page.height;
+  const innerWidthMm = pageWidthMm - setup.margins.left - setup.margins.right;
+  const innerHeightMm = pageHeightMm - setup.margins.top - setup.margins.bottom;
+  // Pixel dimensions preserve the printable-area aspect ratio (width:height =
+  // innerWidthMm:innerHeightMm), so the canvas can be stretched to the
+  // printable area in mm without distortion.
+  const innerWidthPx = innerWidthMm * MM_TO_PX;
+  const pageHeightPx = innerHeightMm * MM_TO_PX;
 
-  // Title
-  const titleEl = document.createElement('h2');
-  titleEl.textContent = title;
-  titleEl.style.margin = '0 0 8px 0';
-  titleEl.style.fontSize = '14pt';
-  container.appendChild(titleEl);
-
-  // Find the used range
   const usedRange = findUsedRange(sheet);
   if (!usedRange) {
+    const pageEl = createPageElement(innerWidthPx, pageHeightPx);
     const empty = document.createElement('p');
     empty.textContent = '(Empty sheet)';
-    container.appendChild(empty);
-    return container;
+    empty.style.margin = '8px';
+    pageEl.appendChild(empty);
+    return [pageEl];
   }
 
   const bounds = normalizePrintRange(range, sheet, usedRange);
 
-  // Resolve column widths so relative widths match the on-screen grid.
-  const colWidths: number[] = [];
-  let totalWidth = 0;
+  // Natural column widths.
+  const naturalColWidths: number[] = [];
+  let naturalWidth = showHeaders ? ROW_HEADER_WIDTH_PX : 0;
   for (let c = bounds.startCol; c <= bounds.endCol; c++) {
     const w = sheet.columnWidths[c] ?? sheet.defaultColWidth;
-    colWidths.push(w);
-    totalWidth += w;
+    naturalColWidths.push(w);
+    naturalWidth += w;
   }
 
-  // Optional column-letter heading row.
-  if (showHeaders) {
-    container.appendChild(
-      buildRow(sheet, bounds.startRow, bounds, colWidths, totalWidth, true, true)
-    );
+  // All columns have zero width — fall back to equal columns filling the page.
+  if (naturalColWidths.reduce((sum, w) => sum + w, 0) <= 0) {
+    const colCount = naturalColWidths.length || 1;
+    for (let i = 0; i < naturalColWidths.length; i++) {
+      naturalColWidths[i] = innerWidthPx / colCount;
+    }
+    naturalWidth = (showHeaders ? ROW_HEADER_WIDTH_PX : 0) + innerWidthPx;
   }
 
-  // Data rows
+  // Natural content height (used for fit-to-page scaling).
+  let naturalHeight = TITLE_HEIGHT_PX;
+  if (showHeaders) naturalHeight += HEADER_ROW_HEIGHT_PX;
   for (let r = bounds.startRow; r <= bounds.endRow; r++) {
-    container.appendChild(
-      buildRow(sheet, r, bounds, colWidths, totalWidth, showHeaders, false)
-    );
+    naturalHeight += sheet.rowHeights[r] ?? sheet.defaultRowHeight;
+  }
+  const charts = sheet.charts ?? [];
+  if (charts.length > 0) {
+    naturalHeight += CHARTS_TITLE_HEIGHT_PX;
+    for (const chart of charts) naturalHeight += chart.height + 12;
   }
 
-  // Charts
-  const charts = sheet.charts ?? [];
+  const { widthScale, heightScale, fontScale } = resolveScales(
+    setup, naturalWidth, naturalHeight, pageWidthMm, pageHeightMm,
+  );
+  const colWidths = naturalColWidths.map((w) => w * widthScale);
+  const rowHeaderWidth = ROW_HEADER_WIDTH_PX * widthScale;
+  const contentWidth = naturalWidth * widthScale;
+
+  // ── Blocks ────────────────────────────────────────────────────────────────
+  const blocks: Block[] = [];
+
+  const titleEl = document.createElement('h2');
+  titleEl.textContent = title;
+  titleEl.style.margin = '0 0 8px 0';
+  titleEl.style.fontSize = `${14 * fontScale}pt`;
+  blocks.push({ el: titleEl, height: TITLE_HEIGHT_PX * heightScale });
+
+  if (showHeaders) {
+    blocks.push({
+      el: buildRow(sheet, -1, bounds, colWidths, contentWidth, rowHeaderWidth, true, true, heightScale, fontScale),
+      height: HEADER_ROW_HEIGHT_PX * heightScale,
+    });
+  }
+
+  for (let r = bounds.startRow; r <= bounds.endRow; r++) {
+    const rowHeight = (sheet.rowHeights[r] ?? sheet.defaultRowHeight) * heightScale;
+    blocks.push({
+      el: buildRow(sheet, r, bounds, colWidths, contentWidth, rowHeaderWidth, showHeaders, false, heightScale, fontScale),
+      height: rowHeight,
+    });
+  }
+
   if (charts.length > 0) {
     const chartsTitle = document.createElement('h3');
     chartsTitle.textContent = 'Charts';
     chartsTitle.style.margin = '16px 0 8px 0';
-    chartsTitle.style.fontSize = '12pt';
-    container.appendChild(chartsTitle);
+    chartsTitle.style.fontSize = `${12 * fontScale}pt`;
+    blocks.push({ el: chartsTitle, height: CHARTS_TITLE_HEIGHT_PX * heightScale });
 
     for (const chart of charts) {
       const chartContainer = document.createElement('div');
       chartContainer.className = 'pdf-chart';
       chartContainer.style.marginBottom = '12px';
-      chartContainer.style.breakInside = 'avoid';
-      chartContainer.style.pageBreakInside = 'avoid';
 
-      // Generate SVG and embed as a data URL (avoids leaking blob URLs).
       const svgString = generateChartSvg(chart, sheet);
-
       const img = document.createElement('img');
       img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgString)}`;
-      img.width = chart.width;
-      img.height = chart.height;
+      img.width = Math.max(1, Math.round(chart.width * widthScale));
+      img.height = Math.max(1, Math.round(chart.height * heightScale));
       img.style.maxWidth = '100%';
       chartContainer.appendChild(img);
-      container.appendChild(chartContainer);
+
+      blocks.push({ el: chartContainer, height: chart.height * heightScale + 12 });
     }
   }
 
-  return container;
+  // ── Paginate ──────────────────────────────────────────────────────────────
+  return paginateBlocks(blocks, pageHeightPx).map((group) => {
+    const pageEl = createPageElement(innerWidthPx, pageHeightPx, fontScale);
+    for (const block of group) pageEl.appendChild(block.el);
+    return pageEl;
+  });
+}
+
+/**
+ * Creates a fixed-size, white page container.
+ */
+function createPageElement(widthPx: number, heightPx: number, fontScale = 1): HTMLElement {
+  const el = document.createElement('div');
+  el.className = 'pdf-page';
+  el.style.width = `${widthPx}px`;
+  el.style.height = `${heightPx}px`;
+  el.style.overflow = 'hidden';
+  el.style.position = 'relative';
+  el.style.backgroundColor = '#ffffff';
+  el.style.boxSizing = 'border-box';
+  el.style.fontFamily = 'Arial, sans-serif';
+  el.style.fontSize = `${10 * fontScale}pt`;
+  el.style.color = '#000';
+  return el;
+}
+
+/**
+ * Groups blocks into pages so no block is split across a page boundary.
+ */
+function paginateBlocks(blocks: Block[], pageHeightPx: number): Block[][] {
+  const pages: Block[][] = [];
+  let current: Block[] = [];
+  let used = 0;
+
+  for (const block of blocks) {
+    // A small tolerance absorbs sub-pixel rounding so a block that fits within
+    // a hair of the page boundary isn't pushed onto an extra page.
+    if (current.length > 0 && used + block.height > pageHeightPx + 0.5) {
+      pages.push(current);
+      current = [];
+      used = 0;
+    }
+    current.push(block);
+    used += block.height;
+  }
+
+  if (current.length > 0) pages.push(current);
+  return pages;
+}
+
+/**
+ * Resolves the scale factors for the configured scaling mode.
+ */
+function resolveScales(
+  setup: PrintSetup,
+  naturalWidthPx: number,
+  naturalHeightPx: number,
+  pageWidthMm: number,
+  pageHeightMm: number
+): { widthScale: number; heightScale: number; fontScale: number } {
+  if (setup.scaling === 'actual-size') {
+    return { widthScale: 1, heightScale: 1, fontScale: 1 };
+  }
+
+  if (setup.scaling === 'fit-to-width') {
+    return {
+      widthScale: computePrintScale('fit-to-width', naturalWidthPx, naturalHeightPx, pageWidthMm, pageHeightMm, setup.margins),
+      heightScale: 1,
+      fontScale: 1,
+    };
+  }
+
+  // fit-to-page: a single uniform scale keeps the sheet proportional.
+  const scale = computePrintScale('fit-to-page', naturalWidthPx, naturalHeightPx, pageWidthMm, pageHeightMm, setup.margins);
+  return { widthScale: scale, heightScale: scale, fontScale: scale };
+}
+
+/**
+ * Renders a page element to a canvas (off-screen, then removed).
+ */
+async function renderPageToCanvas(
+  pageEl: HTMLElement,
+  html2canvas: (element: HTMLElement, options?: Record<string, unknown>) => Promise<HTMLCanvasElement>
+): Promise<HTMLCanvasElement> {
+  const holder = document.createElement('div');
+  holder.style.position = 'absolute';
+  holder.style.left = '-10000px';
+  holder.style.top = '0';
+  holder.appendChild(pageEl);
+  document.body.appendChild(holder);
+
+  try {
+    return await html2canvas(pageEl, {
+      scale: 2,
+      useCORS: true,
+      logging: false,
+      backgroundColor: '#ffffff',
+    });
+  } finally {
+    if (pageEl.parentNode === holder) holder.removeChild(pageEl);
+    if (holder.parentNode === document.body) document.body.removeChild(holder);
+  }
 }
 
 /**
@@ -339,55 +479,47 @@ function buildRow(
   r: number,
   bounds: PrintRange,
   colWidths: number[],
-  totalWidth: number,
+  contentWidth: number,
+  rowHeaderWidth: number,
   showHeaders: boolean,
-  isHeaderRow: boolean
+  isHeaderRow: boolean,
+  heightScale: number,
+  fontScale: number
 ): HTMLElement {
   const row = document.createElement('div');
   row.className = isHeaderRow ? 'pdf-row pdf-header-row' : 'pdf-row';
   row.style.display = 'flex';
-  row.style.width = '100%';
-  // Marks this row as unbreakable so html2pdf moves it whole to the next page.
-  row.style.breakInside = 'avoid';
-  row.style.pageBreakInside = 'avoid';
+  row.style.flexWrap = 'nowrap';
+  row.style.width = `${contentWidth}px`;
+  row.style.boxSizing = 'border-box';
+  row.style.overflow = 'hidden';
+  row.style.height = isHeaderRow
+    ? `${HEADER_ROW_HEIGHT_PX * heightScale}px`
+    : `${(sheet.rowHeights[r] ?? sheet.defaultRowHeight) * heightScale}px`;
 
-  if (!isHeaderRow) {
-    row.style.minHeight = `${sheet.rowHeights[r] ?? sheet.defaultRowHeight}px`;
-  }
-
-  // Row-number heading cell
+  // Row-number heading cell.
   if (showHeaders) {
     const rowHeader = document.createElement('div');
     rowHeader.className = 'pdf-row-header';
-    rowHeader.style.flex = `0 0 ${ROW_HEADER_WIDTH_PX}px`;
+    rowHeader.style.flex = '0 0 auto';
+    rowHeader.style.width = `${rowHeaderWidth}px`;
     rowHeader.style.boxSizing = 'border-box';
     rowHeader.style.padding = '2px 6px';
     rowHeader.style.backgroundColor = '#f0f0f0';
     rowHeader.style.fontWeight = 'bold';
     rowHeader.style.textAlign = 'center';
     rowHeader.style.borderBottom = '1px solid #999';
+    rowHeader.style.overflow = 'hidden';
     rowHeader.textContent = isHeaderRow ? '' : String(r + 1);
     row.appendChild(rowHeader);
   }
 
-  // Data cells
-  const cells = document.createElement('div');
-  cells.className = 'pdf-row-cells';
-  cells.style.display = 'flex';
-  cells.style.flex = '1';
-  cells.style.minWidth = '0';
-  row.appendChild(cells);
-
-  const colCount = bounds.endCol - bounds.startCol + 1;
   for (let c = bounds.startCol; c <= bounds.endCol; c++) {
     const cell = sheet.cells[`${r}:${c}`];
     const cellEl = document.createElement('div');
     cellEl.className = 'pdf-cell';
-    const widthPct =
-      totalWidth > 0
-        ? (colWidths[c - bounds.startCol] / totalWidth) * 100
-        : 100 / colCount;
-    cellEl.style.flex = `0 0 ${widthPct}%`;
+    cellEl.style.flex = '0 0 auto';
+    cellEl.style.width = `${colWidths[c - bounds.startCol]}px`;
     cellEl.style.boxSizing = 'border-box';
     cellEl.style.padding = '2px 6px';
     cellEl.style.overflow = 'hidden';
@@ -402,11 +534,11 @@ function buildRow(
       cellEl.textContent = colToLetter(c);
     } else {
       applyCellBorders(cellEl, cell, r, c, bounds, sheet);
-      applyCellStyle(cellEl, cell);
+      applyCellStyle(cellEl, cell, fontScale);
       cellEl.textContent = getCellValue(cell);
     }
 
-    cells.appendChild(cellEl);
+    row.appendChild(cellEl);
   }
 
   return row;
@@ -459,13 +591,13 @@ function applyCellBorders(
 /**
  * Applies a cell's visual style to its rendered element.
  */
-function applyCellStyle(el: HTMLElement, cell: Cell | undefined): void {
+function applyCellStyle(el: HTMLElement, cell: Cell | undefined, fontScale: number): void {
   const style = cell?.style;
   if (!style) return;
 
   if (style.fontWeight !== undefined) el.style.fontWeight = String(style.fontWeight);
   if (style.fontStyle) el.style.fontStyle = style.fontStyle;
-  if (style.fontSize) el.style.fontSize = `${style.fontSize}px`;
+  if (style.fontSize) el.style.fontSize = `${style.fontSize * fontScale}px`;
   if (style.color) el.style.color = style.color;
   if (style.backgroundColor) el.style.backgroundColor = style.backgroundColor;
   if (style.textAlign) el.style.textAlign = style.textAlign;
@@ -521,91 +653,6 @@ function normalizePrintRange(
 
   if (endRow < startRow || endCol < startCol) return fallback;
   return { startRow, endRow, startCol, endCol };
-}
-
-/**
- * Applies the configured scaling to the rendered container. For `fit-to-*`
- * modes the container is measured at its natural size and then shrunk (via
- * CSS `zoom`) so it fits the printable area. The rendered height is then
- * re-measured and the scale corrected, because browser layout rounds heights
- * and an uncorrected scale can spill a sliver onto an extra page.
- */
-function applyPrintScale(container: HTMLElement, setup: PrintSetup): void {
-  const page = PAGE_SIZES_MM[setup.pageSize];
-  const pageWidthMm = setup.orientation === 'landscape' ? page.height : page.width;
-  const pageHeightMm = setup.orientation === 'landscape' ? page.width : page.height;
-  const innerHeightPx = (pageHeightMm - setup.margins.top - setup.margins.bottom) * MM_TO_PX;
-  // html2pdf's pagebreak plugin floors the page height (toPx), so target the
-  // floored value to avoid spilling a sub-pixel sliver onto an extra page.
-  const pageHeightPx = Math.floor(innerHeightPx);
-
-  if (setup.scaling === 'actual-size') {
-    // Shrink-wrap to the natural content width (may overflow the page, which
-    // is the expected behaviour for "actual size").
-    container.style.display = 'inline-block';
-    container.style.width = 'auto';
-    return;
-  }
-
-  const natural = measureContainer(container, 'max-content');
-  let scale = computePrintScale(
-    setup.scaling,
-    natural.width,
-    natural.height,
-    pageWidthMm,
-    pageHeightMm,
-    setup.margins
-  );
-
-  // Apply and re-measure. For `fit-to-page` the rendered height must not
-  // exceed the printable height, otherwise html2pdf's pagebreak plugin (whose
-  // page height is floored) inserts a break and leaves a near-empty page.
-  for (let attempt = 0; attempt < 3; attempt++) {
-    applyScale(container, scale, natural.width);
-    if (setup.scaling === 'fit-to-width') break;
-    const rendered = measureContainer(container, `${natural.width}px`);
-    if (rendered.height <= pageHeightPx) break;
-    scale *= pageHeightPx / rendered.height;
-  }
-}
-
-/**
- * Measures a container's rendered size at a given CSS width, off-screen.
- */
-function measureContainer(
-  container: HTMLElement,
-  width: string
-): { width: number; height: number } {
-  const prevWidth = container.style.width;
-  const prevPosition = container.style.position;
-  const prevVisibility = container.style.visibility;
-
-  container.style.position = 'absolute';
-  container.style.visibility = 'hidden';
-  container.style.width = width;
-  document.body.appendChild(container);
-  const rect = container.getBoundingClientRect();
-  const result = { width: rect.width, height: rect.height };
-
-  document.body.removeChild(container);
-  container.style.position = prevPosition;
-  container.style.visibility = prevVisibility;
-  container.style.width = prevWidth;
-  return result;
-}
-
-/**
- * Applies a scale factor to the container via CSS `zoom`, keeping the CSS
- * width at the natural size so the zoom performs the shrinking.
- */
-function applyScale(container: HTMLElement, scale: number, naturalWidth: number): void {
-  if (scale < 1 && naturalWidth > 0) {
-    container.style.setProperty('zoom', String(scale));
-    container.style.width = `${naturalWidth}px`;
-  } else {
-    container.style.removeProperty('zoom');
-    container.style.width = '100%';
-  }
 }
 
 /**

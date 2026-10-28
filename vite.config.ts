@@ -43,7 +43,7 @@ export default defineConfig({
         manualChunks: {
           xlsx: ['xlsx'],
           vendor: ['react', 'react-dom'],
-          html2pdf: ['html2pdf.js'],
+          pdf: ['html2canvas', 'jspdf'],
         },
       },
     },
