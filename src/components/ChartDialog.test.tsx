@@ -212,7 +212,14 @@ describe('ChartDialog Range Picker', () => {
     const onToggleRangePicker = jest.fn();
     render(<ChartDialog {...defaultProps} onToggleRangePicker={onToggleRangePicker} isRangePickerActive={false} />);
     fireEvent.click(screen.getByTestId('chart-range-picker'));
-    expect(onToggleRangePicker).toHaveBeenCalledTimes(1);
+    expect(onToggleRangePicker).toHaveBeenCalledWith('dataRange');
+  });
+
+  it('calls onToggleRangePicker with the title target', () => {
+    const onToggleRangePicker = jest.fn();
+    render(<ChartDialog {...defaultProps} onToggleRangePicker={onToggleRangePicker} isRangePickerActive={false} />);
+    fireEvent.click(screen.getByTestId('chart-title-picker'));
+    expect(onToggleRangePicker).toHaveBeenCalledWith('title');
   });
 
   it('updates dataRange when chartRangeSelected event fires', () => {
@@ -224,5 +231,25 @@ describe('ChartDialog Range Picker', () => {
       }));
     });
     expect(screen.getByTestId('chart-data-range')).toHaveValue('A1:D10');
+  });
+
+  it('updates the title as a cell reference when the title field is picked', () => {
+    render(<ChartDialog {...defaultProps} />);
+    act(() => {
+      window.dispatchEvent(new CustomEvent('simplesheets:chartRangeSelected', {
+        detail: { range: 'B2', field: 'title' },
+      }));
+    });
+    expect(screen.getByTestId('chart-title')).toHaveValue('=B2');
+  });
+
+  it('uses the top-left cell for a label field range selection', () => {
+    render(<ChartDialog {...defaultProps} />);
+    act(() => {
+      window.dispatchEvent(new CustomEvent('simplesheets:chartRangeSelected', {
+        detail: { range: 'B2:C5', field: 'xAxisLabel' },
+      }));
+    });
+    expect(screen.getByTestId('chart-x-axis')).toHaveValue('=B2');
   });
 });

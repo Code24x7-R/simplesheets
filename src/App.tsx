@@ -62,7 +62,7 @@ import {
   type FilterState,
 } from './utils/sheetFilter';
 import type { ColumnFilter } from './utils/sheetFilter';
-import { ChartDialog } from './components/ChartDialog';
+import { ChartDialog, type ChartFieldTarget } from './components/ChartDialog';
 import { ChartOverlay } from './components/charts/ChartOverlay';
 import type { ChartConfig } from './types';
 import { createDemoWorkbook } from './utils/demoWorkbook';
@@ -347,6 +347,7 @@ function WorkbookView() {
   const [editingChart, setEditingChart] = useState<ChartConfig | null>(null);
   const [selectedChartId, setSelectedChartId] = useState<string | null>(null);
   const [chartPointMode, setChartPointMode] = useState(false);
+  const [chartPointTarget, setChartPointTarget] = useState<ChartFieldTarget>('dataRange');
   const [namedRangePointMode, setNamedRangePointMode] = useState(false);
   const { settings: chartSettings, updateSettings: updateChartSettings } = useChartSettings();
 
@@ -2347,20 +2348,20 @@ function WorkbookView() {
 
   // ─── Chart Range Picker ────────────────────────────────────────────
 
-  const handleToggleChartRangePicker = useCallback(() => {
+  const handleToggleChartRangePicker = useCallback((target: ChartFieldTarget) => {
+    setChartPointTarget(target);
     setChartPointMode((prev) => !prev);
   }, []);
 
   const handleChartPointSelection = useCallback(
     (range: string) => {
-      // Update the chart range in the dialog via a custom event
-      // The ChartDialog listens for this and updates its dataRange
+      // Forward the selection (and which field it targets) to ChartDialog.
       window.dispatchEvent(new CustomEvent('simplesheets:chartRangeSelected', {
-        detail: { range },
+        detail: { range, field: chartPointTarget },
       }));
       setChartPointMode(false);
     },
-    [],
+    [chartPointTarget],
   );
 
   // ─── Named Range Range Picker ─────────────────────────────────────
@@ -3376,6 +3377,7 @@ function WorkbookView() {
         }
         existingChart={editingChart ?? undefined}
         isRangePickerActive={chartPointMode}
+        rangePickerTarget={chartPointTarget}
         onToggleRangePicker={handleToggleChartRangePicker}
         initialSettings={chartSettings}
         onSettingsChange={updateChartSettings}

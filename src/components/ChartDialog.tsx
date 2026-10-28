@@ -7,10 +7,21 @@
 
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import type { ChartConfig, ChartType, LegendPosition, Workbook } from '../types';
-import { extractChartDataFromWorkbook, generateColors, findDataRange, resolveChartLabel } from '../utils/chartData';
+import { colToLetter } from '../types';
+import { extractChartDataFromWorkbook, generateColors, findDataRange, resolveChartLabel, parseRange } from '../utils/chartData';
 import { ChartRenderer } from './charts/ChartRenderer';
 import type { Sheet } from '../types';
 import type { ChartSettings } from '../hooks/useChartSettings';
+
+/** Which chart field a range-picker selection targets. */
+export type ChartFieldTarget = 'dataRange' | 'title' | 'xAxisLabel' | 'yAxisLabel';
+
+/** Returns the top-left single-cell reference of a range string. */
+function toCellReference(range: string): string {
+  const parsed = parseRange(range);
+  if (parsed.startRow < 0 || parsed.startCol < 0) return range;
+  return `${colToLetter(parsed.startCol)}${parsed.startRow + 1}`;
+}
 
 interface ChartDialogProps {
   isOpen: boolean;
@@ -24,8 +35,10 @@ interface ChartDialogProps {
   existingChart?: ChartConfig;
   /** Whether range picker mode is active. */
   isRangePickerActive?: boolean;
-  /** Callback to toggle range picker mode. */
-  onToggleRangePicker?: () => void;
+  /** Which field is currently being picked (for the minimized banner). */
+  rangePickerTarget?: ChartFieldTarget;
+  /** Callback to toggle range picker mode for a given field. */
+  onToggleRangePicker?: (target: ChartFieldTarget) => void;
   /** Initial settings from persistence. */
   initialSettings?: ChartSettings;
   /** Callback when settings change (for persistence). */
@@ -55,7 +68,7 @@ const LEGEND_POSITIONS: Array<{ value: LegendPosition; label: string }> = [
 /**
  * Dialog for creating or editing a chart.
  */
-export function ChartDialog({ isOpen, onClose, onApply, sheet, initialRange, existingChart, isRangePickerActive, onToggleRangePicker, initialSettings, onSettingsChange, workbook }: ChartDialogProps) {
+export function ChartDialog({ isOpen, onClose, onApply, sheet, initialRange, existingChart, isRangePickerActive, rangePickerTarget, onToggleRangePicker, initialSettings, onSettingsChange, workbook }: ChartDialogProps) {
   const defaultRange = initialRange || findDataRange(sheet) || 'A1:B5';
   const settings = initialSettings;
 
@@ -77,11 +90,15 @@ export function ChartDialog({ isOpen, onClose, onApply, sheet, initialRange, exi
     setLegendPosition(existingChart?.legendPosition || settings?.legendPosition || 'bottom');
   }, [existingChart, settings, defaultRange]);
 
-  // Listen for chart range selection events from the grid
+  // Listen for chart range selection events from the grid.
   useEffect(() => {
     const handleRangeSelected = (e: Event) => {
-      const customEvent = e as CustomEvent<{ range: string }>;
-      setDataRange(customEvent.detail.range);
+      const customEvent = e as CustomEvent<{ range: string; field?: ChartFieldTarget }>;
+      const { range, field = 'dataRange' } = customEvent.detail;
+      if (field === 'title') setTitle(`=${toCellReference(range)}`);
+      else if (field === 'xAxisLabel') setXAxisLabel(`=${toCellReference(range)}`);
+      else if (field === 'yAxisLabel') setYAxisLabel(`=${toCellReference(range)}`);
+      else setDataRange(range);
     };
     window.addEventListener('simplesheets:chartRangeSelected', handleRangeSelected);
     return () => window.removeEventListener('simplesheets:chartRangeSelected', handleRangeSelected);
@@ -181,11 +198,19 @@ export function ChartDialog({ isOpen, onClose, onApply, sheet, initialRange, exi
     return (
       <div className="fixed top-2 left-1/2 -translate-x-1/2 z-50 bg-white rounded-lg shadow-xl border border-blue-300 w-[500px]">
         <div className="flex items-center justify-between px-4 py-2">
-          <span className="text-sm font-medium text-blue-700">📊 Select a data range on the grid</span>
+          <span className="text-sm font-medium text-blue-700">
+            {rangePickerTarget === 'title'
+              ? '📊 Select a cell for the chart title'
+              : rangePickerTarget === 'xAxisLabel'
+                ? '📊 Select a cell for the X-axis label'
+                : rangePickerTarget === 'yAxisLabel'
+                  ? '📊 Select a cell for the Y-axis label'
+                  : '📊 Select a data range on the grid'}
+          </span>
           <div className="flex items-center gap-2">
             <span className="text-xs text-gray-500">Press Enter to accept, Esc to cancel</span>
             <button
-              onClick={onToggleRangePicker}
+              onClick={() => onToggleRangePicker?.(rangePickerTarget ?? 'dataRange')}
               className="text-gray-400 hover:text-gray-600 text-sm"
               aria-label="Cancel range selection"
             >
@@ -249,15 +274,15 @@ export function ChartDialog({ isOpen, onClose, onApply, sheet, initialRange, exi
               />
               <button
                 className={`px-3 py-2 rounded border text-sm whitespace-nowrap ${
-                  isRangePickerActive
+                  isRangePickerActive && rangePickerTarget === 'dataRange'
                     ? 'bg-blue-100 border-blue-500 text-blue-700'
                     : 'border-gray-200 hover:bg-gray-50'
                 }`}
-                onClick={onToggleRangePicker}
+                onClick={() => onToggleRangePicker?.('dataRange')}
                 title="Select range on grid"
                 data-testid="chart-range-picker"
               >
-                {isRangePickerActive ? '✓ Selecting...' : '📎 Pick Range'}
+                {isRangePickerActive && rangePickerTarget === 'dataRange' ? '✓ Selecting...' : '📎 Pick Range'}
               </button>
             </div>
             <p className="text-xs text-gray-500 mt-1">
@@ -271,34 +296,67 @@ export function ChartDialog({ isOpen, onClose, onApply, sheet, initialRange, exi
           <div className="grid grid-cols-1 gap-3">
             <div>
               <label className="block text-sm font-medium mb-1">Chart Title</label>
-              <input
-                type="text"
-                className="w-full border border-gray-200 rounded px-3 py-2 text-sm"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                data-testid="chart-title"
-              />
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  className="flex-1 border border-gray-200 rounded px-3 py-2 text-sm"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  data-testid="chart-title"
+                />
+                <button
+                  type="button"
+                  className="px-3 py-2 rounded border border-gray-200 hover:bg-gray-50 text-sm"
+                  onClick={() => onToggleRangePicker?.('title')}
+                  title="Pick a cell for the title"
+                  data-testid="chart-title-picker"
+                >
+                  📎
+                </button>
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-sm font-medium mb-1">X-Axis Label</label>
-                <input
-                  type="text"
-                  className="w-full border border-gray-200 rounded px-3 py-2 text-sm"
-                  value={xAxisLabel}
-                  onChange={(e) => setXAxisLabel(e.target.value)}
-                  data-testid="chart-x-axis"
-                />
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    className="flex-1 border border-gray-200 rounded px-3 py-2 text-sm"
+                    value={xAxisLabel}
+                    onChange={(e) => setXAxisLabel(e.target.value)}
+                    data-testid="chart-x-axis"
+                  />
+                  <button
+                    type="button"
+                    className="px-3 py-2 rounded border border-gray-200 hover:bg-gray-50 text-sm"
+                    onClick={() => onToggleRangePicker?.('xAxisLabel')}
+                    title="Pick a cell for the X-axis label"
+                    data-testid="chart-x-axis-picker"
+                  >
+                    📎
+                  </button>
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Y-Axis Label</label>
-                <input
-                  type="text"
-                  className="w-full border border-gray-200 rounded px-3 py-2 text-sm"
-                  value={yAxisLabel}
-                  onChange={(e) => setYAxisLabel(e.target.value)}
-                  data-testid="chart-y-axis"
-                />
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    className="flex-1 border border-gray-200 rounded px-3 py-2 text-sm"
+                    value={yAxisLabel}
+                    onChange={(e) => setYAxisLabel(e.target.value)}
+                    data-testid="chart-y-axis"
+                  />
+                  <button
+                    type="button"
+                    className="px-3 py-2 rounded border border-gray-200 hover:bg-gray-50 text-sm"
+                    onClick={() => onToggleRangePicker?.('yAxisLabel')}
+                    title="Pick a cell for the Y-axis label"
+                    data-testid="chart-y-axis-picker"
+                  >
+                    📎
+                  </button>
+                </div>
               </div>
             </div>
           </div>
