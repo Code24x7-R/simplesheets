@@ -13,6 +13,7 @@ import {
   generateColors,
   findDataRange,
   findSheetByName,
+  resolveChartLabel,
 } from './chartData';
 import type { Workbook } from '../types';
 import type { Sheet } from '../types';
@@ -97,6 +98,57 @@ describe('getCellValue', () => {
 
   it('returns empty string for missing cells', () => {
     expect(getCellValue(sheet, 99, 99)).toBe('');
+  });
+});
+
+describe('resolveChartLabel', () => {
+  const sheet = createTestSheet({
+    '0:0': { rawValue: 'Sales Report', computedValue: 'Sales Report' },
+    '1:0': { rawValue: '42', computedValue: 42 },
+  });
+  const sheet2: Sheet = {
+    ...createTestSheet({ '0:0': { rawValue: 'Cross Sheet', computedValue: 'Cross Sheet' } }),
+    id: 'sheet-2',
+    name: 'Data',
+  };
+  const workbook: Workbook = {
+    id: 'wb',
+    title: 'WB',
+    sheets: [sheet, sheet2],
+    activeSheetIndex: 0,
+    lastModified: 0,
+  };
+
+  it('returns literal text unchanged', () => {
+    expect(resolveChartLabel('My Chart', workbook, sheet)).toBe('My Chart');
+  });
+
+  it('resolves a single-cell reference', () => {
+    expect(resolveChartLabel('=A1', workbook, sheet)).toBe('Sales Report');
+  });
+
+  it('resolves a numeric cell to its display value', () => {
+    expect(resolveChartLabel('=A2', workbook, sheet)).toBe('42');
+  });
+
+  it('resolves an absolute reference', () => {
+    expect(resolveChartLabel('=$A$1', workbook, sheet)).toBe('Sales Report');
+  });
+
+  it('resolves a cross-sheet reference', () => {
+    expect(resolveChartLabel('=Data!A1', workbook, sheet)).toBe('Cross Sheet');
+  });
+
+  it('returns the original text for an invalid reference', () => {
+    expect(resolveChartLabel('=not-a-ref', workbook, sheet)).toBe('=not-a-ref');
+  });
+
+  it('returns the original text for a multi-cell range', () => {
+    expect(resolveChartLabel('=A1:B2', workbook, sheet)).toBe('=A1:B2');
+  });
+
+  it('returns empty string for an undefined label', () => {
+    expect(resolveChartLabel(undefined, workbook, sheet)).toBe('');
   });
 });
 

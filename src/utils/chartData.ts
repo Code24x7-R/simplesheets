@@ -143,6 +143,41 @@ export function getCellValue(sheet: Sheet, row: number, col: number): string {
 }
 
 /**
+ * Resolves a chart title/axis label that may reference a single cell.
+ *
+ * Labels beginning with `=` are treated as cell references (e.g. `=A1`,
+ * `=$B$2`, or `=Sheet2!A1`) and resolved to that cell's display value.
+ * Any other text is returned unchanged, so plain literal labels keep working.
+ *
+ * @param label - The label string from the chart config.
+ * @param workbook - The workbook (for cross-sheet references).
+ * @param activeSheet - The sheet the chart belongs to (default scope).
+ * @returns The resolved label, or the original text if it is not a valid cell reference.
+ */
+export function resolveChartLabel(
+  label: string | undefined,
+  workbook: Workbook,
+  activeSheet: Sheet
+): string {
+  if (!label) return '';
+
+  const trimmed = label.trim();
+  if (!trimmed.startsWith('=')) return label;
+
+  const parsed = parseRangeWithSheet(trimmed.slice(1).trim());
+  if (parsed.startRow < 0 || parsed.startCol < 0) return label;
+  // Only single-cell references make sense for a title/axis label.
+  if (parsed.startRow !== parsed.endRow || parsed.startCol !== parsed.endCol) return label;
+
+  const sheet = parsed.sheetName
+    ? findSheetByName(workbook, parsed.sheetName)
+    : activeSheet;
+  if (!sheet) return label;
+
+  return getCellValue(sheet, parsed.startRow, parsed.startCol);
+}
+
+/**
  * Attempts to parse a string as a number.
  * @param str - The string to parse.
  * @returns The numeric value, or null if not parseable.

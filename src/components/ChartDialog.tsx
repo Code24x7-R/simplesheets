@@ -7,7 +7,7 @@
 
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import type { ChartConfig, ChartType, LegendPosition, Workbook } from '../types';
-import { extractChartDataFromWorkbook, generateColors, findDataRange } from '../utils/chartData';
+import { extractChartDataFromWorkbook, generateColors, findDataRange, resolveChartLabel } from '../utils/chartData';
 import { ChartRenderer } from './charts/ChartRenderer';
 import type { Sheet } from '../types';
 import type { ChartSettings } from '../hooks/useChartSettings';
@@ -111,21 +111,30 @@ export function ChartDialog({ isOpen, onClose, onApply, sheet, initialRange, exi
       color: generateColors(previewData.series.length)[i],
     }));
 
+    // Resolve cell-reference labels (e.g. "=A1") in the live preview.
+    const wb: Workbook = workbook ?? {
+      id: 'temp',
+      title: 'Temp',
+      sheets: [sheet],
+      activeSheetIndex: 0,
+      lastModified: 0,
+    };
+
     return {
       id: existingChart?.id || 'preview-chart',
       type: chartType,
-      title,
+      title: resolveChartLabel(title, wb, sheet),
       dataRange,
       series,
-      xAxisLabel: xAxisLabel || undefined,
-      yAxisLabel: yAxisLabel || undefined,
+      xAxisLabel: resolveChartLabel(xAxisLabel, wb, sheet) || undefined,
+      yAxisLabel: resolveChartLabel(yAxisLabel, wb, sheet) || undefined,
       legendPosition,
       width: 380,
       height: 240,
       row: existingChart?.row || 0,
       col: existingChart?.col || 0,
     };
-  }, [chartType, title, dataRange, xAxisLabel, yAxisLabel, legendPosition, previewData, existingChart]);
+  }, [chartType, title, dataRange, xAxisLabel, yAxisLabel, legendPosition, previewData, existingChart, workbook, sheet]);
 
   const handleApply = useCallback(() => {
     const width = existingChart?.width || settings?.width || 400;

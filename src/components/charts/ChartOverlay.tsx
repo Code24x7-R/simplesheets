@@ -9,7 +9,7 @@
 import { useCallback, useState, useRef, useMemo, useEffect } from 'react';
 import type { ChartConfig, Sheet, Workbook } from '../../types';
 import { ChartRenderer } from './ChartRenderer';
-import { extractChartDataFromWorkbook } from '../../utils/chartData';
+import { extractChartDataFromWorkbook, resolveChartLabel } from '../../utils/chartData';
 import { isEditableTarget } from '../../utils/dom';
 
 interface ChartOverlayProps {
@@ -176,6 +176,13 @@ export function ChartOverlay({
         const data = extractChartDataFromWorkbook(workbook, chart.dataRange);
         const isSelected = chart.id === selectedChartId;
         const isMinimized = minimizedCharts.has(chart.id);
+        // Resolve cell-reference labels (e.g. "=A1") to their display values.
+        const renderConfig: ChartConfig = {
+          ...chart,
+          title: resolveChartLabel(chart.title, workbook, sheet),
+          xAxisLabel: resolveChartLabel(chart.xAxisLabel, workbook, sheet) || undefined,
+          yAxisLabel: resolveChartLabel(chart.yAxisLabel, workbook, sheet) || undefined,
+        };
 
         // Resize handles for selected chart
         const resizeHandles = isSelected && !isMinimized && onResizeChart ? (
@@ -251,7 +258,7 @@ export function ChartOverlay({
                   onDoubleClick={() => onEditChart?.(chart)}
                   title="Double-click to edit"
                 >
-                  {chart.title}
+                  {renderConfig.title}
                 </span>
                 <div className="flex items-center gap-1">
                   {onEditChart && (
@@ -283,7 +290,7 @@ export function ChartOverlay({
               {/* Chart body */}
               {!isMinimized && (
                 <ChartRenderer
-                  config={chart}
+                  config={renderConfig}
                   width={chart.width}
                   height={chart.height - 28}
                   data={data}
