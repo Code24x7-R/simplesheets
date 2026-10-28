@@ -164,7 +164,7 @@ export function RiskEditorModal({
             className="text-gray-400 hover:text-gray-600 text-xl leading-none"
             onClick={onClose}
           >
-            &times;
+            ✕
           </button>
         </div>
 

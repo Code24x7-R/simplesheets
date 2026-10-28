@@ -282,7 +282,7 @@ export function ChartDialog({ isOpen, onClose, onApply, sheet, initialRange, exi
                 title="Select range on grid"
                 data-testid="chart-range-picker"
               >
-                {isRangePickerActive && rangePickerTarget === 'dataRange' ? '✓ Selecting...' : '📎 Pick Range'}
+                {isRangePickerActive && rangePickerTarget === 'dataRange' ? '✓ Selecting...' : '🗗 Pick Range'}
               </button>
             </div>
             <p className="text-xs text-gray-500 mt-1">
@@ -311,7 +311,7 @@ export function ChartDialog({ isOpen, onClose, onApply, sheet, initialRange, exi
                   title="Pick a cell for the title"
                   data-testid="chart-title-picker"
                 >
-                  📎
+                  🗗
                 </button>
               </div>
             </div>
@@ -333,7 +333,7 @@ export function ChartDialog({ isOpen, onClose, onApply, sheet, initialRange, exi
                     title="Pick a cell for the X-axis label"
                     data-testid="chart-x-axis-picker"
                   >
-                    📎
+                    🗗
                   </button>
                 </div>
               </div>
@@ -354,7 +354,7 @@ export function ChartDialog({ isOpen, onClose, onApply, sheet, initialRange, exi
                     title="Pick a cell for the Y-axis label"
                     data-testid="chart-y-axis-picker"
                   >
-                    📎
+                    🗗
                   </button>
                 </div>
               </div>

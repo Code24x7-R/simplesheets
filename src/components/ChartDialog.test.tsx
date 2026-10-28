@@ -192,7 +192,7 @@ describe('ChartDialog Range Picker', () => {
 
   it('shows inactive state initially', () => {
     render(<ChartDialog {...defaultProps} isRangePickerActive={false} />);
-    expect(screen.getByText('📎 Pick Range')).toBeInTheDocument();
+    expect(screen.getByText('🗗 Pick Range')).toBeInTheDocument();
   });
 
   it('minimizes dialog when range picker is active', () => {

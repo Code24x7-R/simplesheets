@@ -444,7 +444,7 @@ export function FormulaWizard({
         {/* Validation warnings */}
         {hasCircularRef && (
           <div className="mx-4 mb-3 px-3 py-2 bg-red-50 border border-red-200 rounded text-xs text-red-600">
-            ⚠️ Selected range includes target cell and may cause circular dependency.
+            ⚠ Selected range includes target cell and may cause circular dependency.
           </div>
         )}
 

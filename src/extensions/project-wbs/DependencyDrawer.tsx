@@ -181,7 +181,7 @@ export function DependencyDrawer({
             className="text-gray-400 hover:text-gray-600 text-lg leading-none"
             onClick={onClose}
           >
-            &times;
+            ✕
           </button>
         </div>
         <p className="text-xs text-gray-500 mt-1 truncate">{task.name}</p>

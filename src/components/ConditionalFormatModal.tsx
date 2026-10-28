@@ -92,7 +92,7 @@ export function ConditionalFormatModal({
             aria-label="Close"
             data-testid="close-modal"
           >
-            &times;
+            ✕
           </button>
         </div>
 

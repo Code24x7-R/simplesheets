@@ -57,7 +57,7 @@ const CATEGORY_ICONS: Record<AnalysisCategory, string> = {
   status: '📊',
   financials: '💰',
   timeline: '📅',
-  risks: '⚠️',
+  risks: '⚠',
 };
 
 /** Grade colors */

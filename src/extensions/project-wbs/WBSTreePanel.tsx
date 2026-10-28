@@ -118,7 +118,7 @@ export function WBSTreePanel({
     if (onEditTask) {
       items.push({
         label: 'Edit',
-        icon: '✏️',
+        icon: '✎',
         onClick: () => onEditTask(task.id),
       });
     }

@@ -169,7 +169,7 @@ export function NamedRangesModal({
     return (
       <div className="fixed top-2 left-1/2 -translate-x-1/2 z-[55] bg-white rounded-lg shadow-xl border border-blue-300 w-[480px]">
         <div className="flex items-center justify-between px-4 py-2">
-          <span className="text-sm font-medium text-blue-700">📎 Select a range on the grid for the named range</span>
+          <span className="text-sm font-medium text-blue-700">🗗 Select a range on the grid for the named range</span>
           <div className="flex items-center gap-2">
             <span className="text-xs text-gray-500">Press Enter to accept, Esc to cancel</span>
             <button
@@ -202,7 +202,7 @@ export function NamedRangesModal({
             aria-label="Close"
             data-testid="close-modal"
           >
-            &times;
+            ✕
           </button>
         </div>
 
@@ -382,7 +382,7 @@ function EditForm({
             title="Select range on grid"
             data-testid="named-range-pick-range"
           >
-            {isRangePickerActive ? '✓ Selecting...' : '📎 Pick Range'}
+            {isRangePickerActive ? '✓ Selecting...' : '🗗 Pick Range'}
           </button>
         </div>
         {errors.reference && <p className="text-xs text-red-500 mt-1">{errors.reference}</p>}

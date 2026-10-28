@@ -590,7 +590,7 @@ const CHANGE_TYPE_ICONS: Record<string, string> = {
   scope: '📐',
   resource: '👤',
   schedule: '📅',
-  risk: '⚠️',
+  risk: '⚠',
   other: '📝',
 };
 
