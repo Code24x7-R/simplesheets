@@ -46,6 +46,26 @@ describe('ChartRenderer', () => {
     expect(screen.getByText('My Chart')).toBeInTheDocument();
   });
 
+  describe('category label rotation', () => {
+    it('rotates crowded category labels to avoid overlap', () => {
+      const crowded = {
+        categories: ['Category A', 'Category B', 'Category C', 'Category D', 'Category E', 'Category F', 'Category G'],
+        series: [{ label: 'Sales', values: [1, 2, 3, 4, 5, 6, 7] }],
+      };
+      const { container } = render(
+        <ChartRenderer config={createChartConfig({ type: 'column' })} width={400} height={300} data={crowded} />,
+      );
+      expect(container.querySelector('text[transform*="rotate(-35"]')).toBeTruthy();
+    });
+
+    it('keeps sparse category labels horizontal', () => {
+      const { container } = render(
+        <ChartRenderer config={createChartConfig({ type: 'column' })} width={400} height={300} data={sampleData} />,
+      );
+      expect(container.querySelector('text[transform*="rotate(-35"]')).toBeNull();
+    });
+  });
+
   describe('Bar Chart', () => {
     it('renders correct number of bars', () => {
       const { container } = render(
@@ -99,6 +119,18 @@ describe('ChartRenderer', () => {
         <ChartRenderer config={createChartConfig({ type: 'pie' })} width={400} height={300} data={{ categories: [], series: [] }} />,
       );
       expect(screen.getByText('No data')).toBeInTheDocument();
+    });
+
+    it('renders callout labels with leader lines for a small pie', () => {
+      const { container } = render(
+        <ChartRenderer config={createChartConfig({ type: 'pie', legendPosition: 'none' })} width={400} height={300} data={pieData} />,
+      );
+      const lines = container.querySelectorAll('line');
+      expect(lines.length).toBe(3);
+      const hasPercent = Array.from(container.querySelectorAll('text')).some((t) =>
+        t.textContent?.includes('%'),
+      );
+      expect(hasPercent).toBe(true);
     });
   });
 

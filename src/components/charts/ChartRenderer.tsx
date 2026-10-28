@@ -177,12 +177,31 @@ function renderAxes(
   const categories = data.categories;
   if (categories.length > 0) {
     const step = Math.max(1, Math.ceil(categories.length / 10));
+    // Rotate labels when they're likely to overlap: many categories, or a
+    // long label that would bleed into its neighbour. -35° keeps them legible
+    // while using far less horizontal space (the Excel-style default).
+    const rotate = categories.length > 6 || categories.some((c) => c.length > 10);
+    const labelY = bottom + (rotate ? 14 : 16);
     for (let i = 0; i < categories.length; i += step) {
       const x = left + (plotWidth * (i + 0.5)) / categories.length;
       xLabels.push(
-        <text key={`xlabel-${i}`} x={x} y={bottom + 16} textAnchor="middle" fontSize="10" fill="#6B7280">
-          {categories[i]}
-        </text>,
+        rotate ? (
+          <text
+            key={`xlabel-${i}`}
+            x={x}
+            y={labelY}
+            textAnchor="end"
+            fontSize="10"
+            fill="#6B7280"
+            transform={`rotate(-35 ${x} ${labelY})`}
+          >
+            {categories[i]}
+          </text>
+        ) : (
+          <text key={`xlabel-${i}`} x={x} y={labelY} textAnchor="middle" fontSize="10" fill="#6B7280">
+            {categories[i]}
+          </text>
+        ),
       );
     }
   }
@@ -368,21 +387,30 @@ function renderPieChart(data: ChartData, cfg: ChartConfig, width: number, height
   }
 
   const hasLegend = legendPos !== 'none';
-  const radius = Math.min(width - 40, height - 80) / 2;
-  const cx = hasLegend && legendPos === 'left' ? width / 2 + LEGEND_WIDTH / 2 : width / 2;
-  const cy = height / 2;
   const total = pieData.reduce((sum, s) => sum + s.value, 0);
 
   if (total === 0) return <text x={width / 2} y={height / 2} textAnchor="middle" fill="#9CA3AF">No data</text>;
 
+  // Show outside callout labels only for a manageable number of slices; for
+  // dense pies the legend + tooltips carry the labels instead.
+  const showCallouts = pieData.length <= 6;
+  // Shrink the pie when callouts are shown so labels fit inside the SVG.
+  const radius = showCallouts
+    ? Math.min(width - 80, height - 120) / 2
+    : Math.min(width - 40, height - 80) / 2;
+  const cx = hasLegend && legendPos === 'left' ? width / 2 + LEGEND_WIDTH / 2 : width / 2;
+  const cy = height / 2;
+
   let currentAngle = -Math.PI / 2;
   const slices: JSX.Element[] = [];
+  const callouts: JSX.Element[] = [];
 
   pieData.forEach((slice, i) => {
     if (slice.value <= 0) return;
 
     const sliceAngle = (slice.value / total) * 2 * Math.PI;
     const endAngle = currentAngle + sliceAngle;
+    const midAngle = currentAngle + sliceAngle / 2;
 
     const x1 = cx + radius * Math.cos(currentAngle);
     const y1 = cy + radius * Math.sin(currentAngle);
@@ -398,10 +426,32 @@ function renderPieChart(data: ChartData, cfg: ChartConfig, width: number, height
       </path>,
     );
 
+    if (showCallouts && slice.percent >= 5) {
+      const innerX = cx + radius * Math.cos(midAngle);
+      const innerY = cy + radius * Math.sin(midAngle);
+      const outerX = cx + (radius + 12) * Math.cos(midAngle);
+      const outerY = cy + (radius + 12) * Math.sin(midAngle);
+      const anchor = Math.cos(midAngle) >= 0 ? 'start' : 'end';
+      callouts.push(
+        <g key={`callout-${i}`}>
+          <line x1={innerX} y1={innerY} x2={outerX} y2={outerY} stroke={getColor(i, cfg)} strokeWidth={1} />
+          <text
+            x={outerX + (anchor === 'start' ? 4 : -4)}
+            y={outerY + 3}
+            textAnchor={anchor}
+            fontSize="10"
+            fill="#4B5563"
+          >
+            {`${slice.label} ${slice.percent.toFixed(0)}%`}
+          </text>
+        </g>,
+      );
+    }
+
     currentAngle = endAngle;
   });
 
-  return <g>{slices}</g>;
+  return <g>{slices}{callouts}</g>;
 }
 
 function renderScatterChart(data: ChartData, cfg: ChartConfig, area: DrawingArea, minVal: number, maxVal: number): JSX.Element {
