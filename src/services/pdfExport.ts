@@ -59,7 +59,10 @@ const PDF_FONT = 'Arial, sans-serif';
 const PDF_BASE_FONT_SIZE_PX = 13.33;
 
 /** Line-height ratio used for PDF cell text (no grid minimum, so it scales). */
-const PDF_LINE_HEIGHT_RATIO = 1.4;
+const PDF_LINE_HEIGHT_RATIO = 1.5;
+
+/** Extra bottom room added to wrapped rows so descenders aren't clipped. */
+const CELL_VERTICAL_BUFFER_PX = 4;
 
 /** Line height in px for a given font size, scaled with the font. */
 function pdfLineHeight(fontSize: number): number {
@@ -518,7 +521,7 @@ function computeRowRenderedHeight(
       const value = getCellValue(cell);
       const width = colWidths[c - bounds.startCol];
       const lines = countWrappedLines(value, width, font, cell.style?.whiteSpace === 'pre');
-      needed = Math.max(needed, lines * lineHeight);
+      needed = Math.max(needed, lines * lineHeight + CELL_VERTICAL_BUFFER_PX);
     } else {
       needed = Math.max(needed, lineHeight);
     }
@@ -590,7 +593,12 @@ function buildRow(
       cellEl.textContent = colToLetter(c);
     } else {
       const fontSize = (cell?.style?.fontSize ?? PDF_BASE_FONT_SIZE_PX) * fontScale;
-      cellEl.style.lineHeight = `${pdfLineHeight(fontSize)}px`;
+      // Single-line cells use the full row height as line-height, which
+      // vertically centres the text and leaves slack above/below so html2canvas
+      // never clips the bottom of the glyphs.
+      cellEl.style.lineHeight = isWrappedCell(cell)
+        ? `${pdfLineHeight(fontSize)}px`
+        : `${rowHeight}px`;
       applyCellBorders(cellEl, cell, r, c, bounds, sheet);
       applyCellStyle(cellEl, cell, fontScale);
       cellEl.textContent = getCellValue(cell);

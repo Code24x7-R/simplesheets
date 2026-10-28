@@ -234,6 +234,16 @@ describe('pdfExport', () => {
       expect(cell!.style.lineHeight).toBeTruthy();
     });
 
+    it('vertically centres single-line cell text within its row height', async () => {
+      await generatePdf(createTestSheet(), { setup: baseSetup() });
+
+      const cell = findCell('Name');
+      const row = cell!.parentElement as HTMLElement;
+      // line-height matches the row height so the glyphs are centred and never
+      // clipped at the bottom.
+      expect(cell!.style.lineHeight).toBe(row.style.height);
+    });
+
     it('applies the cell number format (currency) to the data cell', async () => {
       const sheet: Sheet = {
         ...createTestSheet(),
