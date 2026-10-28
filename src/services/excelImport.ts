@@ -10,6 +10,7 @@
 import * as XLSX from 'xlsx';
 import type { Workbook, Sheet, Cell, CellStyle } from '../types';
 import { cellKey } from '../types';
+import { applyAutoRowHeights, ROW_LINE_HEIGHT } from '../utils/rowHeight';
 
 /**
  * Options for Excel import.
@@ -86,12 +87,14 @@ export function importExcel(
         });
       }
 
-      // Extract row heights (array index === row index)
+      // Extract row heights (array index === row index). Clamp to the app's
+      // minimum line height: Excel's default 15pt row is ~20px, which is too
+      // short for the grid's 14px font / 28px line-height.
       const rowHeights: Record<number, number> = {};
       if (ws['!rows']) {
         ws['!rows'].forEach((rowInfo, r) => {
           if (rowInfo && rowInfo.hpx) {
-            rowHeights[r] = rowInfo.hpx;
+            rowHeights[r] = Math.max(rowInfo.hpx, ROW_LINE_HEIGHT);
           }
         });
       }
@@ -152,6 +155,10 @@ export function importExcel(
               if (s.alignment?.horizontal) {
                 style.textAlign = s.alignment.horizontal as 'left' | 'center' | 'right';
               }
+              /* istanbul ignore next - wrap text (SheetJS doesn't preserve through write/read) */
+              if (s.alignment?.wrapText) {
+                style.whiteSpace = 'normal';
+              }
             }
 
             if (Object.keys(style).length > 0) {
@@ -163,7 +170,7 @@ export function importExcel(
         }
       }
 
-      return {
+      const sheet: Sheet = {
         id: `sheet-${index}`,
         name: sheetName,
         cells,
@@ -175,7 +182,10 @@ export function importExcel(
         rowCount: Math.max(rowCount, 100),
         frozenColumns: 0,
         frozenRows: 0,
-      } satisfies Sheet;
+      };
+
+      // Import bypasses the edit-time auto-fit, so fit wrapped cells here.
+      return applyAutoRowHeights(sheet);
     });
 
     const workbook: Workbook = {

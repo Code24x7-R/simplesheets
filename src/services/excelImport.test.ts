@@ -102,6 +102,22 @@ describe('Excel Import Service', () => {
     expect(sheet.rowHeights[1]).toBe(60);
   });
 
+  it('clamps imported row heights to the minimum line height', () => {
+    const ws = XLSX.utils.aoa_to_sheet([['A', 'B'], ['1', '2']]);
+    ws['!rows'] = [{ hpx: 20 }, { hpx: 15 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
+    const wbout = XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
+
+    const result = importExcel(wbout);
+    expect(result.success).toBe(true);
+
+    const sheet = result.workbook!.sheets[0];
+    // Excel's default 15pt rows (~20px) are too short for the app's grid.
+    expect(sheet.rowHeights[0]).toBe(28);
+    expect(sheet.rowHeights[1]).toBe(28);
+  });
+
   it('sets correct sheet dimensions', () => {
     const buffer = createXlsxMatrix(5, 3);
     const result = importExcel(buffer);

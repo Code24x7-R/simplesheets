@@ -10,6 +10,7 @@
  */
 import type { Cell, Sheet } from '../types';
 import { DEFAULT_FONT_SIZE } from '../hooks/useCellStyle';
+import { formatCellDisplayValue } from './numberFormat';
 
 /** Line-height of a grid cell (Tailwind `leading-7` on `.grid-cell`). */
 export const ROW_LINE_HEIGHT = 28;
@@ -158,7 +159,9 @@ export function computeAutoRowHeights(sheet: Sheet, font: string = CELL_FONT): R
     const col = parseInt(key.slice(colon + 1), 10);
     const width = sheet.columnWidths[col] ?? sheet.defaultColWidth;
     const height = computeAutoRowHeight(
-      cell.rawValue,
+      // Measure the displayed value (formulas show their computed result),
+      // not the raw input string.
+      formatCellDisplayValue(cell),
       width,
       sheet.defaultRowHeight,
       font,

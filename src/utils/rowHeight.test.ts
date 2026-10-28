@@ -187,6 +187,18 @@ describe('computeAutoRowHeights', () => {
     expect(computeAutoRowHeights(sheet)[0]).toBe(lineHeightForFont(36));
   });
 
+  it('measures the computed value for wrapped formula cells', () => {
+    const sheet = createSheet({
+      columnWidths: { 0: 100 },
+      cells: {
+        // The displayed value is '123' (one line); the raw formula string
+        // '=SUM(A1:A10)' would wrap to multiple lines if measured directly.
+        '0:0': { rawValue: '=SUM(A1:A10)', computedValue: 123, style: { whiteSpace: 'normal' } },
+      },
+    });
+    expect(computeAutoRowHeights(sheet)[0]).toBe(ROW_LINE_HEIGHT);
+  });
+
   it('takes the tallest wrapped cell in a row', () => {
     const sheet = createSheet({
       cells: {
