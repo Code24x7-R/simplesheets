@@ -30,14 +30,14 @@ interface UseMRUReturn {
     name: string,
     size: number,
     source: MRUSource,
-    opts?: { provider?: CloudProvider; cloudFileId?: string; path?: string },
+    opts?: { provider?: CloudProvider; cloudFileId?: string; path?: string; handleId?: string; canReopen?: boolean },
   ) => void;
   /** Record that a file was saved. */
   recordSave: (
     name: string,
     size: number,
     source: MRUSource,
-    opts?: { provider?: CloudProvider; cloudFileId?: string; path?: string },
+    opts?: { provider?: CloudProvider; cloudFileId?: string; path?: string; handleId?: string; canReopen?: boolean },
   ) => void;
   /** Remove a single entry by id. */
   remove: (id: string) => void;
@@ -77,7 +77,7 @@ export function useMRU(): UseMRUReturn {
       name: string,
       size: number,
       source: MRUSource,
-      opts: { provider?: CloudProvider; cloudFileId?: string; path?: string } = {},
+      opts: { provider?: CloudProvider; cloudFileId?: string; path?: string; handleId?: string; canReopen?: boolean } = {},
     ) => {
       setEntries(addMRUEntry({ name, size, source, ...opts }));
     },
@@ -89,7 +89,7 @@ export function useMRU(): UseMRUReturn {
       name: string,
       size: number,
       source: MRUSource,
-      opts: { provider?: CloudProvider; cloudFileId?: string; path?: string } = {},
+      opts: { provider?: CloudProvider; cloudFileId?: string; path?: string; handleId?: string; canReopen?: boolean } = {},
     ) => {
       setEntries(addMRUEntry({ name, size, source, ...opts }));
     },

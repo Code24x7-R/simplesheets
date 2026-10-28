@@ -18,6 +18,7 @@
  */
 
 import type { CloudProvider } from '../cloud/types';
+import { stripKnownExtension } from './fileTypes';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -42,6 +43,10 @@ export interface MRUEntry {
   cloudFileId?: string;
   /** Optional path/identifier for reopening (local path hint or URL). */
   path?: string;
+  /** Optional IndexedDB handle id (File System Access handles). */
+  handleId?: string;
+  /** Whether this entry can be reopened directly (false = re-pick). */
+  canReopen?: boolean;
 }
 
 /** Payload for adding a new MRU entry (id/timestamp filled in automatically). */
@@ -102,6 +107,35 @@ function isValidMRUEntry(obj: unknown): obj is MRUEntry {
   );
 }
 
+/**
+ * Normalize a validated MRU entry to the current schema, dropping unknown
+ * fields and defaulting optional fields added in later versions. This migrates
+ * v1 entries (without `handleId`/`canReopen`) in place.
+ */
+function normalizeEntry(entry: MRUEntry): MRUEntry {
+  const normalized: MRUEntry = {
+    id: entry.id,
+    name: entry.name,
+    size: entry.size,
+    timestamp: entry.timestamp,
+    source: entry.source,
+  };
+  if (entry.provider) normalized.provider = entry.provider;
+  if (entry.cloudFileId) normalized.cloudFileId = entry.cloudFileId;
+  if (entry.path) normalized.path = entry.path;
+  if (entry.handleId) normalized.handleId = entry.handleId;
+  if (entry.canReopen !== undefined) normalized.canReopen = entry.canReopen;
+  return normalized;
+}
+
+/**
+ * Dedupe key: source + extension-stripped, case-folded name so that
+ * "budget.ssjson" and "budget.json" are treated as the same document.
+ */
+function dedupeKey(entry: { name: string; source: MRUSource }): string {
+  return `${entry.source}:${stripKnownExtension(entry.name).toLowerCase()}`;
+}
+
 // ─── Public API ─────────────────────────────────────────────────────────────
 
 /**
@@ -114,7 +148,10 @@ export function loadMRU(): MRUEntry[] {
   try {
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
-    return parsed.filter(isValidMRUEntry).sort((a, b) => b.timestamp - a.timestamp);
+    return parsed
+      .filter(isValidMRUEntry)
+      .map(normalizeEntry)
+      .sort((a, b) => b.timestamp - a.timestamp);
   } catch {
     /* istanbul ignore next - corrupted JSON */
     return [];
@@ -132,9 +169,9 @@ export function loadMRU(): MRUEntry[] {
 export function addMRUEntry(entry: MRUPick): MRUEntry[] {
   const existing = loadMRU();
 
-  // Deduplicate: same name + source means we refresh, not duplicate.
+  // Deduplicate: same normalized name + source means we refresh, not duplicate.
   const deduped = existing.filter(
-    (e) => !(e.name === entry.name && e.source === entry.source),
+    (e) => dedupeKey(e) !== dedupeKey({ name: entry.name, source: entry.source }),
   );
 
   // Generate a unique id. We combine timestamp with a random suffix so that
@@ -149,6 +186,8 @@ export function addMRUEntry(entry: MRUPick): MRUEntry[] {
     provider: entry.provider,
     cloudFileId: entry.cloudFileId,
     path: entry.path,
+    handleId: entry.handleId,
+    canReopen: entry.canReopen,
   };
 
   const updated = [newEntry, ...deduped].slice(0, MAX_ENTRIES);

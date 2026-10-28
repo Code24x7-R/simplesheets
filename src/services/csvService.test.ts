@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
-import { importCsv, importTsv, exportCsv, exportTsv, downloadCsv, downloadTsv, downloadTxt } from './csvService';
+import { importCsv, importTsv, exportCsv, exportTsv, downloadCsv, downloadTsv, downloadTxt, detectDelimiter } from './csvService';
 import type { Sheet, Cell } from '../types';
 
 describe('CSV Service', () => {
@@ -55,6 +55,37 @@ describe('CSV Service', () => {
       const result = importTsv(tsv, { hasHeader: true });
       expect(result.success).toBe(true);
       expect(result.workbook?.sheets[0].cells['0:0']?.rawValue).toBe('1');
+    });
+  });
+
+  describe('detectDelimiter', () => {
+    it('detects comma', () => {
+      expect(detectDelimiter('a,b,c\n1,2,3')).toBe(',');
+    });
+
+    it('detects tab', () => {
+      expect(detectDelimiter('a\tb\tc\n1\t2\t3')).toBe('\t');
+    });
+
+    it('detects semicolon', () => {
+      expect(detectDelimiter('a;b;c\n1;2;3')).toBe(';');
+    });
+
+    it('detects pipe', () => {
+      expect(detectDelimiter('a|b|c\n1|2|3')).toBe('|');
+    });
+
+    it('defaults to comma for a single column', () => {
+      expect(detectDelimiter('only-one-column')).toBe(',');
+    });
+
+    it('defaults to comma for empty input', () => {
+      expect(detectDelimiter('')).toBe(',');
+      expect(detectDelimiter('\n\n')).toBe(',');
+    });
+
+    it('ignores delimiters inside quoted fields when comparing', () => {
+      expect(detectDelimiter('"a,b",c,d\n1,2,3')).toBe(',');
     });
   });
 

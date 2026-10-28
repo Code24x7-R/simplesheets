@@ -41,10 +41,20 @@ import { useFormulaWizard } from './hooks/useFormulaWizard';
 import { useMRU } from './hooks/useMRU';
 import type { MRUEntry } from './utils/mru';
 import { FormulaWizard } from './components/FormulaWizard';
-import { loadAutosave } from './services/storageService';
-import { downloadJson } from './services/jsonService';
+import { loadAutosave, snapshotPreviousSession, loadPreviousSession, clearPreviousSession } from './services/storageService';
+import { normalizeFileName } from './utils/fileTypes';
+import { formatRelativeTime } from './utils/relativeTime';
+import { decodeDocFromUrl, encodeDocToUrl } from './utils/shareUrl';
+import { downloadDocument, shareDocument } from './utils/webShare';
 import { downloadExcel } from './services/excelExport';
-import { downloadCsv } from './services/csvService';
+import { downloadCsv, importCsv, detectDelimiter } from './services/csvService';
+import { importExcelFile } from './services/excelImport';
+import { readFileAsText, readWorkbookFile, readSpreadsheetFile } from './utils/fileIO';
+import { supportsFileSystemAccess, pickFileWithHandle, readFileFromHandle } from './utils/fileHandles';
+import { storeFileHandle, loadFileHandle } from './utils/handleStore';
+import { ImportScopeDialog } from './components/ImportScopeDialog';
+import { applyReplace, applyAddSheets, applyInsertAtCell } from './utils/importScope';
+import type { IncomingImport, ImportScopeOptions } from './utils/importScope';
 import { downloadPdf } from './services/pdfExport';
 import type { Cell, Selection, Sheet, NamedRange } from './types';
 import { insertRow, deleteRow, insertCol, deleteCol } from './utils/sheetOperations';
@@ -160,6 +170,46 @@ function WorkbookView() {
   // The `selection` derived below falls back to activeCell when this is null.
   const [gridSelection, setGridSelection] = useState<Selection | null>(null);
 
+  // ─── Save / dirty state (for the confirm-on-discard and status bar) ─────
+  // The workbook is "clean" while it is reference-equal to the last saved/
+  // opened/replaced snapshot. Any history push produces a new object → dirty.
+  const [lastCleanWorkbook, setLastCleanWorkbook] = useState<Workbook>(workbook);
+  const isDirty = lastCleanWorkbook !== workbook;
+  const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
+  const [currentFileName, setCurrentFileName] = useState<string>(workbook.title ?? 'Untitled');
+  const [isReadOnly, setIsReadOnly] = useState(false);
+
+  /**
+   * Mark the workbook as clean (saved / opened / replaced).
+   * Does not change `lastSavedAt` — only an actual Save sets that.
+   */
+  const markClean = useCallback((wb: Workbook, opts?: { readOnly?: boolean }) => {
+    setLastCleanWorkbook(wb);
+    setCurrentFileName(wb.title ?? 'Untitled');
+    setIsReadOnly(opts?.readOnly ?? false);
+  }, []);
+
+  /** Mark the workbook clean *and* record that it was just saved. */
+  const markSaved = useCallback(
+    (wb: Workbook) => {
+      markClean(wb);
+      setLastSavedAt(Date.now());
+    },
+    [markClean],
+  );
+
+  /**
+   * Confirm before a destructive replace when there are unsaved changes.
+   * Returns true to proceed, false to cancel.
+   */
+  const confirmDiscard = useCallback(
+    (message: string): boolean => {
+      if (!isDirty) return true;
+      return window.confirm(message);
+    },
+    [isDirty],
+  );
+
   // Auto-save to localStorage on every workbook change (debounced)
   useAutosave(workbook);
   const { format: referenceFormat, toggle: toggleReferenceFormat } = useReferenceFormat();
@@ -170,6 +220,8 @@ function WorkbookView() {
   const [showAbout, setShowAbout] = useState(false);
   const [showCloudModal, setShowCloudModal] = useState(false);
   const [cloudModalMode, setCloudModalMode] = useState<'save' | 'open'>('save');
+  const [showImportScope, setShowImportScope] = useState(false);
+  const [pendingImport, setPendingImport] = useState<IncomingImport | null>(null);
   const [showSearchReplace, setShowSearchReplace] = useState(false);
   const [showSortDialog, setShowSortDialog] = useState(false);
   const [pendingSortDirection, setPendingSortDirection] = useState<SortDirection>('asc');
@@ -220,6 +272,59 @@ function WorkbookView() {
     }, 0);
   }, [closeFormulaWizard, wizardTargetCell]);
   const [statusMessage, setStatusMessage] = useState<string>('Ready');
+
+  /**
+   * Open a shared document from a `#doc=` URL (read-only snapshot).
+   * @returns True if a document was decoded and opened.
+   */
+  const openSharedDocument = useCallback(
+    (url: string): boolean => {
+      const wb = decodeDocFromUrl(url);
+      if (!wb) return false;
+      resetHistory(wb);
+      markClean(wb, { readOnly: true });
+      recordOpenMRU(wb.title ?? 'Shared document', 0, 'url', { path: url });
+      setStatusMessage(`Opened shared document "${wb.title ?? 'Untitled'}" (read-only)`);
+      clearPreviousSession();
+      return true;
+    },
+    [resetHistory, markClean, recordOpenMRU, setStatusMessage],
+  );
+
+  /** Strip the `#doc=` fragment from the address bar after loading. */
+  const stripDocFragment = useCallback(() => {
+    window.history.replaceState(null, '', window.location.pathname + window.location.search);
+  }, []);
+
+  // On mount: a shared `#doc=` link takes priority; otherwise offer to
+  // restore a session snapshotted before a destructive replace.
+  useEffect(() => {
+    if (openSharedDocument(window.location.href)) {
+      stripDocFragment();
+      return;
+    }
+
+    const prev = loadPreviousSession();
+    if (!prev) return;
+    if (window.confirm(`Restore your last session "${prev.title ?? 'Untitled'}"?`)) {
+      resetHistory(prev);
+      markClean(prev);
+      setStatusMessage(`Restored previous session "${prev.title ?? 'Untitled'}"`);
+    }
+    clearPreviousSession();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Runtime navigation to a new `#doc=` link without a full reload.
+  useEffect(() => {
+    const onHashChange = () => {
+      if (openSharedDocument(window.location.href)) {
+        stripDocFragment();
+      }
+    };
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
+  }, [openSharedDocument, stripDocFragment]);
   const [highlightedRanges, setHighlightedRanges] = useState<HighlightedRange[]>([]);
   // Cross-sheet navigation state
   const [crossSheetNavigation, setCrossSheetNavigation] = useState<{
@@ -803,6 +908,7 @@ function WorkbookView() {
   // Raw focus - FSM enters EDIT mode
   const handleFormulaRawFocus = useCallback(
     (caretPos: number) => {
+      if (isReadOnly) return;
       // If we're in cross-sheet navigation mode, clicking the formula bar
       // returns to the source sheet instead of starting edit
       if (crossSheetSourceRef.current !== null && crossSheetNavigation) {
@@ -812,7 +918,7 @@ function WorkbookView() {
       startEditAt(caretPos);
       setFormulaCursorPos(caretPos);
     },
-    [startEditAt, handleReturnFromCrossSheet, crossSheetNavigation],
+    [startEditAt, handleReturnFromCrossSheet, crossSheetNavigation, isReadOnly],
   );
 
   // Raw blur - FSM commits
@@ -843,6 +949,7 @@ function WorkbookView() {
 
   const handleRawChange = useCallback(
     (value: string, caretPos: number) => {
+      if (isReadOnly) return;
       const s = editingSession;
       if (s.state === 'SELECT' && value.length > 0) {
         // First character typed: start editing
@@ -860,7 +967,7 @@ function WorkbookView() {
         setBuffer(value, caretPos);
       }
     },
-    [setBuffer, startEnter, startEdit, editingSession],
+    [setBuffer, startEnter, startEdit, editingSession, isReadOnly],
   );
 
   // ─── Grid Editing Callbacks ──────────────────────────────────────
@@ -868,6 +975,7 @@ function WorkbookView() {
 
   const handleGridStartEdit = useCallback(
     (row: number, col: number) => {
+      if (isReadOnly) return;
       // Update active cell so FSM uses correct row/col.
       // Pass row/col explicitly to startEdit so it doesn't rely on
       // the stale hook closure values (which are based on activeCell
@@ -875,7 +983,7 @@ function WorkbookView() {
       setActiveCell({ row, col });
       startEdit(row, col);
     },
-    [startEdit],
+    [startEdit, isReadOnly],
   );
 
   // Clears both the marching-ants range and the clipboard data (Esc / typing)
@@ -886,6 +994,7 @@ function WorkbookView() {
 
   const handleGridStartEnter = useCallback(
     (row: number, col: number, char: string) => {
+      if (isReadOnly) return;
       // Update active cell so FSM uses correct row/col
       // Pass row/col explicitly to avoid stale closure values
       setActiveCell({ row, col });
@@ -893,7 +1002,7 @@ function WorkbookView() {
       handleClearClipboard();
       startEnter(char, row, col);
     },
-    [startEnter, handleClearClipboard],
+    [startEnter, handleClearClipboard, isReadOnly],
   );
 
   // ─── Help / Utility Actions ──────────────────────────────────────────
@@ -910,21 +1019,110 @@ function WorkbookView() {
     window.open('https://simpledocs.mouseclick.au', '_blank', 'noopener,noreferrer');
   }, []);
 
-  const handleSaveToCloud = useCallback(() => {
+  const handleSave = useCallback(() => {
+    const name = (workbook.title || 'Untitled').replace(/[^a-zA-Z0-9-_]/g, '_') || 'Untitled';
+    downloadDocument(workbook, name);
+    markSaved(workbook);
+    recordSaveMRU(normalizeFileName(name), JSON.stringify(workbook).length, 'local');
+    setStatusMessage(`Saved "${name}.ssjson" — download started`);
+  }, [workbook, markSaved, recordSaveMRU]);
+
+  // Ref to the open/replace handler so handleOpen/reopenFromHandle can be
+  // declared before handleImport without a TDZ error.
+  const handleImportRef = useRef<
+    (wb: Workbook, filename?: string, opts?: { handleId?: string; canReopen?: boolean }) => void
+  >(() => {});
+
+  const handleOpen = useCallback(async () => {
+    if (!supportsFileSystemAccess()) {
+      window.dispatchEvent(new CustomEvent('simplesheets:open'));
+      return;
+    }
+
+    try {
+      const picked = await pickFileWithHandle();
+      if (!picked) return; // user cancelled
+
+      const wb = await readSpreadsheetFile(picked.file);
+
+      let handleId: string | undefined;
+      if (picked.handle) {
+        handleId = `h-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        await storeFileHandle(handleId, picked.handle);
+      }
+
+      handleImportRef.current(wb, picked.file.name, handleId ? { handleId, canReopen: true } : undefined);
+    } catch (err) {
+      setStatusMessage(`Import error: ${err instanceof Error ? err.message : 'Failed to open file'}`);
+    }
+  }, [setStatusMessage]);
+
+  const handleCopyShareLink = useCallback(async () => {
+    try {
+      const baseUrl = `${window.location.origin}${window.location.pathname}`;
+      const url = encodeDocToUrl(workbook, baseUrl);
+      await navigator.clipboard.writeText(url);
+      setStatusMessage('Link copied to clipboard — share it with anyone');
+    } catch {
+      setStatusMessage('Failed to copy link to clipboard');
+    }
+  }, [workbook]);
+
+  const handleShareFile = useCallback(async () => {
+    try {
+      const name = (workbook.title || 'Untitled').replace(/[^a-zA-Z0-9-_]/g, '_') || 'Untitled';
+      const result = await shareDocument(workbook, name);
+      if (result === 'shared') {
+        setStatusMessage('Share sheet opened');
+      } else if (result === 'fallback') {
+        setStatusMessage('File downloaded — sharing not supported on this browser');
+      }
+    } catch (err) {
+      setStatusMessage(err instanceof Error ? err.message : 'Failed to share file');
+    }
+  }, [workbook]);
+
+  const handleCloudAccounts = useCallback(() => {
     setCloudModalMode('save');
     setShowCloudModal(true);
   }, []);
 
-  const handleOpenFromCloud = useCallback(() => {
-    setCloudModalMode('open');
-    setShowCloudModal(true);
-  }, []);
+  /** Reopen a local recent that has a retained File System Access handle. */
+  const reopenFromHandle = useCallback(
+    async (entry: MRUEntry) => {
+      if (!entry.handleId) return;
+      const handle = await loadFileHandle(entry.handleId);
+      if (!handle) {
+        window.dispatchEvent(new CustomEvent('simplesheets:open'));
+        setStatusMessage(`Reopen "${entry.name}" — select the file in the picker.`);
+        return;
+      }
+      const file = await readFileFromHandle(handle);
+      if (!file) {
+        window.dispatchEvent(new CustomEvent('simplesheets:open'));
+        setStatusMessage(`Reopen "${entry.name}" — permission denied; select the file again.`);
+        return;
+      }
+      try {
+        const wb = await readSpreadsheetFile(file);
+        handleImportRef.current(wb, entry.name, { handleId: entry.handleId, canReopen: true });
+      } catch (err) {
+        setStatusMessage(`Import error: ${err instanceof Error ? err.message : 'Failed to reopen file'}`);
+      }
+    },
+    [setStatusMessage],
+  );
 
   const handleOpenRecent = useCallback(
     (entry: MRUEntry) => {
       if (entry.source === 'url' && entry.path) {
-        // URL-opened documents: load from the share link fragment
-        window.location.href = entry.path;
+        // URL-opened documents: decode and reopen the shared snapshot directly
+        // (no full reload; the fragment may already have been stripped).
+        if (openSharedDocument(entry.path)) {
+          stripDocFragment();
+        } else {
+          setStatusMessage('Shared link is no longer valid');
+        }
         return;
       }
       if (entry.source === 'cloud') {
@@ -934,11 +1132,15 @@ function WorkbookView() {
         setStatusMessage(`Reopen "${entry.name}" from ${entry.provider ?? 'cloud'} — select the file in the cloud modal.`);
         return;
       }
-      // Local files: trigger the file picker (same as File → Open)
+      // Local files: reopen from a retained handle when available, else picker.
+      if (entry.handleId) {
+        reopenFromHandle(entry);
+        return;
+      }
       window.dispatchEvent(new CustomEvent('simplesheets:open'));
       setStatusMessage(`Reopen "${entry.name}" — select the file in the picker.`);
     },
-    [],
+    [openSharedDocument, stripDocFragment, setStatusMessage, reopenFromHandle],
   );
 
   const handleSearchReplace = useCallback(() => {
@@ -971,17 +1173,31 @@ function WorkbookView() {
     gridRef.current?.focus();
   }, []);
 
+  const handleSaveAs = useCallback(() => {
+    const defaultName = (workbook.title || 'Untitled').replace(/[^a-zA-Z0-9-_]/g, '_') || 'Untitled';
+    openFilenameModal('Save As', defaultName, 'ssjson', (filename) => {
+      downloadDocument(workbook, filename);
+      const updatedWb: Workbook = { ...workbook, title: filename, lastModified: Date.now() };
+      pushHistory(updatedWb, `Saved as "${filename}"`, filterStateRef.current, gridSelectionRef.current);
+      markSaved(updatedWb);
+      recordSaveMRU(normalizeFileName(filename), JSON.stringify(workbook).length, 'local');
+      setStatusMessage(`Saved "${filename}.ssjson" — download started`);
+      closeFilenameModal();
+    });
+  }, [workbook, openFilenameModal, closeFilenameModal, pushHistory, markSaved, recordSaveMRU]);
+
   /**
    * Callback after CloudStorageModal saves a file locally.
    * Records MRU, updates the workbook title, and pushes to history.
    */
   const handleSaveFile = useCallback(
     (filename: string, sizeBytes: number) => {
-      recordSaveMRU(`${filename}.ssjson`, sizeBytes, 'local');
+      recordSaveMRU(normalizeFileName(filename), sizeBytes, 'local');
       const updatedWb: Workbook = { ...workbook, title: filename, lastModified: Date.now() };
       pushHistory(updatedWb, `Saved as "${filename}"`, filterStateRef.current, gridSelectionRef.current);
+      markSaved(updatedWb);
     },
-    [workbook, pushHistory, recordSaveMRU],
+    [workbook, pushHistory, recordSaveMRU, markSaved],
   );
 
   // Import / Export triggers — dispatch events that the hidden import buttons listen for
@@ -1014,15 +1230,6 @@ function WorkbookView() {
       closeFilenameModal();
     });
   }, [workbook, sheet, openFilenameModal, closeFilenameModal]);
-
-  const handleExportJsonMenu = useCallback(() => {
-    const defaultName = workbook.title.replace(/[^a-zA-Z0-9-_]/g, '_') || 'Untitled';
-    openFilenameModal('Export JSON', defaultName, 'json', (filename) => {
-      downloadJson(workbook, filename);
-      setStatusMessage(`Exported "${filename}.json" — download started`);
-      closeFilenameModal();
-    });
-  }, [workbook, openFilenameModal, closeFilenameModal]);
 
   const handleExportPdfMenu = useCallback(() => {
     const defaultName = (sheet.name || workbook.title).replace(/[^a-zA-Z0-9-_]/g, '_') || 'Untitled';
@@ -1191,48 +1398,189 @@ function WorkbookView() {
     return filename.slice(0, lastDot);
   };
 
-  /* istanbul ignore next - handleImport requires file upload (tested in ImportButtons.test.tsx) */
+  /** Record an import/open in the MRU. */
+  const recordImportMRU = useCallback(
+    (filename: string | undefined, wb: Workbook, opts?: { handleId?: string; canReopen?: boolean }) => {
+      if (!filename) return;
+      const size = wb.sheets.reduce((acc, s) => acc + Object.keys(s.cells).length, 0) * 50;
+      recordOpenMRU(filename, size, 'local', opts);
+    },
+    [recordOpenMRU],
+  );
+
+  /** Show project/creator-canvas tabs when the imported workbook carries them. */
+  const applyExtensionDetection = useCallback((importedWb: Workbook) => {
+    const hasProjectData = importedWb.extensions?.['project-wbs'] ||
+      importedWb.sheets.some((s) => s.name === TASKS_SHEET_NAME);
+    if (hasProjectData) {
+      setShowProjectTab(true);
+    }
+
+    const hasCreatorCanvasData = importedWb.extensions?.['creator-canvas'] ||
+      importedWb.sheets.some((s) => CREATOR_CANVAS_SHEET_NAMES_SET.has(s.name));
+    if (hasCreatorCanvasData) {
+      const canvas = loadCreatorCanvasFromWorkbook(importedWb);
+      setCurrentCreatorCanvas(canvas);
+      setShowCreatorCanvasTab(true);
+      setShowCreatorCanvas(Boolean(canvas));
+    } else {
+      setCurrentCreatorCanvas(null);
+      setShowCreatorCanvas(false);
+      setShowCreatorCanvasTab(false);
+    }
+  }, []);
+
+  /* istanbul ignore next - handleImport (open path) requires file upload (tested in ImportButtons.test.tsx) */
   const handleImport = useCallback(
-    (importedWb: Workbook, filename?: string) => {
+    (importedWb: Workbook, filename?: string, opts?: { handleId?: string; canReopen?: boolean }) => {
+      if (!confirmDiscard('Open this file? Unsaved changes will be lost.')) return;
+      if (isDirty) snapshotPreviousSession(workbook);
+
       // If a filename is provided (from file picker), use it as the title (sans extension)
       const title = filename ? stripExtension(filename) : importedWb.title;
       const wbWithTitle: Workbook = title !== importedWb.title
         ? { ...importedWb, title, lastModified: Date.now() }
         : importedWb;
       pushHistory(wbWithTitle, 'Import file', filterStateRef.current, gridSelectionRef.current);
+      markClean(wbWithTitle);
       setStatusMessage(`Imported "${title}" — ${wbWithTitle.sheets.length} sheet(s)`);
 
-      // Record in MRU: local file open
-      if (filename) {
-        recordOpenMRU(filename, importedWb.sheets.reduce((acc, s) => acc + Object.keys(s.cells).length, 0) * 50, 'local');
+      recordImportMRU(filename, importedWb, opts);
+      applyExtensionDetection(importedWb);
+    },
+    [pushHistory, recordImportMRU, applyExtensionDetection, confirmDiscard, isDirty, workbook, markClean]
+  );
+
+  useEffect(() => {
+    handleImportRef.current = handleImport;
+  }, [handleImport]);
+
+  /** Import entry points (Excel/CSV/JSON) → show the scope dialog. */
+  const handleIncomingImport = useCallback((payload: IncomingImport) => {
+    setPendingImport(payload);
+    setShowImportScope(true);
+  }, []);
+
+  const handleImportScopeCancel = useCallback(() => {
+    setShowImportScope(false);
+    setPendingImport(null);
+    gridRef.current?.focus();
+  }, []);
+
+  /** Apply the chosen import scope (and CSV parse options). */
+  const handleImportScopeConfirm = useCallback(
+    (options: ImportScopeOptions) => {
+      if (!pendingImport) return;
+      const { workbook: importedWb, fileName, kind, rawText } = pendingImport;
+
+      // Re-parse CSV/TSV if the dialog changed delimiter/header options.
+      let wb = importedWb;
+      if (kind === 'csv' && rawText) {
+        const reparsed = importCsv(rawText, { delimiter: options.delimiter, hasHeader: options.hasHeader });
+        if (!reparsed.success || !reparsed.workbook) {
+          setStatusMessage(`Import error: ${reparsed.error ?? 'Failed to parse CSV'}`);
+          setShowImportScope(false);
+          setPendingImport(null);
+          return;
+        }
+        wb = reparsed.workbook;
       }
 
-      // Check if imported workbook has project data and show project tab
-      const hasProjectData = importedWb.extensions?.['project-wbs'] ||
-        importedWb.sheets.some((s) => s.name === TASKS_SHEET_NAME);
-      if (hasProjectData) {
-        setShowProjectTab(true);
-      }
-
-      const hasCreatorCanvasData = importedWb.extensions?.['creator-canvas'] ||
-        importedWb.sheets.some((s) => CREATOR_CANVAS_SHEET_NAMES_SET.has(s.name));
-      if (hasCreatorCanvasData) {
-        const canvas = loadCreatorCanvasFromWorkbook(importedWb);
-        setCurrentCreatorCanvas(canvas);
-        setShowCreatorCanvasTab(true);
-        setShowCreatorCanvas(Boolean(canvas));
+      if (options.scope === 'replace') {
+        if (!confirmDiscard('Import this file? Unsaved changes will be lost.')) {
+          setShowImportScope(false);
+          setPendingImport(null);
+          return;
+        }
+        if (isDirty) snapshotPreviousSession(workbook);
+        const title = fileName ? stripExtension(fileName) : wb.title;
+        const replaced = applyReplace(wb, title);
+        resetHistory(replaced);
+        markClean(replaced);
+        recordImportMRU(fileName, wb);
+        applyExtensionDetection(wb);
+        setStatusMessage(`Imported "${title}" — ${replaced.sheets.length} sheet(s)`);
+      } else if (options.scope === 'new-sheets') {
+        const merged = applyAddSheets(workbook, wb);
+        pushHistory(merged, 'Import: add sheet(s)', filterStateRef.current, gridSelectionRef.current);
+        recordImportMRU(fileName, wb);
+        setStatusMessage(`Imported ${wb.sheets.length} sheet(s) into the workbook`);
       } else {
-        setCurrentCreatorCanvas(null);
-        setShowCreatorCanvas(false);
-        setShowCreatorCanvasTab(false);
+        const row = activeCell?.row ?? 0;
+        const col = activeCell?.col ?? 0;
+        const merged = applyInsertAtCell(workbook, wb, row, col);
+        pushHistory(merged, 'Import: insert at cell', filterStateRef.current, gridSelectionRef.current);
+        recordImportMRU(fileName, wb);
+        setStatusMessage('Imported data at the active cell');
+      }
+
+      setShowImportScope(false);
+      setPendingImport(null);
+    },
+    [
+      pendingImport, workbook, activeCell, confirmDiscard, isDirty,
+      resetHistory, markClean, pushHistory, recordImportMRU, applyExtensionDetection,
+      filterStateRef, gridSelectionRef,
+    ],
+  );
+
+  /** Drag-and-drop: route a dropped file through the import-scope pipeline. */
+  const handleFilesDropped = useCallback(
+    async (files: FileList | null) => {
+      if (!files || files.length === 0) return;
+      const file = files[0];
+      const name = file.name.toLowerCase();
+
+      try {
+        if (name.endsWith('.xlsx') || name.endsWith('.xls')) {
+          const result = await importExcelFile(file);
+          if (result.success && result.workbook) {
+            handleIncomingImport({ workbook: result.workbook, fileName: file.name, kind: 'excel' });
+          } else {
+            setStatusMessage(`Import error: ${result.error ?? 'Failed to import Excel'}`);
+          }
+          return;
+        }
+
+        if (name.endsWith('.csv') || name.endsWith('.tsv') || name.endsWith('.txt')) {
+          const text = await readFileAsText(file);
+          const detected = detectDelimiter(text);
+          const result = importCsv(text, { delimiter: detected });
+          if (result.success && result.workbook) {
+            handleIncomingImport({
+              workbook: result.workbook,
+              fileName: file.name,
+              kind: 'csv',
+              rawText: text,
+              detectedDelimiter: detected,
+            });
+          } else {
+            setStatusMessage(`Import error: ${result.error ?? 'Failed to import CSV'}`);
+          }
+          return;
+        }
+
+        if (name.endsWith('.ssjson') || name.endsWith('.json')) {
+          const wb = await readWorkbookFile(file);
+          handleIncomingImport({ workbook: wb, fileName: file.name, kind: 'json' });
+          return;
+        }
+
+        setStatusMessage('Unsupported file type — drop .xlsx, .csv, .tsv, or .ssjson');
+      } catch (err) {
+        setStatusMessage(`Import error: ${err instanceof Error ? err.message : 'Failed to import file'}`);
       }
     },
-    [pushHistory, recordOpenMRU]
+    [handleIncomingImport, setStatusMessage],
   );
 
   const handleNewSheet = useCallback(
     (wb: Workbook) => {
+      if (!confirmDiscard('Create a new workbook? Unsaved changes will be lost.')) return;
+      if (isDirty) snapshotPreviousSession(workbook);
+
       resetHistory(wb);
+      markClean(wb);
       // Clear per-sheet active cells — new workbook has fresh sheet ids
       sheetActiveCellsRef.current.clear();
       // Default to A1 on the first sheet
@@ -1247,7 +1595,7 @@ function WorkbookView() {
       setStatusMessage('Created new workbook');
       gridRef.current?.focus();
     },
-    [resetHistory, restoreActiveCellForSheet]
+    [resetHistory, restoreActiveCellForSheet, confirmDiscard, isDirty, workbook, markClean]
   );
 
   const handleSwitchSheet = useCallback(
@@ -2650,6 +2998,7 @@ function WorkbookView() {
   // pastes as plain text directly.
   useEffect(() => {
     const handleNativePaste = (e: ClipboardEvent) => {
+      if (isReadOnly) return;
       // Never hijack a paste that belongs to a text field (formula bar,
       // modal inputs, etc.) — let the native paste into that field happen.
       if (isEditableTarget(e.target)) return;
@@ -2678,7 +3027,7 @@ function WorkbookView() {
 
     window.addEventListener('paste', handleNativePaste);
     return () => window.removeEventListener('paste', handleNativePaste);
-  }, [handleExternalPaste]);
+  }, [handleExternalPaste, isReadOnly]);
 
   // ─── Insert / Delete Row / Column ───────────────────────────────────────
 
@@ -2833,11 +3182,11 @@ function WorkbookView() {
               return;
             case 's':
               e.preventDefault();
-              handleSaveToCloud();
+              handleSave();
               return;
             case 'o':
               e.preventDefault();
-              handleOpenFromCloud();
+              handleOpen();
               return;
             case 'h':
               e.preventDefault();
@@ -2872,6 +3221,12 @@ function WorkbookView() {
         }
         return;
       }
+      // Ctrl+Shift+S = Save As (Excel/Sheets convention)
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && !isEditing && (e.key === 's' || e.key === 'S')) {
+        e.preventDefault();
+        handleSaveAs();
+        return;
+      }
       // Ctrl+Shift+Z also triggers redo (common alternative)
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && !isEditing && e.key === 'Z') {
         e.preventDefault();
@@ -2895,7 +3250,7 @@ function WorkbookView() {
     };
     window.addEventListener('keydown', handleGlobalKeyDown);
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-  }, [handleUndo, handleRedo, handleNewSheet, handleSaveToCloud, handleOpenFromCloud, handleSearchReplace, toggleBoldStyle, toggleItalicStyle, toggleUnderlineStyle, handleToggleFilter, handleFxClick, getActiveCellValue, handlePasteSpecial, activeCell]);
+  }, [handleUndo, handleRedo, handleNewSheet, handleSave, handleSaveAs, handleOpen, handleSearchReplace, toggleBoldStyle, toggleItalicStyle, toggleUnderlineStyle, handleToggleFilter, handleFxClick, getActiveCellValue, handlePasteSpecial, activeCell]);
 
   return (
     <div className="h-screen flex flex-col">
@@ -2910,11 +3265,14 @@ function WorkbookView() {
           onImportJson={handleImportJsonMenu}
           onExportExcel={handleExportExcelMenu}
           onExportCsv={handleExportCsvMenu}
-          onExportJson={handleExportJsonMenu}
           onExportPdf={handleExportPdfMenu}
           onPageSetup={() => setShowPrintSetup(true)}
-          onSaveToCloud={handleSaveToCloud}
-          onOpenFromCloud={handleOpenFromCloud}
+          onSave={handleSave}
+          onSaveAs={handleSaveAs}
+          onOpen={handleOpen}
+          onCopyShareLink={handleCopyShareLink}
+          onShareFile={handleShareFile}
+          onCloudAccounts={handleCloudAccounts}
           onUndo={handleUndo}
           onRedo={handleRedo}
           canUndo={canUndo}
@@ -3032,6 +3390,7 @@ function WorkbookView() {
         onRawFocus={handleFormulaRawFocus}
         onRawBlur={handleFormulaRawBlur}
         onRawCaretMove={setCaretPos}
+        readOnly={isReadOnly}
         autoComplete={autoComplete}
         onAcceptAutoComplete={acceptAutoComplete}
         onNavigateAutoComplete={navigateAutoComplete}
@@ -3142,7 +3501,12 @@ function WorkbookView() {
       )}
       {/* Grid — shown when Project tab is not active */}
       {!showCreatorCanvas && !showProjectView && (
-      <div className="flex-1 overflow-hidden">
+      <div
+        className="flex-1 overflow-hidden"
+        data-testid="grid-drop-zone"
+        onDragOver={(e) => { e.preventDefault(); }}
+        onDrop={(e) => { e.preventDefault(); handleFilesDropped(e.dataTransfer.files); }}
+      >
         <Grid
           ref={gridRef}
           sheet={updatedSheet}
@@ -3212,6 +3576,19 @@ function WorkbookView() {
           <span className="font-medium text-gray-700 w-16" data-testid="cell-mode">{cellMode}</span>
           <span className="text-gray-400">|</span>
           <span data-testid="status-message">{showFormulas ? 'Formulas' : statusMessage}</span>
+          <span className="text-gray-400">|</span>
+          <span
+            data-testid="save-state"
+            className={isDirty ? 'text-amber-600 font-medium' : ''}
+          >
+            {isReadOnly
+              ? 'Shared snapshot (read-only)'
+              : isDirty
+                ? 'Unsaved changes'
+                : lastSavedAt !== null
+                  ? `Saved · ${currentFileName} · ${formatRelativeTime(lastSavedAt)}`
+                  : 'Not saved'}
+          </span>
           {filterState?.active && filterState.visibleDataRows !== filterState.totalDataRows && (
             <span className="text-blue-600 font-medium" data-testid="filter-status">
               {filterState.visibleDataRows} of {filterState.totalDataRows} rows visible
@@ -3243,7 +3620,8 @@ function WorkbookView() {
       <ImportExportBridge
         workbook={workbook}
         sheet={sheet}
-        onImport={handleImport}
+        onImport={handleIncomingImport}
+        onOpenDocument={handleImport}
         onError={handleImportError}
       />
 
@@ -3286,6 +3664,12 @@ function WorkbookView() {
         extension={filenameModal.extension}
         onConfirm={filenameModal.onConfirm}
         onCancel={closeFilenameModal}
+      />
+      <ImportScopeDialog
+        isOpen={showImportScope && pendingImport !== null}
+        imported={pendingImport ?? { workbook, fileName: undefined, kind: 'json' }}
+        onConfirm={handleImportScopeConfirm}
+        onCancel={handleImportScopeCancel}
       />
       <SearchReplaceModal
         isOpen={showSearchReplace}

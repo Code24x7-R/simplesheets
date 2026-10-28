@@ -78,6 +78,37 @@ export function importTsv(tsv: string, options: Omit<CsvImportOptions, 'delimite
 }
 
 /**
+ * Detect the most likely field delimiter from the first few non-empty lines.
+ * Candidates are comma, tab, semicolon, and pipe. Uses the candidate that
+ * produces the most columns on the first data row.
+ *
+ * @param text - Raw CSV/TSV content.
+ * @returns The detected delimiter (defaults to ',').
+ */
+export function detectDelimiter(text: string): string {
+  const candidates = [',', '\t', ';', '|'];
+  const sample = text
+    .split(/\r?\n/)
+    .filter((line) => line.trim().length > 0)
+    .slice(0, 3)
+    .join('\n');
+
+  if (!sample.trim()) return ',';
+
+  let best = ',';
+  let bestCols = 1;
+  for (const delimiter of candidates) {
+    const parsed = Papa.parse<string[]>(sample, { delimiter, skipEmptyLines: true });
+    const cols = parsed.data[0]?.length ?? 1;
+    if (cols > bestCols) {
+      bestCols = cols;
+      best = delimiter;
+    }
+  }
+  return best;
+}
+
+/**
  * Exports a sheet to CSV format.
  * @param sheet - The sheet to export.
  * @param delimiter - Field delimiter (default ',').

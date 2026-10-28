@@ -8,6 +8,7 @@ import { ImportJsonButton } from './ImportJsonButton';
 // Mock services
 jest.mock('../services/csvService', () => ({
   importCsv: jest.fn(),
+  detectDelimiter: jest.fn(() => ','),
 }));
 
 jest.mock('../services/excelImport', () => ({
@@ -63,7 +64,7 @@ describe('ImportExcelButton', () => {
     fireEvent.change(input);
 
     await waitFor(() => {
-      expect(onImport).toHaveBeenCalledWith(mockWorkbook);
+      expect(onImport).toHaveBeenCalledWith({ workbook: mockWorkbook, fileName: 'test.xlsx', kind: 'excel' });
     });
   });
 
@@ -138,7 +139,13 @@ describe('ImportCsvButton', () => {
     fireEvent.change(input);
 
     await waitFor(() => {
-      expect(onImport).toHaveBeenCalledWith(mockWorkbook);
+      expect(onImport).toHaveBeenCalledWith({
+        workbook: mockWorkbook,
+        fileName: 'test.csv',
+        kind: 'csv',
+        rawText: 'a,b,c\n1,2,3',
+        detectedDelimiter: ',',
+      });
     });
   });
 
@@ -203,11 +210,12 @@ describe('ImportJsonButton', () => {
     clickSpy.mockRestore();
   });
 
-  it('has hidden file input with json accept', () => {
+  it('has hidden file input with json and ssjson accept', () => {
     render(<ImportJsonButton onImport={jest.fn()} onError={jest.fn()} />);
     const input = document.querySelector('input[type="file"]') as HTMLInputElement;
     expect(input).toBeInTheDocument();
     expect(input?.accept).toContain('.json');
+    expect(input?.accept).toContain('.ssjson');
   });
 
   it('calls onImport when JSON file is selected', async () => {
@@ -224,7 +232,7 @@ describe('ImportJsonButton', () => {
     fireEvent.change(input);
 
     await waitFor(() => {
-      expect(onImport).toHaveBeenCalledWith(mockWorkbook);
+      expect(onImport).toHaveBeenCalledWith({ workbook: mockWorkbook, fileName: 'test.json', kind: 'json' });
     });
   });
 

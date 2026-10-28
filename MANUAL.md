@@ -478,7 +478,8 @@ of cross-sheet A1 references).
 | Shortcut | Action |
 |----------|--------|
 | `Ctrl + N` | New workbook |
-| `Ctrl + S` | Save workbook (downloads JSON) |
+| `Ctrl + S` | Save workbook (downloads `.ssjson`) |
+| `Ctrl + Shift + S` | Save As… (choose filename) |
 | `Ctrl + O` | Open workbook (file picker) |
 | `Ctrl + H` | Find & Replace |
 | `Ctrl + Shift + F` | Open Formula Wizard |
@@ -757,19 +758,33 @@ Access borders via the toolbar border dropdown or Format → Borders:
 | Format | Extension | How |
 |--------|-----------|-----|
 | **Excel** | `.xlsx`, `.xls` | File → Import → Excel |
-| **CSV** | `.csv` | File → Import → CSV |
+| **CSV** | `.csv` | File → Import → CSV (auto-detects delimiter) |
 | **TSV** | `.tsv` | File → Import → CSV (auto-detects tab delimiter) |
-| **JSON** | `.json` | File → Import → JSON |
+| **JSON** | `.json`, `.ssjson` | File → Import → JSON |
+
+You can also **drag & drop** a `.xlsx`, `.csv`, `.tsv`, `.json`, or `.ssjson` file onto the grid.
+
+### Import Scope
+
+After picking a file, choose where the data lands:
+
+| Scope | Behaviour |
+|-------|-----------|
+| **Replace workbook** | Discard the current workbook and open the imported data. |
+| **Add as new sheet(s)** | Append the imported sheets to the current workbook (names are de-duplicated). |
+| **Insert at active cell** | Paste the imported sheet's cells starting at the active cell. |
+
+For CSV/TSV, the dialog also lets you pick the **delimiter** (auto-detected from `,` `;` `\t` `|`) and whether the **first row is a header**.
 
 ### Export Formats
 
 | Format | Extension | How |
 |--------|-----------|-----|
-| **Excel** | `.xlsx` | File → Export → Excel |
-| **CSV** | `.csv` | File → Export → CSV |
-| **TSV** | `.tsv` | File → Export → CSV (select TSV) |
-| **JSON** | `.json` | File → Export → JSON |
-| **PDF** | `.pdf` | File → Export → PDF |
+| **Excel** | `.xlsx` | File → Export → Excel (all sheets) |
+| **CSV** | `.csv` | File → Export → CSV (current sheet) |
+| **PDF** | `.pdf` | File → Export → PDF (current sheet) |
+
+Use **File → Save** to download the whole workbook as a `.ssjson` document.
 
 ### PDF Export Options
 
@@ -795,7 +810,7 @@ Open **File → Page Setup…** to configure PDF export:
 
 ### Auto-Save
 
-SimpleSheet automatically saves your workbook to **localStorage** every time you make a change (debounced). If you accidentally close the browser, your work is preserved. Use **File → Save** to download a JSON backup file.
+SimpleSheet automatically saves your workbook to **localStorage** every time you make a change (debounced). If you accidentally close the browser, your work is preserved. Use **File → Save** to download a `.ssjson` backup file.
 
 ---
 

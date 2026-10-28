@@ -78,9 +78,9 @@ describe('App', () => {
 
   it('renders the demo workbook title when Load Demo is triggered', () => {
     render(<App />);
-    // Click "File" menu, then "Load Demo"
-    fireEvent.click(screen.getByText('File'));
-    fireEvent.click(screen.getByText('Load Demo'));
+    // Click "Help" menu, then "Load Demo Workbook"
+    fireEvent.click(screen.getByText('Help'));
+    fireEvent.click(screen.getByText('Load Demo Workbook'));
     expect(screen.getByText('SimpleSheet Demo')).toBeInTheDocument();
   });
 
@@ -326,42 +326,37 @@ describe('App - Global Keyboard Shortcuts', () => {
     expect(screen.getByText('Untitled')).toBeInTheDocument();
   });
 
-  it('Ctrl+S opens the cloud modal in save mode', async () => {
+  it('Ctrl+S saves immediately (downloads .ssjson)', async () => {
     URL.createObjectURL = jest.fn(() => 'blob:mock');
     URL.revokeObjectURL = jest.fn();
     render(<App />);
-    // Press Ctrl+S → opens CloudStorageModal in 'save' mode
+    // Press Ctrl+S → immediate download (no modal)
     fireGlobalKeyDown('s');
-    // Cloud modal should appear with the Save title
-    expect(screen.getByText('Save to Cloud')).toBeInTheDocument();
-    // Click Save to File to trigger download
-    fireEvent.click(screen.getByText('Save to File'));
-    // Verify download was triggered (async via dynamic import)
-    await waitFor(() => {
-      expect(URL.createObjectURL).toHaveBeenCalled();
-    });
-    // Verify app still renders
+    expect(screen.queryByText('Save to Cloud')).not.toBeInTheDocument();
+    expect(URL.createObjectURL).toHaveBeenCalled();
+    expect(screen.getByTestId('status-message').textContent).toContain('Saved');
     expect(screen.getByText('SimpleSheets')).toBeInTheDocument();
   });
 
-  it('Ctrl+O opens the cloud modal in open mode', () => {
+  it('Ctrl+O triggers the open file picker', () => {
+    const clickSpy = jest.spyOn(HTMLInputElement.prototype, 'click');
     render(<App />);
-    // Press Ctrl+O → opens CloudStorageModal in 'open' mode
+    // Press Ctrl+O → dispatch the open event (no cloud modal)
     fireGlobalKeyDown('o');
-    // Verify the cloud modal opened with the Open title
-    expect(screen.getByText('Open from Cloud')).toBeInTheDocument();
-    // Verify app still renders
+    expect(clickSpy).toHaveBeenCalled();
+    clickSpy.mockRestore();
+    expect(screen.queryByText('Open from Cloud')).not.toBeInTheDocument();
     expect(screen.getByText('SimpleSheets')).toBeInTheDocument();
   });
 
-  it('Save to File records an MRU entry', async () => {
+  it('Save records an MRU entry', async () => {
+    URL.createObjectURL = jest.fn(() => 'blob:mock');
+    URL.revokeObjectURL = jest.fn();
     // Clear any pre-existing MRU entries
     localStorage.removeItem('simplesheets:mru');
     render(<App />);
-    // Open the cloud modal in save mode and click Save to File
+    // Press Ctrl+S → immediate save + MRU recording
     fireGlobalKeyDown('s');
-    fireEvent.click(screen.getByText('Save to File'));
-    // Wait for the async download + MRU recording
     await waitFor(() => {
       const raw = localStorage.getItem('simplesheets:mru');
       expect(raw).not.toBeNull();
@@ -1059,6 +1054,7 @@ describe('App - Global Keyboard Shortcuts', () => {
       expect(screen.getByTestId('project-view')).toBeInTheDocument();
 
       // Now create a new workbook (File → New)
+      jest.spyOn(window, 'confirm').mockReturnValueOnce(true);
       clickMenuItem('File');
       clickMenuItem('New');
 

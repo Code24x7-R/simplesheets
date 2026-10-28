@@ -52,6 +52,9 @@ import {
   Info,
   FolderKanban,
   Tag,
+  Link,
+  Share2,
+  Cloud,
 } from 'lucide-react';
 import {
   BorderAll,
@@ -62,7 +65,7 @@ import {
   BorderRight,
   SimpleDocs,
 } from './icons/BorderIcons';
-import { CloudUpload, CloudDownload, FileClock } from 'lucide-react';
+import { CloudUpload, FileClock } from 'lucide-react';
 import type { MRUEntry } from '../utils/mru';
 import { DropdownMenu, type MenuItem } from './DropdownMenu';
 import { COLOR_PALETTE, COLOR_LABELS, FONT_SIZES } from '../hooks/useCellStyle';
@@ -71,17 +74,20 @@ interface MenuBarProps {
   // File menu
   onNew: () => void;
   onLoadDemo: () => void;
+  onOpen: () => void;
+  onSave: () => void;
+  onSaveAs: () => void;
   onImportExcel: () => void;
   onImportCsv: () => void;
   onImportJson: () => void;
   onExportExcel: () => void;
   onExportCsv: () => void;
-  onExportJson: () => void;
   onExportPdf: () => void;
   onPageSetup: () => void;
-  // Cloud
-  onSaveToCloud: () => void;
-  onOpenFromCloud: () => void;
+  // Share
+  onCopyShareLink: () => void;
+  onShareFile: () => void;
+  onCloudAccounts: () => void;
   // Edit menu
   onUndo: () => void;
   onRedo: () => void;
@@ -218,18 +224,20 @@ export function MenuBar(props: MenuBarProps) {
       const actions: Record<string, () => void> = {
         // File
         'file-new': props.onNew,
-        'file-load-demo': props.onLoadDemo,
+        'file-open': props.onOpen,
+        'file-save': props.onSave,
+        'file-save-as': props.onSaveAs,
         'file-import-excel': props.onImportExcel,
         'file-import-csv': props.onImportCsv,
         'file-import-json': props.onImportJson,
         'file-export-excel': props.onExportExcel,
         'file-export-csv': props.onExportCsv,
-        'file-export-json': props.onExportJson,
         'file-export-pdf': props.onExportPdf,
         'file-page-setup': props.onPageSetup,
-        // Cloud
-        'file-save-cloud': props.onSaveToCloud,
-        'file-open-cloud': props.onOpenFromCloud,
+        // Share
+        'file-share-link': props.onCopyShareLink,
+        'file-share-file': props.onShareFile,
+        'file-cloud-accounts': props.onCloudAccounts,
         // Recent files
         'file-clear-recent': props.onClearRecent,
         // Edit
@@ -315,6 +323,7 @@ export function MenuBar(props: MenuBarProps) {
         'help-about': props.onAbout,
         'help-shortcuts': props.onShortcuts,
         'help-simpledocs': props.onSimpleDocs,
+        'help-load-demo': props.onLoadDemo,
       };
       // Handle dynamic recent-file items (id format: "recent-<mruId>")
       if (id.startsWith('recent-')) {
@@ -332,14 +341,24 @@ export function MenuBar(props: MenuBarProps) {
     [props],
   );
 
+  // Remove a recent file via its recent-<mruId> item id.
+  const handleRemoveRecent = useCallback(
+    (id: string) => {
+      const mruId = id.startsWith('recent-') ? id.slice('recent-'.length) : id;
+      props.onRemoveRecent(mruId);
+    },
+    [props],
+  );
+
   // Build recent-files menu items dynamically from the MRU list.
-  // Each entry gets a source-indicating icon and a unique id for the handler.
+  // Each entry gets a source-indicating icon, a unique id, and a remove button.
   const recentFileItems: MenuItem[] = props.recentFiles.length > 0
     ? [
         ...props.recentFiles.map((entry) => ({
           id: `recent-${entry.id}`,
           label: entry.name,
           icon: entry.source === 'cloud' ? CloudUpload : entry.source === 'url' ? FileClock : FileSpreadsheet,
+          removable: true,
         })),
         { id: 'sep-recent', label: '', separator: true },
         { id: 'file-clear-recent', label: 'Clear Recent', icon: X },
@@ -348,12 +367,16 @@ export function MenuBar(props: MenuBarProps) {
 
   const fileItems: MenuItem[] = [
     { id: 'file-new', label: 'New', shortcut: 'Ctrl+N', icon: FileSpreadsheet },
-    { id: 'file-load-demo', label: 'Load Demo', icon: FlaskConical },
+    { id: 'file-open', label: 'Open…', shortcut: 'Ctrl+O', icon: FileUp },
+    { id: 'file-recent', label: 'Recent', icon: FileClock, submenu: recentFileItems },
     { id: 'sep-file-1', label: '', separator: true },
+    { id: 'file-save', label: 'Save', shortcut: 'Ctrl+S', icon: Download },
+    { id: 'file-save-as', label: 'Save As…', shortcut: 'Ctrl+Shift+S', icon: Download },
+    { id: 'sep-file-2', label: '', separator: true },
     {
       id: 'file-import',
       label: 'Import',
-      icon: Download,
+      icon: Upload,
       submenu: [
         { id: 'file-import-excel', label: 'Excel (.xlsx)', icon: FileDown },
         { id: 'file-import-csv', label: 'CSV (.csv)', icon: FileDown },
@@ -363,19 +386,24 @@ export function MenuBar(props: MenuBarProps) {
     {
       id: 'file-export',
       label: 'Export',
-      icon: Upload,
+      icon: FileUp,
       submenu: [
-        { id: 'file-export-excel', label: 'Excel (.xlsx)', icon: FileUp },
-        { id: 'file-export-csv', label: 'CSV (.csv)', icon: FileUp },
-        { id: 'file-export-json', label: 'JSON (.json)', icon: FileJson },
-        { id: 'file-export-pdf', label: 'PDF (.pdf)', icon: Printer },
+        { id: 'file-export-excel', label: 'Excel — all sheets (.xlsx)', icon: FileUp },
+        { id: 'file-export-csv', label: 'CSV — current sheet (.csv)', icon: FileUp },
+        { id: 'file-export-pdf', label: 'PDF — current sheet (.pdf)', icon: Printer },
       ],
     },
-    { id: 'sep-file-2', label: '', separator: true },
-    { id: 'file-save-cloud', label: 'Save…', shortcut: 'Ctrl+S', icon: CloudUpload },
-    { id: 'file-open-cloud', label: 'Open…', shortcut: 'Ctrl+O', icon: CloudDownload },
+    {
+      id: 'file-share',
+      label: 'Share',
+      icon: Share2,
+      submenu: [
+        { id: 'file-share-link', label: 'Copy Link', icon: Link },
+        { id: 'file-share-file', label: 'Share File', icon: Share2 },
+        { id: 'file-cloud-accounts', label: 'Cloud accounts…', icon: Cloud },
+      ],
+    },
     { id: 'sep-file-3', label: '', separator: true },
-    ...recentFileItems,
     { id: 'file-page-setup', label: 'Page Setup…', icon: Ruler },
   ];
 
@@ -492,6 +520,8 @@ export function MenuBar(props: MenuBarProps) {
   ];
 
   const helpItems: MenuItem[] = [
+    { id: 'help-load-demo', label: 'Load Demo Workbook', icon: FlaskConical },
+    { id: 'sep-help-0', label: '', separator: true },
     { id: 'help-shortcuts', label: 'Keyboard Shortcuts', icon: Keyboard },
     { id: 'help-about', label: 'About SimpleSheets', icon: Info },
     { id: 'sep-help-1', label: '', separator: true },
@@ -551,7 +581,7 @@ export function MenuBar(props: MenuBarProps) {
 
   return (
     <div className="menu-bar">
-      <DropdownMenu label="File" items={fileItems} onSelect={handleSelect} />
+      <DropdownMenu label="File" items={fileItems} onSelect={handleSelect} onItemRemove={handleRemoveRecent} />
       <DropdownMenu label="Edit" items={editItems} onSelect={handleSelect} />
       <DropdownMenu label="View" items={viewItems} onSelect={handleSelect} />
       <DropdownMenu label="Insert" items={insertItems} onSelect={handleSelect} />

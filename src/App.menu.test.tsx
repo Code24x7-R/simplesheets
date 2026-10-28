@@ -135,17 +135,14 @@ describe('App - Menu Handlers', () => {
     expect(unfreezeItem?.classList.contains('menu-item-disabled')).toBe(true);
   });
 
-  it('handles File > Save… (opens cloud modal)', async () => {
+  it('handles File > Save (immediate download)', async () => {
     URL.createObjectURL = jest.fn(() => 'blob:mock');
     URL.revokeObjectURL = jest.fn();
     render(<App />);
     fireEvent.click(screen.getByText('File'));
-    fireEvent.click(screen.getByText('Save…'));
-    // Cloud modal should appear with the Save title
-    expect(screen.getByText('Save to Cloud')).toBeInTheDocument();
-    // Click Save to File to trigger download
-    fireEvent.click(screen.getByText('Save to File'));
-    // Status message appears (async via dynamic import)
+    fireEvent.click(screen.getByText('Save'));
+    // No cloud modal — immediate download
+    expect(screen.queryByText('Save to Cloud')).not.toBeInTheDocument();
     await waitFor(() => {
       const statusBar = screen.getByTestId('status-message');
       expect(statusBar?.textContent).toContain('Saved');
@@ -153,12 +150,14 @@ describe('App - Menu Handlers', () => {
     expect(URL.createObjectURL).toHaveBeenCalled();
   });
 
-  it('handles File > Open… (opens cloud modal)', () => {
+  it('handles File > Open… (file picker, no cloud modal)', () => {
+    const clickSpy = jest.spyOn(HTMLInputElement.prototype, 'click');
     render(<App />);
     fireEvent.click(screen.getByText('File'));
     fireEvent.click(screen.getByText('Open…'));
-    // Should open the CloudStorageModal in 'open' mode
-    expect(screen.getByText('Open from Cloud')).toBeInTheDocument();
+    expect(clickSpy).toHaveBeenCalled();
+    clickSpy.mockRestore();
+    expect(screen.queryByText('Open from Cloud')).not.toBeInTheDocument();
   });
 
   it('opens Page Setup modal from File menu', () => {
@@ -250,8 +249,8 @@ describe('App - Menu Handlers (Insert)', () => {
   it('adjusts formula references when inserting a row above a formula cell', () => {
     render(<App />);
     // Load the demo workbook for this test
-    fireEvent.click(screen.getByText('File'));
-    fireEvent.click(screen.getByText('Load Demo'));
+    fireEvent.click(screen.getByText('Help'));
+    fireEvent.click(screen.getByText('Load Demo Workbook'));
     // The demo sheet renders a title in row 0, headers in row 3,
     // and the first formula example "Sum of range" in row 4, col 0.
     // Select that cell, then insert a row above it.
@@ -373,7 +372,7 @@ describe('App - Menu Handlers (Import/Export via bridge)', () => {
     render(<App />);
     fireEvent.click(screen.getByText('File'));
     fireEvent.mouseEnter(screen.getByText('Export'));
-    fireEvent.click(screen.getByText('CSV (.csv)'));
+    fireEvent.click(screen.getByText('CSV — current sheet (.csv)'));
     // Filename modal should appear
     expect(screen.getByText('Export CSV')).toBeInTheDocument();
     // Confirm the export
@@ -385,7 +384,7 @@ describe('App - Menu Handlers (Import/Export via bridge)', () => {
     render(<App />);
     fireEvent.click(screen.getByText('File'));
     fireEvent.mouseEnter(screen.getByText('Export'));
-    expect(screen.getByText('PDF (.pdf)')).toBeTruthy();
+    expect(screen.getByText('PDF — current sheet (.pdf)')).toBeTruthy();
   });
 
   it('shows File > Import submenu options', () => {
@@ -401,10 +400,9 @@ describe('App - Menu Handlers (Import/Export via bridge)', () => {
     render(<App />);
     fireEvent.click(screen.getByText('File'));
     fireEvent.mouseEnter(screen.getByText('Export'));
-    expect(screen.getByText('Excel (.xlsx)')).toBeTruthy();
-    expect(screen.getByText('CSV (.csv)')).toBeTruthy();
-    expect(screen.getByText('JSON (.json)')).toBeTruthy();
-    expect(screen.getByText('PDF (.pdf)')).toBeTruthy();
+    expect(screen.getByText('Excel — all sheets (.xlsx)')).toBeTruthy();
+    expect(screen.getByText('CSV — current sheet (.csv)')).toBeTruthy();
+    expect(screen.getByText('PDF — current sheet (.pdf)')).toBeTruthy();
   });
 });
 
@@ -456,8 +454,8 @@ describe('App - Cell Style System (single cell & range)', () => {
     const statusBar = screen.getByTestId('status-message');
 
     // Load the demo workbook so there are cells to style
-    fireEvent.click(screen.getByText('File'));
-    fireEvent.click(screen.getByText('Load Demo'));
+    fireEvent.click(screen.getByText('Help'));
+    fireEvent.click(screen.getByText('Load Demo Workbook'));
 
     // Select a single cell
     const cell = document.querySelector('.grid-cell') as HTMLElement;
@@ -476,8 +474,8 @@ describe('App - Cell Style System (single cell & range)', () => {
     const statusBar = screen.getByTestId('status-message');
 
     // Load the demo workbook so there are cells to style
-    fireEvent.click(screen.getByText('File'));
-    fireEvent.click(screen.getByText('Load Demo'));
+    fireEvent.click(screen.getByText('Help'));
+    fireEvent.click(screen.getByText('Load Demo Workbook'));
 
     // Select a cell, then shift+click to create a range
     const cells = document.querySelectorAll('.grid-cell');
@@ -502,8 +500,8 @@ describe('App - Cell Style System (single cell & range)', () => {
     const statusBar = screen.getByTestId('status-message');
 
     // Load the demo workbook so there are cells to style
-    fireEvent.click(screen.getByText('File'));
-    fireEvent.click(screen.getByText('Load Demo'));
+    fireEvent.click(screen.getByText('Help'));
+    fireEvent.click(screen.getByText('Load Demo Workbook'));
 
     const cell = document.querySelector('.grid-cell') as HTMLElement;
     fireEvent.mouseDown(cell);
@@ -519,8 +517,8 @@ describe('App - Cell Style System (single cell & range)', () => {
     const statusBar = screen.getByTestId('status-message');
 
     // Load the demo workbook so there are cells to style
-    fireEvent.click(screen.getByText('File'));
-    fireEvent.click(screen.getByText('Load Demo'));
+    fireEvent.click(screen.getByText('Help'));
+    fireEvent.click(screen.getByText('Load Demo Workbook'));
 
     const cell = document.querySelector('.grid-cell') as HTMLElement;
     fireEvent.mouseDown(cell);
@@ -538,8 +536,8 @@ describe('App - Cell Style System (single cell & range)', () => {
     const statusBar = screen.getByTestId('status-message');
 
     // Load the demo workbook so there are cells to style
-    fireEvent.click(screen.getByText('File'));
-    fireEvent.click(screen.getByText('Load Demo'));
+    fireEvent.click(screen.getByText('Help'));
+    fireEvent.click(screen.getByText('Load Demo Workbook'));
 
     const cell = document.querySelector('.grid-cell') as HTMLElement;
     fireEvent.mouseDown(cell);
@@ -557,8 +555,8 @@ describe('App - Cell Style System (single cell & range)', () => {
     const statusBar = screen.getByTestId('status-message');
 
     // Load the demo workbook so there are cells to style
-    fireEvent.click(screen.getByText('File'));
-    fireEvent.click(screen.getByText('Load Demo'));
+    fireEvent.click(screen.getByText('Help'));
+    fireEvent.click(screen.getByText('Load Demo Workbook'));
 
     const cell = document.querySelector('.grid-cell') as HTMLElement;
     fireEvent.mouseDown(cell);
@@ -579,8 +577,8 @@ describe('App - Cell Style System (single cell & range)', () => {
     const statusBar = screen.getByTestId('status-message');
 
     // Load the demo workbook so there are cells to style
-    fireEvent.click(screen.getByText('File'));
-    fireEvent.click(screen.getByText('Load Demo'));
+    fireEvent.click(screen.getByText('Help'));
+    fireEvent.click(screen.getByText('Load Demo Workbook'));
 
     const cell = document.querySelector('.grid-cell') as HTMLElement;
     fireEvent.mouseDown(cell);

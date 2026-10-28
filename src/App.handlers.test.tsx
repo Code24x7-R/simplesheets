@@ -329,14 +329,12 @@ describe('App - Save Button', () => {
     URL.createObjectURL = jest.fn(() => 'blob:mock');
     URL.revokeObjectURL = jest.fn();
     render(<App />);
-    // Use File menu — Save… opens the cloud modal
+    // Use File menu — Save triggers an immediate download
     fireEvent.click(screen.getByText('File'));
-    fireEvent.click(screen.getByText('Save…'));
+    fireEvent.click(screen.getByText('Save'));
 
-    // Cloud modal should appear
-    expect(screen.getByText('Save to Cloud')).toBeInTheDocument();
-    // Click Save to File to trigger download
-    fireEvent.click(screen.getByText('Save to File'));
+    // No cloud modal
+    expect(screen.queryByText('Save to Cloud')).not.toBeInTheDocument();
 
     // Should show saved status and trigger download (async via dynamic import)
     await waitFor(() => {

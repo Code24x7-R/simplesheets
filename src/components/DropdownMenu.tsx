@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Richard Robertson
 import { useState, useRef, useEffect, useCallback } from 'react';
 import type { ComponentType, SVGProps } from 'react';
+import { X } from 'lucide-react';
 
 /** Any component that accepts SVGProps (lucide icons, custom SVG components, etc.). */
 type IconComponent = ComponentType<SVGProps<SVGSVGElement>>;
@@ -24,6 +25,8 @@ export interface MenuItem {
   submenu?: MenuItem[];
   /** Whether the item is in an active/checked state (renders blue). */
   active?: boolean;
+  /** Whether to show a per-item remove button. */
+  removable?: boolean;
 }
 
 interface DropdownMenuProps {
@@ -33,6 +36,8 @@ interface DropdownMenuProps {
   items: MenuItem[];
   /** Callback when an item is selected. */
   onSelect: (id: string) => void;
+  /** Callback when an item's remove button is clicked (requires removable). */
+  onItemRemove?: (id: string) => void;
 }
 
 /**
@@ -45,7 +50,7 @@ interface DropdownMenuProps {
  * - Disabled items shown but not clickable
  * - Separators for visual grouping
  */
-export function DropdownMenu({ label, items, onSelect }: DropdownMenuProps) {
+export function DropdownMenu({ label, items, onSelect, onItemRemove }: DropdownMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [activeSubmenu, setActiveSubmenu] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -123,6 +128,19 @@ export function DropdownMenu({ label, items, onSelect }: DropdownMenuProps) {
         <span className="menu-item-label">{item.label}</span>
         {item.shortcut && <span className="menu-item-shortcut">{item.shortcut}</span>}
         {item.submenu && <span className="menu-item-arrow">▸</span>}
+        {item.removable && onItemRemove && (
+          <button
+            className="menu-item-remove"
+            aria-label={`Remove ${item.label}`}
+            title={`Remove ${item.label}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              onItemRemove(item.id);
+            }}
+          >
+            <X className="w-3 h-3" />
+          </button>
+        )}
         {item.submenu && activeSubmenu === item.id && (
           <div className="menu-submenu">
             {item.submenu.map(renderItem)}

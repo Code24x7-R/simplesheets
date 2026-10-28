@@ -51,6 +51,46 @@ describe('mru', () => {
       localStorage.setItem('simplesheets:mru', '%%%not-json%%%');
       expect(loadMRU()).toEqual([]);
     });
+
+    it('migrates v1 entries by dropping unknown fields and defaulting optional fields', () => {
+      localStorage.setItem('simplesheets:mru', JSON.stringify([
+        {
+          id: 'v1',
+          name: 'Budget.ssjson',
+          size: 100,
+          timestamp: 1000,
+          source: 'local',
+          path: '/docs/Budget.ssjson',
+          obsoleteField: 'should be dropped',
+        },
+      ]));
+
+      const entries = loadMRU();
+      expect(entries).toHaveLength(1);
+      expect(entries[0].id).toBe('v1');
+      expect(entries[0].path).toBe('/docs/Budget.ssjson');
+      expect(entries[0].handleId).toBeUndefined();
+      expect(entries[0].canReopen).toBeUndefined();
+      expect((entries[0] as unknown as Record<string, unknown>).obsoleteField).toBeUndefined();
+    });
+
+    it('preserves v2 fields (handleId, canReopen)', () => {
+      localStorage.setItem('simplesheets:mru', JSON.stringify([
+        {
+          id: 'v2',
+          name: 'Budget.ssjson',
+          size: 100,
+          timestamp: 1000,
+          source: 'local',
+          handleId: 'handle-1',
+          canReopen: true,
+        },
+      ]));
+
+      const entries = loadMRU();
+      expect(entries[0].handleId).toBe('handle-1');
+      expect(entries[0].canReopen).toBe(true);
+    });
   });
 
   describe('addMRUEntry', () => {
@@ -102,6 +142,30 @@ describe('mru', () => {
 
       const entries = loadMRU();
       expect(entries).toHaveLength(2);
+    });
+
+    it('deduplicates .ssjson and .json names as the same document', () => {
+      addMRUEntry({ name: 'budget.json', size: 100, source: 'local', timestamp: 1000 });
+      addMRUEntry({ name: 'budget.ssjson', size: 200, source: 'local', timestamp: 2000 });
+
+      const entries = loadMRU();
+      expect(entries).toHaveLength(1);
+      // The newer entry's name wins.
+      expect(entries[0].name).toBe('budget.ssjson');
+      expect(entries[0].timestamp).toBe(2000);
+    });
+
+    it('stores v2 handle metadata', () => {
+      const entries = addMRUEntry({
+        name: 'Budget.ssjson',
+        size: 1024,
+        source: 'local',
+        handleId: 'ih-1',
+        canReopen: true,
+      });
+
+      expect(entries[0].handleId).toBe('ih-1');
+      expect(entries[0].canReopen).toBe(true);
     });
 
     it('caps the list at MAX_ENTRIES (10)', () => {

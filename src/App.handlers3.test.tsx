@@ -62,16 +62,14 @@ describe('App - Menu Handlers', () => {
     expect(screen.getByText('Ready')).toBeInTheDocument();
   });
 
-  it('File → Save… opens cloud modal and triggers download', async () => {
+  it('File → Save triggers an immediate download', async () => {
     URL.createObjectURL = jest.fn(() => 'blob:mock');
     URL.revokeObjectURL = jest.fn();
     render(<App />);
     fireEvent.click(screen.getByText('File'));
-    fireEvent.click(screen.getByText('Save…'));
-    // Cloud modal should appear
-    expect(screen.getByText('Save to Cloud')).toBeInTheDocument();
-    // Click Save to File to trigger download
-    fireEvent.click(screen.getByText('Save to File'));
+    fireEvent.click(screen.getByText('Save'));
+    // No cloud modal — immediate download
+    expect(screen.queryByText('Save to Cloud')).not.toBeInTheDocument();
     // Status message appears (async via dynamic import)
     await waitFor(() => {
       const statusBar = screen.getByTestId('status-message');

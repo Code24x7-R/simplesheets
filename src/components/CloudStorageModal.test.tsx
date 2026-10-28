@@ -49,6 +49,7 @@ describe('CloudStorageModal', () => {
   const originalRevokeObjectURL = URL.revokeObjectURL;
 
   beforeEach(() => {
+    localStorage.clear();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (URL as any).createObjectURL = jest.fn().mockReturnValue('blob:mock-url');
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -86,7 +87,7 @@ describe('CloudStorageModal', () => {
           onOpenDocument={jest.fn()}
         />,
       );
-      expect(screen.getByText('Save to Cloud')).toBeInTheDocument();
+      expect(screen.getByText('Share')).toBeInTheDocument();
     });
 
     it('renders the open modal with correct title', () => {
@@ -248,7 +249,7 @@ describe('CloudStorageModal', () => {
           onOpenDocument={jest.fn()}
         />,
       );
-      fireEvent.click(screen.getByText('Save to Cloud'));
+      fireEvent.click(screen.getByText('Share'));
       expect(onClose).not.toHaveBeenCalled();
     });
 
@@ -500,7 +501,7 @@ describe('CloudStorageModal', () => {
       expect(screen.queryByText('Google Drive')).not.toBeInTheDocument();
     });
 
-    it('shows an error when connecting to a cloud provider (not configured)', async () => {
+    it('shows a setup invite when a cloud provider is selected', () => {
       render(
         <CloudStorageModal
           isOpen={true}
@@ -514,10 +515,51 @@ describe('CloudStorageModal', () => {
       fireEvent.click(screen.getByText('Advanced: cloud accounts'));
       fireEvent.click(screen.getByText('Google Drive'));
 
-      await waitFor(() => {
-        expect(screen.getByRole('alert')).toBeInTheDocument();
-      });
-      expect(screen.getByText(/Google Drive integration requires OAuth/)).toBeInTheDocument();
+      expect(screen.getByText('Connect Google Drive')).toBeInTheDocument();
+      expect(screen.getByText(/requires one-time setup/)).toBeInTheDocument();
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    });
+
+    it('returns to home view via Back from the invite', () => {
+      render(
+        <CloudStorageModal
+          isOpen={true}
+          onClose={jest.fn()}
+          mode="save"
+          workbook={makeWorkbook()}
+          onOpenDocument={jest.fn()}
+        />,
+      );
+
+      fireEvent.click(screen.getByText('Advanced: cloud accounts'));
+      fireEvent.click(screen.getByText('OneDrive'));
+      expect(screen.getByText('Connect OneDrive')).toBeInTheDocument();
+
+      fireEvent.click(screen.getByText('← Back'));
+      expect(screen.getByText('Save to File')).toBeInTheDocument();
+      expect(screen.queryByText('Connect OneDrive')).not.toBeInTheDocument();
+    });
+
+    it('hides providers after dismiss-forever and can show them again', () => {
+      render(
+        <CloudStorageModal
+          isOpen={true}
+          onClose={jest.fn()}
+          mode="save"
+          workbook={makeWorkbook()}
+          onOpenDocument={jest.fn()}
+        />,
+      );
+
+      fireEvent.click(screen.getByText('Advanced: cloud accounts'));
+      fireEvent.click(screen.getByText('S3-Compatible'));
+      fireEvent.click(screen.getByText("Don't show again"));
+
+      expect(screen.getByText('Cloud accounts hidden — show again')).toBeInTheDocument();
+      expect(screen.queryByText('Advanced: cloud accounts')).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByText('Cloud accounts hidden — show again'));
+      expect(screen.getByText('Advanced: cloud accounts')).toBeInTheDocument();
     });
   });
 
@@ -533,9 +575,13 @@ describe('CloudStorageModal', () => {
         />,
       );
 
-      // Trigger an error via cloud connect
-      fireEvent.click(screen.getByText('Advanced: cloud accounts'));
-      fireEvent.click(screen.getByText('Google Drive'));
+      // Trigger an error via clipboard failure
+      const writeText = jest.fn().mockRejectedValue(new Error('denied'));
+      Object.defineProperty(navigator, 'clipboard', {
+        value: { writeText },
+        configurable: true,
+      });
+      fireEvent.click(screen.getByText('Copy Link'));
 
       await waitFor(() => {
         expect(screen.getByRole('alert')).toBeInTheDocument();
@@ -590,7 +636,7 @@ describe('CloudStorageModal', () => {
 
       // The filename input in the provider view isn't shown in home view,
       // but we can verify the modal opened correctly
-      expect(screen.getByText('Save to Cloud')).toBeInTheDocument();
+      expect(screen.getByText('Share')).toBeInTheDocument();
     });
   });
 });

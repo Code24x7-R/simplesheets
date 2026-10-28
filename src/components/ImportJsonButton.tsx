@@ -2,10 +2,11 @@
 // Copyright (c) 2026 Richard Robertson
 import { useCallback, useRef, forwardRef } from 'react';
 import { importJson } from '../services/jsonService';
-import type { Workbook } from '../types';
+import { ACCEPT_NATIVE } from '../utils/fileTypes';
+import type { IncomingImport } from '../utils/importScope';
 
 interface ImportJsonButtonProps {
-  onImport: (workbook: Workbook) => void;
+  onImport: (payload: IncomingImport) => void;
   onError?: (message: string) => void;
 }
 
@@ -30,7 +31,7 @@ export const ImportJsonButton = forwardRef<HTMLButtonElement, ImportJsonButtonPr
         const text = evt.target?.result as string;
         const result = importJson(text);
         if (result.success && result.workbook) {
-          onImport(result.workbook);
+          onImport({ workbook: result.workbook, fileName: file.name, kind: 'json' });
         } else {
           onError?.(result.error ?? 'Import failed');
         }
@@ -46,7 +47,7 @@ export const ImportJsonButton = forwardRef<HTMLButtonElement, ImportJsonButtonPr
       <input
         ref={inputRef}
         type="file"
-        accept=".json"
+        accept={ACCEPT_NATIVE}
         className="hidden"
         onChange={handleFileChange}
       />

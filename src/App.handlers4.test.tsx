@@ -97,7 +97,7 @@ describe('App - Export Menu Actions', () => {
     render(<App />);
     fireEvent.click(screen.getByText('File'));
     fireEvent.click(screen.getByText('Export'));
-    fireEvent.click(screen.getByText('Excel (.xlsx)'));
+    fireEvent.click(screen.getByText('Excel — all sheets (.xlsx)'));
     // Filename modal should appear
     expect(screen.getByText('Export Excel')).toBeInTheDocument();
     // Confirm the export
@@ -109,21 +109,9 @@ describe('App - Export Menu Actions', () => {
     render(<App />);
     fireEvent.click(screen.getByText('File'));
     fireEvent.click(screen.getByText('Export'));
-    fireEvent.click(screen.getByText('CSV (.csv)'));
+    fireEvent.click(screen.getByText('CSV — current sheet (.csv)'));
     // Filename modal should appear
     expect(screen.getByText('Export CSV')).toBeInTheDocument();
-    // Confirm the export
-    fireEvent.click(screen.getByText('Save'));
-    expect(screen.getByTestId('status-message')).toBeInTheDocument();
-  });
-
-  it('File → Export → JSON shows filename modal', () => {
-    render(<App />);
-    fireEvent.click(screen.getByText('File'));
-    fireEvent.click(screen.getByText('Export'));
-    fireEvent.click(screen.getByText('JSON (.json)'));
-    // Filename modal should appear
-    expect(screen.getByText('Export JSON')).toBeInTheDocument();
     // Confirm the export
     fireEvent.click(screen.getByText('Save'));
     expect(screen.getByTestId('status-message')).toBeInTheDocument();
@@ -136,7 +124,7 @@ describe('App - Export Menu Actions', () => {
 
     fireEvent.click(screen.getByText('File'));
     fireEvent.click(screen.getByText('Export'));
-    fireEvent.click(screen.getByText('JSON (.json)'));
+    fireEvent.click(screen.getByText('Excel — all sheets (.xlsx)'));
 
     const input = screen.getByPlaceholderText('Enter filename') as HTMLInputElement;
     fireEvent.change(input, { target: { value: 'MyName' } });
@@ -154,7 +142,7 @@ describe('App - Export Menu Actions', () => {
     render(<App />);
     fireEvent.click(screen.getByText('File'));
     fireEvent.click(screen.getByText('Export'));
-    fireEvent.click(screen.getByText('PDF (.pdf)'));
+    fireEvent.click(screen.getByText('PDF — current sheet (.pdf)'));
     // Filename modal should appear
     expect(screen.getByText('Export PDF')).toBeInTheDocument();
     // Confirm the export
@@ -188,10 +176,10 @@ describe('App - Find & Replace', () => {
 });
 
 describe('App - Load Demo', () => {
-  it('File → Load Demo loads demo data', () => {
+  it('Help → Load Demo Workbook loads demo data', () => {
     render(<App />);
-    fireEvent.click(screen.getByText('File'));
-    fireEvent.click(screen.getByText('Load Demo'));
+    fireEvent.click(screen.getByText('Help'));
+    fireEvent.click(screen.getByText('Load Demo Workbook'));
     // Should load demo data (no error thrown)
     expect(screen.getByText('File')).toBeInTheDocument();
   });

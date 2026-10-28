@@ -1,7 +1,18 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
-import { readFileAsText, readWorkbookFile, ACCEPTED_FILE_TYPES } from './fileIO';
+import { readFileAsText, readWorkbookFile, readSpreadsheetFile, ACCEPTED_FILE_TYPES } from './fileIO';
 import type { Workbook } from '../types';
+
+jest.mock('../services/csvService', () => ({
+  importCsv: jest.fn(),
+  detectDelimiter: jest.fn(() => ','),
+}));
+jest.mock('../services/excelImport', () => ({
+  importExcelFile: jest.fn(),
+}));
+
+import { importCsv, detectDelimiter } from '../services/csvService';
+import { importExcelFile } from '../services/excelImport';
 
 /** Create a minimal valid workbook JSON string. */
 function makeWorkbookJson(): { json: string; wb: Workbook } {
@@ -97,6 +108,36 @@ describe('fileIO', () => {
     it('includes .ssjson and .json extensions', () => {
       expect(ACCEPTED_FILE_TYPES).toContain('.ssjson');
       expect(ACCEPTED_FILE_TYPES).toContain('.json');
+    });
+  });
+
+  describe('readSpreadsheetFile', () => {
+    const wb = { id: 'x', title: 'X', sheets: [], activeSheetIndex: 0 } as unknown as Workbook;
+
+    it('routes .xlsx through importExcelFile', async () => {
+      jest.mocked(importExcelFile).mockResolvedValue({ success: true, workbook: wb, sheetCount: 1, cellCount: 0 });
+      const file = new File(['x'], 'data.xlsx');
+      await expect(readSpreadsheetFile(file)).resolves.toBe(wb);
+      expect(importExcelFile).toHaveBeenCalledWith(file);
+    });
+
+    it('routes .csv through importCsv with a detected delimiter', async () => {
+      jest.mocked(detectDelimiter).mockReturnValue(';');
+      jest.mocked(importCsv).mockReturnValue({ success: true, workbook: wb, rowCount: 1, colCount: 1 });
+      const file = new File(['a;b'], 'data.csv');
+      const spy = jest.spyOn(FileReader.prototype, 'readAsText').mockImplementation(function(this: FileReader) {
+        Object.defineProperty(this, 'result', { value: 'a;b' });
+        this.onload?.({ target: this } as unknown as ProgressEvent<FileReader>);
+      });
+      await expect(readSpreadsheetFile(file)).resolves.toBe(wb);
+      expect(importCsv).toHaveBeenCalledWith('a;b', { delimiter: ';' });
+      spy.mockRestore();
+    });
+
+    it('throws when Excel import fails', async () => {
+      jest.mocked(importExcelFile).mockResolvedValue({ success: false, error: 'bad', sheetCount: 0, cellCount: 0 });
+      const file = new File(['x'], 'data.xlsx');
+      await expect(readSpreadsheetFile(file)).rejects.toThrow('bad');
     });
   });
 });

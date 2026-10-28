@@ -174,13 +174,16 @@ describe('App - Search & Replace Apply', () => {
 });
 
 describe('App - Open Menu Handler', () => {
-  it('opens the cloud modal when File > Open… is selected', () => {
+  it('dispatches the open event when File > Open… is selected', () => {
+    const clickSpy = jest.spyOn(HTMLInputElement.prototype, 'click');
     render(<App />);
     fireEvent.click(screen.getByText('File'));
     fireEvent.click(screen.getByText('Open…'));
 
-    // Should open the CloudStorageModal in 'open' mode
-    expect(screen.getByText('Open from Cloud')).toBeInTheDocument();
+    // Should trigger the local file picker (not the cloud modal)
+    expect(clickSpy).toHaveBeenCalled();
+    clickSpy.mockRestore();
+    expect(screen.queryByText('Open from Cloud')).not.toBeInTheDocument();
   });
 });
 

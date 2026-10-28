@@ -24,6 +24,59 @@ This file tracks bugs in **existing** code, functions, and UI elements. New feat
 
 <!-- Bugs resolved in this session or recent past. Newest first. -->
 
+### 2026-10-28: B-045 — Recent files did not reopen (local entries only re-triggered the picker) ✅ VERIFIED
+- **Symptom**: Clicking a Recent file just opened a fresh file picker; the actual file was not reopened.
+- **Root cause**: No file handle/path was retained — MRU local entries had nothing to reopen from.
+- **Fix**: When the File System Access API is available, Open… retains the `FileSystemFileHandle` in IndexedDB (`handleStore`) and records `handleId` + `canReopen` in the MRU. Recent local entries reopen the handle (requesting read permission if needed); handle-less entries and unsupported browsers fall back to the picker and are labelled accordingly. Graceful degradation when IndexedDB is unavailable.
+- **Files**: `src/types/fileSystemAccess.d.ts` (new), `src/utils/fileHandles.ts` (new), `src/utils/handleStore.ts` (new), `src/utils/fileIO.ts` (`readSpreadsheetFile`), `src/hooks/useMRU.ts`, `src/App.tsx` (+ tests).
+
+
+### 2026-10-28: B-044 — Import was destructive and CSV/TSV delimiter auto-detection was missing ✅ VERIFIED
+- **Symptom**: Import always replaced the whole workbook with no scope choice, and MANUAL claimed TSV auto-detection while `importCsv` was hardcoded to `,`.
+- **Root cause**: Import buttons parsed immediately and replaced; `detectDelimiter` didn't exist and `importTsv` was unused.
+- **Fix**: Added `detectDelimiter` (`, ; \t |`) and an **Import Scope** dialog (Replace / Add as new sheet(s) / Insert at active cell) with CSV delimiter + header-row options and re-parse on confirm. Drag & drop onto the grid routes through the same scope pipeline. `applyReplace`/`applyAddSheets`/`applyInsertAtCell` are pure reducers in `src/utils/importScope.ts`.
+- **Files**: `src/services/csvService.ts`, `src/utils/importScope.ts` (new), `src/components/ImportScopeDialog.tsx` (new), `src/components/Import*Button.tsx`, `src/components/ImportExportBridge.tsx`, `src/App.tsx`, `MANUAL.md` (+ tests).
+
+
+### 2026-10-28: B-043 — Shared links (`#doc=`) never opened; recipients saw their own workbook ✅ VERIFIED
+- **Symptom**: Copy Link produced a shareable URL, but opening it showed the recipient's own last workbook instead of the shared document.
+- **Root cause**: `decodeDocFromUrl()` was never wired into app startup or `hashchange`; only `encodeDocToUrl()` was used. The `source:'url'` MRU branch also did `window.location.href = entry.path` (a no-op reload).
+- **Fix**: On mount and `hashchange`, a `#doc=` fragment is decoded and opened as a **read-only** snapshot (editing entry points and paste are guarded, formula bar is `readOnly`), the fragment is stripped via `history.replaceState`, the document is recorded in the MRU (`source:'url'`), and the Recent-files branch re-decodes the path instead of navigating.
+- **Files**: `src/App.tsx`, `src/components/FormulaBar.tsx`, `src/App.sharedLink.test.tsx` (new).
+
+
+### 2026-10-28: B-041 — New / Load Demo / Open destroyed work with no warning ✅ VERIFIED
+- **Symptom**: Creating a new workbook, loading the demo, or opening/importing a file replaced the current workbook immediately; the 500 ms autosave then overwrote the recovery slot, so the work was unrecoverable.
+- **Root cause**: No dirty-state model existed; `handleNewSheet`/`handleImport` reset history unconditionally, and autosave used a single global slot.
+- **Fix**: Added a derived `isDirty` flag (workbook vs last-clean snapshot) with a `window.confirm` guard on New/Load Demo/Open/Import when dirty. Before a dirty discard, the current workbook is snapshotted to a new `simplesheets:previous-session` recovery slot, and the app offers to restore it on the next launch.
+- **Files**: `src/App.tsx`, `src/services/storageService.ts` (+ tests).
+
+### 2026-10-28: B-042 — Cloud provider buttons were a dead end (error banner) ✅ VERIFIED
+- **Symptom**: Clicking Google Drive / OneDrive / S3 under "Advanced: cloud accounts" showed an error banner — a dead end inside the primary Save/Open flow.
+- **Root cause**: `handleConnect` threw a stub error with no actionable next step; `busy`/`loadingFiles`/`saving` scaffolding and the unreachable `ProviderView` were left in place.
+- **Fix**: Selecting a provider now opens a "Connect (setup required)" invite panel (OAuth checklist + pointer to the zero-config options), with Back and "Don't show again" (persisted). Removed the dead `provider`/`files`/`busy`/`loadingFiles`/`saving` state and `ProviderView`.
+- **Files**: `src/components/CloudStorageModal.tsx` (+ tests).
+
+
+### 2026-10-28: B-038 — `.ssjson` files were not selectable in open/import pickers ✅ VERIFIED
+- **Symptom**: Saving produced a `.ssjson` file, but File → Open and Import → JSON could not select it (the picker filtered to `.json` only).
+- **Root cause**: `ImportExportBridge`'s open input and `ImportJsonButton` hardcoded `accept=".json"`/`".json,application/json"`; there was no shared file-type definition.
+- **Fix**: New `src/utils/fileTypes.ts` is the single source of truth (`ACCEPT_NATIVE` = `.ssjson,.json,application/json`, plus import/all lists and `normalizeFileName`). Both pickers now use `ACCEPT_NATIVE`; `fileIO.ACCEPTED_FILE_TYPES` re-exports it for the cloud modal.
+- **Files**: `src/utils/fileTypes.ts` (new), `src/utils/fileIO.ts`, `src/components/ImportExportBridge.tsx`, `src/components/ImportJsonButton.tsx` (+ tests).
+
+### 2026-10-28: B-039 — MRU showed duplicated extensions (`budget.ssjson.ssjson`) ✅ VERIFIED
+- **Symptom**: Saving a file named with the extension already present produced an MRU entry with a doubled extension.
+- **Root cause**: `handleSaveFile` unconditionally appended `.ssjson`.
+- **Fix**: `normalizeFileName` collapses repeated extensions; `handleSaveFile` uses it. MRU v2 also dedupes `.ssjson`/`.json` names (same document) and migrates v1 entries (drops unknown fields, adds optional `handleId`/`canReopen`).
+- **Files**: `src/utils/mru.ts`, `src/App.tsx` (+ tests).
+
+### 2026-10-28: B-040 — Import (Excel/CSV/JSON) never recorded the file in Recent ✅ VERIFIED
+- **Symptom**: Opening via File → Import did not add the file to the Recent list, unlike File → Open.
+- **Root cause**: `ImportExcelButton`/`ImportCsvButton`/`ImportJsonButton` called `onImport(workbook)` without the filename, so `App.handleImport` had no name to record. The bridge also duplicated the JSON read path with its own `FileReader`.
+- **Fix**: All three import buttons pass `file.name`; the bridge now routes through `readWorkbookFile` (single read path) and passes the filename.
+- **Files**: `src/components/ImportExcelButton.tsx`, `ImportCsvButton.tsx`, `ImportJsonButton.tsx`, `ImportExportBridge.tsx` (+ tests).
+
+
 ### 2026-10-25: B-037 — PDF `fit-to-page` rendered unreadable ~3px text (regression) ✅ VERIFIED
 - **Symptom**: Exporting the demo Formula Guide produced a single A4 page whose grid text was unreadable — only the title was legible, and it was drawn twice. File was ~28 KB instead of ~1 MB.
 - **Root cause**: The scale was applied with CSS `zoom` inside html2pdf's **full-page-width** canvas. The content was rendered at the scaled size but the canvas stayed page-width, so the PDF upscaled a tiny render. A `fit-to-page` scale of ~0.294× gave ~3 px text regardless of canvas resolution. The earlier measurement code had silently returned 0, so it never scaled (and looked fine at 4 pages) — fixing the measurement exposed this.

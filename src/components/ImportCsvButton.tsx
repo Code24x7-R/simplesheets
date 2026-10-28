@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
 import { useCallback, useRef, forwardRef } from 'react';
-import { importCsv } from '../services/csvService';
-import type { Workbook } from '../types';
+import { importCsv, detectDelimiter } from '../services/csvService';
+import type { IncomingImport } from '../utils/importScope';
 
 interface ImportCsvButtonProps {
-  onImport: (workbook: Workbook) => void;
+  onImport: (payload: IncomingImport) => void;
   onError?: (message: string) => void;
 }
 
@@ -28,9 +28,10 @@ export const ImportCsvButton = forwardRef<HTMLButtonElement, ImportCsvButtonProp
       const reader = new FileReader();
       reader.onload = (evt) => {
         const text = evt.target?.result as string;
-        const result = importCsv(text);
+        const detected = detectDelimiter(text);
+        const result = importCsv(text, { delimiter: detected });
         if (result.success && result.workbook) {
-          onImport(result.workbook);
+          onImport({ workbook: result.workbook, fileName: file.name, kind: 'csv', rawText: text, detectedDelimiter: detected });
         } else {
           onError?.(result.error ?? 'Import failed');
         }

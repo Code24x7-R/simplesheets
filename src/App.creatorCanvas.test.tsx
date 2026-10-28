@@ -120,6 +120,7 @@ describe('App Creator Canvas Integration', () => {
     expect(screen.getByRole('button', { name: '🎨 Canvas' })).toBeInTheDocument();
 
     // Create new blank workbook
+    jest.spyOn(window, 'confirm').mockReturnValueOnce(true);
     fireEvent.click(screen.getByText('File'));
     fireEvent.click(screen.getByText('New'));
 

@@ -53,6 +53,7 @@ describe('ImportExportBridge', () => {
     workbook: createTestWorkbook(),
     sheet: createTestSheet(),
     onImport: jest.fn(),
+    onOpenDocument: jest.fn(),
     onError: jest.fn(),
   };
 
@@ -164,10 +165,18 @@ describe('ImportExportBridge', () => {
     clickSpy.mockRestore();
   });
 
-  it('handleOpenFileChange calls onImport on valid JSON', () => {
-    const onImport = jest.fn();
+  it('open input accepts both .ssjson and .json', () => {
+    render(<PrintSetupProvider><ImportExportBridge {...defaultProps} /></PrintSetupProvider>);
+    const inputs = document.querySelectorAll('input[type="file"]');
+    const input = inputs[inputs.length - 1] as HTMLInputElement;
+    expect(input.accept).toContain('.ssjson');
+    expect(input.accept).toContain('.json');
+  });
+
+  it('handleOpenFileChange calls onOpenDocument on valid JSON', async () => {
+    const onOpenDocument = jest.fn();
     const onError = jest.fn();
-    render(<PrintSetupProvider><ImportExportBridge {...defaultProps} onImport={onImport} onError={onError} /></PrintSetupProvider>);
+    render(<PrintSetupProvider><ImportExportBridge {...defaultProps} onOpenDocument={onOpenDocument} onError={onError} /></PrintSetupProvider>);
 
     const validWb = JSON.stringify({ id: 'wb1', title: 'Imported', sheets: [], activeSheetIndex: 0, lastModified: 0 });
     const file = new File([validWb], 'test.json', { type: 'application/json' });
@@ -184,18 +193,18 @@ describe('ImportExportBridge', () => {
       this.onload?.({ target: this } as unknown as ProgressEvent<FileReader>);
     });
 
-    act(() => {
+    await act(async () => {
       Object.defineProperty(input, 'files', { value: [file], configurable: true });
       const changeEvent = new Event('change', { bubbles: true });
       input.dispatchEvent(changeEvent);
     });
 
-    expect(onImport).toHaveBeenCalled();
+    expect(onOpenDocument).toHaveBeenCalled();
     expect(onError).not.toHaveBeenCalled();
     readAsTextSpy.mockRestore();
   });
 
-  it('handleOpenFileChange calls onError on invalid JSON', () => {
+  it('handleOpenFileChange calls onError on invalid JSON', async () => {
     const onError = jest.fn();
     render(<PrintSetupProvider><ImportExportBridge {...defaultProps} onError={onError} /></PrintSetupProvider>);
 
@@ -210,7 +219,7 @@ describe('ImportExportBridge', () => {
       this.onload?.({ target: this } as unknown as ProgressEvent<FileReader>);
     });
 
-    act(() => {
+    await act(async () => {
       Object.defineProperty(input, 'files', { value: [file], configurable: true });
       const changeEvent = new Event('change', { bubbles: true });
       input.dispatchEvent(changeEvent);
@@ -220,7 +229,7 @@ describe('ImportExportBridge', () => {
     readAsTextSpy.mockRestore();
   });
 
-  it('handleOpenFileChange calls onError with fallback when importJson returns no error', () => {
+  it('handleOpenFileChange calls onError with fallback when importJson returns no error', async () => {
     const onError = jest.fn();
     // Mock importJson to return success: false without error field
     jest.mocked(importJson).mockReturnValueOnce({ success: false });
@@ -238,13 +247,13 @@ describe('ImportExportBridge', () => {
       this.onload?.({ target: this } as unknown as ProgressEvent<FileReader>);
     });
 
-    act(() => {
+    await act(async () => {
       Object.defineProperty(input, 'files', { value: [file], configurable: true });
       const changeEvent = new Event('change', { bubbles: true });
       input.dispatchEvent(changeEvent);
     });
 
-    expect(onError).toHaveBeenCalledWith('Open failed');
+    expect(onError).toHaveBeenCalledWith('Invalid workbook file');
     readAsTextSpy.mockRestore();
   });
 
@@ -261,7 +270,7 @@ describe('ImportExportBridge', () => {
       input.dispatchEvent(new Event('change'));
     });
 
-    expect(defaultProps.onImport).not.toHaveBeenCalled();
+    expect(defaultProps.onOpenDocument).not.toHaveBeenCalled();
     expect(defaultProps.onError).not.toHaveBeenCalled();
   });
 });

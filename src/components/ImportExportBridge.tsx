@@ -8,13 +8,18 @@ import { ExportExcelButton } from './ExportExcelButton';
 import { ExportCsvButton } from './ExportCsvButton';
 import { ExportJsonButton } from './ExportJsonButton';
 import { ExportPdfButton } from './ExportPdfButton';
-import { importJson } from '../services/jsonService';
+import { readSpreadsheetFile } from '../utils/fileIO';
+import { ACCEPT_ALL } from '../utils/fileTypes';
+import type { IncomingImport } from '../utils/importScope';
 import type { Workbook, Sheet } from '../types';
 
 interface ImportExportBridgeProps {
   workbook: Workbook;
   sheet: Sheet;
-  onImport: (wb: Workbook, filename?: string) => void;
+  /** Called by the three import buttons with a parsed import payload. */
+  onImport: (payload: IncomingImport) => void;
+  /** Called when a native document is opened from the file picker. */
+  onOpenDocument: (wb: Workbook, filename?: string) => void;
   onError: (msg: string) => void;
 }
 
@@ -23,7 +28,7 @@ interface ImportExportBridgeProps {
  * import/export components.  The menu dispatches CustomEvents; this
  * component forwards them to the appropriate hidden file input.
  */
-export function ImportExportBridge({ workbook, sheet, onImport, onError }: ImportExportBridgeProps) {
+export function ImportExportBridge({ workbook, sheet, onImport, onOpenDocument, onError }: ImportExportBridgeProps) {
   const excelRef = useRef<HTMLButtonElement>(null);
   const csvRef = useRef<HTMLButtonElement>(null);
   const jsonRef = useRef<HTMLButtonElement>(null);
@@ -39,23 +44,18 @@ export function ImportExportBridge({ workbook, sheet, onImport, onError }: Impor
   }, []);
 
   const handleOpenFileChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = (evt) => {
-        const text = evt.target?.result as string;
-        const result = importJson(text);
-        if (result.success && result.workbook) {
-          onImport(result.workbook, file.name);
-        } else {
-          onError(result.error ?? 'Open failed');
-        }
-      };
-      reader.readAsText(file);
       e.target.value = '';
+      if (!file) return;
+      try {
+        const wb = await readSpreadsheetFile(file);
+        onOpenDocument(wb, file.name);
+      } catch (err) {
+        onError(err instanceof Error ? err.message : 'Open failed');
+      }
     },
-    [onImport, onError],
+    [onOpenDocument, onError],
   );
 
   useEffect(() => {
@@ -96,7 +96,7 @@ export function ImportExportBridge({ workbook, sheet, onImport, onError }: Impor
       <input
         ref={openInputRef}
         type="file"
-        accept=".json,application/json"
+        accept={ACCEPT_ALL}
         onChange={handleOpenFileChange}
       />
       <ExportExcelButton ref={exportExcelRef} workbook={workbook} />

@@ -253,7 +253,7 @@ describe('App - Import/Export Bridge', () => {
     const exportMenu = screen.getByText('Export').closest('.menu-item') as HTMLElement;
     fireEvent.click(exportMenu);
     // Click CSV export
-    const csvExport = screen.getByText('CSV (.csv)').closest('.menu-item') as HTMLElement;
+    const csvExport = screen.getByText('CSV — current sheet (.csv)').closest('.menu-item') as HTMLElement;
     fireEvent.click(csvExport);
     // Should trigger download (no crash)
     expect(screen.getByTestId('status-message')).toBeInTheDocument();
@@ -264,7 +264,7 @@ describe('App - Import/Export Bridge', () => {
     fireEvent.click(screen.getByText('File'));
     const exportMenu = screen.getByText('Export').closest('.menu-item') as HTMLElement;
     fireEvent.click(exportMenu);
-    const pdfExport = screen.getByText('PDF (.pdf)').closest('.menu-item') as HTMLElement;
+    const pdfExport = screen.getByText('PDF — current sheet (.pdf)').closest('.menu-item') as HTMLElement;
     fireEvent.click(pdfExport);
     expect(screen.getByTestId('status-message')).toBeInTheDocument();
   });

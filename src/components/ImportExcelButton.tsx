@@ -2,11 +2,11 @@
 // Copyright (c) 2026 Richard Robertson
 import { useCallback, useRef, useState, forwardRef } from 'react';
 import { importExcelFile } from '../services/excelImport';
-import type { Workbook } from '../types';
+import type { IncomingImport } from '../utils/importScope';
 
 interface ImportExcelButtonProps {
   /** Callback when a workbook is successfully imported. */
-  onImport: (workbook: Workbook) => void;
+  onImport: (payload: IncomingImport) => void;
   /** Callback for error messages. */
   onError?: (message: string) => void;
 }
@@ -33,7 +33,7 @@ export const ImportExcelButton = forwardRef<HTMLButtonElement, ImportExcelButton
       try {
         const result = await importExcelFile(file);
         if (result.success && result.workbook) {
-          onImport(result.workbook);
+          onImport({ workbook: result.workbook, fileName: file.name, kind: 'excel' });
         } else {
           onError?.(result.error ?? 'Import failed');
         }

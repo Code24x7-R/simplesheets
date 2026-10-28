@@ -6,6 +6,78 @@
 
 ---
 
+---
+
+---
+
+---
+
+---
+
+---
+
+---
+
+### 2026-10-28 [FEATURE] IO workflow audit — T12 (File System Access handles + IndexedDB recents)
+- **What**: Final batch of the IO/UX plan (`docs/IO_UX_PLAN.md`).
+  - Ambient type shim for `showOpenFilePicker` / `FileSystemFileHandle` permission helpers.
+  - `fileHandles.ts`: `supportsFileSystemAccess`, `pickFileWithHandle`, `readFileFromHandle`, `pickFileWithInput` (fallback).
+  - `handleStore.ts`: IndexedDB-backed handle store with graceful degradation (null/false when IndexedDB is unavailable).
+  - `readSpreadsheetFile` in `fileIO.ts` centralizes extension routing (Excel/CSV/TSV/JSON) — now shared by the bridge open input and the native picker.
+  - `Open…` retains the handle + records MRU `handleId`/`canReopen`; Recent local entries reopen via the handle (permission re-prompt) and fall back to the picker otherwise. `useMRU` opts extended with `handleId`/`canReopen`.
+- **Tests**: +21 (fileHandles ×10, handleStore ×4, fileIO readSpreadsheetFile ×3, App integration ×4). Total: 4478 passing / 198 suites.
+- **Files**: `src/types/fileSystemAccess.d.ts` (new), `src/utils/fileHandles.ts` (new), `src/utils/handleStore.ts` (new), `src/utils/fileIO.ts`, `src/hooks/useMRU.ts`, `src/App.tsx`, `src/components/ImportExportBridge.tsx` (+ tests).
+- **Results**: lint clean, type-check clean, build OK, 4478 tests pass.
+
+### 2026-10-28 [FEATURE] IO workflow audit — T11 (File menu restructure: Save/Open/Share, Recent removal, Load Demo → Help)
+- **What**: Final UI batch of the IO/UX plan (`docs/IO_UX_PLAN.md`).
+  - **File menu**: `New / Open… / Recent▸ / Save (Ctrl+S) / Save As… (Ctrl+Shift+S) / Import▸ / Export▸ (scope-labelled, JSON removed) / Share▸ (Copy Link, Share File, Cloud accounts…) / Page Setup…`.
+  - **Save** = immediate `.ssjson` download (no modal); **Save As…** = filename prompt; **Open…** = local picker accepting `.ssjson/.json/.xlsx/.xls/.csv/.tsv/.txt` (bridge routes by extension).
+  - **Share▸** = Copy Link / Share File (direct) + Cloud accounts… (reuses the cloud modal, retitled to "Share").
+  - **Recent▸** now supports per-item remove (new `removable` + `onItemRemove` in `DropdownMenu`).
+  - **Load Demo** moved to `Help → Load Demo Workbook`.
+- **Tests**: updated MenuBar/App tests for new labels and behaviour; +5 MenuBar tests (Save/Save As/Open/Share/Recent remove/Help demo). Total: 4457 passing / 195 suites.
+- **Files**: `src/components/MenuBar.tsx`, `DropdownMenu.tsx`, `ImportExportBridge.tsx`, `CloudStorageModal.tsx`, `src/App.tsx`, `MANUAL.md` (+ tests).
+- **Results**: lint clean, type-check clean, build OK, 4457 tests pass.
+
+### 2026-10-28 [FEATURE] IO workflow audit — Batch C (import scope dialog, CSV/TSV options, drag & drop)
+- **What**: Fourth batch of the IO/UX plan (`docs/IO_UX_PLAN.md`).
+  - **Import scope**: after File → Import (Excel/CSV/JSON), a dialog offers Replace workbook / Add as new sheet(s) / Insert at active cell. Pure reducers in `src/utils/importScope.ts` (`applyReplace`, `applyAddSheets` with name de-duplication, `applyInsertAtCell` with offset/expansion).
+  - **CSV/TSV options**: `detectDelimiter` (`, ; \t |`) auto-detection, delimiter + header-row controls, re-parse on confirm.
+  - **Drag & drop**: dropping `.xlsx/.csv/.tsv/.txt/.json/.ssjson` on the grid routes through the same scope pipeline; unsupported types show a status error.
+  - Import buttons now emit a structured `IncomingImport`; the bridge separates `onImport` (buttons) from `onOpenDocument` (open picker).
+- **Tests**: +32 (csvService detectDelimiter ×7, importScope reducers ×9, ImportScopeDialog ×8, App import-scope integration ×5, App drag & drop ×4, updated ImportButtons/ImportExportBridge). Total: 4453 passing / 195 suites.
+- **Files**: `src/services/csvService.ts`, `src/utils/importScope.ts` (new), `src/components/ImportScopeDialog.tsx` (new), `src/components/ImportExcelButton.tsx`, `ImportCsvButton.tsx`, `ImportJsonButton.tsx`, `ImportExportBridge.tsx`, `src/App.tsx`, `MANUAL.md` (+ tests).
+- **Results**: lint clean, type-check clean, build OK, 4453 tests pass.
+
+### 2026-10-28 [FEATURE] IO workflow audit — T8 (shared `#doc=` links open read-only)
+- **What**: Third batch of the IO/UX plan (`docs/IO_UX_PLAN.md`).
+  - Shared links now decode on mount **and** `hashchange`; the document opens as a read-only snapshot (`isReadOnly` guards cell typing, F2/double-click edit, formula-bar edit, and paste; formula bar input is `readOnly`).
+  - The `#doc=` fragment is stripped via `history.replaceState` after load; the document is recorded in the MRU as `source:'url'`; the Recent-files `url` branch re-decodes the path instead of a no-op `location.href` assignment.
+- **Tests**: +6 (`src/App.sharedLink.test.tsx`): decode on mount, fragment strip, MRU url entry, invalid fragment ignored, formula-bar readOnly, typing does not start editing. Total: 4420 passing / 191 suites.
+- **Files**: `src/App.tsx`, `src/components/FormulaBar.tsx`, `src/App.sharedLink.test.tsx` (new).
+- **Results**: lint clean, type-check clean, build OK, 4420 tests pass.
+
+### 2026-10-28 [FEATURE] IO workflow audit — Batch B (dirty-state confirm, session recovery, saved-state status, cloud invite)
+- **What**: Second batch of the IO/UX plan (`docs/IO_UX_PLAN.md`).
+  - **Dirty state + confirm**: `isDirty` (derived from workbook vs last-clean snapshot) and a `window.confirm` guard on New / Load Demo / Open / Import when there are unsaved changes.
+  - **Session recovery**: destructive replaces snapshot the discarded workbook to `simplesheets:previous-session`; a mount prompt offers to restore it (declining clears the slot).
+  - **Status-bar saved state**: footer shows `Unsaved changes` / `Saved · <name> · <relative time>` / `Not saved` / `Shared snapshot (read-only)` (read-only is a T8 precursor). New `formatRelativeTime` helper.
+  - **Cloud invite screen**: provider buttons open a "Connect (setup required)" panel (OAuth checklist, Back, "Don't show again" persisted); removed dead `provider`/`files`/`busy`/`loadingFiles`/`saving` state and `ProviderView`.
+- **Tests**: +23 (relativeTime ×6, storage recovery ×5, App save-state/confirm/restore ×8, CloudStorageModal invite ×4). Total: 4414 passing / 190 suites.
+- **Files**: `src/App.tsx`, `src/services/storageService.ts`, `src/utils/relativeTime.ts` (new), `src/components/CloudStorageModal.tsx`, `src/App.saveState.test.tsx` (new) (+ tests).
+- **Results**: lint clean, type-check clean, build OK, 4414 tests pass.
+
+### 2026-10-28 [FEATURE] IO workflow audit — Batch A (file-type unification, MRU v2, single read path, dead-code removal)
+- **What**: First low-risk batch of the IO/UX plan (`docs/IO_UX_PLAN.md`).
+  - New `src/utils/fileTypes.ts`: `.ssjson` native, `.json` legacy, shared accept lists (`ACCEPT_NATIVE`, `ACCEPT_IMPORT`, `ACCEPT_ALL`), `stripKnownExtension`, `normalizeFileName`.
+  - MRU v2: optional `handleId`/`canReopen`, v1 migration (drop unknown fields), dedupe `.ssjson`/`.json` as the same document, normalized names on save.
+  - Single JSON read path: `ImportExportBridge` now uses `readWorkbookFile`; all three import buttons pass `file.name` so every open/import records MRU.
+  - Removed dead named-save API from `storageService` (`saveWorkbook`/`loadWorkbook`/`listSaves`/`deleteSave`/`hasSave`).
+- **Tests**: +27 (fileTypes ×17, mru migration/dedupe/handle ×5, import button filename passing, bridge accept + read path, storage rewrite). Total: 4393 passing / 188 suites.
+- **Files**: `src/utils/fileTypes.ts` (new), `src/utils/fileIO.ts`, `src/utils/mru.ts`, `src/services/storageService.ts`, `src/components/ImportExcelButton.tsx`, `ImportCsvButton.tsx`, `ImportJsonButton.tsx`, `ImportExportBridge.tsx`, `src/App.tsx`, `docs/IO_UX_PLAN.md` (+ tests).
+- **Results**: lint clean, type-check clean, build OK, 4393 tests pass.
+
 ### 2026-10-25 [BUGFIX] PDF export: `fit-to-page` shrank content to unreadable size — default changed to `fit-to-width`
 - **Symptom**: Exporting the demo Formula Guide produced a single A4 page whose grid text was unreadable (only the title was legible, and it was drawn twice). The file was ~28 KB instead of ~1 MB.
 - **Root cause**: The PDF scale is applied with CSS `zoom` inside html2pdf's **full-page-width** canvas, so the content is rendered at the scaled size but the canvas is still page-width. A `fit-to-page` scale of ~0.294× therefore produced ~3 px text no matter what canvas resolution was used. (The earlier code had silently failed to measure the content, so it never scaled and looked fine at 4 pages.)

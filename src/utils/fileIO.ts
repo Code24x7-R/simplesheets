@@ -10,6 +10,10 @@
 
 import type { Workbook } from '../types';
 import { importJson } from '../services/jsonService';
+import { importCsv, detectDelimiter } from '../services/csvService';
+import { importExcelFile } from '../services/excelImport';
+
+export { ACCEPT_NATIVE as ACCEPTED_FILE_TYPES } from './fileTypes';
 
 /**
  * Read a File object and return its text contents.
@@ -51,7 +55,34 @@ export async function readWorkbookFile(file: File): Promise<Workbook> {
 }
 
 /**
- * Accepted file extensions for the open file picker.
- * Includes .ssjson (SimpleSheets native) and generic .json.
+ * Read any supported spreadsheet/document file and parse it as a Workbook.
+ * Routes by extension: Excel (.xlsx/.xls), CSV/TSV (.csv/.tsv/.txt), or the
+ * native JSON document (.ssjson/.json).
+ *
+ * @param file - The File to read.
+ * @returns Promise resolving to the parsed Workbook.
+ * @throws Error when the file is unsupported or cannot be parsed.
  */
-export const ACCEPTED_FILE_TYPES = '.ssjson,.json,application/json';
+export async function readSpreadsheetFile(file: File): Promise<Workbook> {
+  const name = file.name.toLowerCase();
+
+  if (name.endsWith('.xlsx') || name.endsWith('.xls')) {
+    const result = await importExcelFile(file);
+    if (!result.success || !result.workbook) {
+      throw new Error(result.error ?? 'Failed to import Excel');
+    }
+    return result.workbook;
+  }
+
+  if (name.endsWith('.csv') || name.endsWith('.tsv') || name.endsWith('.txt')) {
+    const text = await readFileAsText(file);
+    const result = importCsv(text, { delimiter: detectDelimiter(text) });
+    if (!result.success || !result.workbook) {
+      throw new Error(result.error ?? 'Failed to import CSV');
+    }
+    return result.workbook;
+  }
+
+  return readWorkbookFile(file);
+}
+

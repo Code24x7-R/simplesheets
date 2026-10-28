@@ -7,16 +7,19 @@ describe('MenuBar', () => {
   const defaultProps = {
     onNew: jest.fn(),
     onLoadDemo: jest.fn(),
+    onOpen: jest.fn(),
+    onSave: jest.fn(),
+    onSaveAs: jest.fn(),
     onImportExcel: jest.fn(),
     onImportCsv: jest.fn(),
     onImportJson: jest.fn(),
     onExportExcel: jest.fn(),
     onExportCsv: jest.fn(),
-    onExportJson: jest.fn(),
     onExportPdf: jest.fn(),
     onPageSetup: jest.fn(),
-    onSaveToCloud: jest.fn(),
-    onOpenFromCloud: jest.fn(),
+    onCopyShareLink: jest.fn(),
+    onShareFile: jest.fn(),
+    onCloudAccounts: jest.fn(),
     onUndo: jest.fn(),
     onRedo: jest.fn(),
     canUndo: true,
@@ -94,12 +97,13 @@ describe('MenuBar', () => {
     expect(screen.getByText('Help')).toBeTruthy();
   });
 
-  it('File menu shows New, Save…, Open… items', () => {
+  it('File menu shows New, Open…, Save, Save As… items', () => {
     render(<MenuBar {...defaultProps} />);
     fireEvent.click(screen.getByText('File'));
     expect(screen.getByText('New')).toBeTruthy();
-    expect(screen.getByText('Save…')).toBeTruthy();
     expect(screen.getByText('Open…')).toBeTruthy();
+    expect(screen.getByText('Save')).toBeTruthy();
+    expect(screen.getByText('Save As…')).toBeTruthy();
   });
 
   it('File menu shows Import and Export submenus', () => {
@@ -121,7 +125,7 @@ describe('MenuBar', () => {
     render(<MenuBar {...defaultProps} />);
     fireEvent.click(screen.getByText('File'));
     fireEvent.mouseEnter(screen.getByText('Export'));
-    fireEvent.click(screen.getByText('PDF (.pdf)'));
+    fireEvent.click(screen.getByText('PDF — current sheet (.pdf)'));
     expect(defaultProps.onExportPdf).toHaveBeenCalled();
   });
 
@@ -489,5 +493,57 @@ describe('MenuBar', () => {
     fireEvent.click(screen.getByText('Project / WBS'));
     fireEvent.click(screen.getByText('Simple WBS'));
     expect(onProjectNew).toHaveBeenCalledWith('simple-wbs');
+  });
+
+  it('File menu triggers Save and Save As', () => {
+    render(<MenuBar {...defaultProps} />);
+    fireEvent.click(screen.getByText('File'));
+    fireEvent.click(screen.getByText('Save'));
+    expect(defaultProps.onSave).toHaveBeenCalled();
+    fireEvent.click(screen.getByText('File'));
+    fireEvent.click(screen.getByText('Save As…'));
+    expect(defaultProps.onSaveAs).toHaveBeenCalled();
+  });
+
+  it('File menu triggers Open', () => {
+    render(<MenuBar {...defaultProps} />);
+    fireEvent.click(screen.getByText('File'));
+    fireEvent.click(screen.getByText('Open…'));
+    expect(defaultProps.onOpen).toHaveBeenCalled();
+  });
+
+  it('Share submenu triggers copy link, share file, and cloud accounts', () => {
+    render(<MenuBar {...defaultProps} />);
+    fireEvent.click(screen.getByText('File'));
+    fireEvent.mouseEnter(screen.getByText('Share'));
+    fireEvent.click(screen.getByText('Copy Link'));
+    expect(defaultProps.onCopyShareLink).toHaveBeenCalled();
+
+    fireEvent.click(screen.getByText('File'));
+    fireEvent.mouseEnter(screen.getByText('Share'));
+    fireEvent.click(screen.getByText('Share File'));
+    expect(defaultProps.onShareFile).toHaveBeenCalled();
+
+    fireEvent.click(screen.getByText('File'));
+    fireEvent.mouseEnter(screen.getByText('Share'));
+    fireEvent.click(screen.getByText('Cloud accounts…'));
+    expect(defaultProps.onCloudAccounts).toHaveBeenCalled();
+  });
+
+  it('Recent submenu shows entries and removes one on demand', () => {
+    const entry = { id: 'mru-1', name: 'Budget.ssjson', size: 10, timestamp: 1000, source: 'local' as const };
+    render(<MenuBar {...defaultProps} recentFiles={[entry]} />);
+    fireEvent.click(screen.getByText('File'));
+    fireEvent.mouseEnter(screen.getByText('Recent'));
+    expect(screen.getByText('Budget.ssjson')).toBeTruthy();
+    fireEvent.click(screen.getByLabelText('Remove Budget.ssjson'));
+    expect(defaultProps.onRemoveRecent).toHaveBeenCalledWith('mru-1');
+  });
+
+  it('Help menu shows and triggers Load Demo Workbook', () => {
+    render(<MenuBar {...defaultProps} />);
+    fireEvent.click(screen.getByText('Help'));
+    fireEvent.click(screen.getByText('Load Demo Workbook'));
+    expect(defaultProps.onLoadDemo).toHaveBeenCalled();
   });
 });

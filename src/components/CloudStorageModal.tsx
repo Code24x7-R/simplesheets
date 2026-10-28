@@ -1,15 +1,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
 /**
- * CloudStorageModal — Save to Cloud / Open from Cloud
+ * CloudStorageModal — Save / Open / Share
  *
- * A two-view modal:
- *  - Home view (no provider): userland actions (Copy Link, Share File,
- *    Save to File, Open from File) + Advanced collapsible for cloud accounts.
- *  - Provider view (after connecting): save form or file list.
- *
- * Userland actions require zero configuration — they work immediately on any
- * device. Cloud accounts are opt-in behind the Advanced collapsible.
+ * Zero-config actions (Copy Link, Share File, Save to File, Open from File)
+ * work immediately on any device. Cloud accounts are opt-in behind the
+ * Advanced collapsible; selecting one shows an invite/setup panel rather than
+ * a dead-end error, since OAuth credentials are required before any provider
+ * can be wired up.
  */
 
 import { useState, useRef, useEffect, useCallback } from 'react';
@@ -19,22 +17,17 @@ import {
   Link,
   Share2,
   Download,
-  Upload,
   FolderOpen,
   ChevronDown,
   ChevronRight,
   Cloud,
   HardDrive,
-  RefreshCw,
-  Loader2,
   AlertCircle,
   Check,
-  Trash2,
-  FileJson,
-  ExternalLink,
+  Info,
 } from 'lucide-react';
 import type { Workbook } from '../types';
-import type { CloudProvider, CloudFile } from '../cloud/types';
+import type { CloudProvider } from '../cloud/types';
 import { encodeDocToUrl, estimateShareSize, canShareViaUrl } from '../utils/shareUrl';
 import { downloadDocument, shareDocument } from '../utils/webShare';
 import { readWorkbookFile, ACCEPTED_FILE_TYPES } from '../utils/fileIO';
@@ -70,6 +63,13 @@ const PROVIDERS: { id: CloudProvider; label: string; icon: IconComponent; descri
   { id: 's3', label: 'S3-Compatible', icon: Cloud, description: 'Save and open from S3-compatible storage' },
 ];
 
+/** localStorage key for the "don't show again" cloud invite preference. */
+const CLOUD_INVITE_DISMISSED_KEY = 'simplesheets:cloud-invite-dismissed';
+
+function providerLabel(provider: CloudProvider): string {
+  return provider === 'google' ? 'Google Drive' : provider === 'onedrive' ? 'OneDrive' : 'S3-Compatible';
+}
+
 // ─── Component ──────────────────────────────────────────────────────────────
 
 export function CloudStorageModal({
@@ -82,22 +82,18 @@ export function CloudStorageModal({
   onSaveFile,
 }: CloudStorageModalProps) {
   // View state
-  const [provider, setProvider] = useState<CloudProvider | null>(null);
-  const [files, setFiles] = useState<CloudFile[]>([]);
   const [fileName, setFileName] = useState('');
   const [advancedOpen, setAdvancedOpen] = useState(false);
-
-  // Async / loading state
-  // setLoadingFiles / setSaving are reserved for cloud provider integration
-  // (they remain unused until OAuth/API flows are wired up).
-  const [loadingFiles, _setLoadingFiles] = useState(false);
-  const [saving, _setSaving] = useState(false);
+  const [inviteProvider, setInviteProvider] = useState<CloudProvider | null>(null);
+  const [hideInvite, setHideInvite] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(CLOUD_INVITE_DISMISSED_KEY) === 'true';
+    } catch {
+      return false;
+    }
+  });
   const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
-  // Mark setters as intentionally reserved for future provider integration
-  void _setLoadingFiles;
-  void _setSaving;
 
   // Refs
   const cardRef = useRef<HTMLDivElement>(null);
@@ -112,8 +108,7 @@ export function CloudStorageModal({
       triggerRef.current = document.activeElement as HTMLElement;
       setFileName(workbook.title.replace(/[^a-zA-Z0-9-_]/g, '_') || 'Untitled');
       setError(null);
-      setProvider(null);
-      setFiles([]);
+      setInviteProvider(null);
       setAdvancedOpen(false);
       setLinkCopied(false);
     }
@@ -238,34 +233,34 @@ export function CloudStorageModal({
     [onOpenDocument, onClose, onStatusMessage],
   );
 
-  // ─── Cloud provider handlers (stubs — require SDK setup) ────────────────
+  // ─── Cloud provider invite handlers ─────────────────────────────────────
 
-  const handleConnect = useCallback(
-    async (providerId: CloudProvider) => {
-      setBusy(true);
-      setError(null);
-      try {
-        // Cloud providers require OAuth / SDK setup that is beyond the
-        // zero-config userland flow. Surface a helpful message.
-        throw new Error(
-          `${providerId === 'google' ? 'Google Drive' : providerId === 'onedrive' ? 'OneDrive' : 'S3'} integration requires OAuth configuration. Use Copy Link, Share File, or Save to File for instant sharing.`,
-        );
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to connect');
-      } finally {
-        setBusy(false);
-      }
-    },
-    [],
-  );
-
-  const handleDisconnect = useCallback(() => {
-    setProvider(null);
-    setFiles([]);
+  const handleConnect = useCallback((providerId: CloudProvider) => {
     setError(null);
+    setInviteProvider(providerId);
   }, []);
 
-  // ─── Render helpers ─────────────────────────────────────────────────────
+  const handleDismissInviteForever = useCallback(() => {
+    try {
+      localStorage.setItem(CLOUD_INVITE_DISMISSED_KEY, 'true');
+    } catch {
+      // ignore storage failures
+    }
+    setHideInvite(true);
+    setInviteProvider(null);
+  }, []);
+
+  const handleShowProviders = useCallback(() => {
+    try {
+      localStorage.removeItem(CLOUD_INVITE_DISMISSED_KEY);
+    } catch {
+      // ignore storage failures
+    }
+    setHideInvite(false);
+    setAdvancedOpen(true);
+  }, []);
+
+  // ─── Render ─────────────────────────────────────────────────────────────
 
   if (!isOpen) return null;
 
@@ -278,7 +273,7 @@ export function CloudStorageModal({
         ref={cardRef}
         role="dialog"
         aria-modal="true"
-        aria-label={mode === 'save' ? 'Save to Cloud' : 'Open from Cloud'}
+        aria-label={mode === 'save' ? 'Share' : 'Open from Cloud'}
         tabIndex={-1}
         onKeyDown={handleKeyDown}
         onClick={(e) => e.stopPropagation()}
@@ -289,7 +284,7 @@ export function CloudStorageModal({
           <div className="flex items-center gap-2">
             <Cloud className="w-5 h-5 text-blue-600" />
             <h2 className="text-lg font-bold">
-              {mode === 'save' ? 'Save to Cloud' : 'Open from Cloud'}
+              {mode === 'save' ? 'Share' : 'Open from Cloud'}
             </h2>
           </div>
           <button
@@ -314,14 +309,20 @@ export function CloudStorageModal({
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto px-5 py-4">
-          {provider === null ? (
+          {inviteProvider ? (
+            <InvitePanel
+              provider={inviteProvider}
+              onBack={() => setInviteProvider(null)}
+              onDismissForever={handleDismissInviteForever}
+            />
+          ) : (
             <HomeView
               mode={mode}
               linkTooLarge={linkTooLarge}
               linkSizeLabel={linkSizeLabel}
               linkCopied={linkCopied}
               advancedOpen={advancedOpen}
-              busy={busy}
+              hideInvite={hideInvite}
               fileName={fileName}
               onFileNameChange={setFileName}
               onCopyLink={handleCopyLink}
@@ -330,38 +331,10 @@ export function CloudStorageModal({
               onOpenFile={handleOpenFile}
               onToggleAdvanced={() => setAdvancedOpen((prev) => !prev)}
               onConnect={handleConnect}
-            />
-          ) : (
-            <ProviderView
-              provider={provider}
-              mode={mode}
-              files={files}
-              fileName={fileName}
-              loadingFiles={loadingFiles}
-              saving={saving}
-              onFileNameChange={setFileName}
+              onShowProviders={handleShowProviders}
             />
           )}
         </div>
-
-        {/* Footer — only when a provider is connected */}
-        {provider && (
-          <div className="px-5 py-2 border-t border-gray-200 flex justify-between items-center">
-            <button
-              onClick={() => { setProvider(null); setFiles([]); }}
-              className="text-xs text-gray-500 hover:text-gray-700"
-            >
-              Switch provider
-            </button>
-            <button
-              onClick={handleDisconnect}
-              disabled={busy}
-              className="text-xs text-gray-500 hover:text-red-500"
-            >
-              Disconnect
-            </button>
-          </div>
-        )}
 
         {/* Hidden file input for Open from File */}
         <input
@@ -386,13 +359,14 @@ interface HomeViewProps {
   linkSizeLabel: string;
   linkCopied: boolean;
   advancedOpen: boolean;
-  busy: boolean;
+  hideInvite: boolean;
   onCopyLink: () => void;
   onShareFile: () => void;
   onSaveToFile: () => void;
   onOpenFile: () => void;
   onToggleAdvanced: () => void;
   onConnect: (provider: CloudProvider) => void;
+  onShowProviders: () => void;
 }
 
 function HomeView({
@@ -403,13 +377,14 @@ function HomeView({
   linkSizeLabel,
   linkCopied,
   advancedOpen,
-  busy,
+  hideInvite,
   onCopyLink,
   onShareFile,
   onSaveToFile,
   onOpenFile,
   onToggleAdvanced,
   onConnect,
+  onShowProviders,
 }: HomeViewProps) {
   return (
     <div className="space-y-2">
@@ -439,7 +414,7 @@ function HomeView({
       {mode === 'save' && (
         <button
           onClick={onCopyLink}
-          disabled={busy || linkTooLarge}
+          disabled={linkTooLarge}
           className="w-full flex items-start gap-3 px-3 py-3 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {linkCopied ? (
@@ -464,8 +439,7 @@ function HomeView({
       {mode === 'save' && (
         <button
           onClick={onShareFile}
-          disabled={busy}
-          className="w-full flex items-start gap-3 px-3 py-3 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-colors text-left disabled:opacity-50"
+          className="w-full flex items-start gap-3 px-3 py-3 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-colors text-left"
         >
           <Share2 className="w-5 h-5 text-blue-600 mt-0.5 shrink-0" />
           <div className="flex-1 min-w-0">
@@ -481,8 +455,7 @@ function HomeView({
       {mode === 'save' && (
         <button
           onClick={onSaveToFile}
-          disabled={busy}
-          className="w-full flex items-start gap-3 px-3 py-3 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-colors text-left disabled:opacity-50"
+          className="w-full flex items-start gap-3 px-3 py-3 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-colors text-left"
         >
           <Download className="w-5 h-5 text-blue-600 mt-0.5 shrink-0" />
           <div className="flex-1 min-w-0">
@@ -498,8 +471,7 @@ function HomeView({
       {mode === 'open' && (
         <button
           onClick={onOpenFile}
-          disabled={busy}
-          className="w-full flex items-start gap-3 px-3 py-3 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-colors text-left disabled:opacity-50"
+          className="w-full flex items-start gap-3 px-3 py-3 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-colors text-left"
         >
           <FolderOpen className="w-5 h-5 text-blue-600 mt-0.5 shrink-0" />
           <div className="flex-1 min-w-0">
@@ -512,152 +484,112 @@ function HomeView({
       )}
 
       {/* Advanced collapsible — cloud accounts */}
-      <div className="pt-2">
-        <button
-          onClick={onToggleAdvanced}
-          className="flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-gray-700 transition-colors"
-          aria-expanded={advancedOpen}
-        >
-          {advancedOpen ? (
-            <ChevronDown className="w-3.5 h-3.5" />
-          ) : (
-            <ChevronRight className="w-3.5 h-3.5" />
-          )}
-          Advanced: cloud accounts
-        </button>
+      {hideInvite ? (
+        <div className="pt-2">
+          <button
+            onClick={onShowProviders}
+            className="text-xs font-medium text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            Cloud accounts hidden — show again
+          </button>
+        </div>
+      ) : (
+        <div className="pt-2">
+          <button
+            onClick={onToggleAdvanced}
+            className="flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-gray-700 transition-colors"
+            aria-expanded={advancedOpen}
+          >
+            {advancedOpen ? (
+              <ChevronDown className="w-3.5 h-3.5" />
+            ) : (
+              <ChevronRight className="w-3.5 h-3.5" />
+            )}
+            Advanced: cloud accounts
+          </button>
 
-        {advancedOpen && (
-          <div className="mt-2 space-y-2 pl-1">
-            {PROVIDERS.map((p) => (
-              <button
-                key={p.id}
-                onClick={() => onConnect(p.id)}
-                disabled={busy}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-colors text-left disabled:opacity-50"
-              >
-                <p.icon className="w-5 h-5 text-gray-500 shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium text-gray-900">{p.label}</div>
-                  <div className="text-xs text-gray-500">{p.description}</div>
-                </div>
-                {busy ? (
-                  <Loader2 className="w-4 h-4 text-blue-600 animate-spin shrink-0" />
-                ) : (
-                  <ExternalLink className="w-4 h-4 text-gray-400 shrink-0" />
-                )}
-              </button>
-            ))}
-            <p className="text-xs text-gray-400 pt-1 px-1">
-              Cloud accounts require OAuth setup. Use the options above for instant sharing.
-            </p>
-          </div>
-        )}
-      </div>
+          {advancedOpen && (
+            <div className="mt-2 space-y-2 pl-1">
+              {PROVIDERS.map((p) => (
+                <button
+                  key={p.id}
+                  onClick={() => onConnect(p.id)}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-colors text-left"
+                >
+                  <p.icon className="w-5 h-5 text-gray-500 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium text-gray-900">{p.label}</div>
+                    <div className="text-xs text-gray-500">{p.description}</div>
+                  </div>
+                </button>
+              ))}
+              <p className="text-xs text-gray-400 pt-1 px-1">
+                Cloud accounts require setup. Use the options above for instant sharing.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
 
-// ─── Provider View ──────────────────────────────────────────────────────────
+// ─── Invite Panel ───────────────────────────────────────────────────────────
 
-interface ProviderViewProps {
+interface InvitePanelProps {
   provider: CloudProvider;
-  mode: 'save' | 'open';
-  files: CloudFile[];
-  fileName: string;
-  loadingFiles: boolean;
-  saving: boolean;
-  onFileNameChange: (name: string) => void;
+  onBack: () => void;
+  onDismissForever: () => void;
 }
 
-function ProviderView({
-  provider,
-  mode,
-  files,
-  fileName,
-  loadingFiles,
-  saving,
-  onFileNameChange,
-}: ProviderViewProps) {
-  const providerLabel = provider === 'google' ? 'Google Drive' : provider === 'onedrive' ? 'OneDrive' : 'S3';
+function InvitePanel({ provider, onBack, onDismissForever }: InvitePanelProps) {
+  const label = providerLabel(provider);
 
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
         <Cloud className="w-4 h-4 text-blue-600" />
-        {providerLabel}
+        Connect {label}
       </div>
 
-      {mode === 'save' ? (
-        /* Save mode: filename input + Save button */
-        <div className="space-y-3">
-          <div>
-            <label htmlFor="cloud-filename" className="block text-xs font-medium text-gray-600 mb-1">
-              Filename
-            </label>
-            <div className="flex items-center gap-2">
-              <input
-                id="cloud-filename"
-                type="text"
-                value={fileName}
-                onChange={(e) => onFileNameChange(e.target.value)}
-                onClick={(e) => e.stopPropagation()}
-                onKeyDown={(e) => e.stopPropagation()}
-                className="flex-1 px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Enter filename"
-              />
-              <span className="text-sm text-gray-400 font-mono">.ssjson</span>
-            </div>
-          </div>
-          <button
-            disabled={saving || !fileName.trim()}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 text-sm disabled:opacity-50"
-          >
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-            Save
-          </button>
+      <div className="px-3 py-3 bg-blue-50 border border-blue-200 rounded flex items-start gap-2">
+        <Info className="w-4 h-4 text-blue-600 mt-0.5 shrink-0" />
+        <div className="text-xs text-blue-800 flex-1">
+          {label} requires one-time setup before it can be used. Until then, use
+          Copy Link, Share File, or Save to File — they work instantly with no
+          configuration.
         </div>
-      ) : (
-        /* Open mode: file list */
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-gray-600">Files</span>
-            <button className="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1">
-              <RefreshCw className="w-3 h-3" />
-              Refresh
-            </button>
-          </div>
+      </div>
 
-          {loadingFiles ? (
-            <div className="flex items-center justify-center py-8 text-gray-400">
-              <Loader2 className="w-5 h-5 animate-spin mr-2" />
-              Loading files…
-            </div>
-          ) : files.length === 0 ? (
-            <div className="text-center py-8 text-gray-400 text-sm">
-              <FileJson className="w-8 h-8 mx-auto mb-2 opacity-50" />
-              No .ssjson files found.
-            </div>
-          ) : (
-            <div className="space-y-1 max-h-48 overflow-y-auto">
-              {files.map((file) => (
-                <div key={file.id} className="flex items-center gap-3 px-3 py-2 rounded hover:bg-gray-50 group">
-                  <FileJson className="w-4 h-4 text-gray-400 shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm text-gray-900 truncate">{file.name}</div>
-                    <div className="text-xs text-gray-400">{file.modifiedTime}</div>
-                  </div>
-                  <button className="opacity-0 group-hover:opacity-100 focus:opacity-100 text-xs text-blue-600 hover:text-blue-700">
-                    Open
-                  </button>
-                  <button className="opacity-0 group-hover:opacity-100 focus:opacity-100 text-xs text-red-500 hover:text-red-600">
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+      <ul className="space-y-2 text-sm text-gray-700">
+        <li className="flex gap-2">
+          <span className="text-blue-600">1.</span>
+          <span>Create OAuth credentials in the {label} developer console.</span>
+        </li>
+        <li className="flex gap-2">
+          <span className="text-blue-600">2.</span>
+          <span>Add the redirect URI for this app to the credentials.</span>
+        </li>
+        <li className="flex gap-2">
+          <span className="text-blue-600">3.</span>
+          <span>Wire the credentials into the app&apos;s provider integration.</span>
+        </li>
+      </ul>
+
+      <div className="flex items-center justify-between pt-1">
+        <button
+          onClick={onBack}
+          className="text-sm text-gray-500 hover:text-gray-700"
+        >
+          ← Back
+        </button>
+        <button
+          onClick={onDismissForever}
+          className="text-xs text-gray-400 hover:text-gray-600"
+        >
+          Don&apos;t show again
+        </button>
+      </div>
     </div>
   );
 }

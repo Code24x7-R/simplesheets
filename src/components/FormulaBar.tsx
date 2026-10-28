@@ -47,6 +47,8 @@ export interface FormulaBarProps {
   onRawBlur: () => void;
   /** Caret moved (click) - FSM updates caret position. */
   onRawCaretMove: (caretPos: number) => void;
+  /** When true, the formula bar is read-only (shared snapshot). */
+  readOnly?: boolean;
 
   // ── Auto-complete state from FSM ──────────────────────────────────
   /** Auto-complete state derived from the current buffer and caret. */
@@ -311,6 +313,7 @@ export const FormulaBar = forwardRef<FormulaBarHandle, FormulaBarProps>(function
   onRawFocus,
   onRawBlur,
   onRawCaretMove,
+  readOnly = false,
   autoComplete,
   onAcceptAutoComplete,
   onNavigateAutoComplete,
@@ -715,6 +718,7 @@ export const FormulaBar = forwardRef<FormulaBarHandle, FormulaBarProps>(function
               style={{ caretColor: '#000', minWidth: '100%', minHeight: '80px' }}
               placeholder="Enter a value or formula (e.g., =SUM(A1:A10))"
               value={value}
+              readOnly={readOnly}
               onChange={handleChange}
               onFocus={handleFocus}
               onScroll={syncOverlayScroll}
@@ -733,6 +737,7 @@ export const FormulaBar = forwardRef<FormulaBarHandle, FormulaBarProps>(function
               style={{ caretColor: '#000', minWidth: '100%' }}
               placeholder="Enter a value or formula (e.g., =SUM(A1:A10))"
               value={value}
+              readOnly={readOnly}
               onChange={handleChange}
               onFocus={handleFocus}
               onScroll={syncOverlayScroll}

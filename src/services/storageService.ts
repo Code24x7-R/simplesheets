@@ -13,23 +13,7 @@ import type { Workbook } from '../types';
 
 const PREFIX = 'simplesheets:';
 const AUTOSAVE_KEY = `${PREFIX}autosave`;
-const SAVES_LIST_KEY = `${PREFIX}saves-list`;
-
-// ─── Types ──────────────────────────────────────────────────────────────────
-
-/**
- * Metadata about a saved workbook slot.
- */
-export interface SaveSlot {
-  /** Display name of the save. */
-  name: string;
-  /** When this save was created (epoch ms). */
-  savedAt: number;
-  /** Workbook title at time of save. */
-  title: string;
-  /** Number of sheets in the saved workbook. */
-  sheetCount: number;
-}
+const PREVIOUS_SESSION_KEY = `${PREFIX}previous-session`;
 
 // ─── Internal Helpers ───────────────────────────────────────────────────────
 
@@ -58,26 +42,6 @@ function removeRaw(key: string): void {
   } catch {
     // ignore
   }
-}
-
-function getSaveKey(name: string): string {
-  return `${PREFIX}save:${name}`;
-}
-
-function readSavesList(): string[] {
-  const raw = readRaw(SAVES_LIST_KEY);
-  if (!raw) return [];
-  try {
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed.filter((n) => typeof n === 'string') : [];
-  } catch {
-    /* istanbul ignore next - corrupted localStorage data */
-    return [];
-  }
-}
-
-function writeSavesList(names: string[]): void {
-  writeRaw(SAVES_LIST_KEY, JSON.stringify(names));
 }
 
 // ─── Auto-Save ──────────────────────────────────────────────────────────────
@@ -124,98 +88,41 @@ export function hasAutosave(): boolean {
   return readRaw(AUTOSAVE_KEY) !== null;
 }
 
-// ─── Named Saves ────────────────────────────────────────────────────────────
+// ─── Previous-Session Recovery ─────────────────────────────────────────────
 
 /**
- * Saves the workbook under a named slot.
- * If the name already exists, it is overwritten.
- * @param name - The save slot name.
- * @param workbook - The workbook to save.
- * @returns True if the save succeeded.
+ * Snapshot the current workbook to the recovery slot before it is replaced
+ * by a destructive action (New / Open / Import). This keeps the discarded
+ * document recoverable without clobbering the auto-save slot.
+ *
+ * @param workbook - The workbook being discarded.
+ * @returns True if the snapshot was written.
  */
-export function saveWorkbook(name: string, workbook: Workbook): boolean {
-  if (!name.trim()) return false;
-
-  const trimmed = name.trim();
-  const success = writeRaw(getSaveKey(trimmed), JSON.stringify(workbook));
-  if (!success) return false;
-
-  // Update the list (deduplicate, move to end)
-  const list = readSavesList().filter((n) => n !== trimmed);
-  list.push(trimmed);
-  writeSavesList(list);
-
-  return true;
+export function snapshotPreviousSession(workbook: Workbook): boolean {
+  return writeRaw(PREVIOUS_SESSION_KEY, JSON.stringify(workbook));
 }
 
 /**
- * Loads a workbook from a named slot.
- * @param name - The save slot name.
- * @returns The saved workbook, or null if not found or corrupt.
+ * Load a previously snapshotted session, if any.
+ * @returns The snapshotted workbook, or null if none/valid.
  */
-export function loadWorkbook(name: string): Workbook | null {
-  const raw = readRaw(getSaveKey(name));
+export function loadPreviousSession(): Workbook | null {
+  const raw = readRaw(PREVIOUS_SESSION_KEY);
   if (!raw) return null;
   try {
     const parsed = JSON.parse(raw);
-    if (isValidWorkbook(parsed)) {
-      return parsed;
-    }
+    if (isValidWorkbook(parsed)) return parsed;
     return null;
   } catch {
-    /* istanbul ignore next - corrupted JSON */
     return null;
   }
 }
 
 /**
- * Deletes a named save slot.
- * @param name - The save slot name to delete.
+ * Clear the previous-session recovery slot.
  */
-export function deleteSave(name: string): void {
-  removeRaw(getSaveKey(name));
-  const list = readSavesList().filter((n) => n !== name);
-  writeSavesList(list);
-}
-
-/**
- * Lists all named save slots with metadata, sorted by most recently saved first.
- */
-export function listSaves(): SaveSlot[] {
-  const names = readSavesList();
-  const slots: SaveSlot[] = [];
-
-  for (const name of names) {
-    const raw = readRaw(getSaveKey(name));
-    if (!raw) continue;
-    try {
-      const wb = JSON.parse(raw);
-      if (isValidWorkbook(wb)) {
-        // isValidWorkbook guarantees sheets is a non-empty array,
-        // so the ?? 0 fallback below is unreachable — guard it from coverage.
-        /* istanbul ignore next */
-        const sheetCount = wb.sheets?.length ?? 0;
-        slots.push({
-          name,
-          savedAt: wb.lastModified ?? 0,
-          title: wb.title,
-          sheetCount,
-        });
-      }
-    } catch {
-      // skip corrupt entries
-    }
-  }
-
-  return slots.sort((a, b) => b.savedAt - a.savedAt);
-}
-
-/**
- * Checks whether a named save exists.
- * @param name - The save slot name.
- */
-export function hasSave(name: string): boolean {
-  return readRaw(getSaveKey(name)) !== null;
+export function clearPreviousSession(): void {
+  removeRaw(PREVIOUS_SESSION_KEY);
 }
 
 // ─── Validation ─────────────────────────────────────────────────────────────
