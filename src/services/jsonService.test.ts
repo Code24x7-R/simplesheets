@@ -121,6 +121,23 @@ describe('JSON Service', () => {
       expect(result.workbook!.sheets[0].columnWidths).toEqual({});
       expect(result.workbook!.sheets[0].rowHeights).toEqual({});
     });
+
+    it('clamps imported row heights to the minimum line height', () => {
+      const wb: Workbook = {
+        ...testWorkbook,
+        sheets: [
+          {
+            ...testWorkbook.sheets[0],
+            rowHeights: { 0: 20, 1: 15 },
+          },
+        ],
+      };
+
+      const result = importJson(JSON.stringify(wb));
+      expect(result.success).toBe(true);
+      expect(result.workbook!.sheets[0].rowHeights[0]).toBe(28);
+      expect(result.workbook!.sheets[0].rowHeights[1]).toBe(28);
+    });
   });
 
   describe('round-trip', () => {

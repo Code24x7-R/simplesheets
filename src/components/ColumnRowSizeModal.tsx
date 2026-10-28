@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Richard Robertson
 import { useState, useCallback, useEffect } from 'react';
 import { NumericInput } from './NumericInput';
+import { ROW_LINE_HEIGHT } from '../utils/rowHeight';
 
 interface ColumnRowSizeModalProps {
   /** Whether the modal is open. */
@@ -37,10 +38,13 @@ interface ColumnRowSizeModalProps {
 const COLUMN_PRESETS = [50, 80, 100, 150, 200];
 
 /** Preset heights for rows (pixels). */
-const ROW_PRESETS = [20, 28, 40, 60, 80];
+const ROW_PRESETS = [28, 40, 60, 80];
 
-/** Minimum allowed size (pixels). */
-const MIN_SIZE = 10;
+/** Minimum allowed column width (pixels). */
+const MIN_COL_SIZE = 10;
+
+/** Minimum allowed row height (pixels) — matches the grid's line-height floor. */
+const MIN_ROW_SIZE = ROW_LINE_HEIGHT;
 
 /** Maximum allowed size (pixels). */
 const MAX_SIZE = 500;
@@ -75,7 +79,8 @@ export function ColumnRowSizeModal({
   }, [initialType, defaultColWidth, defaultRowHeight]);
 
   const handleApply = useCallback(() => {
-    const clamped = Math.min(MAX_SIZE, Math.max(MIN_SIZE, size));
+    const min = type === 'col' ? MIN_COL_SIZE : MIN_ROW_SIZE;
+    const clamped = Math.min(MAX_SIZE, Math.max(min, size));
     const index = type === 'col' ? currentCol : currentRow;
     onApply({ type, size: clamped, applyToAll, index });
     onClose();
@@ -186,7 +191,7 @@ export function ColumnRowSizeModal({
             value={size}
             onChange={(v) => setSize(v)}
             className="w-full border border-gray-200 rounded px-3 py-3 text-base min-h-[44px]"
-            min={MIN_SIZE}
+            min={type === 'col' ? MIN_COL_SIZE : MIN_ROW_SIZE}
             max={MAX_SIZE}
             placeholder={String(type === 'col' ? defaultColWidth : defaultRowHeight)}
           />

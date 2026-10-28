@@ -7,7 +7,8 @@
  * all sheets, cells, styles, frozen panes, and column/row dimensions.
  */
 
-import type { Workbook } from '../types';
+import type { Workbook, Sheet } from '../types';
+import { applyAutoRowHeights, ROW_LINE_HEIGHT } from '../utils/rowHeight';
 
 /**
  * Options for JSON export.
@@ -52,16 +53,20 @@ export function importJson(json: string): JsonImportResult {
 
     // Restore the workbook with a new ID. Older/hand-edited files may omit the
     // per-column/row dimension maps; default them to empty so the Grid never
-    // dereferences undefined.
+    // dereferences undefined. Row heights are clamped to the app's minimum and
+    // wrapped cells are re-auto-fitted so imported sheets render correctly.
     const workbook: Workbook = {
       ...parsed,
       id: `json-wb-${Date.now()}`,
       lastModified: Date.now(),
-      sheets: parsed.sheets.map((sheet) => ({
-        ...sheet,
-        columnWidths: sheet.columnWidths ?? {},
-        rowHeights: sheet.rowHeights ?? {},
-      })),
+      sheets: parsed.sheets.map((sheet) => {
+        const base: Sheet = {
+          ...sheet,
+          columnWidths: sheet.columnWidths ?? {},
+          rowHeights: clampRowHeights(sheet.rowHeights ?? {}),
+        };
+        return applyAutoRowHeights(base);
+      }),
     };
 
     return { success: true, workbook };
@@ -71,6 +76,19 @@ export function importJson(json: string): JsonImportResult {
       error: err instanceof Error ? err.message : 'JSON parse error',
     };
   }
+}
+
+/**
+ * Clamps imported row heights to the app's minimum line height.
+ */
+function clampRowHeights(heights: Record<number, number>): Record<number, number> {
+  const clamped: Record<number, number> = {};
+  for (const [row, height] of Object.entries(heights)) {
+    if (typeof height === 'number' && Number.isFinite(height)) {
+      clamped[Number(row)] = Math.max(height, ROW_LINE_HEIGHT);
+    }
+  }
+  return clamped;
 }
 
 /**

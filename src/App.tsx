@@ -52,7 +52,7 @@ import { computeFillSeries } from './utils/fillSeries';
 import { applyPasteOptions } from './utils/pasteSpecial';
 import type { PasteMode } from './utils/pasteSpecial';
 import { isEditableTarget } from './utils/dom';
-import { computeAutoRowHeights, applyAutoRowHeights } from './utils/rowHeight';
+import { computeAutoRowHeights, applyAutoRowHeights, ROW_LINE_HEIGHT } from './utils/rowHeight';
 import { extractColumnWidths, applyColumnWidths } from './utils/pasteWidths';
 import { sortRange, getCurrentRegion } from './utils/sheetSort';
 import { SortDialog } from './components/SortDialog';
@@ -1112,7 +1112,7 @@ function WorkbookView() {
         if (idx !== workbook.activeSheetIndex) return s;
         return {
           ...s,
-          rowHeights: { ...s.rowHeights, [row]: newHeight },
+          rowHeights: { ...s.rowHeights, [row]: Math.max(newHeight, ROW_LINE_HEIGHT) },
         };
       });
       const newWorkbook: Workbook = {
@@ -1135,13 +1135,13 @@ function WorkbookView() {
             const previousAuto = computeAutoRowHeights(s);
             return applyAutoRowHeights({ ...s, defaultColWidth: size }, previousAuto);
           }
-          return { ...s, defaultRowHeight: size };
+          return { ...s, defaultRowHeight: Math.max(size, ROW_LINE_HEIGHT) };
         }
         if (type === 'col') {
           const previousAuto = computeAutoRowHeights(s);
           return applyAutoRowHeights({ ...s, columnWidths: { ...s.columnWidths, [index]: size } }, previousAuto);
         }
-        return { ...s, rowHeights: { ...s.rowHeights, [index]: size } };
+        return { ...s, rowHeights: { ...s.rowHeights, [index]: Math.max(size, ROW_LINE_HEIGHT) } };
       });
       const newWorkbook: Workbook = {
         ...workbook,

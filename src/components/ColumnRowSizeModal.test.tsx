@@ -53,9 +53,9 @@ describe('ColumnRowSizeModal', () => {
     });
   });
 
-  it('shows row preset buttons (20, 28, 40, 60, 80) in row mode', () => {
+  it('shows row preset buttons (28, 40, 60, 80) in row mode', () => {
     render(<ColumnRowSizeModal {...defaultProps} initialType="row" />);
-    [20, 28, 40, 60, 80].forEach((val) => {
+    [28, 40, 60, 80].forEach((val) => {
       expect(screen.getByRole('button', { name: String(val) })).toBeInTheDocument();
     });
   });
