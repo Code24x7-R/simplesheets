@@ -162,4 +162,51 @@ describe('App File System Access integration', () => {
     });
     clickSpy.mockRestore();
   });
+
+  it('Save retains a file handle and records it in the MRU', async () => {
+    const write = jest.fn().mockResolvedValue(undefined);
+    const close = jest.fn().mockResolvedValue(undefined);
+    const handle = {
+      createWritable: jest.fn().mockResolvedValue({ write, close }),
+    } as unknown as FileSystemFileHandle;
+    (window as Partial<Window>).showSaveFilePicker = jest.fn().mockResolvedValue(handle);
+
+    render(<App />);
+    fireEvent.click(screen.getByText('File'));
+    fireEvent.click(screen.getByText('Save'));
+
+    await waitFor(() => {
+      expect(write).toHaveBeenCalled();
+    });
+
+    const raw = localStorage.getItem('simplesheets:mru');
+    const entries = JSON.parse(raw!);
+    const entry = entries.find((e: { source: string }) => e.source === 'local');
+    expect(entry.canReopen).toBe(true);
+    expect(entry.handleId).toBeTruthy();
+    expect(screen.getByTestId('save-state').textContent).toContain('Saved ·');
+  });
+
+  it('Save As retains a file handle', async () => {
+    const write = jest.fn().mockResolvedValue(undefined);
+    const close = jest.fn().mockResolvedValue(undefined);
+    const handle = {
+      createWritable: jest.fn().mockResolvedValue({ write, close }),
+    } as unknown as FileSystemFileHandle;
+    (window as Partial<Window>).showSaveFilePicker = jest.fn().mockResolvedValue(handle);
+
+    render(<App />);
+    fireEvent.click(screen.getByText('File'));
+    fireEvent.click(screen.getByText('Save As…'));
+
+    await waitFor(() => {
+      expect(write).toHaveBeenCalled();
+    });
+
+    const raw = localStorage.getItem('simplesheets:mru');
+    const entries = JSON.parse(raw!);
+    const entry = entries.find((e: { source: string }) => e.source === 'local');
+    expect(entry.canReopen).toBe(true);
+    expect(entry.handleId).toBeTruthy();
+  });
 });

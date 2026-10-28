@@ -5,7 +5,12 @@ import {
   pickFileWithHandle,
   readFileFromHandle,
   pickFileWithInput,
+  supportsSaveFilePicker,
+  saveWithFilePicker,
+  serializeWorkbook,
+  writeWorkbookToHandle,
 } from './fileHandles';
+import type { Workbook } from '../types';
 
 function makeHandle(file: File, permission: PermissionState = 'granted'): FileSystemFileHandle {
   return {
@@ -103,5 +108,69 @@ describe('pickFileWithInput', () => {
     expect(clickSpy).toHaveBeenCalled();
     expect(onFile).toHaveBeenCalledWith(file);
     clickSpy.mockRestore();
+  });
+});
+
+describe('supportsSaveFilePicker', () => {
+  afterEach(() => {
+    delete (window as Partial<Window>).showSaveFilePicker;
+  });
+
+  it('returns false when showSaveFilePicker is missing', () => {
+    expect(supportsSaveFilePicker()).toBe(false);
+  });
+
+  it('returns true when showSaveFilePicker exists', () => {
+    (window as Partial<Window>).showSaveFilePicker = jest.fn();
+    expect(supportsSaveFilePicker()).toBe(true);
+  });
+});
+
+describe('saveWithFilePicker', () => {
+  afterEach(() => {
+    delete (window as Partial<Window>).showSaveFilePicker;
+  });
+
+  it('returns null when unsupported', async () => {
+    await expect(saveWithFilePicker('budget.ssjson')).resolves.toBeNull();
+  });
+
+  it('returns the handle from the picker', async () => {
+    const handle = { createWritable: jest.fn() } as unknown as FileSystemFileHandle;
+    (window as Partial<Window>).showSaveFilePicker = jest.fn().mockResolvedValue(handle);
+    await expect(saveWithFilePicker('budget.ssjson')).resolves.toBe(handle);
+  });
+
+  it('returns null when the user cancels', async () => {
+    (window as Partial<Window>).showSaveFilePicker = jest.fn().mockRejectedValue(new DOMException('aborted', 'AbortError'));
+    await expect(saveWithFilePicker('budget.ssjson')).resolves.toBeNull();
+  });
+});
+
+describe('serializeWorkbook', () => {
+  it('pretty-prints the workbook JSON', () => {
+    const wb = { id: 'x', title: 'T', sheets: [], activeSheetIndex: 0 } as unknown as Workbook;
+    expect(serializeWorkbook(wb)).toContain('\n');
+  });
+});
+
+describe('writeWorkbookToHandle', () => {
+  it('writes and closes the writable stream', async () => {
+    const write = jest.fn().mockResolvedValue(undefined);
+    const close = jest.fn().mockResolvedValue(undefined);
+    const handle = {
+      createWritable: jest.fn().mockResolvedValue({ write, close }),
+    } as unknown as FileSystemFileHandle;
+
+    await expect(writeWorkbookToHandle(handle, '{}')).resolves.toBe(true);
+    expect(write).toHaveBeenCalledWith('{}');
+    expect(close).toHaveBeenCalled();
+  });
+
+  it('returns false when writing fails', async () => {
+    const handle = {
+      createWritable: jest.fn().mockRejectedValue(new Error('denied')),
+    } as unknown as FileSystemFileHandle;
+    await expect(writeWorkbookToHandle(handle, '{}')).resolves.toBe(false);
   });
 });

@@ -23,7 +23,14 @@ interface OpenFilePickerOptions {
   types?: FilePickerAcceptType[];
 }
 
+interface SaveFilePickerOptions {
+  suggestedName?: string;
+  types?: FilePickerAcceptType[];
+}
+
 interface Window {
   /** Open the native file picker and return writable file handles. */
   showOpenFilePicker?: (options?: OpenFilePickerOptions) => Promise<FileSystemFileHandle[]>;
+  /** Open the native save picker and return a writable file handle. */
+  showSaveFilePicker?: (options?: SaveFilePickerOptions) => Promise<FileSystemFileHandle>;
 }

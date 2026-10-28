@@ -9,6 +9,7 @@
  */
 
 import { ACCEPT_ALL } from './fileTypes';
+import type { Workbook } from '../types';
 
 /** Whether the browser supports the File System Access API. */
 export function supportsFileSystemAccess(): boolean {
@@ -87,4 +88,43 @@ export function pickFileWithInput(onFile: (file: File) => void): void {
   };
   document.body.appendChild(input);
   input.click();
+}
+
+/** Whether the browser supports the native save picker. */
+export function supportsSaveFilePicker(): boolean {
+  return typeof window !== 'undefined' && typeof window.showSaveFilePicker === 'function';
+}
+
+/**
+ * Open the native save picker and return a writable handle. Returns null when
+ * the user cancels.
+ */
+export async function saveWithFilePicker(suggestedName: string): Promise<FileSystemFileHandle | null> {
+  if (!supportsSaveFilePicker()) return null;
+  try {
+    return await window.showSaveFilePicker!({ suggestedName });
+  } catch (err) {
+    if (err instanceof DOMException && err.name === 'AbortError') return null;
+    throw err;
+  }
+}
+
+/** Serialize a workbook to the pretty-printed native `.ssjson` format. */
+export function serializeWorkbook(workbook: Workbook): string {
+  return JSON.stringify(workbook, null, 2);
+}
+
+/**
+ * Write a workbook JSON string to a retained file handle. Returns false on
+ * write failure (e.g. revoked permission).
+ */
+export async function writeWorkbookToHandle(handle: FileSystemFileHandle, json: string): Promise<boolean> {
+  try {
+    const writable = await handle.createWritable();
+    await writable.write(json);
+    await writable.close();
+    return true;
+  } catch {
+    return false;
+  }
 }

@@ -282,9 +282,13 @@ Ordering rule: **pure/isolated → small state changes → new isolated modules 
 
 ## 6. Open items (non-blocking, assume defaults)
 
-1. Recent entries created by **Save** have no handle → labelled "select file to reopen" (only
-   **Open** can capture a handle). Acceptable? *(assumed yes)*
-2. Should `Save As…` also write an MRU entry with `canReopen: false`? *(assumed yes)*
+> **Update (2026-10-28):** Items 1–2 are now resolved — Save and Save As… retain File System
+> Access handles (with `canReopen: true` MRU entries) in supporting browsers, and fall back to
+> download otherwise.
+
+1. ~~Recent entries created by **Save** have no handle~~ → **resolved**: Save/Save As retain handles.
+2. ~~Should `Save As…` also write an MRU entry with `canReopen: false`?~~ → **resolved**: it records
+   `canReopen: true`.
 3. Remove `Export → JSON` outright, or keep it as "Export → Backup (.ssjson)" pointing at the same
    download as Save? *(assumed remove — Save covers it)*
 4. Ctrl+N keeps browser-default behaviour inside text inputs (already the case) — no change.

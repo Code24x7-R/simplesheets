@@ -18,6 +18,18 @@
 
 ---
 
+---
+
+### 2026-10-28 [FEATURE] IO — Save/Save As retain File System Access handles (true reopen of saved files)
+- **What**: Closes the last D1 trade-off — Save is no longer a download-only path in Chromium.
+  - `fileHandles.ts` gained `supportsSaveFilePicker`, `saveWithFilePicker`, `serializeWorkbook`, and `writeWorkbookToHandle`.
+  - **Save** (Ctrl+S) writes to the retained handle when one exists (opened via Open… or previously saved), otherwise opens the native save picker. **Save As…** always opens the native save picker. Both record `handleId` + `canReopen: true` in the MRU, so saved files now reopen directly.
+  - A `currentHandleId` state tracks the document handle; it is reset on New/Open-replace/Import-replace/download fallback.
+  - Non-supporting browsers keep the existing download + filename-prompt fallback.
+- **Tests**: +10 (fileHandles save helpers ×8, App Save/Save As integration ×2). Total: 4488 passing / 198 suites.
+- **Files**: `src/types/fileSystemAccess.d.ts`, `src/utils/fileHandles.ts`, `src/App.tsx` (+ tests).
+- **Results**: lint clean, type-check clean, build OK, 4488 tests pass.
+
 ### 2026-10-28 [FEATURE] IO workflow audit — T12 (File System Access handles + IndexedDB recents)
 - **What**: Final batch of the IO/UX plan (`docs/IO_UX_PLAN.md`).
   - Ambient type shim for `showOpenFilePicker` / `FileSystemFileHandle` permission helpers.

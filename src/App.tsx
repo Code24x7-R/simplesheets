@@ -50,7 +50,7 @@ import { downloadExcel } from './services/excelExport';
 import { downloadCsv, importCsv, detectDelimiter } from './services/csvService';
 import { importExcelFile } from './services/excelImport';
 import { readFileAsText, readWorkbookFile, readSpreadsheetFile } from './utils/fileIO';
-import { supportsFileSystemAccess, pickFileWithHandle, readFileFromHandle } from './utils/fileHandles';
+import { supportsFileSystemAccess, pickFileWithHandle, readFileFromHandle, saveWithFilePicker, writeWorkbookToHandle, serializeWorkbook, supportsSaveFilePicker } from './utils/fileHandles';
 import { storeFileHandle, loadFileHandle } from './utils/handleStore';
 import { ImportScopeDialog } from './components/ImportScopeDialog';
 import { applyReplace, applyAddSheets, applyInsertAtCell } from './utils/importScope';
@@ -178,6 +178,8 @@ function WorkbookView() {
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
   const [currentFileName, setCurrentFileName] = useState<string>(workbook.title ?? 'Untitled');
   const [isReadOnly, setIsReadOnly] = useState(false);
+  // Retained File System Access handle for the current document (null = none).
+  const [currentHandleId, setCurrentHandleId] = useState<string | null>(null);
 
   /**
    * Mark the workbook as clean (saved / opened / replaced).
@@ -1019,13 +1021,48 @@ function WorkbookView() {
     window.open('https://simpledocs.mouseclick.au', '_blank', 'noopener,noreferrer');
   }, []);
 
-  const handleSave = useCallback(() => {
-    const name = (workbook.title || 'Untitled').replace(/[^a-zA-Z0-9-_]/g, '_') || 'Untitled';
-    downloadDocument(workbook, name);
+  const handleSave = useCallback(async () => {
+    const baseName = (workbook.title || 'Untitled').replace(/[^a-zA-Z0-9-_]/g, '_') || 'Untitled';
+    const size = JSON.stringify(workbook).length;
+
+    // Native write path (Chromium): reuse a retained handle when available.
+    if (supportsSaveFilePicker()) {
+      let handle: FileSystemFileHandle | null = null;
+      let handleId: string | null = currentHandleId;
+
+      if (currentHandleId) {
+        handle = await loadFileHandle(currentHandleId);
+        if (!handle) handleId = null;
+      }
+
+      if (!handle) {
+        handle = await saveWithFilePicker(`${baseName}.ssjson`);
+        if (!handle) return; // user cancelled
+        handleId = `h-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        const stored = await storeFileHandle(handleId, handle);
+        if (!stored) handleId = null;
+      }
+
+      const ok = await writeWorkbookToHandle(handle, serializeWorkbook(workbook));
+      if (!ok) {
+        setStatusMessage('Save failed — permission denied or file unavailable');
+        return;
+      }
+
+      if (handleId) setCurrentHandleId(handleId);
+      markSaved(workbook);
+      recordSaveMRU(normalizeFileName(baseName), size, 'local', handleId ? { handleId, canReopen: true } : undefined);
+      setStatusMessage(`Saved "${baseName}.ssjson"`);
+      return;
+    }
+
+    // Download fallback (no File System Access).
+    downloadDocument(workbook, baseName);
+    setCurrentHandleId(null);
     markSaved(workbook);
-    recordSaveMRU(normalizeFileName(name), JSON.stringify(workbook).length, 'local');
-    setStatusMessage(`Saved "${name}.ssjson" — download started`);
-  }, [workbook, markSaved, recordSaveMRU]);
+    recordSaveMRU(normalizeFileName(baseName), size, 'local');
+    setStatusMessage(`Saved "${baseName}.ssjson" — download started`);
+  }, [workbook, currentHandleId, markSaved, recordSaveMRU]);
 
   // Ref to the open/replace handler so handleOpen/reopenFromHandle can be
   // declared before handleImport without a TDZ error.
@@ -1052,6 +1089,7 @@ function WorkbookView() {
       }
 
       handleImportRef.current(wb, picked.file.name, handleId ? { handleId, canReopen: true } : undefined);
+      if (handleId) setCurrentHandleId(handleId);
     } catch (err) {
       setStatusMessage(`Import error: ${err instanceof Error ? err.message : 'Failed to open file'}`);
     }
@@ -1106,6 +1144,7 @@ function WorkbookView() {
       try {
         const wb = await readSpreadsheetFile(file);
         handleImportRef.current(wb, entry.name, { handleId: entry.handleId, canReopen: true });
+        setCurrentHandleId(entry.handleId);
       } catch (err) {
         setStatusMessage(`Import error: ${err instanceof Error ? err.message : 'Failed to reopen file'}`);
       }
@@ -1173,12 +1212,39 @@ function WorkbookView() {
     gridRef.current?.focus();
   }, []);
 
-  const handleSaveAs = useCallback(() => {
-    const defaultName = (workbook.title || 'Untitled').replace(/[^a-zA-Z0-9-_]/g, '_') || 'Untitled';
-    openFilenameModal('Save As', defaultName, 'ssjson', (filename) => {
+  const handleSaveAs = useCallback(async () => {
+    const baseName = (workbook.title || 'Untitled').replace(/[^a-zA-Z0-9-_]/g, '_') || 'Untitled';
+    const size = JSON.stringify(workbook).length;
+
+    // Native save picker (Chromium) — retains a writable handle.
+    if (supportsSaveFilePicker()) {
+      const handle = await saveWithFilePicker(`${baseName}.ssjson`);
+      if (!handle) return; // user cancelled
+
+      const ok = await writeWorkbookToHandle(handle, serializeWorkbook(workbook));
+      if (!ok) {
+        setStatusMessage('Save failed — permission denied or file unavailable');
+        return;
+      }
+
+      const handleId = `h-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const stored = await storeFileHandle(handleId, handle);
+      setCurrentHandleId(stored ? handleId : null);
+
+      const updatedWb: Workbook = { ...workbook, title: baseName, lastModified: Date.now() };
+      pushHistory(updatedWb, `Saved as "${baseName}"`, filterStateRef.current, gridSelectionRef.current);
+      markSaved(updatedWb);
+      recordSaveMRU(normalizeFileName(baseName), size, 'local', stored ? { handleId, canReopen: true } : undefined);
+      setStatusMessage(`Saved "${baseName}.ssjson"`);
+      return;
+    }
+
+    // Fallback: filename prompt + download.
+    openFilenameModal('Save As', baseName, 'ssjson', (filename) => {
       downloadDocument(workbook, filename);
       const updatedWb: Workbook = { ...workbook, title: filename, lastModified: Date.now() };
       pushHistory(updatedWb, `Saved as "${filename}"`, filterStateRef.current, gridSelectionRef.current);
+      setCurrentHandleId(null);
       markSaved(updatedWb);
       recordSaveMRU(normalizeFileName(filename), JSON.stringify(workbook).length, 'local');
       setStatusMessage(`Saved "${filename}.ssjson" — download started`);
@@ -1435,6 +1501,7 @@ function WorkbookView() {
     (importedWb: Workbook, filename?: string, opts?: { handleId?: string; canReopen?: boolean }) => {
       if (!confirmDiscard('Open this file? Unsaved changes will be lost.')) return;
       if (isDirty) snapshotPreviousSession(workbook);
+      setCurrentHandleId(null);
 
       // If a filename is provided (from file picker), use it as the title (sans extension)
       const title = filename ? stripExtension(filename) : importedWb.title;
@@ -1497,6 +1564,7 @@ function WorkbookView() {
         const replaced = applyReplace(wb, title);
         resetHistory(replaced);
         markClean(replaced);
+        setCurrentHandleId(null);
         recordImportMRU(fileName, wb);
         applyExtensionDetection(wb);
         setStatusMessage(`Imported "${title}" — ${replaced.sheets.length} sheet(s)`);
@@ -1581,6 +1649,7 @@ function WorkbookView() {
 
       resetHistory(wb);
       markClean(wb);
+      setCurrentHandleId(null);
       // Clear per-sheet active cells — new workbook has fresh sheet ids
       sheetActiveCellsRef.current.clear();
       // Default to A1 on the first sheet
