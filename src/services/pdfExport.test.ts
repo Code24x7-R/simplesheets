@@ -210,6 +210,30 @@ describe('pdfExport', () => {
       expect(cell!.style.fontSize).toBe('24px');
     });
 
+    it('auto-fits row height for wrapped cells', async () => {
+      const sheet: Sheet = {
+        ...createTestSheet(),
+        cells: {
+          '0:0': { rawValue: 'Header' },
+          '0:1': { rawValue: 'Value' },
+          '1:0': { rawValue: 'A very long wrapped text value', style: { whiteSpace: 'normal' } },
+          '1:1': { rawValue: 'B' },
+        },
+        columnWidths: { 0: 60, 1: 100 },
+      };
+
+      await generatePdf(sheet, { setup: baseSetup() });
+
+      const row = allRows().find((r) => r.textContent?.includes('A very long'));
+      expect(row).toBeTruthy();
+      expect(parseFloat(row!.style.height)).toBeGreaterThan(28);
+
+      const cell = findCell('A very long wrapped text value');
+      expect(cell).toBeTruthy();
+      expect(cell!.style.whiteSpace).toBe('normal');
+      expect(cell!.style.lineHeight).toBeTruthy();
+    });
+
     it('applies the cell number format (currency) to the data cell', async () => {
       const sheet: Sheet = {
         ...createTestSheet(),

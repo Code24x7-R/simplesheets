@@ -27,6 +27,7 @@ import type { PageSize, PrintRange, PrintScaling, PrintSetup } from '../context/
 import { parseRange } from '../utils/chartData';
 import { extractChartData, getMinMax, generateColors } from '../utils/chartData';
 import { formatCellDisplayValue } from '../utils/numberFormat';
+import { countWrappedLines, isWrappedCell } from '../utils/rowHeight';
 import type { ChartConfig } from '../types';
 
 /** Millimetres → pixels (matches jsPDF's mm→pt→px conversion). */
@@ -50,6 +51,20 @@ const HEADER_ROW_HEIGHT_PX = 24;
 
 /** Estimated height of the "Charts" section heading in pixels. */
 const CHARTS_TITLE_HEIGHT_PX = 28;
+
+/** Font used to render cell text in the PDF. */
+const PDF_FONT = 'Arial, sans-serif';
+
+/** Base cell font size in pixels (≈10pt). */
+const PDF_BASE_FONT_SIZE_PX = 13.33;
+
+/** Line-height ratio used for PDF cell text (no grid minimum, so it scales). */
+const PDF_LINE_HEIGHT_RATIO = 1.4;
+
+/** Line height in px for a given font size, scaled with the font. */
+function pdfLineHeight(fontSize: number): number {
+  return Math.max(1, Math.round(fontSize * PDF_LINE_HEIGHT_RATIO));
+}
 
 /** Default footer template. */
 export const DEFAULT_FOOTER = 'Page {page} of {total}';
@@ -304,7 +319,7 @@ function buildPrintablePages(
   let naturalHeight = TITLE_HEIGHT_PX;
   if (showHeaders) naturalHeight += HEADER_ROW_HEIGHT_PX;
   for (let r = bounds.startRow; r <= bounds.endRow; r++) {
-    naturalHeight += sheet.rowHeights[r] ?? sheet.defaultRowHeight;
+    naturalHeight += computeRowRenderedHeight(sheet, r, bounds, naturalColWidths, 1, 1);
   }
   const charts = sheet.charts ?? [];
   if (charts.length > 0) {
@@ -324,21 +339,24 @@ function buildPrintablePages(
 
   const titleEl = document.createElement('h2');
   titleEl.textContent = title;
-  titleEl.style.margin = '0 0 8px 0';
+  titleEl.style.margin = '0';
   titleEl.style.fontSize = `${14 * fontScale}pt`;
+  titleEl.style.lineHeight = `${TITLE_HEIGHT_PX * heightScale}px`;
+  titleEl.style.overflow = 'hidden';
   blocks.push({ el: titleEl, height: TITLE_HEIGHT_PX * heightScale });
 
   if (showHeaders) {
+    const headerHeight = HEADER_ROW_HEIGHT_PX * heightScale;
     blocks.push({
-      el: buildRow(sheet, -1, bounds, colWidths, contentWidth, rowHeaderWidth, true, true, heightScale, fontScale),
-      height: HEADER_ROW_HEIGHT_PX * heightScale,
+      el: buildRow(sheet, -1, bounds, colWidths, contentWidth, rowHeaderWidth, true, true, headerHeight, fontScale),
+      height: headerHeight,
     });
   }
 
   for (let r = bounds.startRow; r <= bounds.endRow; r++) {
-    const rowHeight = (sheet.rowHeights[r] ?? sheet.defaultRowHeight) * heightScale;
+    const rowHeight = computeRowRenderedHeight(sheet, r, bounds, colWidths, heightScale, fontScale);
     blocks.push({
-      el: buildRow(sheet, r, bounds, colWidths, contentWidth, rowHeaderWidth, showHeaders, false, heightScale, fontScale),
+      el: buildRow(sheet, r, bounds, colWidths, contentWidth, rowHeaderWidth, showHeaders, false, rowHeight, fontScale),
       height: rowHeight,
     });
   }
@@ -346,8 +364,10 @@ function buildPrintablePages(
   if (charts.length > 0) {
     const chartsTitle = document.createElement('h3');
     chartsTitle.textContent = 'Charts';
-    chartsTitle.style.margin = '16px 0 8px 0';
+    chartsTitle.style.margin = '0';
     chartsTitle.style.fontSize = `${12 * fontScale}pt`;
+    chartsTitle.style.lineHeight = `${CHARTS_TITLE_HEIGHT_PX * heightScale}px`;
+    chartsTitle.style.overflow = 'hidden';
     blocks.push({ el: chartsTitle, height: CHARTS_TITLE_HEIGHT_PX * heightScale });
 
     for (const chart of charts) {
@@ -472,6 +492,42 @@ async function renderPageToCanvas(
 }
 
 /**
+ * Computes the rendered height of a data row, accounting for wrapped cells
+ * and larger fonts. The result is in rendered (post-scale) pixels.
+ */
+function computeRowRenderedHeight(
+  sheet: Sheet,
+  r: number,
+  bounds: PrintRange,
+  colWidths: number[],
+  heightScale: number,
+  fontScale: number,
+): number {
+  const base = (sheet.rowHeights[r] ?? sheet.defaultRowHeight) * heightScale;
+  let needed = base;
+
+  for (let c = bounds.startCol; c <= bounds.endCol; c++) {
+    const cell = sheet.cells[`${r}:${c}`];
+    if (!cell) continue;
+
+    const fontSize = (cell.style?.fontSize ?? PDF_BASE_FONT_SIZE_PX) * fontScale;
+    const lineHeight = pdfLineHeight(fontSize);
+
+    if (isWrappedCell(cell)) {
+      const font = `${fontSize}px ${PDF_FONT}`;
+      const value = getCellValue(cell);
+      const width = colWidths[c - bounds.startCol];
+      const lines = countWrappedLines(value, width, font, cell.style?.whiteSpace === 'pre');
+      needed = Math.max(needed, lines * lineHeight);
+    } else {
+      needed = Math.max(needed, lineHeight);
+    }
+  }
+
+  return needed;
+}
+
+/**
  * Builds a single row (either the column-letter heading row or a data row).
  */
 function buildRow(
@@ -483,7 +539,7 @@ function buildRow(
   rowHeaderWidth: number,
   showHeaders: boolean,
   isHeaderRow: boolean,
-  heightScale: number,
+  rowHeight: number,
   fontScale: number
 ): HTMLElement {
   const row = document.createElement('div');
@@ -493,9 +549,7 @@ function buildRow(
   row.style.width = `${contentWidth}px`;
   row.style.boxSizing = 'border-box';
   row.style.overflow = 'hidden';
-  row.style.height = isHeaderRow
-    ? `${HEADER_ROW_HEIGHT_PX * heightScale}px`
-    : `${(sheet.rowHeights[r] ?? sheet.defaultRowHeight) * heightScale}px`;
+  row.style.height = `${rowHeight}px`;
 
   // Row-number heading cell.
   if (showHeaders) {
@@ -504,7 +558,8 @@ function buildRow(
     rowHeader.style.flex = '0 0 auto';
     rowHeader.style.width = `${rowHeaderWidth}px`;
     rowHeader.style.boxSizing = 'border-box';
-    rowHeader.style.padding = '2px 6px';
+    rowHeader.style.padding = '0 6px';
+    rowHeader.style.lineHeight = `${rowHeight}px`;
     rowHeader.style.backgroundColor = '#f0f0f0';
     rowHeader.style.fontWeight = 'bold';
     rowHeader.style.textAlign = 'center';
@@ -521,7 +576,7 @@ function buildRow(
     cellEl.style.flex = '0 0 auto';
     cellEl.style.width = `${colWidths[c - bounds.startCol]}px`;
     cellEl.style.boxSizing = 'border-box';
-    cellEl.style.padding = '2px 6px';
+    cellEl.style.padding = '0 6px';
     cellEl.style.overflow = 'hidden';
     cellEl.style.whiteSpace = 'nowrap';
     cellEl.style.textOverflow = 'ellipsis';
@@ -531,8 +586,11 @@ function buildRow(
       cellEl.style.fontWeight = 'bold';
       cellEl.style.textAlign = 'center';
       cellEl.style.borderBottom = '1px solid #999';
+      cellEl.style.lineHeight = `${rowHeight}px`;
       cellEl.textContent = colToLetter(c);
     } else {
+      const fontSize = (cell?.style?.fontSize ?? PDF_BASE_FONT_SIZE_PX) * fontScale;
+      cellEl.style.lineHeight = `${pdfLineHeight(fontSize)}px`;
       applyCellBorders(cellEl, cell, r, c, bounds, sheet);
       applyCellStyle(cellEl, cell, fontScale);
       cellEl.textContent = getCellValue(cell);
