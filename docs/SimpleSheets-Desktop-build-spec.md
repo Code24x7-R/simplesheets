@@ -235,7 +235,7 @@ Every requirement is testable and has a stable ID. Evidence levels are defined i
 - **PERF-04** Twenty open/close cycles show no more than 20% heap growth after garbage collection, and no growth in listener counts.
 - **PERF-05** Recovery writes are debounced and never exceed 2 writes per second; no recovery write blocks the UI for more than 50 ms.
 - **PERF-06** IPC listeners, object URLs, timers, and streams created by desktop code are removed on document close and window close.
-- **PERF-07** The installed package size is measured and reported; the starting budget is 250 MB.
+- **PERF-07** The installer and portable artifacts are measured and reported; the starting budgets are **150 MB compressed** and **350 MB unpacked** (revised after measuring Electron 45 on Windows; see `DECISIONS.md`).
 - **PERF-08** Peak memory for the 10 MB workbook is measured and reported; the starting ceiling is 1.5 GB total across processes.
 - **PERF-09** All measurements record machine specification, Electron/Chromium version, fixture path, and method in `DECISIONS.md`.
 
@@ -440,7 +440,7 @@ Reference machine: this Windows machine (record exact CPU/RAM in `DECISIONS.md`)
 | Save 10 MB | < 2 s | IPC timestamp to write completion |
 | Recovery write | ≤ 2/s, < 50 ms each | Main-process write log |
 | Heap growth over 20 cycles | < 20% after GC | `getProcessMemoryInfo` + heap snapshots; launch E2E with `--js-flags=--expose-gc` and force GC before each sample |
-| Installed size | ≤ 250 MB | Measure `release/win-unpacked` and installer |
+| Installed size | Installer ≤ 150 MB; unpacked ≤ 350 MB | Measure `release/win-unpacked` and installer |
 | Peak memory (10 MB workbook) | ≤ 1.5 GB | Sum of process working sets after open and scroll |
 | Idle network requests | 0 over 30 s | Playwright/CDP network log |
 

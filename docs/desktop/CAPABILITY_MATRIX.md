@@ -16,12 +16,12 @@ Status reflects M0. Capabilities are enabled as milestones land; the adapter in
 | Window position/size persistence | ❌ | ⏳ M4 | ⏳ M4 | ⏳ M4 |
 | Single-instance focus | ❌ | ✅ | ✅ | ✅ |
 | `.ssjson` file association / Open With | ❌ | ❌ (dev) | ⏳ M5 | ❌ |
-| NSIS per-user installer | — | — | ⏳ M5 | — |
-| Portable executable | — | — | — | ⏳ M5 |
+| NSIS per-user installer | — | — | 🟡 built (not installed) | — |
+| Portable executable | — | — | — | 🟡 built (not launched) |
 | Open data folder | ❌ | ✅ | ✅ | ✅ |
 | About: versions, edition, diagnostics | ⏳ M4 | ⏳ M4 | ⏳ M4 | ⏳ M4 |
 | Auto-update | ❌ | ❌ | ❌ | ❌ |
 | Telemetry / network at idle | ❌ | ❌ | ❌ | ❌ |
 | URL protocol (`simplesheets://`) | ❌ | ❌ | ❌ | ❌ |
 
-Legend: ✅ available · ⏳ planned milestone · ❌ not available.
+Legend: ✅ available · ⏳ planned milestone · 🟡 built but not verified · ❌ not available.

@@ -11,6 +11,11 @@ files:
   - dist-electron/**/*
   - package.json
   - '!node_modules/**/*'
+  - '!**/*.map'
+
+# Keep only the locale Chromium actually uses; the app UI ships its own strings.
+electronLanguages:
+  - en-US
 
 asar: true
 npmRebuild: false

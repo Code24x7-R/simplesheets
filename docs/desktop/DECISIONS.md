@@ -171,3 +171,28 @@ fetched. Revisit before public release and record the decision here. Do not run
 - `npm run electron:dev` was exercised through Playwright's web-server +
   Electron launch; the combined script itself should be re-run manually on a
   fresh shell before M1.
+
+---
+
+## 7. Measured package sizes (M0 preview build)
+
+Measured from `npm run electron:build` on the development machine:
+
+| Artifact | Size |
+| --- | --- |
+| `release/win-unpacked/` | 312 MB |
+| `release/SimpleSheets-Setup-0.1.0.exe` | 109 MB |
+| `release/SimpleSheets-Portable-0.1.0.exe` | 99 MB |
+
+Reductions applied: `electronLanguages: [en-US]` (locales dropped from 49 MB to
+588 KB) and `!**/*.map` (source maps excluded from the package).
+
+The spec's original 250 MB installed-size budget was set before measuring
+Electron 45. A modern Electron runtime is ~240 MB before the app is added, so
+the budget is revised to **installer ≤ 150 MB and unpacked ≤ 350 MB** rather
+than removing runtime DLLs that the app may need. Installer signing and
+clean-machine install remain unverified.
+
+The NSIS installer and portable executable were built for size measurement only.
+They were **not installed**, because installing changes registry entries and
+file associations and needs explicit approval.

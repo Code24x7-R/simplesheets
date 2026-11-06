@@ -42,8 +42,9 @@ Checks run:
 | `npm run type-check:electron` | pass |
 | `npm test` | 201 suites, 4,535 passed, 1 skipped |
 | `npm run verify:e2e` | 1 smoke test passed (dev shell) |
-| `npm run electron:build:dir` | unpacked packaged build produced |
+| `npm run electron:build:dir` | unpacked packaged build produced (312 MB) |
 | `node scripts/desktop-packaged-smoke.mjs` | packaged app loaded from `app://`, edition `installed` |
+| `npm run electron:build` | NSIS installer 109 MB; portable 99 MB (built, not installed) |
 | `npm run desktop:fixtures` | 15 fixtures in `tmp/desktop-fixtures` |
 | `npm run desktop:icons` | `build/icon.ico`, `build/icon.png` |
 
@@ -52,13 +53,15 @@ Artifacts (not committed):
 - `dist-electron/` — compiled main/preload/core.
 - `dist/` — renderer built with `--mode electron`.
 - `release/win-unpacked/SimpleSheets.exe` — packaged smoke target.
+- `release/SimpleSheets-Setup-0.1.0.exe` — NSIS installer (not installed).
+- `release/SimpleSheets-Portable-0.1.0.exe` — portable build (not launched).
 - `tmp/desktop-fixtures/` — generated test data.
 
 Known limitations:
 
 - Adapter capabilities are intentionally `false` for dialogs, recents,
   recovery, native menu, and association until their milestones.
-- No installer was produced. Running one is deferred and requires approval.
+- Installer and portable artifacts were produced for size measurement only. Installing one requires approval; association and clean-machine checks remain unverified.
 - The combined `npm run electron:dev` script should be manually exercised
   before closing M1 (the equivalent launch is covered by Playwright).
 
