@@ -1185,3 +1185,13 @@
 - **Fix**: Elevated the SVG connections layer (`z-10`), set `pointer-events: none` on the overlay containers with `pointer-events: auto` scoped to individual connector hitboxes/lines/midpoints and node cards, and added a dedicated wide hit area (`canvas-connection-hitbox-*`) on every connector for smooth click selection.
 - **Tests**: Added explicit connector selection hit area test in `CreatorCanvasView.test.tsx`.
 - **Verification**: All 9 Creator Canvas test suites pass (57 tests), type check clean, lint clean.
+
+## 2026-11-07 [FEATURE] SimpleSheets Desktop — M0 Electron Scaffold
+
+- **Spec**: Added `docs/SimpleSheets-Desktop-build-spec.md` (133 requirements, milestones M0–M8).
+- **Shell**: Electron 45 main/preload with `contextIsolation`, sandboxing, no Node in the renderer, single-instance lock, and a stable `app://simplesheets` origin served from ASAR.
+- **Security**: validated IPC sender origins, strict packaged CSP, navigation/window-open blocking, denied permissions, disabled DevTools in packaged builds.
+- **Adapter**: web/desktop platform adapter skeleton with freeze-safe preload bridge and typed results.
+- **Tooling**: deterministic fixture generator, ImageMagick icon generator, electron-builder config (per-user NSIS + portable), packed smoke script, Playwright Electron smoke test.
+- **Docs**: `docs/desktop/DECISIONS.md`, `PROGRESS.md`, and `CAPABILITY_MATRIX.md`.
+- **Verification**: `npm run verify` (201 suites, 4,535 passed, 1 skipped), `npm run verify:e2e` (1 passed), `npm run electron:build:dir` produced an unpacked build, and the packaged app loaded from `app://` with edition `installed`.

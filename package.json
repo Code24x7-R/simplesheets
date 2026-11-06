@@ -2,6 +2,8 @@
   "name": "simplesheets",
   "version": "0.1.0",
   "description": "A lightweight, browser-based spreadsheet for small businesses",
+  "main": "dist-electron/electron/main.js",
+  "author": "Richard Robertson",
   "license": "MIT",
   "private": true,
   "files": [
@@ -15,9 +17,22 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "lint": "eslint src/ --ext .ts,.tsx --max-warnings 0",
+    "lint:electron": "eslint electron src/platform --ext .ts,.cts --max-warnings 0",
     "type-check": "tsc --noEmit",
+    "type-check:electron": "tsc -p tsconfig.electron.json --noEmit",
     "test": "jest --coverage",
     "test:watch": "jest --watch",
+    "verify": "npm run lint && npm run type-check && npm run lint:electron && npm run type-check:electron && npm test",
+    "verify:e2e": "playwright test",
+    "verify:desktop": "npm run lint:electron && npm run type-check:electron && npm test -- --testPathPattern=src/platform",
+    "electron:compile": "tsc -p tsconfig.electron.json && node scripts/write-electron-package.mjs",
+    "electron:dev": "concurrently -k -s first \"npm run dev\" \"wait-on http://localhost:3000 && electron .\"",
+    "electron:start": "electron .",
+    "electron:build:renderer": "vite build --mode electron",
+    "electron:build:dir": "npm run electron:compile && npm run electron:build:renderer && electron-builder --dir --publish never",
+    "electron:build": "npm run electron:compile && npm run electron:build:renderer && electron-builder --win nsis portable --publish never",
+    "desktop:fixtures": "node scripts/generate-desktop-fixtures.mjs",
+    "desktop:icons": "node scripts/build-desktop-icon.mjs",
     "prepack-offline": "node scripts/prepack-offline.mjs",
     "postpack": "node scripts/postpack-offline.mjs",
     "release:offline": "npm run build && npm run prepack-offline && npm pack",
@@ -40,9 +55,11 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "@playwright/test": "1.65.0",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.1.0",
     "@types/jest": "^29.5.14",
+    "@types/node": "24.10.1",
     "@types/papaparse": "^5.3.15",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
@@ -50,6 +67,9 @@
     "@typescript-eslint/parser": "^8.19.1",
     "@vitejs/plugin-react": "^4.3.4",
     "autoprefixer": "^10.4.20",
+    "concurrently": "10.0.6",
+    "electron": "45.2.3",
+    "electron-builder": "26.18.0",
     "eslint": "^8.57.1",
     "eslint-plugin-react-hooks": "^4.6.2",
     "husky": "^9.1.7",
@@ -60,6 +80,7 @@
     "tailwindcss": "^3.4.17",
     "ts-jest": "^29.2.5",
     "typescript": "^5.7.2",
-    "vite": "^5.4.11"
+    "vite": "^5.4.11",
+    "wait-on": "9.5.1"
   }
 }
