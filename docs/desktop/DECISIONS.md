@@ -390,3 +390,32 @@ file associations and needs explicit approval.
   upgrade, association/`Open with` behavior, actual portable-wrapper launch,
   SmartScreen, antivirus, and Windows 11 presentation are marked
   unverified-environment and covered by `INSTALL-CHECKLIST.md`.
+
+---
+
+## 13. Security hardening (M6)
+
+- **Sender identity.** `assertTrustedSender` rejects subframes (`senderFrame.parent
+  !== null`) and requires the frame origin to be trusted. Packaged builds trust
+  only `app://simplesheets`; the dev origin is trusted only when
+  `app.isPackaged === false`.
+- **Strict payloads.** IPC objects use an allowlist of own keys. Unknown fields
+  return typed `INVALID_ARGUMENT`; this complements existing type, length, and
+  range checks.
+- **Path policy.** Write allowlist keys are canonical real paths (`realpath`),
+  with the real parent + basename used for new files. `..` and symlink aliases
+  therefore cannot bypass an approved path. The save-handler check runs before
+  the atomic writer.
+- **Navigation.** `will-navigate` and `will-redirect` block anything outside the
+  trusted origins. `setWindowOpenHandler` denies windows and only opens
+  validated http/https/mailto externally; webview attachment is cancelled.
+- **Shell.** `shell.showItemInFolder` is the only shell path operation, applied
+  to the fixed app data directory. External URLs use `shell.openExternal` only
+  after scheme, length, and control-character validation.
+- **Packaged checks.** The packaged smoke captures console output, verifies the
+  CSP response header, rejects protocol traversal and encoded traversal, denies
+  geolocation and `window.open`, and records 30 seconds of idle network traffic
+  (empty).
+- **Unverified.** Forged native input and OS-level antivirus/registry behavior
+  remain outside automated coverage; the M5 checklist covers installed-app
+  behavior.

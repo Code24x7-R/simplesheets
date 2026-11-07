@@ -36,6 +36,17 @@ describe('isTrustedOrigin', () => {
     expect(isTrustedOrigin('', allowed)).toBe(false);
   });
 
+  it('rejects null, wrong ports, and userinfo lookalikes', () => {
+    expect(isTrustedOrigin('null', allowed)).toBe(false);
+    expect(isTrustedOrigin('http://localhost:3001/', allowed)).toBe(false);
+    expect(isTrustedOrigin('http://localhost:3000@evil.example/', allowed)).toBe(false);
+    expect(isTrustedOrigin('app://simplesheets:444/index.html', allowed)).toBe(false);
+  });
+
+  it('rejects a development origin when only the app origin is trusted', () => {
+    expect(isTrustedOrigin('http://localhost:3000/', [APP_ORIGIN])).toBe(false);
+  });
+
   it('rejects an empty allowlist', () => {
     expect(isTrustedOrigin('app://simplesheets/index.html', [])).toBe(false);
   });
@@ -57,6 +68,7 @@ describe('isAllowedExternalUrl', () => {
     'ftp://example.com/file',
     'not a url',
     '',
+    ' javascript:alert(1)',
   ])('rejects %s', (url) => {
     expect(isAllowedExternalUrl(url)).toBe(false);
   });

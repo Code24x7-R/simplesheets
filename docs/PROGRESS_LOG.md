@@ -1255,3 +1255,12 @@
 - **Identity**: appId `au.mouseclick.simplesheets`, product `SimpleSheets`, per-user assisted installer, data preserved on uninstall.
 - **Docs**: README Electron build/install/signing section, `INSTALL-CHECKLIST.md`, and `M5-EVIDENCE.md` with sizes, SHA-256 hashes, script snippets, and unverified-environment list.
 - **Tests**: 214 suites / 4,653 passed / 1 skipped; E2E 34; packaged smoke pass.
+
+## 2026-11-07 [FEATURE] SimpleSheets Desktop — M6 Complete
+
+- **Trust boundary**: top-level-frame-only IPC; packaged builds trust only the app origin, dev adds localhost.
+- **Payloads**: strict unknown-field rejection across recents, recovery, menu state, legacy import, save dialogs, and writes.
+- **Path policy**: canonical real-path write allowlist, with real parent + basename for new files; `..` and symlink bypass tests pass.
+- **Navigation/shell**: `will-redirect` blocked, subframes rejected, `shell.showItemInFolder` only, external URLs length/control validated.
+- **Packaged security smoke**: CSP header/console, traversal, permissions, window-open, and 30-second idle network checks pass.
+- **Tests**: 215 suites / 4,658 passed / 1 skipped; E2E 35 tests.

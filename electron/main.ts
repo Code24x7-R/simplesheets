@@ -41,12 +41,13 @@ import { OpenRequestQueue } from '../src/platform/desktop/core/openQueue';
 import { DesktopStateStore, type RecentInput } from '../src/platform/desktop/core/desktopStateStore';
 import { resolveWindowBounds } from '../src/platform/desktop/core/windowBounds';
 import { resolveEdition } from '../src/platform/desktop/core/edition';
+import { hasOnlyKeys } from '../src/platform/desktop/core/ipcValidation';
 import { NATIVE_SHORTCUTS, nativeShortcutAction } from '../src/platform/desktop/core/shortcutOwner';
 import { allowWritePath, isWritePathAllowed, registerSaveHandlers } from './saveHandlers';
 
 const DEV_URL = 'http://localhost:3000';
 const APP_URL = 'app://simplesheets/index.html';
-const TRUSTED_ORIGINS = [APP_ORIGIN, DEV_ORIGIN] as const;
+const TRUSTED_ORIGINS = (app.isPackaged ? [APP_ORIGIN] : [APP_ORIGIN, DEV_ORIGIN]) as readonly string[];
 
 const CONTENT_SECURITY_POLICY = [
   "default-src 'self'",
@@ -357,8 +358,13 @@ function rebuildMenu(): void {
  * @throws Error when the sender frame is missing or untrusted.
  */
 function assertTrustedSender(event: IpcMainInvokeEvent): void {
-  const senderUrl = event.senderFrame?.url ?? '';
-  if (!isTrustedOrigin(senderUrl, TRUSTED_ORIGINS)) {
+  const frame = event.senderFrame;
+  // Only the top-level renderer may invoke privileged IPC. Subframes are
+  // rejected even if they somehow share the trusted origin.
+  if (!frame || frame.parent !== null) {
+    throw new Error('Rejected IPC call from a subframe.');
+  }
+  if (!isTrustedOrigin(frame.url, TRUSTED_ORIGINS)) {
     throw new Error('Rejected IPC call from an untrusted frame.');
   }
 }
@@ -490,13 +496,23 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
 
+function hasControlCharacters(value: string): boolean {
+  for (let index = 0; index < value.length; index += 1) {
+    if (value.charCodeAt(index) < 32) return true;
+  }
+  return false;
+}
+
 function parseRecentInput(value: unknown): RecentInput | null {
   if (!isRecord(value)) return null;
+  if (!hasOnlyKeys(value, ['id', 'name', 'size', 'timestamp', 'source', 'path', 'handleId', 'provider', 'cloudFileId', 'canReopen'])) {
+    return null;
+  }
   if (typeof value.name !== 'string' || value.name.length === 0 || value.name.length > 260) return null;
   if (typeof value.size !== 'number' || !Number.isFinite(value.size)) return null;
   if (value.source !== 'local' && value.source !== 'cloud' && value.source !== 'url') return null;
   if (value.path !== undefined) {
-    if (typeof value.path !== 'string') return null;
+    if (typeof value.path !== 'string' || value.path.length > 32767) return null;
     if (
       value.source === 'local' &&
       (!path.isAbsolute(value.path) || !isSupportedOpenPath(value.path) || !fs.existsSync(value.path))
@@ -712,7 +728,12 @@ function setupIpc(): void {
 
   ipcMain.handle('app:open-external', async (event, url: unknown) => {
     assertTrustedSender(event);
-    if (typeof url !== 'string' || !isAllowedExternalUrl(url)) {
+    if (
+      typeof url !== 'string' ||
+      url.length > 2048 ||
+      hasControlCharacters(url) ||
+      !isAllowedExternalUrl(url)
+    ) {
       return {
         ok: false,
         code: 'INVALID_ARGUMENT',
@@ -723,12 +744,9 @@ function setupIpc(): void {
     return { ok: true };
   });
 
-  ipcMain.handle('app:reveal-data-folder', async (event) => {
+  ipcMain.handle('app:reveal-data-folder', (event) => {
     assertTrustedSender(event);
-    const errorMessage = await shell.openPath(app.getPath('userData'));
-    if (errorMessage) {
-      return { ok: false, code: 'OPEN_FAILED', message: errorMessage };
-    }
+    shell.showItemInFolder(app.getPath('userData'));
     return { ok: true };
   });
 
@@ -793,7 +811,7 @@ function setupIpc(): void {
 
   ipcMain.handle('menu:set-state', (event, value: unknown) => {
     assertTrustedSender(event);
-    if (!isRecord(value)) {
+    if (!isRecord(value) || !hasOnlyKeys(value, ['canUndo', 'canRedo', 'saveEnabled'])) {
       return { ok: false, code: 'INVALID_ARGUMENT', message: 'Invalid menu state.' };
     }
     if (typeof value.canUndo !== 'boolean' || typeof value.canRedo !== 'boolean' || typeof value.saveEnabled !== 'boolean') {
@@ -913,8 +931,18 @@ function setupIpc(): void {
 
   ipcMain.handle('state:import-legacy', async (event, value: unknown) => {
     assertTrustedSender(event);
-    if (!isRecord(value)) {
+    if (!isRecord(value) || !hasOnlyKeys(value, ['mru', 'autosave'])) {
       return { ok: false, code: 'INVALID_ARGUMENT', message: 'Invalid legacy import payload.' };
+    }
+    if (value.mru !== null && value.mru !== undefined && typeof value.mru !== 'string') {
+      return { ok: false, code: 'INVALID_ARGUMENT', message: 'Invalid legacy MRU payload.' };
+    }
+    if (value.autosave !== null && value.autosave !== undefined && typeof value.autosave !== 'string') {
+      return { ok: false, code: 'INVALID_ARGUMENT', message: 'Invalid legacy autosave payload.' };
+    }
+    if ((typeof value.mru === 'string' && value.mru.length > 5_000_000) ||
+        (typeof value.autosave === 'string' && value.autosave.length > 50_000_000)) {
+      return { ok: false, code: 'INVALID_ARGUMENT', message: 'Legacy data is too large.' };
     }
     const mru = typeof value.mru === 'string' ? value.mru : null;
     const autosave = typeof value.autosave === 'string' ? value.autosave : null;
@@ -967,7 +995,7 @@ function setupIpc(): void {
 
   ipcMain.handle('recovery:write', (event, value: unknown) => {
     assertTrustedSender(event);
-    if (!isRecord(value)) {
+    if (!isRecord(value) || !hasOnlyKeys(value, ['workbook', 'path', 'displayName'])) {
       return { ok: false, code: 'INVALID_ARGUMENT', message: 'Invalid recovery payload.' };
     }
     if (value.path !== null && typeof value.path !== 'string') {
@@ -1188,7 +1216,11 @@ if (!hasSingleInstanceLock) {
   });
 
   app.on('web-contents-created', (_event, contents) => {
-    contents.on('will-navigate', (event, url) => {
+    const blockUntrustedNavigation = (event: Electron.Event, url: string): void => {
+      if (!isTrustedOrigin(url, TRUSTED_ORIGINS)) event.preventDefault();
+    };
+    contents.on('will-navigate', blockUntrustedNavigation);
+    contents.on('will-redirect', (event, url) => {
       if (!isTrustedOrigin(url, TRUSTED_ORIGINS)) event.preventDefault();
     });
 

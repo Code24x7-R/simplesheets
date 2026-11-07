@@ -18,7 +18,7 @@ here and in `DECISIONS.md`.
 | M3 | Recents, recovery, session restore, intent state machine | ✅ Complete | See below |
 | M4 | Native menu, accelerators, window state, About | ✅ Complete | See below |
 | M5 | File association, NSIS + portable build | ⬜ Not started | — |
-| M6 | Security hardening | ⬜ Not started | — |
+| M6 | Security hardening | ✅ Complete | See below |
 | M7 | Performance, leak test, packaging polish | ⬜ Not started | — |
 | M8 | Final evidence report | ⬜ Not started | — |
 
@@ -52,6 +52,48 @@ Known M1 limitations:
 - The literal Explorer drag gesture is manual; the drop event and preload path are automated.
 - The native dirty/open-close prompt arrives in M4; M2 uses the existing confirm.
 - M1's FIFO queue was superseded by M3's newest-wins behavior.
+
+---
+
+## M6 evidence
+
+Checks run:
+
+| Check | Result |
+| --- | --- |
+| `npm run verify` | 215 suites, 4,658 passed, 1 skipped |
+| `npm run verify:e2e` | 35 tests passed |
+| Packaged smoke | argv/picker/save/security pass, including 30 s idle network |
+| `npm run electron:build:dir` | pass |
+
+Hardening:
+
+- IPC callers must be the top-level renderer frame; subframes are rejected even
+  with a trusted origin. Packaged builds trust only `app://simplesheets`;
+  development additionally trusts `http://localhost:3000`.
+- Strict unknown-field rejection for recent, recovery, menu-state, legacy-import,
+  save-dialog, and write payloads. Existing type/range/length checks retained.
+- Write allowlist keys now use `realpath` (or the real parent + basename for a
+  new file), so symlink and `..` aliases cannot bypass the approved path.
+- `will-redirect` is blocked like `will-navigate`; window-open, webview attach,
+  permissions, and external schemes remain denied/validated.
+- `app:reveal-data-folder` uses `shell.showItemInFolder` on the fixed app data
+  folder; no `shell.openPath` path operation remains.
+- Packaged CSP response header verified, CSP console checked, protocol
+  traversal/encoded traversal rejected, `window.open` denied, geolocation
+  denied, and 30 s idle network log empty.
+
+E2E/negative coverage added:
+
+- unknown write fields return `INVALID_ARGUMENT`;
+- `..` traversal outside the approved path returns `NOT_ALLOWED`;
+- a symlink resolving outside the approved path returns `NOT_ALLOWED`;
+- `open:recent` rejects paths not in the main recents list;
+- packaged permission/window-open/traversal/CSP/idle checks.
+
+Unverified-environment: forged native input, OS-level antivirus behavior, and
+actual registry association behavior are covered by code inspection and the
+M5 manual checklist; no installer is run.
 
 ---
 

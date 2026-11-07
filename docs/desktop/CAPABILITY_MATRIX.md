@@ -1,6 +1,6 @@
 # SimpleSheets Desktop — Capability Matrix
 
-Status reflects M5. Capabilities are enabled as milestones land; the adapter in
+Status reflects M6. Capabilities are enabled as milestones land; the adapter in
 `src/platform/desktop/index.ts` is the source of truth.
 
 | Capability | Web | Desktop dev | Installed | Portable |

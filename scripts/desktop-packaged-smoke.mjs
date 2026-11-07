@@ -25,6 +25,8 @@ for (const required of [executablePath, smallFixture, unicodeFixture]) {
 
 const profile = await mkdtemp(path.join(os.tmpdir(), 'simplesheets-packaged-'));
 console.log('[smoke] launching packaged build');
+const consoleMessages = [];
+const externalRequests = [];
 const electronApp = await electron.launch({
   executablePath,
   args: [smallCopy],
@@ -36,8 +38,21 @@ const electronApp = await electron.launch({
   },
 });
 
+electronApp.on('window', (page) => {
+  page.on('console', (message) => consoleMessages.push(message.text()));
+});
+
 try {
   const window = await electronApp.firstWindow();
+  await electronApp.evaluate(({ session }) => {
+    globalThis.__simplesheetsRequests = [];
+    session.defaultSession.webRequest.onBeforeRequest((details, callback) => {
+      if (/^https?:/i.test(details.url)) {
+        globalThis.__simplesheetsRequests.push(details.url);
+      }
+      callback({});
+    });
+  });
   const title = await window.title();
   if (!/SimpleSheets/.test(title)) {
     throw new Error(`unexpected window title: ${title}`);
@@ -55,6 +70,37 @@ try {
   const info = await window.evaluate(() => window.simplesheetsDesktop?.getAppInfo());
   if (!info || info.edition !== 'installed') {
     throw new Error(`unexpected edition: ${JSON.stringify(info)}`);
+  }
+
+  // Security negative checks: permissions, window.open, traversal.
+  const permission = await window.evaluate(() => {
+    if (!navigator.geolocation) return Promise.resolve('unavailable');
+    return new Promise((resolve) => {
+      navigator.geolocation.getCurrentPosition(
+        () => resolve('granted'),
+        () => resolve('denied'),
+      );
+    });
+  });
+  if (permission !== 'denied' && permission !== 'unavailable') {
+    throw new Error(`permission request was not denied: ${permission}`);
+  }
+  const openedWindow = await window.evaluate(() => window.open('about:blank') !== null);
+  if (openedWindow) throw new Error('window.open was not denied');
+  const csp = await window.evaluate(async () => {
+    const response = await fetch('app://simplesheets/index.html');
+    return response.headers.get('content-security-policy') ?? '';
+  });
+  if (!csp.includes("default-src 'self'") || !csp.includes("object-src 'none'")) {
+    throw new Error(`unexpected packaged CSP: ${csp}`);
+  }
+  const traversalStatuses = await window.evaluate(async () => {
+    const first = await fetch('app://simplesheets/../package.json');
+    const second = await fetch('app://simplesheets/assets/%2e%2e/%2e%2e/package.json');
+    return [first.status, second.status];
+  });
+  if (traversalStatuses.some((status) => status === 200)) {
+    throw new Error(`traversal request succeeded: ${JSON.stringify(traversalStatuses)}`);
   }
 
   // Packaged Save: writes the current path through the atomic writer.
@@ -79,7 +125,18 @@ try {
     .first()
     .waitFor({ timeout: 60_000 });
 
-  console.log(`[smoke] packaged argv+picker/save OK: ${title} (${info.edition})`);
+  if (consoleMessages.some((text) => /content security policy/i.test(text))) {
+    throw new Error('packaged renderer reported a CSP violation');
+  }
+
+  // SEC-12: no external network traffic while idle.
+  await window.waitForTimeout(30_000);
+  const requests = await electronApp.evaluate(() => globalThis.__simplesheetsRequests ?? []);
+  if (requests.length > 0) {
+    throw new Error(`idle network requests detected: ${JSON.stringify(requests)}`);
+  }
+
+  console.log(`[smoke] packaged argv+picker/save/security OK: ${title} (${info.edition})`);
 } finally {
   await electronApp.close();
   await rm(profile, { recursive: true, force: true });

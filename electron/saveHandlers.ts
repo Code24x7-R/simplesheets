@@ -9,9 +9,11 @@
  */
 
 import { app, dialog, ipcMain, type BrowserWindow } from 'electron';
+import fs from 'node:fs';
 import fsp from 'node:fs/promises';
 import path from 'node:path';
 import { atomicWriteFile } from '../src/platform/desktop/core/atomicWrite';
+import { hasOnlyKeys, isFiniteNumber } from '../src/platform/desktop/core/ipcValidation';
 import {
   classifySaveTarget,
   type FileVersion,
@@ -61,9 +63,26 @@ interface SaveHandlerDeps {
   onSaved?: (filePath: string) => void;
 }
 
+function normalizePathKey(filePath: string): string {
+  return process.platform === 'win32' ? filePath.toLowerCase() : filePath;
+}
+
+/**
+ * Resolve a path to its real target, or its real parent plus basename for a
+ * file that does not exist yet. This prevents symlink/path-aliasing bypasses.
+ */
 function pathKey(filePath: string): string {
   const resolved = path.resolve(filePath);
-  return process.platform === 'win32' ? resolved.toLowerCase() : resolved;
+  try {
+    return normalizePathKey(fs.realpathSync.native(resolved));
+  } catch {
+    try {
+      const parent = fs.realpathSync.native(path.dirname(resolved));
+      return normalizePathKey(path.join(parent, path.basename(resolved)));
+    } catch {
+      return normalizePathKey(resolved);
+    }
+  }
 }
 
 /** Approve a path returned by a native dialog for later writes. */
@@ -96,7 +115,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function parseSaveDialogRequest(value: unknown): SaveDialogRequest | null {
-  if (!isRecord(value)) return null;
+  if (!isRecord(value) || !hasOnlyKeys(value, ['suggestedName', 'filters'])) return null;
   if (typeof value.suggestedName !== 'string' || value.suggestedName.length === 0) {
     return null;
   }
@@ -105,7 +124,7 @@ function parseSaveDialogRequest(value: unknown): SaveDialogRequest | null {
   }
   const filters: Electron.FileFilter[] = [];
   for (const entry of value.filters) {
-    if (!isRecord(entry)) return null;
+    if (!isRecord(entry) || !hasOnlyKeys(entry, ['name', 'extensions'])) return null;
     if (typeof entry.name !== 'string' || entry.name.length === 0 || entry.name.length > 80) {
       return null;
     }
@@ -123,8 +142,8 @@ function parseSaveDialogRequest(value: unknown): SaveDialogRequest | null {
 }
 
 function parseWriteRequest(value: unknown): WriteRequest | null {
-  if (!isRecord(value)) return null;
-  if (typeof value.path !== 'string' || !path.isAbsolute(value.path)) return null;
+  if (!isRecord(value) || !hasOnlyKeys(value, ['path', 'data', 'expected'])) return null;
+  if (typeof value.path !== 'string' || !path.isAbsolute(value.path) || value.path.length > 32767) return null;
   if (typeof value.data !== 'string' && !(value.data instanceof Uint8Array)) return null;
   const byteLength = typeof value.data === 'string'
     ? Buffer.byteLength(value.data, 'utf8')
@@ -133,13 +152,8 @@ function parseWriteRequest(value: unknown): WriteRequest | null {
 
   let expected: FileVersion | null = null;
   if (value.expected !== null) {
-    if (!isRecord(value.expected)) return null;
-    if (
-      typeof value.expected.mtimeMs !== 'number' ||
-      !Number.isFinite(value.expected.mtimeMs) ||
-      typeof value.expected.size !== 'number' ||
-      !Number.isFinite(value.expected.size)
-    ) {
+    if (!isRecord(value.expected) || !hasOnlyKeys(value.expected, ['mtimeMs', 'size'])) return null;
+    if (!isFiniteNumber(value.expected.mtimeMs) || !isFiniteNumber(value.expected.size)) {
       return null;
     }
     expected = { mtimeMs: value.expected.mtimeMs, size: value.expected.size };
