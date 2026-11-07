@@ -32,6 +32,7 @@ describe('desktopState', () => {
       reopenLast: true,
       cleanExit: true,
       legacyImported: false,
+      windowBounds: null,
     });
   });
 

@@ -126,6 +126,10 @@ export interface DesktopRecoveryPromptResult extends DesktopBridgeResult {
   value?: DesktopRecoveryLoad;
 }
 
+export interface DesktopUnsavedResult extends DesktopBridgeResult {
+  value?: 'save' | 'discard' | 'cancel';
+}
+
 export interface DesktopBridge {
   readonly isDesktop: true;
   readonly platform: string;
@@ -154,6 +158,18 @@ export interface DesktopBridge {
   writeRecovery(input: { workbook: unknown; path: string | null; displayName: string }): Promise<DesktopBridgeResult>;
   clearRecovery(): Promise<DesktopBridgeResult>;
   promptRecovery(): Promise<DesktopRecoveryPromptResult>;
+  promptUnsavedChanges(message: string): Promise<DesktopUnsavedResult>;
+  setDirty(dirty: boolean): Promise<DesktopBridgeResult>;
+  requestClose(): Promise<DesktopBridgeResult>;
+  closeReady(): Promise<DesktopBridgeResult>;
+  closeCancel(): Promise<DesktopBridgeResult>;
+  setMenuState(state: {
+    canUndo: boolean;
+    canRedo: boolean;
+    saveEnabled: boolean;
+  }): Promise<DesktopBridgeResult>;
+  resetApplicationData(): Promise<DesktopBridgeResult>;
+  dispatchMenuAction(action: string): Promise<DesktopBridgeResult>;
 }
 
 declare global {

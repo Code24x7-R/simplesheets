@@ -19,8 +19,10 @@ import type {
   PlatformAdapter,
   PlatformCapabilities,
   PlatformFailureCode,
+  MenuState,
   PlatformResult,
   RecoveryPromptResult,
+  UnsavedChoice,
   ReloadedFile,
   SaveFileResult,
 } from '../types';
@@ -38,9 +40,9 @@ const CAPABILITIES: PlatformCapabilities = {
   nativeFileDialogs: true,
   fileAssociation: false,
   singleInstance: true,
-  nativeMenu: false,
+  nativeMenu: true,
   revealInFolder: true,
-  windowStatePersistence: false,
+  windowStatePersistence: true,
   recovery: true,
   appInfo: true,
 };
@@ -339,6 +341,70 @@ export function createDesktopAdapter(bridge: DesktopBridge): PlatformAdapter {
         return normalizeResult(await bridge.clearRecovery());
       } catch (error) {
         return toFailure(error instanceof Error ? error.message : 'The recovery snapshot could not be cleared.');
+      }
+    },
+    async promptUnsavedChanges(message: string): Promise<PlatformResult<UnsavedChoice>> {
+      try {
+        const result = await bridge.promptUnsavedChanges(message);
+        if (!result.ok || !result.value) {
+          return {
+            ok: false,
+            code: normalizeFailureCode(result.code),
+            message: result.message ?? 'The prompt failed.',
+          };
+        }
+        return { ok: true, value: result.value };
+      } catch (error) {
+        return toFailure(error instanceof Error ? error.message : 'The prompt failed.');
+      }
+    },
+    async setDirty(dirty: boolean): Promise<void> {
+      try {
+        await bridge.setDirty(dirty);
+      } catch {
+        // A dirty-state marker must not break editing.
+      }
+    },
+    async requestClose(): Promise<void> {
+      try {
+        await bridge.requestClose();
+      } catch {
+        // The OS close button remains available.
+      }
+    },
+    async closeReady(): Promise<void> {
+      try {
+        await bridge.closeReady();
+      } catch {
+        // The window may already be gone.
+      }
+    },
+    async closeCancel(): Promise<void> {
+      try {
+        await bridge.closeCancel();
+      } catch {
+        // The window may already be gone.
+      }
+    },
+    async setMenuState(state: MenuState): Promise<void> {
+      try {
+        await bridge.setMenuState(state);
+      } catch {
+        // Menu enable-state sync is best-effort.
+      }
+    },
+    async dispatchMenuAction(action: string): Promise<void> {
+      try {
+        await bridge.dispatchMenuAction(action);
+      } catch {
+        // The native accelerator remains the primary path.
+      }
+    },
+    async resetApplicationData(): Promise<PlatformResult<void>> {
+      try {
+        return normalizeResult(await bridge.resetApplicationData());
+      } catch (error) {
+        return toFailure(error instanceof Error ? error.message : 'Application data could not be reset.');
       }
     },
     async promptRecovery(): Promise<PlatformResult<RecoveryPromptResult>> {

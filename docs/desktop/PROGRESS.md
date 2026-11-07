@@ -16,7 +16,7 @@ here and in `DECISIONS.md`.
 | M1 | Open end-to-end (picker, argv, single instance, drag-drop, errors, packaged smoke) | ✅ Complete | See below |
 | M2 | Save/Save As, atomic writes, conflict prompts, exports | ✅ Complete | See below |
 | M3 | Recents, recovery, session restore, intent state machine | ✅ Complete | See below |
-| M4 | Native menu, accelerators, window state, About | ⬜ Not started | — |
+| M4 | Native menu, accelerators, window state, About | ✅ Complete | See below |
 | M5 | File association, NSIS + portable build | ⬜ Not started | — |
 | M6 | Security hardening | ⬜ Not started | — |
 | M7 | Performance, leak test, packaging polish | ⬜ Not started | — |
@@ -52,6 +52,66 @@ Known M1 limitations:
 - The literal Explorer drag gesture is manual; the drop event and preload path are automated.
 - The native dirty/open-close prompt arrives in M4; M2 uses the existing confirm.
 - M1's FIFO queue was superseded by M3's newest-wins behavior.
+
+---
+
+## M4 evidence
+
+Checks run:
+
+| Check | Result |
+| --- | --- |
+| `npm run verify` | 213 suites, 4,650 passed, 1 skipped |
+| `npm run verify:e2e` | 34 tests passed (menu 8, open 8, recovery 7, save 10, smoke 1) |
+| `npm run electron:build:dir` | unpacked packaged build produced |
+| `node scripts/desktop-packaged-smoke.mjs` | packaged argv+picker/save OK |
+
+Implemented:
+
+- Native File/Edit/View/Help menu with File New/Open/Recent/Recover/Save/Save As/
+  Import/Export/Exit, Edit history/clipboard/select-all/find, View fullscreen
+  and dev-only reload, and Help manual/shortcuts/About/data folder.
+- Menu actions route through the existing renderer handlers via `menu:action`.
+- Native accelerators: New, Open, Save, Save As, Undo, Redo, Find & Replace,
+  Quit. `shortcutOwner.ts` is the single list; the renderer never performs a
+  native-owned shortcut and forwards synthetic events that Electron's
+  `before-input-event` does not intercept.
+- Menu enable state: Undo/Redo from renderer history; Recover from main recovery
+  presence; Save/Save As from document state. All refresh live.
+- Window bounds: schema v1 `windowBounds`, validated against
+  `screen.getAllDisplays()`, clamped on-screen, centered 1280×800 fallback,
+  900×600 minimum, maximize flag restored without fullscreen.
+- Native Save / Don't Save / Cancel prompts for close and dirty replacement.
+  Close Save writes through the existing Save handler before letting the window
+  close; Cancel aborts.
+- Native Recent now shows the same ten main-owned entries as the in-app menu,
+  including cloud/url rows (handled by the renderer); missing local entries
+  offer Remove / Locate / Keep.
+- About: edition, Electron/Chromium/Node, build/commit, data folder, Open Data
+  Folder, Copy Diagnostics (versions only), license/notices, SmartScreen note,
+  and Reset Application Data with confirmation.
+- Copy Link on desktop encodes against `https://simplesheets.mouseclick.au/`.
+- SimpleDocs and Help links use the validated external-link adapter.
+
+E2E coverage added:
+
+- menu structure and accelerators;
+- native Save routes to the existing handler;
+- dirty close Cancel keeps the window; Don't Save closes and clears recovery;
+- dirty close Save writes the document before closing;
+- dirty open Cancel leaves the document unchanged; Don't Save replaces it;
+- dirty open Save writes before replacing;
+- window bounds persist and restore;
+- About opens from Help and shows edition data.
+
+Known M4 limitations:
+
+- Native menu accelerator delivery through Playwright's synthetic keyboard goes
+  through the renderer forwarding path; real hardware uses `before-input-event`
+  first. Both produce exactly one action.
+- The Manual menu opens the public `MANUAL.md` URL; the local manual is not
+  bundled into the ASAR.
+- SmartScreen/code-signing remains unverified-environment by design.
 
 ---
 
@@ -94,11 +154,8 @@ E2E restart matrix:
 - Recover from the banner replaces the explicit document with the snapshot;
 - Discard from the banner keeps the explicit document and deletes recovery.
 
-Known M3 limitation:
-
-- The native close prompt is M4. To avoid losing work, a dirty quit is recorded
-  as `cleanExit: false` and recovery is preserved; M4 replaces this with
-  Save / Don't Save / Cancel.
+M3 dirty-quit behavior was superseded in M4 by the native close prompt and is
+retained only as a fallback when the renderer cannot report its dirty state.
 
 ---
 

@@ -1,6 +1,6 @@
 # SimpleSheets Desktop — Capability Matrix
 
-Status reflects M3. Capabilities are enabled as milestones land; the adapter in
+Status reflects M4. Capabilities are enabled as milestones land; the adapter in
 `src/platform/desktop/index.ts` is the source of truth.
 
 | Capability | Web | Desktop dev | Installed | Portable |
@@ -16,14 +16,14 @@ Status reflects M3. Capabilities are enabled as milestones land; the adapter in
 | Drag-and-drop files | ✅ (File API) | ✅ (preload path) | ✅ (preload path) | ✅ (preload path) |
 | Recent files backed by real paths | ❌ | ✅ | ✅ | ✅ |
 | Crash recovery | ❌ | ✅ | ✅ | ✅ |
-| Native menu | ❌ | ⏳ M4 | ⏳ M4 | ⏳ M4 |
-| Window position/size persistence | ❌ | ⏳ M4 | ⏳ M4 | ⏳ M4 |
+| Native menu | ❌ | ✅ | ✅ | ✅ |
+| Window position/size persistence | ❌ | ✅ | ✅ | ✅ |
 | Single-instance focus | ❌ | ✅ | ✅ | ✅ |
 | `.ssjson` file association / Open With | ❌ | ❌ (dev) | ⏳ M5 | ❌ |
 | NSIS per-user installer | — | — | 🟡 built (not installed) | — |
 | Portable executable | — | — | — | 🟡 built (not launched) |
 | Open data folder | ❌ | ✅ | ✅ | ✅ |
-| About: versions, edition, diagnostics | ⏳ M4 | ⏳ M4 | ⏳ M4 | ⏳ M4 |
+| About: versions, edition, diagnostics | ❌ | ✅ | ✅ | ✅ |
 | Auto-update | ❌ | ❌ | ❌ | ❌ |
 | Telemetry / network at idle | ❌ | ❌ | ❌ | ❌ |
 | URL protocol (`simplesheets://`) | ❌ | ❌ | ❌ | ❌ |

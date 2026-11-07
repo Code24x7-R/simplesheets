@@ -65,6 +65,7 @@ import {
   isWorkbookSavePath,
 } from './platform/desktop/core/openRequest';
 import type { FileVersion } from './platform/desktop/core/saveTarget';
+import { isNativeShortcutEvent, nativeShortcutAction } from './platform/desktop/core/shortcutOwner';
 import type { ReloadedFile } from './platform/types';
 import type { RecoveryLoad, RecoverySummary } from './platform/desktop/core/desktopStateStore';
 import { recoveredTitle } from './platform/desktop/core/recovery';
@@ -218,7 +219,9 @@ function WorkbookView() {
   // Open intent waiting for the Import Scope dialog to resolve, if any.
   const pendingOpenAckRef = useRef<number | null>(null);
   // Lets handleSave call handleSaveAs without a forward-reference TDZ.
-  const handleSaveAsRef = useRef<() => Promise<void>>(async () => undefined);
+  const handleSaveAsRef = useRef<() => Promise<boolean>>(async () => false);
+  // Lets the native close/open prompts save the current workbook.
+  const handleSaveRef = useRef<() => Promise<boolean>>(async () => false);
   const reloadFromDiskRef = useRef<(reload: ReloadedFile) => Promise<void>>(async () => undefined);
 
   /**
@@ -245,11 +248,33 @@ function WorkbookView() {
    * Returns true to proceed, false to cancel.
    */
   const confirmDiscard = useCallback(
-    (message: string): boolean => {
+    (message: string): boolean | Promise<boolean> => {
       if (!isDirty) return true;
-      return window.confirm(message);
+      const platform = getPlatform();
+      if (!platform.capabilities.nativeMenu) return window.confirm(message);
+      return platform.promptUnsavedChanges(message).then((result) => {
+        if (!result.ok || result.value === 'cancel') return false;
+        if (result.value === 'save') return handleSaveRef.current();
+        return true;
+      });
     },
     [isDirty],
+  );
+
+  /** Run a destructive action after a sync or native discard decision. */
+  const guardDiscard = useCallback(
+    (message: string, action: () => void) => {
+      const decision = confirmDiscard(message);
+      if (!decision) return;
+      if (decision === true) {
+        action();
+        return;
+      }
+      void decision.then((ok) => {
+        if (ok) action();
+      });
+    },
+    [confirmDiscard],
   );
 
   // Web autosaves to localStorage; desktop uses main-owned recovery.json.
@@ -1070,10 +1095,12 @@ function WorkbookView() {
   }, []);
 
   const handleSimpleDocs = useCallback(() => {
-    window.open('https://simpledocs.mouseclick.au', '_blank', 'noopener,noreferrer');
-  }, []);
+    void getPlatform().openExternal('https://simpledocs.mouseclick.au').then((result) => {
+      if (!result.ok) setStatusMessage(result.message);
+    });
+  }, [setStatusMessage]);
 
-  const handleSave = useCallback(async () => {
+  const handleSave = useCallback(async (): Promise<boolean> => {
     const currentWorkbook = workbookRef.current;
     const baseName = (currentWorkbook.title || 'Untitled').replace(/[^a-zA-Z0-9-_]/g, '_') || 'Untitled';
     const serialized = serializeWorkbook(currentWorkbook);
@@ -1083,8 +1110,7 @@ function WorkbookView() {
     if (platform.capabilities.nativeFileDialogs) {
       const target = currentFilePathRef.current;
       if (!target) {
-        await handleSaveAsRef.current();
-        return;
+        return handleSaveAsRef.current();
       }
       const result = await platform.writeFile({
         path: target,
@@ -1125,15 +1151,15 @@ function WorkbookView() {
           recordSaveMRU(normalizeFileName(baseName), size, 'local', { path: savedPath });
         }
         setStatusMessage(`Saved "${fileNameFromPath(savedPath)}"`);
-        return;
+        return true;
       }
-      if (result.code === 'CANCELED') return;
+      if (result.code === 'CANCELED') return false;
       if (result.code === 'RELOAD' && result.reload) {
         await reloadFromDiskRef.current(result.reload);
-        return;
+        return false;
       }
       setStatusMessage(result.message);
-      return;
+      return false;
     }
 
     // Native write path (Chromium): reuse a retained handle when available.
@@ -1148,7 +1174,7 @@ function WorkbookView() {
 
       if (!handle) {
         handle = await saveWithFilePicker(`${baseName}.ssjson`);
-        if (!handle) return; // user cancelled
+        if (!handle) return false; // user cancelled
         handleId = `h-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
         const stored = await storeFileHandle(handleId, handle);
         if (!stored) handleId = null;
@@ -1157,14 +1183,14 @@ function WorkbookView() {
       const ok = await writeWorkbookToHandle(handle, serialized);
       if (!ok) {
         setStatusMessage('Save failed — permission denied or file unavailable');
-        return;
+        return false;
       }
 
       if (handleId) setCurrentHandleId(handleId);
       markSaved(currentWorkbook);
       recordSaveMRU(normalizeFileName(baseName), size, 'local', handleId ? { handleId, canReopen: true } : undefined);
       setStatusMessage(`Saved "${baseName}.ssjson"`);
-      return;
+      return true;
     }
 
     // Download fallback (no File System Access).
@@ -1173,7 +1199,10 @@ function WorkbookView() {
     markSaved(currentWorkbook);
     recordSaveMRU(normalizeFileName(baseName), size, 'local');
     setStatusMessage(`Saved "${baseName}.ssjson" — download started`);
+    return true;
   }, [currentHandleId, markSaved, recordSaveMRU, pushHistory]);
+
+  handleSaveRef.current = handleSave;
 
   // Ref to the open/replace handler so handleOpen/reopenFromHandle can be
   // declared before handleImport without a TDZ error.
@@ -1189,7 +1218,7 @@ function WorkbookView() {
         size?: number;
         skipConfirm?: boolean;
       },
-    ) => void
+    ) => void | Promise<void>
   >(() => {});
 
   const handleOpen = useCallback(async () => {
@@ -1217,7 +1246,7 @@ function WorkbookView() {
         await storeFileHandle(handleId, picked.handle);
       }
 
-      handleImportRef.current(wb, picked.file.name, handleId ? { handleId, canReopen: true } : undefined);
+      await handleImportRef.current(wb, picked.file.name, handleId ? { handleId, canReopen: true } : undefined);
       if (handleId) setCurrentHandleId(handleId);
     } catch (err) {
       setStatusMessage(`Import error: ${err instanceof Error ? err.message : 'Failed to open file'}`);
@@ -1226,7 +1255,9 @@ function WorkbookView() {
 
   const handleCopyShareLink = useCallback(async () => {
     try {
-      const baseUrl = `${window.location.origin}${window.location.pathname}`;
+      const baseUrl = getPlatform().kind === 'desktop'
+        ? 'https://simplesheets.mouseclick.au/'
+        : `${window.location.origin}${window.location.pathname}`;
       const url = encodeDocToUrl(workbook, baseUrl);
       await navigator.clipboard.writeText(url);
       setStatusMessage('Link copied to clipboard — share it with anyone');
@@ -1272,7 +1303,7 @@ function WorkbookView() {
       }
       try {
         const wb = await readSpreadsheetFile(file);
-        handleImportRef.current(wb, entry.name, { handleId: entry.handleId, canReopen: true });
+        await handleImportRef.current(wb, entry.name, { handleId: entry.handleId, canReopen: true });
         setCurrentHandleId(entry.handleId);
       } catch (err) {
         setStatusMessage(`Import error: ${err instanceof Error ? err.message : 'Failed to reopen file'}`);
@@ -1348,7 +1379,7 @@ function WorkbookView() {
     gridRef.current?.focus();
   }, []);
 
-  const handleSaveAs = useCallback(async () => {
+  const handleSaveAs = useCallback(async (): Promise<boolean> => {
     const currentWorkbook = workbookRef.current;
     const baseName = (currentWorkbook.title || 'Untitled').replace(/[^a-zA-Z0-9-_]/g, '_') || 'Untitled';
     const platform = getPlatform();
@@ -1360,9 +1391,9 @@ function WorkbookView() {
       });
       if (!picked.ok) {
         setStatusMessage(picked.message);
-        return;
+        return false;
       }
-      if (!picked.value) return; // user cancelled
+      if (!picked.value) return false; // user cancelled
       const title = documentTitleFromPath(picked.value);
       const updatedWb: Workbook = { ...currentWorkbook, title, lastModified: Date.now() };
       const serialized = serializeWorkbook(updatedWb);
@@ -1374,32 +1405,32 @@ function WorkbookView() {
       });
       if (!result.ok) {
         if (result.code !== 'CANCELED') setStatusMessage(result.message);
-        return;
+        return false;
       }
 
-      pushHistory(updatedWb, `Saved as "${title}"`, filterStateRef.current, gridSelectionRef.current);
-      markSaved(updatedWb);
       currentFilePathRef.current = result.value.path;
       currentFileStatRef.current = {
         mtimeMs: result.value.mtimeMs,
         size: result.value.size,
       };
+      pushHistory(updatedWb, `Saved as "${title}"`, filterStateRef.current, gridSelectionRef.current);
+      markSaved(updatedWb);
       recordSaveMRU(normalizeFileName(title), size, 'local', { path: result.value.path });
       setStatusMessage(`Saved "${fileNameFromPath(result.value.path)}"`);
-      return;
+      return true;
     }
 
     // Native save picker (Chromium) — retains a writable handle.
     if (supportsSaveFilePicker()) {
       const handle = await saveWithFilePicker(`${baseName}.ssjson`);
-      if (!handle) return; // user cancelled
+      if (!handle) return false; // user cancelled
       const serialized = serializeWorkbook(currentWorkbook);
       const size = serialized.length;
 
       const ok = await writeWorkbookToHandle(handle, serialized);
       if (!ok) {
         setStatusMessage('Save failed — permission denied or file unavailable');
-        return;
+        return false;
       }
 
       const handleId = `h-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -1411,7 +1442,7 @@ function WorkbookView() {
       markSaved(updatedWb);
       recordSaveMRU(normalizeFileName(baseName), size, 'local', stored ? { handleId, canReopen: true } : undefined);
       setStatusMessage(`Saved "${baseName}.ssjson"`);
-      return;
+      return true;
     }
 
     // Fallback: filename prompt + download.
@@ -1425,6 +1456,7 @@ function WorkbookView() {
       setStatusMessage(`Saved "${filename}.ssjson" — download started`);
       closeFilenameModal();
     });
+    return true;
   }, [openFilenameModal, closeFilenameModal, pushHistory, markSaved, recordSaveMRU]);
   handleSaveAsRef.current = handleSaveAs;
 
@@ -1441,6 +1473,30 @@ function WorkbookView() {
     },
     [workbook, pushHistory, recordSaveMRU, markSaved],
   );
+
+  const handleExportJsonMenu = useCallback(() => {
+    const defaultName = (workbook.title || 'Untitled').replace(/[^a-zA-Z0-9-_]/g, '_') || 'Untitled';
+    if (getPlatform().capabilities.nativeFileDialogs) {
+      void saveExport({
+        data: serializeWorkbook(workbook),
+        suggestedName: `${defaultName}.json`,
+        filters: [{ name: 'JSON file', extensions: ['json'] }],
+        download: () => downloadDocument(workbook, defaultName),
+      }).then((result) => {
+        if (result.status === 'saved') {
+          setStatusMessage(`Exported "${fileNameFromPath(result.path ?? `${defaultName}.json`)}"`);
+        } else if (result.status === 'failed') {
+          setStatusMessage(result.message ?? 'JSON export failed');
+        }
+      });
+      return;
+    }
+    openFilenameModal('Export JSON', defaultName, 'json', (filename) => {
+      downloadDocument(workbook, filename);
+      setStatusMessage(`Exported "${filename}.json" — download started`);
+      closeFilenameModal();
+    });
+  }, [workbook, openFilenameModal, closeFilenameModal]);
 
   // Import / Export triggers — dispatch events that the hidden import buttons listen for
   const handleImportExcelMenu = useCallback(() => {
@@ -1724,7 +1780,7 @@ function WorkbookView() {
 
   /* istanbul ignore next - handleImport (open path) requires file upload (tested in ImportButtons.test.tsx) */
   const handleImport = useCallback(
-    (
+    async (
       importedWb: Workbook,
       filename?: string,
       opts?: {
@@ -1736,7 +1792,7 @@ function WorkbookView() {
         skipConfirm?: boolean;
       },
     ) => {
-      if (!opts?.skipConfirm && !confirmDiscard('Open this file? Unsaved changes will be lost.')) return;
+      const applyImport = () => {
       if (isDirty) snapshotPreviousSession(workbook);
       setCurrentHandleId(null);
       const savePath = opts?.path && isWorkbookSavePath(opts.path) ? opts.path : null;
@@ -1760,6 +1816,18 @@ function WorkbookView() {
         path: opts?.path,
       });
       applyExtensionDetection(importedWb);
+      };
+      if (opts?.skipConfirm) {
+        applyImport();
+        return;
+      }
+      const decision = confirmDiscard('Open this file? Unsaved changes will be lost.');
+      if (decision === true) {
+        applyImport();
+      } else if (decision) {
+        const confirmed = await decision;
+        if (confirmed) applyImport();
+      }
     },
     [pushHistory, recordImportMRU, applyExtensionDetection, confirmDiscard, isDirty, workbook, markClean]
   );
@@ -1773,7 +1841,7 @@ function WorkbookView() {
     try {
       const name = fileNameFromPath(reload.path);
       const wb = await readWorkbookFile(new File([reload.data], name));
-      handleImportRef.current(wb, name, {
+      await handleImportRef.current(wb, name, {
         path: reload.path,
         mtimeMs: reload.mtimeMs,
         size: reload.size,
@@ -1844,7 +1912,7 @@ function WorkbookView() {
         }
       } else {
         const wb = await readWorkbookFile(file);
-        handleImportRef.current(wb, request.name, {
+        await handleImportRef.current(wb, request.name, {
           path: request.path,
           mtimeMs: request.mtimeMs,
           size: request.size,
@@ -1966,11 +2034,15 @@ function WorkbookView() {
 
   // Desktop window title: document name plus an unsaved marker.
   useEffect(() => {
-    const platform = getPlatform();
-    if (platform.kind !== 'desktop') return;
-    const name = workbook.title || 'Untitled';
-    void platform.setWindowTitle(`${name}${isDirty ? ' •' : ''} — SimpleSheets`);
-  }, [workbook.title, isDirty]);
+    const currentPlatform = getPlatform();
+    if (currentPlatform.kind !== 'desktop') return;
+    const documentName = currentFilePathRef.current
+      ? fileNameFromPath(currentFilePathRef.current)
+      : (workbook.title || 'Untitled');
+    void currentPlatform.setWindowTitle(
+      `SimpleSheets — ${documentName}${isDirty ? ' •' : ''}`,
+    );
+  }, [workbook, isDirty]);
 
   /** Acknowledge a desktop open intent once its import scope is resolved. */
   const ackPendingOpen = useCallback(() => {
@@ -2016,12 +2088,7 @@ function WorkbookView() {
       }
 
       if (options.scope === 'replace') {
-        if (!confirmDiscard('Import this file? Unsaved changes will be lost.')) {
-          setShowImportScope(false);
-          setPendingImport(null);
-          ackPendingOpen();
-          return;
-        }
+        const applyReplaceImport = () => {
         if (isDirty) snapshotPreviousSession(workbook);
         const title = fileName ? stripExtension(fileName) : wb.title;
         const replaced = applyReplace(wb, title);
@@ -2036,6 +2103,12 @@ function WorkbookView() {
         recordImportMRU(fileName, wb, sourcePath ? { path: sourcePath } : undefined);
         applyExtensionDetection(wb);
         setStatusMessage(`Imported "${title}" — ${replaced.sheets.length} sheet(s)`);
+        setShowImportScope(false);
+        setPendingImport(null);
+        ackPendingOpen();
+        };
+        guardDiscard('Import this file? Unsaved changes will be lost.', applyReplaceImport);
+        return;
       } else if (options.scope === 'new-sheets') {
         const merged = applyAddSheets(workbook, wb);
         pushHistory(merged, 'Import: add sheet(s)', filterStateRef.current, gridSelectionRef.current);
@@ -2055,7 +2128,7 @@ function WorkbookView() {
       ackPendingOpen();
     },
     [
-      pendingImport, workbook, activeCell, confirmDiscard, isDirty, ackPendingOpen,
+      pendingImport, workbook, activeCell, guardDiscard, isDirty, ackPendingOpen,
       resetHistory, markClean, pushHistory, recordImportMRU, applyExtensionDetection,
       filterStateRef, gridSelectionRef,
     ],
@@ -2125,7 +2198,7 @@ function WorkbookView() {
 
   const handleNewSheet = useCallback(
     (wb: Workbook) => {
-      if (!confirmDiscard('Create a new workbook? Unsaved changes will be lost.')) return;
+      const applyNew = () => {
       if (isDirty) snapshotPreviousSession(workbook);
 
       resetHistory(wb);
@@ -2146,8 +2219,10 @@ function WorkbookView() {
       setShowCreatorCanvasTab(false);
       setStatusMessage('Created new workbook');
       gridRef.current?.focus();
+      };
+      guardDiscard('Create a new workbook? Unsaved changes will be lost.', applyNew);
     },
-    [resetHistory, restoreActiveCellForSheet, confirmDiscard, isDirty, workbook, markClean]
+    [resetHistory, restoreActiveCellForSheet, guardDiscard, isDirty, workbook, markClean]
   );
 
   const handleSwitchSheet = useCallback(
@@ -3702,11 +3777,165 @@ function WorkbookView() {
     handleClear();
   }, [handleClear]);
 
+  const handleSelectAll = useCallback(() => {
+    gridRef.current?.selectAll();
+  }, []);
+
+  // Native menu actions route back into the same handlers as the in-app menu.
+  const handleMenuAction = useCallback(
+    (action: string) => {
+      if (action.startsWith('recent-id:')) {
+        const id = action.slice('recent-id:'.length);
+        const entry = recentFiles.find((item) => item.id === id);
+        if (entry) handleOpenRecent(entry);
+        else setStatusMessage('That recent file is no longer available');
+        return;
+      }
+      if (action.startsWith('recent:')) {
+        const filePath = action.slice('recent:'.length);
+        void platform.openRecent(filePath).then((result) => {
+          if (!result.ok) setStatusMessage(result.message);
+        });
+        return;
+      }
+      switch (action) {
+        case 'file:new':
+          handleNewSheet(createEmptyWorkbook());
+          break;
+        case 'file:open':
+          void handleOpen();
+          break;
+        case 'file:save':
+          void handleSave();
+          break;
+        case 'file:save-as':
+          void handleSaveAs();
+          break;
+        case 'file:clear-recents':
+          clearMRU();
+          setStatusMessage('Cleared recent files');
+          break;
+        case 'file:recover':
+          void handleRecoverBanner();
+          break;
+        case 'file:import-excel':
+          handleImportExcelMenu();
+          break;
+        case 'file:import-csv':
+          handleImportCsvMenu();
+          break;
+        case 'file:import-json':
+          handleImportJsonMenu();
+          break;
+        case 'file:export-excel':
+          handleExportExcelMenu();
+          break;
+        case 'file:export-csv':
+          handleExportCsvMenu();
+          break;
+        case 'file:export-json':
+          handleExportJsonMenu();
+          break;
+        case 'file:export-pdf':
+          handleExportPdfMenu();
+          break;
+        case 'file:exit':
+          void platform.requestClose();
+          break;
+        case 'file:save-and-close':
+          void (async () => {
+            const saved = await handleSave();
+            if (saved) {
+              await platform.clearRecovery();
+              await platform.closeReady();
+            } else {
+              await platform.closeCancel();
+            }
+          })();
+          break;
+        case 'edit:undo':
+          handleUndo();
+          break;
+        case 'edit:redo':
+          handleRedo();
+          break;
+        case 'edit:cut':
+          handleCutMenu();
+          break;
+        case 'edit:copy':
+          handleCopyMenu();
+          break;
+        case 'edit:paste':
+          handlePasteMenu();
+          break;
+        case 'edit:paste-special':
+          handlePasteSpecial();
+          break;
+        case 'edit:select-all':
+          handleSelectAll();
+          break;
+        case 'edit:find':
+          handleSearchReplace();
+          break;
+        case 'help:manual':
+          void platform.openExternal('https://simplesheets.mouseclick.au/MANUAL.md').then((result) => {
+            if (!result.ok) setStatusMessage(result.message);
+          });
+          break;
+        case 'help:shortcuts':
+          setShowShortcuts(true);
+          break;
+        case 'help:about':
+          setShowAbout(true);
+          break;
+        case 'help:open-data-folder':
+          void platform.revealDataFolder().then((result) => {
+            if (!result.ok) setStatusMessage(result.message);
+          });
+          break;
+        default:
+          break;
+      }
+    },
+    [
+      platform, setStatusMessage, recentFiles, handleOpenRecent, handleNewSheet, handleOpen, handleSave, handleSaveAs,
+      clearMRU, handleRecoverBanner, handleImportExcelMenu, handleImportCsvMenu,
+      handleImportJsonMenu, handleExportExcelMenu, handleExportCsvMenu,
+      handleExportJsonMenu, handleExportPdfMenu, handleUndo, handleRedo,
+      handleCutMenu, handleCopyMenu, handlePasteMenu, handlePasteSpecial,
+      handleSelectAll, handleSearchReplace,
+    ],
+  );
+
+  useEffect(() => {
+    if (!platform.capabilities.nativeMenu) return;
+    return platform.onMenuAction((action) => {
+      handleMenuAction(action);
+    });
+  }, [platform, handleMenuAction]);
+
+  useEffect(() => {
+    if (!platform.capabilities.nativeMenu) return;
+    void platform.setDirty(isDirty);
+  }, [platform, isDirty]);
+
+  useEffect(() => {
+    if (!platform.capabilities.nativeMenu) return;
+    void platform.setMenuState({ canUndo, canRedo, saveEnabled: true });
+  }, [platform, canUndo, canRedo]);
+
   // ─── Global Keyboard Shortcuts ──────────────────────────────────────────
   // Handles application-wide shortcuts that should work regardless of focus.
   // Placed after all handlers are defined so closures capture valid references.
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      // The native menu owns these accelerators on desktop.
+      if (platform.capabilities.nativeMenu && isNativeShortcutEvent(e)) {
+        e.preventDefault();
+        const action = nativeShortcutAction(e);
+        if (action) void platform.dispatchMenuAction(action);
+        return;
+      }
       // Ignore shortcuts while typing in an input/textarea (formula bar, modals)
       const target = e.target as HTMLElement;
       const isEditing = isEditableTarget(target);
@@ -3802,7 +4031,7 @@ function WorkbookView() {
     };
     window.addEventListener('keydown', handleGlobalKeyDown);
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-  }, [handleUndo, handleRedo, handleNewSheet, handleSave, handleSaveAs, handleOpen, handleSearchReplace, toggleBoldStyle, toggleItalicStyle, toggleUnderlineStyle, handleToggleFilter, handleFxClick, getActiveCellValue, handlePasteSpecial, activeCell]);
+  }, [platform, handleUndo, handleRedo, handleNewSheet, handleSave, handleSaveAs, handleOpen, handleSearchReplace, toggleBoldStyle, toggleItalicStyle, toggleUnderlineStyle, handleToggleFilter, handleFxClick, getActiveCellValue, handlePasteSpecial, activeCell]);
 
   return (
     <div className="h-screen flex flex-col">

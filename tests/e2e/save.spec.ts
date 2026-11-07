@@ -180,7 +180,7 @@ test('Save As writes a new file through the native dialog', async () => {
     expect(JSON.parse(await readFile(target, 'utf8'))).toMatchObject({
       title: 'copy',
     });
-    expect(await windowTitle(session.app)).toContain('copy');
+    await expect.poll(() => windowTitle(session.app), { timeout: 5_000 }).toContain('copy');
   } finally {
     await close(session);
     await rm(dir, { recursive: true, force: true });

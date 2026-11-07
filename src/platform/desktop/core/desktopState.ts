@@ -2,6 +2,8 @@
 // Copyright (c) 2026 Richard Robertson
 /** Main-process desktop state schema and recent-file operations. */
 
+import { normalizeWindowBounds, type WindowBounds } from './windowBounds';
+
 export const STATE_SCHEMA_VERSION = 1;
 export const MAX_RECENT_FILES = 10;
 
@@ -28,6 +30,7 @@ export interface DesktopState {
   readonly reopenLast: boolean;
   readonly cleanExit: boolean;
   readonly legacyImported: boolean;
+  readonly windowBounds: WindowBounds | null;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -44,6 +47,7 @@ export function createDefaultState(): DesktopState {
     reopenLast: true,
     cleanExit: true,
     legacyImported: false,
+    windowBounds: null,
   };
 }
 
@@ -88,6 +92,7 @@ export function normalizeState(value: unknown): DesktopState | null {
     reopenLast: typeof value.reopenLast === 'boolean' ? value.reopenLast : true,
     cleanExit: typeof value.cleanExit === 'boolean' ? value.cleanExit : true,
     legacyImported: value.legacyImported === true,
+    windowBounds: normalizeWindowBounds(value.windowBounds),
   };
 }
 

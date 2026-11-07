@@ -137,6 +137,23 @@ const bridge: DesktopBridge = {
   clearRecovery: () => ipcRenderer.invoke('recovery:clear'),
 
   promptRecovery: () => ipcRenderer.invoke('recovery:prompt'),
+
+  promptUnsavedChanges: (message) => ipcRenderer.invoke('dialog:unsaved', message),
+
+  setDirty: (dirty) => ipcRenderer.invoke('window:set-dirty', dirty),
+
+  requestClose: () => ipcRenderer.invoke('window:close'),
+
+  closeReady: () => ipcRenderer.invoke('window:close-ready'),
+
+  closeCancel: () => ipcRenderer.invoke('window:close-cancel'),
+
+  setMenuState: (state) => ipcRenderer.invoke('menu:set-state', state),
+
+  resetApplicationData: () => ipcRenderer.invoke('app:reset-data'),
+
+  dispatchMenuAction: (action: string): Promise<DesktopBridgeResult> =>
+    ipcRenderer.invoke('menu:dispatch', action),
 };
 
 contextBridge.exposeInMainWorld(

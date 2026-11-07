@@ -1235,3 +1235,14 @@
 - **Recovery UX**: native prompt plus an amber banner for explicit+recovery, `(Recovered)` dirty loading, and path retention only when the original still exists.
 - **Intents**: newest-wins queued-intent handling; active imports finish before the next intent.
 - **Tests**: 211 suites / 4,633 passed / 1 skipped; E2E 26 tests incl. 7-case restart matrix; `npm run verify` passes.
+
+## 2026-11-07 [FEATURE] SimpleSheets Desktop — M4 Complete
+
+- **Native menu**: File/Edit/View/Help with Recents, Recover, Import/Export, fullscreen/dev reload, Manual/Shortcuts/About/Data Folder; actions route to existing renderer handlers.
+- **Accelerators**: New/Open/Save/Save As/Undo/Redo/Find/Quit owned by `shortcutOwner.ts`; renderer ignores them and forwards synthetic keys that `before-input-event` misses.
+- **Menu state**: Undo/Redo and Recover enable states update live; Save/Save As remain available while a document exists.
+- **Window state**: `windowBounds` schema, display validation/clamping, centered fallback, 900×600 minimum, maximize restore without fullscreen.
+- **Dirty prompts**: native Save / Don't Save / Cancel for close and dirty open/new; close Save writes before closing.
+- **About/reset**: edition + runtime versions, build/commit, data folder, Copy Diagnostics, SmartScreen note, and confirmed Reset Application Data.
+- **Fixes**: desktop Copy Link uses the public web base; SimpleDocs/Help use the validated external-link adapter; missing recent entries offer Remove/Locate/Keep.
+- **Tests**: 213 suites / 4,650 passed / 1 skipped; E2E 34 tests; packaged build + smoke passed.

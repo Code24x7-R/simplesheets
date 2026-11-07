@@ -59,6 +59,14 @@ function makeBridge(overrides: Partial<DesktopBridge> = {}): DesktopBridge {
     writeRecovery: async () => ({ ok: true }),
     clearRecovery: async () => ({ ok: true }),
     promptRecovery: async () => ({ ok: true, action: 'none' }),
+    promptUnsavedChanges: async () => ({ ok: true, value: 'discard' }),
+    setDirty: async () => ({ ok: true }),
+    requestClose: async () => ({ ok: true }),
+    closeReady: async () => ({ ok: true }),
+    closeCancel: async () => ({ ok: true }),
+    setMenuState: async () => ({ ok: true }),
+    resetApplicationData: async () => ({ ok: true }),
+    dispatchMenuAction: async () => ({ ok: true }),
     ...overrides,
   };
 }

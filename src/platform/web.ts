@@ -151,5 +151,29 @@ export function createWebAdapter(): PlatformAdapter {
     async promptRecovery() {
       return failure('NOT_SUPPORTED', 'The browser edition has no recovery prompt.');
     },
+    async promptUnsavedChanges() {
+      return failure('NOT_SUPPORTED', 'The browser edition uses window.confirm.');
+    },
+    async setDirty() {
+      return undefined;
+    },
+    async requestClose() {
+      return undefined;
+    },
+    async closeReady() {
+      return undefined;
+    },
+    async closeCancel() {
+      return undefined;
+    },
+    async setMenuState() {
+      return undefined;
+    },
+    async resetApplicationData() {
+      return failure('NOT_SUPPORTED', 'The browser edition has no desktop application data.');
+    },
+    async dispatchMenuAction() {
+      return undefined;
+    },
   };
 }

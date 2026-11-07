@@ -29,6 +29,7 @@ import {
   type RecoveryRecord,
 } from './recovery';
 import { parseLegacyAutosave, parseLegacyMru } from './legacyMigration';
+import type { WindowBounds } from './windowBounds';
 
 export type { RecentEntry, RecentSource } from './desktopState';
 
@@ -225,6 +226,29 @@ export class DesktopStateStore {
     if (this.state.lastDirectory === lastDirectory) return;
     this.state = { ...this.state, lastDirectory };
     this.scheduleStateWrite();
+  }
+
+  /**
+   * Persist the last window geometry.
+   *
+   * @param bounds - Normal bounds plus maximized flag.
+   */
+  setWindowBounds(bounds: WindowBounds): void {
+    this.state = { ...this.state, windowBounds: bounds };
+    this.scheduleStateWrite();
+  }
+
+  /**
+   * Clear desktop state without touching user documents.
+   */
+  async resetApplicationData(): Promise<void> {
+    this.state = {
+      ...createDefaultState(),
+      cleanExit: true,
+      legacyImported: true,
+    };
+    await this.clearRecovery();
+    await this.flushState();
   }
 
   /**

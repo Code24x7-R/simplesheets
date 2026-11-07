@@ -120,7 +120,7 @@ async function seedInterruptedSession(profile: string, workbook: unknown): Promi
   await writeFile(path.join(profile, 'recovery.json'), JSON.stringify(recovery));
 }
 
-test('editing writes a recovery snapshot that survives a dirty close', async () => {
+test("editing writes a recovery snapshot and Don't Save clears it", async () => {
   const profile = await mkdtemp(path.join(os.tmpdir(), 'simplesheets-recovery-write-'));
   try {
     const session = await launch(profile, [fixture('small.ssjson')]);
@@ -136,12 +136,18 @@ test('editing writes a recovery snapshot that survives a dirty close', async () 
 
     const recoveryRaw = await readFile(path.join(profile, 'recovery.json'), 'utf8');
     expect(recoveryRaw).toContain('Persisted Edit');
-    await close(session);
-    await expect(stat(path.join(profile, 'recovery.json'))).resolves.toBeTruthy();
+    await stubMessageBox(session.app, 1);
+    const closed = session.app.waitForEvent('close');
+    await session.app.evaluate(({ BrowserWindow }) => {
+      BrowserWindow.getAllWindows()[0]?.close();
+    });
+    await closed;
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    await expect(stat(path.join(profile, 'recovery.json'))).rejects.toThrow();
     const state = JSON.parse(await readFile(path.join(profile, 'state.json'), 'utf8')) as {
       cleanExit: boolean;
     };
-    expect(state.cleanExit).toBe(false);
+    expect(state.cleanExit).toBe(true);
   } finally {
     await cleanupProfile(profile);
   }
@@ -169,6 +175,7 @@ test('unclean startup without an explicit intent prompts Recover', async () => {
         timeout: 30_000,
       });
       await expect(page.getByTestId('save-state')).toContainText(/Unsaved changes/);
+      await stubMessageBox(app, 1);
     } finally {
       await app.close();
     }
@@ -278,6 +285,7 @@ test('explicit open wins over recovery and Recover applies the snapshot', async 
       );
       await expect(banner).toHaveCount(0);
       await expect(stat(path.join(profile, 'recovery.json'))).rejects.toThrow();
+      await stubMessageBox(session.app, 1);
     } finally {
       await close(session);
     }

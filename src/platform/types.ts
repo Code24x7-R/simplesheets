@@ -109,6 +109,14 @@ export interface LegacyImportResult {
 
 export type RecoveryPromptAction = 'recover' | 'discard' | 'none';
 
+export type UnsavedChoice = 'save' | 'discard' | 'cancel';
+
+export interface MenuState {
+  readonly canUndo: boolean;
+  readonly canRedo: boolean;
+  readonly saveEnabled: boolean;
+}
+
 export interface RecoveryPromptResult {
   readonly action: RecoveryPromptAction;
   readonly recovery?: RecoveryLoad;
@@ -162,4 +170,20 @@ export interface PlatformAdapter {
   clearRecovery(): Promise<PlatformResult<void>>;
   /** Show the native Recover/Discard prompt. */
   promptRecovery(): Promise<PlatformResult<RecoveryPromptResult>>;
+  /** Show the native Save / Don't Save / Cancel prompt. */
+  promptUnsavedChanges(message: string): Promise<PlatformResult<UnsavedChoice>>;
+  /** Tell main whether the current document is dirty (for window close). */
+  setDirty(dirty: boolean): Promise<void>;
+  /** Ask main to close the window (runs the dirty prompt). */
+  requestClose(): Promise<void>;
+  /** Continue a close after Save succeeded. */
+  closeReady(): Promise<void>;
+  /** Abort a close after Save failed or was cancelled. */
+  closeCancel(): Promise<void>;
+  /** Update native menu enable states. */
+  setMenuState(state: MenuState): Promise<void>;
+  /** Forward a native-owned accelerator that the main process did not catch. */
+  dispatchMenuAction(action: string): Promise<void>;
+  /** Clear desktop state and preferences (never user documents). */
+  resetApplicationData(): Promise<PlatformResult<void>>;
 }

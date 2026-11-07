@@ -131,7 +131,7 @@ describe('AboutModal', () => {
     expect(writeMock).toHaveBeenCalled();
     const lastCall = writeMock.mock.calls[writeMock.mock.calls.length - 1];
     const copiedText = lastCall[0] as string;
-    expect(copiedText).toContain('Version: 0.1.0');
+    expect(copiedText).toContain('SimpleSheets 0.1.0');
     expect(copiedText).toContain('Build:');
     expect(copiedText).toContain('2024-03-01');
     expect(copiedText).toContain('Commit: abc1234');
@@ -155,7 +155,7 @@ describe('AboutModal', () => {
     expect(writeMock).toHaveBeenCalled();
     const lastCall = writeMock.mock.calls[writeMock.mock.calls.length - 1];
     const copiedText = lastCall[0] as string;
-    expect(copiedText).toContain('Version: 0.1.0');
+    expect(copiedText).toContain('SimpleSheets 0.1.0');
     expect(copiedText).toContain('Build: dev');
     expect(copiedText).toContain('Commit: unknown');
   });

@@ -3,6 +3,8 @@
 import { HelpCircle, Copy, Check } from 'lucide-react';
 import { useState, useCallback, useEffect } from 'react';
 import packageJson from '../../package.json';
+import { getPlatform } from '../platform';
+import type { AppInfo } from '../platform/types';
 
 interface AboutModalProps {
   isOpen: boolean;
@@ -217,13 +219,32 @@ function renderInline(text: string): React.ReactNode {
  */
 export function AboutModal({ isOpen, onClose }: AboutModalProps) {
   const [copied, setCopied] = useState(false);
+  const [appInfo, setAppInfo] = useState<AppInfo | null>(null);
+  const [actionMessage, setActionMessage] = useState('');
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const platform = getPlatform();
+    if (platform.kind !== 'desktop') return;
+    let cancelled = false;
+    void platform.getAppInfo().then((result) => {
+      if (!cancelled && result.ok) setAppInfo(result.value);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen]);
 
   const handleCopyVersionInfo = useCallback(async () => {
     const build = getBuildInfo();
     const text = [
-      `Version: ${APP_VERSION}`,
+      `SimpleSheets ${APP_VERSION} (${appInfo?.edition ?? 'web'})`,
       `Build: ${build.raw || build.date}${build.time ? ` ${build.time}` : ''}`,
       `Commit: ${build.commit}`,
+      `Electron: ${appInfo?.electron ?? 'n/a'}`,
+      `Chromium: ${appInfo?.chromium ?? 'n/a'}`,
+      `Node: ${appInfo?.node ?? 'n/a'}`,
+      `Data folder: ${appInfo?.dataDir ?? 'n/a'}`,
     ].join('\n');
     try {
       await navigator.clipboard.writeText(text);
@@ -240,6 +261,31 @@ export function AboutModal({ isOpen, onClose }: AboutModalProps) {
     }
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  }, [appInfo]);
+
+  const handleOpenDataFolder = useCallback(async () => {
+    const result = await getPlatform().revealDataFolder();
+    setActionMessage(result.ok ? 'Opened the application data folder.' : result.message);
+  }, []);
+
+  const handleResetData = useCallback(async () => {
+    const confirmed = window.confirm(
+      'Reset recent files, recovery, window state, and desktop preferences? ' +
+      'Your saved documents are never modified.',
+    );
+    if (!confirmed) return;
+    const result = await getPlatform().resetApplicationData();
+    if (!result.ok) {
+      setActionMessage(result.message);
+      return;
+    }
+    try {
+      localStorage.clear();
+    } catch {
+      // Preferences may be unavailable; reset still succeeds in main.
+    }
+    window.dispatchEvent(new Event('simplesheets:recents-changed'));
+    setActionMessage('Application data reset.');
   }, []);
 
   // Reset copied state when modal opens so the icon is fresh each time
@@ -285,6 +331,37 @@ export function AboutModal({ isOpen, onClose }: AboutModalProps) {
           <h1 className="text-2xl font-bold text-gray-900 mb-1">Simple Web Apps</h1>
           <p className="text-green-600 text-sm mb-4">Work faster, keep it Simple</p>
           {renderMarkdown(ABOUT_CONTENT)}
+          {appInfo && appInfo.edition !== 'web' && (
+            <div className="mt-3 rounded border border-gray-200 bg-gray-50 p-3 text-xs text-gray-600">
+              <div className="grid grid-cols-[110px_1fr] gap-1">
+                <span className="font-medium">Edition</span><span>{appInfo.edition}</span>
+                <span className="font-medium">Electron</span><span>{appInfo.electron}</span>
+                <span className="font-medium">Chromium</span><span>{appInfo.chromium}</span>
+                <span className="font-medium">Node</span><span>{appInfo.node}</span>
+                <span className="font-medium">Data folder</span><span className="break-all">{appInfo.dataDir}</span>
+              </div>
+              <p className="mt-2 text-gray-500">
+                Builds are unsigned. Windows SmartScreen may warn on first launch. Workbook data never leaves this device.
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  className="rounded border border-gray-300 bg-white px-2 py-1 hover:bg-gray-100"
+                  onClick={() => { void handleOpenDataFolder(); }}
+                >
+                  Open Data Folder
+                </button>
+                <button
+                  type="button"
+                  className="rounded border border-red-300 bg-white px-2 py-1 text-red-700 hover:bg-red-50"
+                  onClick={() => { void handleResetData(); }}
+                >
+                  Reset Application Data…
+                </button>
+              </div>
+            </div>
+          )}
+          {actionMessage && <p className="mt-2 text-xs text-gray-600">{actionMessage}</p>}
           <div className="mt-4 pt-3 border-t border-gray-200">
             <a
               href="https://sites.google.com/view/simplewebapps/home"

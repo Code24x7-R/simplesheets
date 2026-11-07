@@ -15,6 +15,7 @@ import {
   ipcMain,
   Menu,
   protocol,
+  screen,
   session,
   shell,
   type IpcMainInvokeEvent,
@@ -38,6 +39,8 @@ import {
 } from '../src/platform/desktop/core/openRequest';
 import { OpenRequestQueue } from '../src/platform/desktop/core/openQueue';
 import { DesktopStateStore, type RecentInput } from '../src/platform/desktop/core/desktopStateStore';
+import { resolveWindowBounds } from '../src/platform/desktop/core/windowBounds';
+import { NATIVE_SHORTCUTS, nativeShortcutAction } from '../src/platform/desktop/core/shortcutOwner';
 import { allowWritePath, isWritePathAllowed, registerSaveHandlers } from './saveHandlers';
 
 const DEV_URL = 'http://localhost:3000';
@@ -84,6 +87,10 @@ const openQueue = new OpenRequestQueue<OpenRequest>();
 let stateStore!: DesktopStateStore;
 let startupHadExplicitIntent = false;
 let startupRestoreAttempted = false;
+let allowWindowClose = false;
+let rendererDirty = false;
+let closePromptOpen = false;
+let menuState = { canUndo: false, canRedo: false, saveEnabled: true };
 
 // Must run before app.ready so storage and fetch work on the custom origin.
 protocol.registerSchemesAsPrivileged([
@@ -156,6 +163,190 @@ function getAppInfo(): {
     buildTimestamp: process.env.BUILD_TIMESTAMP ?? '',
     gitCommit: process.env.GIT_COMMIT_HASH ?? '',
   };
+}
+
+type UnsavedChoice = 'save' | 'discard' | 'cancel';
+
+/**
+ * Show the native Save / Don't Save / Cancel prompt.
+ *
+ * @param window - Parent window, if any.
+ * @param message - User-facing question.
+ * @returns The chosen action.
+ */
+async function showUnsavedDialog(
+  window: BrowserWindow | null,
+  message: string,
+): Promise<UnsavedChoice> {
+  const options: Electron.MessageBoxOptions = {
+    type: 'warning',
+    buttons: ['Save', "Don't Save", 'Cancel'],
+    defaultId: 0,
+    cancelId: 2,
+    noLink: true,
+    title: 'Unsaved changes',
+    message,
+    detail: 'Your changes will be lost if you continue without saving.',
+  };
+  const result = window
+    ? await dialog.showMessageBox(window, options)
+    : await dialog.showMessageBox(options);
+  if (result.response === 0) return 'save';
+  if (result.response === 1) return 'discard';
+  return 'cancel';
+}
+
+/**
+ * Send a menu action to the existing renderer handler.
+ *
+ * @param action - Stable action id.
+ */
+function sendMenuAction(action: string): void {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  mainWindow.webContents.send('menu:action', action);
+}
+
+/**
+ * Rebuild and install the native application menu from current state.
+ */
+function rebuildMenu(): void {
+  const recentItems: Electron.MenuItemConstructorOptions[] = stateStore
+    .getState()
+    .recents
+    .slice(0, 10)
+    .map((entry, index) => ({
+      id: `recent-${index}`,
+      label: entry.name,
+      click: () => sendMenuAction(`recent-id:${entry.id}`),
+    }));
+  if (recentItems.length > 0) {
+    recentItems.push({ type: 'separator' });
+  }
+  recentItems.push({
+    id: 'file-clear-recents',
+    label: 'Clear Recent Files',
+    click: () => sendMenuAction('file:clear-recents'),
+  });
+
+  const template: Electron.MenuItemConstructorOptions[] = [
+    {
+      label: 'File',
+      submenu: [
+        { id: 'file-new', label: 'New', accelerator: 'CmdOrCtrl+N', click: () => sendMenuAction('file:new') },
+        { id: 'file-open', label: 'Open…', accelerator: 'CmdOrCtrl+O', click: () => sendMenuAction('file:open') },
+        { id: 'file-recent', label: 'Recent', submenu: recentItems },
+        { type: 'separator' },
+        {
+          id: 'file-recover',
+          label: 'Recover Unsaved Changes',
+          enabled: stateStore.getRecovery() !== null,
+          click: () => sendMenuAction('file:recover'),
+        },
+        { type: 'separator' },
+        {
+          id: 'file-save',
+          label: 'Save',
+          accelerator: 'CmdOrCtrl+S',
+          enabled: menuState.saveEnabled,
+          click: () => sendMenuAction('file:save'),
+        },
+        {
+          id: 'file-save-as',
+          label: 'Save As…',
+          accelerator: 'CmdOrCtrl+Shift+S',
+          enabled: menuState.saveEnabled,
+          click: () => sendMenuAction('file:save-as'),
+        },
+        { type: 'separator' },
+        {
+          id: 'file-import',
+          label: 'Import',
+          submenu: [
+            { id: 'file-import-excel', label: 'Excel…', click: () => sendMenuAction('file:import-excel') },
+            { id: 'file-import-csv', label: 'CSV…', click: () => sendMenuAction('file:import-csv') },
+            { id: 'file-import-json', label: 'JSON / SimpleSheets…', click: () => sendMenuAction('file:import-json') },
+          ],
+        },
+        {
+          id: 'file-export',
+          label: 'Export',
+          submenu: [
+            { id: 'file-export-excel', label: 'Excel…', click: () => sendMenuAction('file:export-excel') },
+            { id: 'file-export-csv', label: 'CSV…', click: () => sendMenuAction('file:export-csv') },
+            { id: 'file-export-json', label: 'JSON…', click: () => sendMenuAction('file:export-json') },
+            { id: 'file-export-pdf', label: 'PDF…', click: () => sendMenuAction('file:export-pdf') },
+          ],
+        },
+        { type: 'separator' },
+        {
+          id: 'file-exit',
+          label: 'Exit',
+          accelerator: 'CmdOrCtrl+Q',
+          click: () => sendMenuAction('file:exit'),
+        },
+      ],
+    },
+    {
+      label: 'Edit',
+      submenu: [
+        {
+          id: 'edit-undo',
+          label: 'Undo',
+          accelerator: 'CmdOrCtrl+Z',
+          enabled: menuState.canUndo,
+          click: () => sendMenuAction('edit:undo'),
+        },
+        {
+          id: 'edit-redo',
+          label: 'Redo',
+          accelerator: 'CmdOrCtrl+Y',
+          enabled: menuState.canRedo,
+          click: () => sendMenuAction('edit:redo'),
+        },
+        { type: 'separator' },
+        { id: 'edit-cut', label: 'Cut', click: () => sendMenuAction('edit:cut') },
+        { id: 'edit-copy', label: 'Copy', click: () => sendMenuAction('edit:copy') },
+        { id: 'edit-paste', label: 'Paste', click: () => sendMenuAction('edit:paste') },
+        { id: 'edit-paste-special', label: 'Paste Special…', click: () => sendMenuAction('edit:paste-special') },
+        { id: 'edit-select-all', label: 'Select All', click: () => sendMenuAction('edit:select-all') },
+        { type: 'separator' },
+        {
+          id: 'edit-find',
+          label: 'Find & Replace…',
+          accelerator: 'CmdOrCtrl+H',
+          click: () => sendMenuAction('edit:find'),
+        },
+      ],
+    },
+    {
+      label: 'View',
+      submenu: [
+        {
+          id: 'view-fullscreen',
+          label: 'Toggle Full Screen',
+          accelerator: 'F11',
+          click: () => {
+            if (mainWindow) mainWindow.setFullScreen(!mainWindow.isFullScreen());
+          },
+        },
+        ...(app.isPackaged
+          ? []
+          : [{ id: 'view-reload', label: 'Reload', accelerator: 'CmdOrCtrl+R', click: () => mainWindow?.reload() }]),
+      ],
+    },
+    {
+      label: 'Help',
+      submenu: [
+        { id: 'help-manual', label: 'Manual', click: () => sendMenuAction('help:manual') },
+        { id: 'help-shortcuts', label: 'Keyboard Shortcuts', click: () => sendMenuAction('help:shortcuts') },
+        { id: 'help-about', label: 'About SimpleSheets', click: () => sendMenuAction('help:about') },
+        { type: 'separator' },
+        { id: 'help-data-folder', label: 'Open Data Folder', click: () => sendMenuAction('help:open-data-folder') },
+      ],
+    },
+  ];
+
+  Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
 
 /**
@@ -545,6 +736,77 @@ function setupIpc(): void {
     return 'pong';
   });
 
+  ipcMain.handle('app:reset-data', async (event) => {
+    assertTrustedSender(event);
+    await stateStore.resetApplicationData();
+    rebuildMenu();
+    return { ok: true };
+  });
+
+  ipcMain.handle('dialog:unsaved', async (event, message: unknown) => {
+    assertTrustedSender(event);
+    if (typeof message !== 'string' || message.length === 0 || message.length > 500) {
+      return { ok: false, code: 'INVALID_ARGUMENT', message: 'Invalid prompt text.' };
+    }
+    const choice = await showUnsavedDialog(mainWindow, message);
+    return { ok: true, value: choice };
+  });
+
+  ipcMain.handle('window:set-dirty', (event, dirty: unknown) => {
+    assertTrustedSender(event);
+    if (typeof dirty !== 'boolean') {
+      return { ok: false, code: 'INVALID_ARGUMENT', message: 'Expected a boolean dirty flag.' };
+    }
+    rendererDirty = dirty;
+    return { ok: true };
+  });
+
+  ipcMain.handle('window:close', (event) => {
+    assertTrustedSender(event);
+    mainWindow?.close();
+    return { ok: true };
+  });
+
+  ipcMain.handle('window:close-ready', (event) => {
+    assertTrustedSender(event);
+    allowWindowClose = true;
+    closePromptOpen = false;
+    mainWindow?.close();
+    return { ok: true };
+  });
+
+  ipcMain.handle('window:close-cancel', (event) => {
+    assertTrustedSender(event);
+    closePromptOpen = false;
+    return { ok: true };
+  });
+
+  ipcMain.handle('menu:dispatch', (event, action: unknown) => {
+    assertTrustedSender(event);
+    if (typeof action !== 'string' || !NATIVE_SHORTCUTS.some((shortcut) => shortcut.id === action)) {
+      return { ok: false, code: 'INVALID_ARGUMENT', message: 'Unknown native menu action.' };
+    }
+    sendMenuAction(action);
+    return { ok: true };
+  });
+
+  ipcMain.handle('menu:set-state', (event, value: unknown) => {
+    assertTrustedSender(event);
+    if (!isRecord(value)) {
+      return { ok: false, code: 'INVALID_ARGUMENT', message: 'Invalid menu state.' };
+    }
+    if (typeof value.canUndo !== 'boolean' || typeof value.canRedo !== 'boolean' || typeof value.saveEnabled !== 'boolean') {
+      return { ok: false, code: 'INVALID_ARGUMENT', message: 'Invalid menu state.' };
+    }
+    menuState = {
+      canUndo: value.canUndo,
+      canRedo: value.canRedo,
+      saveEnabled: value.saveEnabled,
+    };
+    rebuildMenu();
+    return { ok: true };
+  });
+
   ipcMain.handle('open:pick', async (event) => {
     assertTrustedSender(event);
     const options: Electron.OpenDialogOptions = {
@@ -579,17 +841,49 @@ function setupIpc(): void {
     const key = process.platform === 'win32'
       ? path.resolve(rawPath).toLowerCase()
       : path.resolve(rawPath);
-    const known = stateStore.getState().recents.some((entry) =>
-      entry.path !== undefined && (
+    const entry = stateStore.getState().recents.find((item) =>
+      item.path !== undefined && (
         process.platform === 'win32'
-          ? path.resolve(entry.path).toLowerCase() === key
-          : path.resolve(entry.path) === key
+          ? path.resolve(item.path).toLowerCase() === key
+          : path.resolve(item.path) === key
       ),
     );
-    if (!known) {
+    if (!entry) {
       return { ok: false, code: 'NOT_ALLOWED', message: 'That path is not in the recent-file list.' };
     }
-    return readOpenRequest(rawPath, 'recent');
+
+    const opened = await readOpenRequest(rawPath, 'recent');
+    if (opened.ok || opened.code !== 'MISSING') return opened;
+
+    const options: Electron.MessageBoxOptions = {
+      type: 'warning',
+      buttons: ['Remove from list', 'Locate…', 'Keep'],
+      defaultId: 2,
+      cancelId: 2,
+      noLink: true,
+      title: 'Recent file is missing',
+      message: `${entry.name} no longer exists at its saved location.`,
+      detail: rawPath,
+    };
+    const choice = mainWindow
+      ? await dialog.showMessageBox(mainWindow, options)
+      : await dialog.showMessageBox(options);
+    if (choice.response === 0) {
+      stateStore.removeRecent(entry.id);
+      rebuildMenu();
+      return { ok: false, code: 'REMOVED', message: `Removed "${entry.name}" from recent files.` };
+    }
+    if (choice.response === 1) {
+      const picked = await dialog.showOpenDialog({
+        title: 'Locate recent file',
+        properties: ['openFile'],
+        filters: OPEN_FILTERS,
+      });
+      if (!picked.canceled && picked.filePaths.length > 0) {
+        return readOpenRequest(picked.filePaths[0], 'picker');
+      }
+    }
+    return { ok: false, code: 'MISSING', message: 'The file no longer exists.' };
   });
 
   ipcMain.handle('open:ack', (event, seq: unknown) => {
@@ -623,7 +917,9 @@ function setupIpc(): void {
     }
     const mru = typeof value.mru === 'string' ? value.mru : null;
     const autosave = typeof value.autosave === 'string' ? value.autosave : null;
-    return { ok: true, value: await stateStore.importLegacy(mru, autosave) };
+    const imported = await stateStore.importLegacy(mru, autosave);
+    rebuildMenu();
+    return { ok: true, value: imported };
   });
 
   ipcMain.handle('recents:list', (event) => {
@@ -637,7 +933,9 @@ function setupIpc(): void {
     if (!parsed) {
       return { ok: false, code: 'INVALID_ARGUMENT', message: 'Invalid recent-file entry.' };
     }
-    return { ok: true, value: stateStore.upsertRecent(parsed) };
+    const entry = stateStore.upsertRecent(parsed);
+    rebuildMenu();
+    return { ok: true, value: entry };
   });
 
   ipcMain.handle('recents:remove', (event, id: unknown) => {
@@ -646,12 +944,14 @@ function setupIpc(): void {
       return { ok: false, code: 'INVALID_ARGUMENT', message: 'A recent-file id is required.' };
     }
     stateStore.removeRecent(id);
+    rebuildMenu();
     return { ok: true };
   });
 
   ipcMain.handle('recents:clear', (event) => {
     assertTrustedSender(event);
     stateStore.clearRecents();
+    rebuildMenu();
     return { ok: true };
   });
 
@@ -685,16 +985,19 @@ function setupIpc(): void {
         return { ok: false, code: 'NOT_ALLOWED', message: 'That recovery path is not the current document.' };
       }
     }
-    return stateStore.writeRecovery({
+    const written = stateStore.writeRecovery({
       workbook: value.workbook,
       path: value.path,
       displayName: value.displayName,
     });
+    rebuildMenu();
+    return written;
   });
 
   ipcMain.handle('recovery:clear', async (event) => {
     assertTrustedSender(event);
     await stateStore.clearRecovery();
+    rebuildMenu();
     return { ok: true };
   });
 
@@ -738,9 +1041,15 @@ function setupIpc(): void {
  * Create the single application window.
  */
 function createWindow(): void {
+  const primary = screen.getPrimaryDisplay().workArea;
+  const displays = screen.getAllDisplays().map((display) => display.workArea);
+  const geometry = resolveWindowBounds(stateStore.getState().windowBounds, displays, primary);
+
   const window = new BrowserWindow({
-    width: 1280,
-    height: 800,
+    x: geometry.bounds.x,
+    y: geometry.bounds.y,
+    width: geometry.bounds.width,
+    height: geometry.bounds.height,
     minWidth: 900,
     minHeight: 600,
     show: false,
@@ -761,15 +1070,74 @@ function createWindow(): void {
   });
 
   mainWindow = window;
-  window.removeMenu();
 
-  window.once('ready-to-show', () => window.show());
+  window.once('ready-to-show', () => {
+    window.show();
+    if (geometry.maximized) window.maximize();
+  });
+
+  window.on('close', (event) => {
+    if (allowWindowClose) {
+      stateStore.setWindowBounds({
+        ...window.getNormalBounds(),
+        maximized: window.isMaximized(),
+      });
+      // A clean close after Save/Don't Save must not leave a dirty-run marker.
+      if (stateStore.getRecovery() === null) void stateStore.markCleanExit();
+      return;
+    }
+    event.preventDefault();
+    if (closePromptOpen) return;
+    if (!rendererDirty) {
+      allowWindowClose = true;
+      window.close();
+      return;
+    }
+    closePromptOpen = true;
+    void showUnsavedDialog(window, 'Save changes before closing?').then(async (choice) => {
+      if (choice === 'save') {
+        window.webContents.send('menu:action', 'file:save-and-close');
+        return;
+      }
+      closePromptOpen = false;
+      if (choice === 'discard') {
+        await stateStore.clearRecovery();
+        allowWindowClose = true;
+        stateStore.setWindowBounds({
+          ...window.getNormalBounds(),
+          maximized: window.isMaximized(),
+        });
+        window.close();
+      }
+    });
+  });
+
   window.on('closed', () => {
-    if (mainWindow === window) mainWindow = null;
+    if (mainWindow === window) {
+      mainWindow = null;
+      allowWindowClose = false;
+      closePromptOpen = false;
+    }
+    void stateStore.flushState();
   });
 
   // A reload or navigation starts a new renderer; wait for its ready signal
   // before re-delivering the active intent.
+  window.webContents.on('before-input-event', (event, input) => {
+    if (input.type !== 'keyDown') return;
+    const action = nativeShortcutAction({
+      key: input.key,
+      ctrlKey: input.control,
+      metaKey: input.meta,
+      shiftKey: input.shift,
+      altKey: input.alt,
+    });
+    if (action) {
+      event.preventDefault();
+      sendMenuAction(action);
+    }
+  });
+
   window.webContents.on('did-start-loading', () => {
     openQueue.setReady(false);
     openQueue.resetActive();
@@ -841,11 +1209,11 @@ if (!hasSingleInstanceLock) {
     }
 
     await stateStore.init();
-    Menu.setApplicationMenu(null);
     protocol.handle('app', handleAppRequest);
     setupPermissions();
     setupIpc();
     startWindow();
+    rebuildMenu();
 
     app.on('activate', () => {
       // Do not re-queue command-line paths when reopening on macOS.

@@ -321,10 +321,9 @@ file associations and needs explicit approval.
 - **Explicit + recovery.** When an explicit open coexists with recovery, startup
   shows a non-modal amber banner with Recover/Discard instead of replacing the
   explicitly opened document. Recovery is applied only on Recover.
-- **Dirty quit before M4.** The native close prompt is M4. To avoid data loss, a
-  quit with a pending snapshot writes `cleanExit: false` and preserves
-  `recovery.json`; the next start prompts. After M4, Save/Don't Save/Cancel
-  decides whether recovery is cleared.
+- **Dirty quit.** M4's native close prompt decides Save / Don't Save / Cancel
+  and clears recovery for Save/Don't Save. The M3 fallback (preserve recovery
+  with `cleanExit: false`) remains for a renderer that cannot report dirty state.
 - **Newest-wins intents.** `openIntentMachine.ts` defines monotonic generation
   tokens, and `OpenRequestQueue.clearPending()` drops queued explicit intents
   when a newer explicit intent arrives. The active intent is allowed to finish
@@ -337,3 +336,36 @@ file associations and needs explicit approval.
   and `simplesheets:autosave` keys once, sends them to `state:import-legacy`,
   and deletes them only after main confirms the state write. A legacy autosave
   becomes a recovery snapshot.
+
+---
+
+## 11. Native menu, window state, and close prompt (M4)
+
+- **One shortcut owner.** `shortcutOwner.ts` lists every native-owned
+  accelerator. The menu registers them; the renderer early-returns for those
+  combinations and does not execute a second action.
+- **Synthetic-key fallback.** Electron's `before-input-event` prevents the page
+  from receiving a native-owned key and dispatches the menu action. Playwright's
+  CDP key events do not always raise `before-input-event`, so the renderer
+  forwards the action id through `menu:dispatch`. On real hardware only one path
+  runs; on synthetic input only the fallback runs.
+- **Menu actions, not menu logic.** Every item sends a stable `menu:action` id.
+  The renderer maps it to the existing handler. Native Recent sends
+  `recent-id:<id>`; the renderer resolves it against the main-owned list so
+  cloud/url entries behave exactly like the in-app menu.
+- **Window state.** `state.json` stores `windowBounds` (normal bounds plus a
+  maximized flag). Bounds are validated against current display work areas,
+  clamped on-screen, and replaced by centered 1280×800 when the saved rectangle
+  is off-screen or below 900×600. Fullscreen is never restored.
+- **Close prompt.** The main process tracks `rendererDirty` via
+  `window:set-dirty`. `window.close`/Alt+F4/File → Exit show native
+  Save / Don't Save / Cancel. Save sends `file:save-and-close`; the renderer
+  saves, clears recovery, and calls `window:close-ready`. Cancel leaves the
+  window open. Don't Save clears recovery before closing.
+- **Dirty replacement.** The existing `confirmDiscard` returns synchronously on
+  the web (`window.confirm`) and asynchronously on desktop
+  (`dialog:unsaved`). Save runs the existing Save handler first; Cancel aborts
+  the open/new action.
+- **Reset.** `app:reset-data` clears recents, recovery, window bounds, and
+  desktop state, then the renderer clears `localStorage` preferences. It never
+  touches user documents.

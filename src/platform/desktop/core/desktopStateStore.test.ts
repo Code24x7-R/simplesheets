@@ -119,6 +119,17 @@ describe('DesktopStateStore', () => {
     await reopened.dispose();
   });
 
+  it('resets desktop state without touching user documents', async () => {
+    store.upsertRecent({ name: 'A.ssjson', size: 1, source: 'local' });
+    store.setWindowBounds({ x: 1, y: 2, width: 900, height: 600 });
+    store.writeRecovery({ workbook: { sheets: [] }, path: null, displayName: 'Dirty' });
+    await store.flushRecovery();
+    await store.resetApplicationData();
+    expect(store.getState().recents).toEqual([]);
+    expect(store.getState().windowBounds).toBeNull();
+    expect(await store.loadRecovery()).toBeNull();
+  });
+
   it('imports legacy MRU and autosave once', async () => {
     const result = await store.importLegacy(
       JSON.stringify([
