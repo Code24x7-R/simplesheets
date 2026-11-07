@@ -13,14 +13,46 @@ here and in `DECISIONS.md`.
 | # | Milestone | Status | Evidence |
 | --- | --- | --- | --- |
 | M0 | Environment audit, scaffold, `app://` origin, adapter skeleton, fixtures, icons, verify scripts | ✅ Complete | See below |
-| M1 | Open end-to-end (picker, argv, single instance, drag-drop, errors, packaged smoke) | ⏳ Next | — |
-| M2 | Save/Save As, atomic writes, conflict prompts, exports | ⬜ Not started | — |
+| M1 | Open end-to-end (picker, argv, single instance, drag-drop, errors, packaged smoke) | ✅ Complete | See below |
+| M2 | Save/Save As, atomic writes, conflict prompts, exports | ⏳ Next | — |
 | M3 | Recents, recovery, session restore, intent state machine | ⬜ Not started | — |
 | M4 | Native menu, accelerators, window state, About | ⬜ Not started | — |
 | M5 | File association, NSIS + portable build | ⬜ Not started | — |
 | M6 | Security hardening | ⬜ Not started | — |
 | M7 | Performance, leak test, packaging polish | ⬜ Not started | — |
 | M8 | Final evidence report | ⬜ Not started | — |
+
+---
+
+## M1 evidence
+
+Checks run:
+
+| Check | Result |
+| --- | --- |
+| `npm run verify` | 203 suites, 4,576 passed, 1 skipped |
+| `npm run verify:e2e` | 9 tests passed |
+| `npm run electron:build:dir` | unpacked packaged build produced |
+| `node scripts/desktop-packaged-smoke.mjs` | packaged argv + picker open passed |
+
+E2E coverage added:
+
+- command-line fixture open;
+- native picker open (`Ctrl+O` with a stubbed dialog);
+- corrupt `.ssjson` shows a status error and leaves the UI intact;
+- missing file from the picker shows an actionable error;
+- two command-line intents serialize behind the Import Scope dialog, and
+  cancelling the dialog releases the next intent;
+- a file dropped onto the grid opens through the preload-resolved path (or the File API fallback);
+- a synthetic `File` without an OS path is rejected with `NO_PATH`;
+- second instance focuses the existing window and opens its file.
+
+Known M1 limitations:
+
+- The literal Explorer drag gesture is manual; the drop event and preload path are automated.
+- Window/document titles arrive in M4; Save-in-place and the native dirty prompt in M2.
+- The queue is FIFO; newest-wins precedence arrives with the M3 state machine.
+- Recents remain browser `localStorage` until M3.
 
 ---
 
@@ -45,7 +77,7 @@ Checks run:
 | `npm run electron:build:dir` | unpacked packaged build produced (312 MB) |
 | `node scripts/desktop-packaged-smoke.mjs` | packaged app loaded from `app://`, edition `installed` |
 | `npm run electron:build` | NSIS installer 109 MB; portable 99 MB (built, not installed) |
-| `npm run desktop:fixtures` | 15 fixtures in `tmp/desktop-fixtures` |
+| `npm run desktop:fixtures` | 16 fixtures in `tmp/desktop-fixtures` (15 at M0 + `small.csv`) |
 | `npm run desktop:icons` | `build/icon.ico`, `build/icon.png` |
 
 Artifacts (not committed):
@@ -62,8 +94,8 @@ Known limitations:
 - Adapter capabilities are intentionally `false` for dialogs, recents,
   recovery, native menu, and association until their milestones.
 - Installer and portable artifacts were produced for size measurement only. Installing one requires approval; association and clean-machine checks remain unverified.
-- The combined `npm run electron:dev` script should be manually exercised
-  before closing M1 (the equivalent launch is covered by Playwright).
+- The combined `npm run electron:dev` script is covered by the Playwright dev
+  shell; run it manually after dependency changes.
 
 ---
 

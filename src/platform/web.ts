@@ -82,5 +82,26 @@ export function createWebAdapter(): PlatformAdapter {
     onMenuAction(): () => void {
       return () => undefined;
     },
+    async openFileDialog(): Promise<PlatformResult<void>> {
+      return failure(
+        'NOT_SUPPORTED',
+        'The browser edition uses the existing file picker.',
+      );
+    },
+    async openDroppedFile(): Promise<PlatformResult<void>> {
+      return failure(
+        'NOT_SUPPORTED',
+        'The browser edition opens dropped files with the File API.',
+      );
+    },
+    onOpenRequest(): () => void {
+      return () => undefined;
+    },
+    async ackOpenRequest(): Promise<void> {
+      return undefined;
+    },
+    async rendererReady(): Promise<void> {
+      return undefined;
+    },
   };
 }

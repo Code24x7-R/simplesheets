@@ -56,6 +56,9 @@ import { ImportScopeDialog } from './components/ImportScopeDialog';
 import { applyReplace, applyAddSheets, applyInsertAtCell } from './utils/importScope';
 import type { IncomingImport, ImportScopeOptions } from './utils/importScope';
 import { downloadPdf } from './services/pdfExport';
+import { getPlatform } from './platform';
+import type { OpenRequest } from './platform/desktop/core/openRequest';
+import { isSpreadsheetImportPath } from './platform/desktop/core/openRequest';
 import type { Cell, Selection, Sheet, NamedRange } from './types';
 import { insertRow, deleteRow, insertCol, deleteCol } from './utils/sheetOperations';
 import { computeFillSeries } from './utils/fillSeries';
@@ -180,6 +183,10 @@ function WorkbookView() {
   const [isReadOnly, setIsReadOnly] = useState(false);
   // Retained File System Access handle for the current document (null = none).
   const [currentHandleId, setCurrentHandleId] = useState<string | null>(null);
+  // Real path of the current desktop document (null until M2 saves in place).
+  const currentFilePathRef = useRef<string | null>(null);
+  // Open intent waiting for the Import Scope dialog to resolve, if any.
+  const pendingOpenAckRef = useRef<number | null>(null);
 
   /**
    * Mark the workbook as clean (saved / opened / replaced).
@@ -1067,10 +1074,21 @@ function WorkbookView() {
   // Ref to the open/replace handler so handleOpen/reopenFromHandle can be
   // declared before handleImport without a TDZ error.
   const handleImportRef = useRef<
-    (wb: Workbook, filename?: string, opts?: { handleId?: string; canReopen?: boolean }) => void
+    (
+      wb: Workbook,
+      filename?: string,
+      opts?: { handleId?: string; canReopen?: boolean; path?: string },
+    ) => void
   >(() => {});
 
   const handleOpen = useCallback(async () => {
+    const platform = getPlatform();
+    if (platform.capabilities.nativeFileDialogs) {
+      const result = await platform.openFileDialog();
+      if (!result.ok) setStatusMessage(result.message);
+      return;
+    }
+
     if (!supportsFileSystemAccess()) {
       window.dispatchEvent(new CustomEvent('simplesheets:open'));
       return;
@@ -1466,7 +1484,7 @@ function WorkbookView() {
 
   /** Record an import/open in the MRU. */
   const recordImportMRU = useCallback(
-    (filename: string | undefined, wb: Workbook, opts?: { handleId?: string; canReopen?: boolean }) => {
+    (filename: string | undefined, wb: Workbook, opts?: { handleId?: string; canReopen?: boolean; path?: string }) => {
       if (!filename) return;
       const size = wb.sheets.reduce((acc, s) => acc + Object.keys(s.cells).length, 0) * 50;
       recordOpenMRU(filename, size, 'local', opts);
@@ -1498,10 +1516,11 @@ function WorkbookView() {
 
   /* istanbul ignore next - handleImport (open path) requires file upload (tested in ImportButtons.test.tsx) */
   const handleImport = useCallback(
-    (importedWb: Workbook, filename?: string, opts?: { handleId?: string; canReopen?: boolean }) => {
+    (importedWb: Workbook, filename?: string, opts?: { handleId?: string; canReopen?: boolean; path?: string }) => {
       if (!confirmDiscard('Open this file? Unsaved changes will be lost.')) return;
       if (isDirty) snapshotPreviousSession(workbook);
       setCurrentHandleId(null);
+      currentFilePathRef.current = opts?.path ?? null;
 
       // If a filename is provided (from file picker), use it as the title (sans extension)
       const title = filename ? stripExtension(filename) : importedWb.title;
@@ -1528,11 +1547,88 @@ function WorkbookView() {
     setShowImportScope(true);
   }, []);
 
+  /**
+   * Handle an open intent from the desktop main process. Exactly one intent is
+   * active at a time; main waits for the acknowledgement before sending the next.
+   */
+  const processOpenRequest = useCallback(async (request: OpenRequest) => {
+    let deferAck = false;
+    try {
+      const file = new File([request.data], request.name);
+
+      if (isSpreadsheetImportPath(request.name)) {
+        const lower = request.name.toLowerCase();
+        if (lower.endsWith('.xlsx') || lower.endsWith('.xls')) {
+          const result = await importExcelFile(file);
+          if (!result.success || !result.workbook) {
+            throw new Error(result.error ?? 'Failed to import Excel');
+          }
+          handleIncomingImport({
+            workbook: result.workbook,
+            fileName: request.name,
+            kind: 'excel',
+            sourcePath: request.path,
+          });
+          pendingOpenAckRef.current = request.seq;
+          deferAck = true;
+        } else {
+          const text = await readFileAsText(file);
+          const delimiter = detectDelimiter(text);
+          const result = importCsv(text, { delimiter });
+          if (!result.success || !result.workbook) {
+            throw new Error(result.error ?? 'Failed to import CSV');
+          }
+          handleIncomingImport({
+            workbook: result.workbook,
+            fileName: request.name,
+            kind: 'csv',
+            rawText: text,
+            detectedDelimiter: delimiter,
+            sourcePath: request.path,
+          });
+          pendingOpenAckRef.current = request.seq;
+          deferAck = true;
+        }
+      } else {
+        const wb = await readWorkbookFile(file);
+        handleImportRef.current(wb, request.name, {
+          path: request.path,
+          canReopen: true,
+        });
+      }
+    } catch (err) {
+      setStatusMessage(`Open error: ${err instanceof Error ? err.message : 'Failed to open file'}`);
+    } finally {
+      if (!deferAck) await getPlatform().ackOpenRequest(request.seq);
+    }
+  }, [handleIncomingImport, setStatusMessage]);
+
+  // Subscribe once to desktop open intents and announce readiness afterwards.
+  useEffect(() => {
+    const platform = getPlatform();
+    if (!platform.capabilities.nativeFileDialogs) return;
+
+    const unsubscribe = platform.onOpenRequest((request) => {
+      void processOpenRequest(request);
+    });
+    void platform.rendererReady();
+    return unsubscribe;
+  }, [processOpenRequest]);
+
+  /** Acknowledge a desktop open intent once its import scope is resolved. */
+  const ackPendingOpen = useCallback(() => {
+    const seq = pendingOpenAckRef.current;
+    if (seq === null) return;
+    pendingOpenAckRef.current = null;
+    void getPlatform().ackOpenRequest(seq);
+  }, []);
+
   const handleImportScopeCancel = useCallback(() => {
     setShowImportScope(false);
     setPendingImport(null);
+    ackPendingOpen();
     gridRef.current?.focus();
-  }, []);
+  }, [ackPendingOpen]);
 
   /** Apply the chosen import scope (and CSV parse options). */
   const handleImportScopeConfirm = useCallback(
@@ -1548,6 +1644,7 @@ function WorkbookView() {
           setStatusMessage(`Import error: ${reparsed.error ?? 'Failed to parse CSV'}`);
           setShowImportScope(false);
           setPendingImport(null);
+          ackPendingOpen();
           return;
         }
         wb = reparsed.workbook;
@@ -1557,6 +1654,7 @@ function WorkbookView() {
         if (!confirmDiscard('Import this file? Unsaved changes will be lost.')) {
           setShowImportScope(false);
           setPendingImport(null);
+          ackPendingOpen();
           return;
         }
         if (isDirty) snapshotPreviousSession(workbook);
@@ -1565,7 +1663,8 @@ function WorkbookView() {
         resetHistory(replaced);
         markClean(replaced);
         setCurrentHandleId(null);
-        recordImportMRU(fileName, wb);
+        currentFilePathRef.current = pendingImport.sourcePath ?? null;
+        recordImportMRU(fileName, wb, pendingImport.sourcePath ? { path: pendingImport.sourcePath } : undefined);
         applyExtensionDetection(wb);
         setStatusMessage(`Imported "${title}" — ${replaced.sheets.length} sheet(s)`);
       } else if (options.scope === 'new-sheets') {
@@ -1584,9 +1683,10 @@ function WorkbookView() {
 
       setShowImportScope(false);
       setPendingImport(null);
+      ackPendingOpen();
     },
     [
-      pendingImport, workbook, activeCell, confirmDiscard, isDirty,
+      pendingImport, workbook, activeCell, confirmDiscard, isDirty, ackPendingOpen,
       resetHistory, markClean, pushHistory, recordImportMRU, applyExtensionDetection,
       filterStateRef, gridSelectionRef,
     ],
@@ -1598,6 +1698,18 @@ function WorkbookView() {
       if (!files || files.length === 0) return;
       const file = files[0];
       const name = file.name.toLowerCase();
+
+      const platform = getPlatform();
+      if (platform.capabilities.nativeFileDialogs) {
+        const result = await platform.openDroppedFile(file);
+        if (result.ok) return;
+        // A synthetic File has no OS path; fall through to the File API so
+        // browser-style drops and tests still work.
+        if (result.code !== 'NO_PATH') {
+          setStatusMessage(result.message);
+          return;
+        }
+      }
 
       try {
         if (name.endsWith('.xlsx') || name.endsWith('.xls')) {
@@ -1650,6 +1762,7 @@ function WorkbookView() {
       resetHistory(wb);
       markClean(wb);
       setCurrentHandleId(null);
+      currentFilePathRef.current = null;
       // Clear per-sheet active cells — new workbook has fresh sheet ids
       sheetActiveCellsRef.current.clear();
       // Default to A1 on the first sheet

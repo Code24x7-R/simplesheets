@@ -275,6 +275,8 @@ while (csvBytes < 20 * 1024 * 1024) {
 writeFileSync(join(outDir, 'import-large.csv'), csvLines.join('\n') + '\n');
 
 // ─── Manifest ───────────────────────────────────────────────────────────────
+writeFileSync(join(outDir, 'small.csv'), 'Item,Q1,Total\nItem 1,10,10\nItem 2,20,20\n');
+
 const manifest = {
   generatedAt: new Date().toISOString(),
   fixedTimestamp: FIXED_TIME,
@@ -294,6 +296,7 @@ const manifest = {
     'recovery-corrupt.json',
     'import.xlsx',
     'import-large.csv',
+    'small.csv',
   ],
 };
 writeJson('manifest.json', manifest);

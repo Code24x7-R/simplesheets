@@ -196,3 +196,60 @@ clean-machine install remain unverified.
 The NSIS installer and portable executable were built for size measurement only.
 They were **not installed**, because installing changes registry entries and
 file associations and needs explicit approval.
+
+---
+
+## 8. Open pipeline (M1)
+
+- **Main owns file reads.** Dialogs, argv, "Open with", second-instance, recent
+  paths, and dropped paths all become an `OpenRequest` read by the main process
+  and delivered to the renderer as an `ArrayBuffer`. The renderer parses with
+  the existing importers; it never receives a path it can read directly.
+- **One intent at a time.** `OpenRequestQueue` holds intents until the renderer
+  sends `renderer:ready`, delivers the first, and waits for `open:ack` before
+  delivering the next. Excel/CSV intents acknowledge only after the Import
+  Scope dialog resolves, so a second file cannot replace the pending import.
+  Reloads reset the active marker without consuming the queued intent.
+  `src/platform/desktop/core/openQueue.ts` is unit-tested.
+- **Ordering.** Command-line and second-instance paths are read sequentially
+  before being enqueued, preserving argument order even when file sizes differ.
+- **Sources.** `argv`/`open-with` on cold start, `second-instance` for an
+  already-running app, `picker` from the native dialog, `recent` for MRU paths,
+  and `drag-drop` for dropped files.
+- **Validation.** Paths must be absolute, exist, have a supported extension,
+  and stay under the 100 MB open limit. `fs.realpath` runs before the request is
+  created. The dialog filters `.ssjson`, `.json`, `.xlsx`, `.xls`, `.csv`,
+  `.tsv`, and `.txt`.
+- **Imports vs document opens.** `.xlsx`, `.xls`, `.csv`, `.tsv`, and `.txt`
+  route through the existing Import Scope dialog. `.ssjson`/`.json` replace the
+  workbook directly, matching the web Open behavior.
+- **Drag-and-drop.** The renderer passes the dropped `File` to
+  `openDroppedFile`; the preload calls `webUtils.getPathForFile` and sends only
+  that resolved path to main. The renderer never supplies an arbitrary path, so
+  a synthetic `File` yields `NO_PATH` and falls back to the existing File API.
+  E2E covers a real file input feeding a drop event and the synthetic-file
+  rejection.
+- **Testing.** Playwright stubs `dialog.showOpenDialog` by evaluating code in
+  the Electron main process. E2E covers argv, picker, corrupt file, missing
+  file, unsupported extension, drag-drop IPC, and second-instance focus/open.
+  The packaged smoke validates argv and picker inside the ASAR build.
+- **SEC-14 packaged test seam.** Packaged builds disable DevTools (SEC-11).
+  Electron 45 then sometimes creates the first window target before
+  Playwright's CDP connection is established, which makes the window
+  undiscoverable. When `SIMPLESHEETS_E2E=1` is set on a packaged build, window
+  creation is delayed by five seconds so the debugger must attach first. The
+  seam does not bypass path validation or IPC checks and is inert in normal
+  runs; the packaged smoke is the only consumer.
+
+### M1 known limitations
+
+- Window title still shows `SimpleSheets`; document titles arrive in M4.
+- The document path is remembered in a renderer ref but Save-in-place is M2.
+- Dirty opens use the existing confirm prompt; the native Save / Don't Save /
+  Cancel prompt depends on Save and arrives in M2.
+- The queue is FIFO; the "newest explicit intent wins" lifecycle precedence
+  arrives with the M3 intent state machine.
+- Recent files still use the existing `localStorage`/File System Access path;
+  native path reopening is deferred to the main-owned recents in M3.
+- A dropped file without an OS path opens through the File API and has no save
+  path until Save As.

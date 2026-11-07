@@ -11,6 +11,7 @@
 import {
   app,
   BrowserWindow,
+  dialog,
   ipcMain,
   Menu,
   protocol,
@@ -28,6 +29,13 @@ import {
   isTrustedOrigin,
 } from '../src/platform/desktop/core/appOrigin';
 import { mimeTypeForPath, resolveAppAssetPath } from '../src/platform/desktop/core/assetPath';
+import {
+  MAX_OPEN_BYTES,
+  isSupportedOpenPath,
+  type OpenRequest,
+  type OpenRequestSource,
+} from '../src/platform/desktop/core/openRequest';
+import { OpenRequestQueue } from '../src/platform/desktop/core/openQueue';
 
 const DEV_URL = 'http://localhost:3000';
 const APP_URL = 'app://simplesheets/index.html';
@@ -49,6 +57,27 @@ const CONTENT_SECURITY_POLICY = [
 ].join('; ');
 
 let mainWindow: BrowserWindow | null = null;
+
+/**
+ * Playwright attaches to the packaged app's CDP endpoint shortly after launch.
+ * With `devTools: false`, a window created before that connection can be
+ * invisible to the debugger. This SEC-14 test seam delays window creation; it
+ * is inert unless the E2E environment variable is set on a packaged build.
+ */
+const E2E_STARTUP_DELAY_MS =
+  app.isPackaged && process.env.SIMPLESHEETS_E2E === '1' ? 5000 : 0;
+
+const OPEN_FILTERS: Electron.FileFilter[] = [
+  { name: 'SimpleSheets documents', extensions: ['ssjson', 'json'] },
+  { name: 'Spreadsheets', extensions: ['xlsx', 'xls', 'csv', 'tsv', 'txt'] },
+  {
+    name: 'All supported files',
+    extensions: ['ssjson', 'json', 'xlsx', 'xls', 'csv', 'tsv', 'txt'],
+  },
+];
+
+let nextOpenSeq = 1;
+const openQueue = new OpenRequestQueue<OpenRequest>();
 
 // Must run before app.ready so storage and fetch work on the custom origin.
 protocol.registerSchemesAsPrivileged([
@@ -133,6 +162,182 @@ function assertTrustedSender(event: IpcMainInvokeEvent): void {
   if (!isTrustedOrigin(senderUrl, TRUSTED_ORIGINS)) {
     throw new Error('Rejected IPC call from an untrusted frame.');
   }
+}
+
+interface OpenFailure {
+  ok: false;
+  code: string;
+  message: string;
+}
+
+interface OpenQueued {
+  ok: true;
+  seq: number;
+}
+
+/**
+ * Read and validate a file before turning it into an open intent.
+ *
+ * @param rawPath - Path supplied by a dialog, command line, or drop.
+ * @param source - Where the intent came from.
+ * @returns A queued intent or a typed failure.
+ */
+async function readOpenRequest(
+  rawPath: string,
+  source: OpenRequestSource,
+): Promise<OpenQueued | OpenFailure> {
+  if (typeof rawPath !== 'string' || rawPath.length === 0) {
+    return { ok: false, code: 'INVALID_PATH', message: 'No file path was provided.' };
+  }
+
+  const resolved = path.resolve(rawPath);
+  if (!isSupportedOpenPath(resolved)) {
+    return {
+      ok: false,
+      code: 'UNSUPPORTED',
+      message: 'Only .ssjson, .json, .xlsx, .xls, .csv, .tsv, and .txt files can be opened.',
+    };
+  }
+
+  try {
+    const realPath = await fsp.realpath(resolved);
+    const stat = await fsp.stat(realPath);
+    if (!stat.isFile()) {
+      return { ok: false, code: 'NOT_A_FILE', message: 'The selected path is not a file.' };
+    }
+    if (stat.size > MAX_OPEN_BYTES) {
+      return {
+        ok: false,
+        code: 'TOO_LARGE',
+        message: `The file is larger than the ${Math.round(MAX_OPEN_BYTES / (1024 * 1024))} MB open limit.`,
+      };
+    }
+
+    const buffer = await fsp.readFile(realPath);
+    const data = buffer.buffer.slice(
+      buffer.byteOffset,
+      buffer.byteOffset + buffer.byteLength,
+    ) as ArrayBuffer;
+
+    const request: OpenRequest = {
+      seq: nextOpenSeq,
+      source,
+      path: realPath,
+      name: path.basename(realPath),
+      size: stat.size,
+      data,
+    };
+    nextOpenSeq += 1;
+
+    openQueue.enqueue(request);
+    pumpOpenRequests();
+    return { ok: true, seq: request.seq };
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code === 'ENOENT') {
+      return { ok: false, code: 'MISSING', message: 'The file no longer exists.' };
+    }
+    if (code === 'EACCES' || code === 'EPERM') {
+      return { ok: false, code: 'PERMISSION', message: 'Permission was denied while reading the file.' };
+    }
+    if (code === 'EBUSY') {
+      return { ok: false, code: 'IN_USE', message: 'The file is being used by another program.' };
+    }
+    return {
+      ok: false,
+      code: 'READ_FAILED',
+      message: error instanceof Error ? error.message : 'The file could not be read.',
+    };
+  }
+}
+
+/**
+ * Deliver the next queued open intent when the renderer is ready and no
+ * previous intent is still being processed.
+ */
+function pumpOpenRequests(): void {
+  const next = openQueue.takeNext();
+  if (!next) return;
+
+  const window = mainWindow;
+  if (!window || window.isDestroyed()) {
+    openQueue.resetActive();
+    return;
+  }
+
+  window.webContents.send('open:request', next);
+}
+
+/**
+ * Mark an intent as handled so the next one can be delivered.
+ *
+ * @param seq - Sequence number acknowledged by the renderer.
+ * @returns True when the sequence matched the active intent.
+ */
+function acknowledgeOpenRequest(seq: number): boolean {
+  const acknowledged = openQueue.ack(seq);
+  if (acknowledged) pumpOpenRequests();
+  return acknowledged;
+}
+
+/**
+ * Parse a command line for supported file paths, ignoring flags and the app path.
+ *
+ * @param args - Arguments after the executable.
+ * @returns Existing, supported absolute paths.
+ */
+function collectOpenPaths(args: readonly string[]): string[] {
+  const paths: string[] = [];
+  for (const arg of args) {
+    if (!arg || arg.startsWith('-') || arg === '.') continue;
+    const resolved = path.resolve(arg);
+    if (!isSupportedOpenPath(resolved)) continue;
+    if (!fs.existsSync(resolved)) {
+      console.warn(`[desktop] ignoring missing open path: ${resolved}`);
+      continue;
+    }
+    paths.push(resolved);
+  }
+  return paths;
+}
+
+/**
+ * Read and queue paths in order. Sequential reads preserve the command-line
+ * order even when file sizes differ.
+ *
+ * @param paths - Absolute paths to queue.
+ * @param source - Intent source label for the renderer.
+ */
+async function queueOpenPaths(
+  paths: readonly string[],
+  source: OpenRequestSource,
+): Promise<void> {
+  for (const filePath of paths) {
+    const result = await readOpenRequest(filePath, source);
+    if (!result.ok) {
+      console.warn(`[desktop] could not queue ${filePath}: ${result.message}`);
+    }
+  }
+}
+
+/**
+ * Queue every supported file passed on the current process command line.
+ *
+ * @param source - Intent source label for the renderer.
+ */
+function queueCommandLineOpenPaths(source: OpenRequestSource): void {
+  const args = process.argv.slice(app.isPackaged ? 1 : 2);
+  void queueOpenPaths(collectOpenPaths(args), source);
+}
+
+/**
+ * Bring the existing window to the front.
+ */
+function focusMainWindow(): void {
+  if (!mainWindow) return;
+  if (mainWindow.isMinimized()) mainWindow.restore();
+  mainWindow.show();
+  mainWindow.focus();
 }
 
 /**
@@ -264,6 +469,50 @@ function setupIpc(): void {
     assertTrustedSender(event);
     return 'pong';
   });
+
+  ipcMain.handle('open:pick', async (event) => {
+    assertTrustedSender(event);
+    const options: Electron.OpenDialogOptions = {
+      title: 'Open',
+      properties: ['openFile'],
+      filters: OPEN_FILTERS,
+    };
+    const result = mainWindow
+      ? await dialog.showOpenDialog(mainWindow, options)
+      : await dialog.showOpenDialog(options);
+    if (result.canceled || result.filePaths.length === 0) {
+      return { ok: true };
+    }
+    return readOpenRequest(result.filePaths[0], 'picker');
+  });
+
+  // Called only by the preload's openDroppedFile helper, which resolves the
+  // path from a real File. The renderer cannot supply a path directly.
+  ipcMain.handle('open:path', async (event, rawPath: unknown) => {
+    assertTrustedSender(event);
+    if (typeof rawPath !== 'string' || !path.isAbsolute(rawPath)) {
+      return { ok: false, code: 'INVALID_PATH', message: 'A valid absolute file path is required.' };
+    }
+    return readOpenRequest(rawPath, 'drag-drop');
+  });
+
+  ipcMain.handle('open:ack', (event, seq: unknown) => {
+    assertTrustedSender(event);
+    if (typeof seq !== 'number' || !Number.isInteger(seq)) {
+      return { ok: false, code: 'INVALID_SEQ', message: 'A numeric sequence is required.' };
+    }
+    const acknowledged = acknowledgeOpenRequest(seq);
+    return acknowledged
+      ? { ok: true }
+      : { ok: false, code: 'UNKNOWN_SEQ', message: 'No open request is waiting for that sequence.' };
+  });
+
+  ipcMain.handle('renderer:ready', (event) => {
+    assertTrustedSender(event);
+    openQueue.setReady(true);
+    pumpOpenRequests();
+    return { ok: true };
+  });
 }
 
 /**
@@ -300,14 +549,40 @@ function createWindow(): void {
     if (mainWindow === window) mainWindow = null;
   });
 
+  // A reload or navigation starts a new renderer; wait for its ready signal
+  // before re-delivering the active intent.
+  window.webContents.on('did-start-loading', () => {
+    openQueue.setReady(false);
+    openQueue.resetActive();
+  });
+
   window.webContents.on('did-fail-load', (_event, code, description, url) => {
     console.error(`[desktop] renderer failed to load (${code} ${description}): ${url}`);
   });
 
   if (app.isPackaged) {
-    void window.loadURL(APP_URL);
+    void window.loadURL(APP_URL).catch((error) => {
+      console.error('[desktop] failed to load', error);
+    });
   } else {
     void window.loadURL(DEV_URL);
+  }
+}
+
+/**
+ * Create the first window and queue any command-line file. The E2E delay is
+ * applied only to packaged builds under the SEC-14 test seam.
+ */
+function startWindow(): void {
+  const launch = (): void => {
+    createWindow();
+    queueCommandLineOpenPaths(app.isPackaged ? 'open-with' : 'argv');
+  };
+
+  if (E2E_STARTUP_DELAY_MS > 0) {
+    setTimeout(launch, E2E_STARTUP_DELAY_MS);
+  } else {
+    launch();
   }
 }
 
@@ -318,11 +593,10 @@ const hasSingleInstanceLock = app.requestSingleInstanceLock();
 if (!hasSingleInstanceLock) {
   app.quit();
 } else {
-  app.on('second-instance', () => {
-    if (!mainWindow) return;
-    if (mainWindow.isMinimized()) mainWindow.restore();
-    mainWindow.show();
-    mainWindow.focus();
+  app.on('second-instance', (_event, commandLine) => {
+    if (!app.isPackaged) console.log('[desktop] second-instance argv:', commandLine);
+    focusMainWindow();
+    void queueOpenPaths(collectOpenPaths(commandLine.slice(1)), 'second-instance');
   });
 
   app.on('web-contents-created', (_event, contents) => {
@@ -351,9 +625,10 @@ if (!hasSingleInstanceLock) {
     protocol.handle('app', handleAppRequest);
     setupPermissions();
     setupIpc();
-    createWindow();
+    startWindow();
 
     app.on('activate', () => {
+      // Do not re-queue command-line paths when reopening on macOS.
       if (BrowserWindow.getAllWindows().length === 0) createWindow();
     });
   }).catch((error: unknown) => {

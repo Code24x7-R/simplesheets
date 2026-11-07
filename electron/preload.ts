@@ -7,13 +7,28 @@
  * access ever reaches renderer code.
  */
 
-import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron';
-import type { DesktopBridge, DesktopBridgeResult } from '../src/types/desktop';
+import {
+  contextBridge,
+  ipcRenderer,
+  webUtils,
+  type IpcRendererEvent,
+} from 'electron';
+import type {
+  DesktopBridge,
+  DesktopBridgeResult,
+  DesktopOpenRequest,
+} from '../src/types/desktop';
 
 let nextMenuListenerId = 1;
 const menuListeners = new Map<
   number,
   (event: IpcRendererEvent, action: string) => void
+>();
+
+let nextOpenListenerId = 1;
+const openListeners = new Map<
+  number,
+  (event: IpcRendererEvent, request: DesktopOpenRequest) => void
 >();
 
 const bridge: DesktopBridge = {
@@ -43,6 +58,49 @@ const bridge: DesktopBridge = {
     ipcRenderer.removeListener('menu:action', listener);
     menuListeners.delete(id);
   },
+
+  pickOpenFile: (): Promise<DesktopBridgeResult> =>
+    ipcRenderer.invoke('open:pick'),
+
+  openDroppedFile: (file: File): Promise<DesktopBridgeResult> => {
+    let filePath = '';
+    try {
+      filePath = webUtils.getPathForFile(file);
+    } catch {
+      filePath = '';
+    }
+    if (!filePath) {
+      return Promise.resolve({
+        ok: false,
+        code: 'NO_PATH',
+        message: 'The dropped file has no filesystem path.',
+      });
+    }
+    return ipcRenderer.invoke('open:path', filePath);
+  },
+
+  onOpenRequest: (callback: (request: DesktopOpenRequest) => void): number => {
+    const id = nextOpenListenerId;
+    nextOpenListenerId += 1;
+    const listener = (_event: IpcRendererEvent, request: DesktopOpenRequest) =>
+      callback(request);
+    openListeners.set(id, listener);
+    ipcRenderer.on('open:request', listener);
+    return id;
+  },
+
+  offOpenRequest: (id: number): void => {
+    const listener = openListeners.get(id);
+    if (!listener) return;
+    ipcRenderer.removeListener('open:request', listener);
+    openListeners.delete(id);
+  },
+
+  ackOpenRequest: (seq: number): Promise<DesktopBridgeResult> =>
+    ipcRenderer.invoke('open:ack', seq),
+
+  rendererReady: (): Promise<DesktopBridgeResult> =>
+    ipcRenderer.invoke('renderer:ready'),
 };
 
 contextBridge.exposeInMainWorld(

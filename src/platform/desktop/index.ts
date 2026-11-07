@@ -17,8 +17,8 @@ import type {
 
 const CAPABILITIES: PlatformCapabilities = {
   // Capabilities are enabled as their milestones land:
-  // file dialogs M1, recovery M3, native menu M4, association M5.
-  nativeFileDialogs: false,
+  // recovery M3, native menu M4, association M5.
+  nativeFileDialogs: true,
   fileAssociation: false,
   singleInstance: true,
   nativeMenu: false,
@@ -36,7 +36,7 @@ function normalizeResult(result: DesktopBridgeResult): PlatformResult<void> {
   if (!result.ok) {
     return {
       ok: false,
-      code: 'IPC_ERROR',
+      code: result.code === 'NO_PATH' ? 'NO_PATH' : 'IPC_ERROR',
       message: result.message ?? 'The desktop request failed.',
     };
   }
@@ -84,6 +84,38 @@ export function createDesktopAdapter(bridge: DesktopBridge): PlatformAdapter {
     onMenuAction(callback: (action: string) => void): () => void {
       const id = bridge.onMenuAction(callback);
       return () => bridge.offMenuAction(id);
+    },
+    async openFileDialog(): Promise<PlatformResult<void>> {
+      try {
+        return normalizeResult(await bridge.pickOpenFile());
+      } catch (error) {
+        return toFailure(error instanceof Error ? error.message : 'Failed to open the file dialog.');
+      }
+    },
+    async openDroppedFile(file: File): Promise<PlatformResult<void>> {
+      try {
+        return normalizeResult(await bridge.openDroppedFile(file));
+      } catch (error) {
+        return toFailure(error instanceof Error ? error.message : 'Failed to open the dropped file.');
+      }
+    },
+    onOpenRequest(callback): () => void {
+      const id = bridge.onOpenRequest(callback);
+      return () => bridge.offOpenRequest(id);
+    },
+    async ackOpenRequest(seq: number): Promise<void> {
+      try {
+        await bridge.ackOpenRequest(seq);
+      } catch {
+        // A dropped acknowledgement must not break the renderer.
+      }
+    },
+    async rendererReady(): Promise<void> {
+      try {
+        await bridge.rendererReady();
+      } catch {
+        // The first open intent will retry the ready handshake.
+      }
     },
   };
 }

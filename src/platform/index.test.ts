@@ -25,6 +25,12 @@ function makeBridge(overrides: Partial<DesktopBridge> = {}): DesktopBridge {
     revealDataFolder: async () => ({ ok: true }),
     onMenuAction: () => 1,
     offMenuAction: () => undefined,
+    pickOpenFile: async () => ({ ok: true }),
+    openDroppedFile: async () => ({ ok: true }),
+    onOpenRequest: () => 2,
+    offOpenRequest: () => undefined,
+    ackOpenRequest: async () => ({ ok: true }),
+    rendererReady: async () => ({ ok: true }),
     ...overrides,
   };
 }
@@ -86,6 +92,23 @@ describe('web adapter', () => {
     expect(typeof unsubscribe).toBe('function');
     expect(() => unsubscribe()).not.toThrow();
   });
+
+  it('reports native open and dropped-file support as unavailable', async () => {
+    const platform = getPlatform();
+    const dialogResult = await platform.openFileDialog();
+    const dropResult = await platform.openDroppedFile(new File(['x'], 'a.ssjson'));
+    expect(dialogResult.ok).toBe(false);
+    expect(dropResult.ok).toBe(false);
+    if (!dropResult.ok) expect(dropResult.code).toBe('NOT_SUPPORTED');
+  });
+
+  it('open notifications and ready calls are no-ops', async () => {
+    const platform = getPlatform();
+    const unsubscribe = platform.onOpenRequest(() => undefined);
+    await expect(platform.ackOpenRequest(1)).resolves.toBeUndefined();
+    await expect(platform.rendererReady()).resolves.toBeUndefined();
+    expect(() => unsubscribe()).not.toThrow();
+  });
 });
 
 describe('desktop adapter', () => {
@@ -136,5 +159,59 @@ describe('desktop adapter', () => {
     const unsubscribe = getPlatform().onMenuAction(() => undefined);
     unsubscribe();
     expect(off).toHaveBeenCalledWith(1);
+  });
+
+  it('opens the native dialog through the bridge', async () => {
+    const pickOpenFile = jest.fn(async () => ({ ok: true }));
+    window.simplesheetsDesktop = makeBridge({ pickOpenFile });
+    const result = await getPlatform().openFileDialog();
+    expect(result.ok).toBe(true);
+    expect(pickOpenFile).toHaveBeenCalledTimes(1);
+  });
+
+  it('opens a dropped file through the bridge', async () => {
+    const openDroppedFile = jest.fn(async () => ({ ok: false, message: 'missing' }));
+    window.simplesheetsDesktop = makeBridge({ openDroppedFile });
+    const file = new File(['x'], 'a.ssjson');
+    const result = await getPlatform().openDroppedFile(file);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.message).toBe('missing');
+    expect(openDroppedFile).toHaveBeenCalledWith(file);
+  });
+
+  it('preserves the NO_PATH failure so drops can fall back', async () => {
+    window.simplesheetsDesktop = makeBridge({
+      openDroppedFile: async () => ({
+        ok: false,
+        code: 'NO_PATH',
+        message: 'no path',
+      }),
+    });
+    const result = await getPlatform().openDroppedFile(new File(['x'], 'a.ssjson'));
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.code).toBe('NO_PATH');
+  });
+
+  it('subscribes to dropped open intents', () => {
+    const offOpenRequest = jest.fn();
+    window.simplesheetsDesktop = makeBridge({ offOpenRequest });
+    const platform = getPlatform();
+    const unsubscribe = platform.onOpenRequest(() => undefined);
+    unsubscribe();
+    expect(offOpenRequest).toHaveBeenCalledWith(2);
+  });
+
+  it('swallows acknowledgement and ready failures', async () => {
+    window.simplesheetsDesktop = makeBridge({
+      ackOpenRequest: async () => {
+        throw new Error('ack failed');
+      },
+      rendererReady: async () => {
+        throw new Error('ready failed');
+      },
+    });
+    const platform = getPlatform();
+    await expect(platform.ackOpenRequest(1)).resolves.toBeUndefined();
+    await expect(platform.rendererReady()).resolves.toBeUndefined();
   });
 });

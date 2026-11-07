@@ -1195,3 +1195,13 @@
 - **Tooling**: deterministic fixture generator, ImageMagick icon generator, electron-builder config (per-user NSIS + portable), packed smoke script, Playwright Electron smoke test.
 - **Docs**: `docs/desktop/DECISIONS.md`, `PROGRESS.md`, and `CAPABILITY_MATRIX.md`.
 - **Verification**: `npm run verify` (201 suites, 4,535 passed, 1 skipped), `npm run verify:e2e` (1 passed), `npm run electron:build:dir` produced an unpacked build, and the packaged app loaded from `app://` with edition `installed`.
+
+## 2026-11-07 [FEATURE] SimpleSheets Desktop — M1 Open Pipeline
+
+- **Open intents**: added the main-process `OpenRequestQueue` (one intent at a time, ack-gated, argv order preserved) and wired argv, Open With, second-instance, native picker, and drag-drop sources. Spreadsheet imports acknowledge after the Import Scope dialog resolves.
+- **Native picker**: `dialog.showOpenDialog` with format filters; files are read in main with realpath + extension + 100 MB validation and delivered to the renderer as an ArrayBuffer.
+- **Renderer integration**: desktop Open replaces the File System Access path when native dialogs are available; Excel/CSV route through the Import Scope dialog, while `.ssjson`/`.json` replace the workbook directly.
+- **Drag-drop**: the renderer passes the dropped `File` to preload, which resolves the OS path with `webUtils.getPathForFile` and sends only that path to main; synthetic files are rejected and fall back to the existing File pipeline.
+- **Error handling**: missing, corrupt, unsupported, permission, and oversized files surface actionable status messages without replacing the UI.
+- **Tests**: 9 Playwright Electron E2E tests (argv, picker, queued CSV+ssjson, corrupt, missing, drop, synthetic-File rejection, second instance) plus packaged argv+picker smoke; queue and path rules unit-tested.
+- **Verification**: `npm run verify` (203 suites, 4,576 passed, 1 skipped), `npm run verify:e2e` (9 passed), packaged smoke passed.

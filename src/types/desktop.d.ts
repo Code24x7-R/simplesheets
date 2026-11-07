@@ -26,6 +26,15 @@ export interface DesktopBridgeResult {
   message?: string;
 }
 
+export interface DesktopOpenRequest {
+  seq: number;
+  source: 'argv' | 'open-with' | 'second-instance' | 'picker' | 'recent' | 'drag-drop';
+  path: string;
+  name: string;
+  size: number;
+  data: ArrayBuffer;
+}
+
 export interface DesktopBridge {
   readonly isDesktop: true;
   readonly platform: string;
@@ -34,6 +43,12 @@ export interface DesktopBridge {
   revealDataFolder(): Promise<DesktopBridgeResult>;
   onMenuAction(callback: (action: string) => void): number;
   offMenuAction(id: number): void;
+  pickOpenFile(): Promise<DesktopBridgeResult>;
+  openDroppedFile(file: File): Promise<DesktopBridgeResult>;
+  onOpenRequest(callback: (request: DesktopOpenRequest) => void): number;
+  offOpenRequest(id: number): void;
+  ackOpenRequest(seq: number): Promise<DesktopBridgeResult>;
+  rendererReady(): Promise<DesktopBridgeResult>;
 }
 
 declare global {

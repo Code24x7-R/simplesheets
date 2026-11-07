@@ -8,6 +8,8 @@
  * preload bridge. Capabilities describe what the current edition can do.
  */
 
+import type { OpenRequest } from './desktop/core/openRequest';
+
 export type PlatformKind = 'web' | 'desktop';
 
 export type AppEdition = 'web' | 'development' | 'installed' | 'portable';
@@ -41,6 +43,7 @@ export type PlatformFailureCode =
   | 'INVALID_ARGUMENT'
   | 'IPC_ERROR'
   | 'DENIED'
+  | 'NO_PATH'
   | 'UNKNOWN';
 
 export type PlatformResult<T> =
@@ -54,4 +57,17 @@ export interface PlatformAdapter {
   openExternal(url: string): Promise<PlatformResult<void>>;
   revealDataFolder(): Promise<PlatformResult<void>>;
   onMenuAction(callback: (action: string) => void): () => void;
+  /** Show the native open dialog. The selected file arrives via onOpenRequest. */
+  openFileDialog(): Promise<PlatformResult<void>>;
+  /**
+   * Open a dropped File through its OS path. The preload resolves the path;
+   * the renderer never supplies an arbitrary filesystem path.
+   */
+  openDroppedFile(file: File): Promise<PlatformResult<void>>;
+  /** Subscribe to open intents delivered by the desktop main process. */
+  onOpenRequest(callback: (request: OpenRequest) => void): () => void;
+  /** Acknowledge an open intent so the next queued intent can be delivered. */
+  ackOpenRequest(seq: number): Promise<void>;
+  /** Tell main the renderer is ready to receive open intents. */
+  rendererReady(): Promise<void>;
 }
