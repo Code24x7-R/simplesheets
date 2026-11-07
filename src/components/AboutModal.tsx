@@ -339,6 +339,12 @@ export function AboutModal({ isOpen, onClose }: AboutModalProps) {
                 <span className="font-medium">Chromium</span><span>{appInfo.chromium}</span>
                 <span className="font-medium">Node</span><span>{appInfo.node}</span>
                 <span className="font-medium">Data folder</span><span className="break-all">{appInfo.dataDir}</span>
+                {appInfo.edition === 'portable' && appInfo.portableDir && (
+                  <>
+                    <span className="font-medium">Portable folder</span>
+                    <span className="break-all">{appInfo.portableDir}</span>
+                  </>
+                )}
               </div>
               <p className="mt-2 text-gray-500">
                 Builds are unsigned. Windows SmartScreen may warn on first launch. Workbook data never leaves this device.

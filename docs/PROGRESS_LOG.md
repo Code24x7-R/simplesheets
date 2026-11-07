@@ -1246,3 +1246,12 @@
 - **About/reset**: edition + runtime versions, build/commit, data folder, Copy Diagnostics, SmartScreen note, and confirmed Reset Application Data.
 - **Fixes**: desktop Copy Link uses the public web base; SimpleDocs/Help use the validated external-link adapter; missing recent entries offer Remove/Locate/Keep.
 - **Tests**: 213 suites / 4,650 passed / 1 skipped; E2E 34 tests; packaged build + smoke passed.
+
+## 2026-11-07 [FEATURE] SimpleSheets Desktop — M5 Complete
+
+- **Packaging**: `npm run electron:build` produced the per-user NSIS installer and portable executable; both unsigned with ASAR enabled.
+- **Association**: generated NSIS script contains exactly one `.ssjson` `APP_ASSOCIATE` with "Open with SimpleSheets"; no `UserChoice` write. Portable script registers nothing.
+- **Portable edition**: sets `PORTABLE_EXECUTABLE_DIR`; About reports `portable` plus the portable folder.
+- **Identity**: appId `au.mouseclick.simplesheets`, product `SimpleSheets`, per-user assisted installer, data preserved on uninstall.
+- **Docs**: README Electron build/install/signing section, `INSTALL-CHECKLIST.md`, and `M5-EVIDENCE.md` with sizes, SHA-256 hashes, script snippets, and unverified-environment list.
+- **Tests**: 214 suites / 4,653 passed / 1 skipped; E2E 34; packaged smoke pass.

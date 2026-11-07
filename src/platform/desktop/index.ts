@@ -38,7 +38,7 @@ const CAPABILITIES: PlatformCapabilities = {
   // Capabilities are enabled as their milestones land:
   // recovery M3, native menu M4, association M5.
   nativeFileDialogs: true,
-  fileAssociation: false,
+  fileAssociation: true,
   singleInstance: true,
   nativeMenu: true,
   revealInFolder: true,

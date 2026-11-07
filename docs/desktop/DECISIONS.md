@@ -369,3 +369,24 @@ file associations and needs explicit approval.
 - **Reset.** `app:reset-data` clears recents, recovery, window bounds, and
   desktop state, then the renderer clears `localStorage` preferences. It never
   touches user documents.
+
+---
+
+## 12. Packaging and file association (M5)
+
+- **Targets.** `npm run electron:build` builds a per-user assisted NSIS
+  installer and a portable executable for x64 Windows. Both are unsigned and
+  ASAR-packaged. Build output stays in the git-ignored `release/` directory.
+- **Association.** `fileAssociations` contains only `.ssjson`. electron-builder
+  emits `APP_ASSOCIATE` for the per-user `HKCU\Software\Classes` shell context
+  with the "Open with SimpleSheets" label and icon. It does **not** write the
+  Windows `UserChoice` hash, so Windows retains default-handler control.
+- **Portable.** The portable target receives no association macro and sets
+  `PORTABLE_EXECUTABLE_DIR`; `resolveEdition()` reports `portable` and About
+  shows the portable folder. Data still lives in `%APPDATA%\SimpleSheets`.
+- **Uninstall.** `deleteAppDataOnUninstall: false`; the NSIS uninstaller removes
+  the app, shortcuts, and association, but preserves user data.
+- **Unverified.** The installer has not been executed on this machine. Install,
+  upgrade, association/`Open with` behavior, actual portable-wrapper launch,
+  SmartScreen, antivirus, and Windows 11 presentation are marked
+  unverified-environment and covered by `INSTALL-CHECKLIST.md`.

@@ -40,6 +40,7 @@ import {
 import { OpenRequestQueue } from '../src/platform/desktop/core/openQueue';
 import { DesktopStateStore, type RecentInput } from '../src/platform/desktop/core/desktopStateStore';
 import { resolveWindowBounds } from '../src/platform/desktop/core/windowBounds';
+import { resolveEdition } from '../src/platform/desktop/core/edition';
 import { NATIVE_SHORTCUTS, nativeShortcutAction } from '../src/platform/desktop/core/shortcutOwner';
 import { allowWritePath, isWritePathAllowed, registerSaveHandlers } from './saveHandlers';
 
@@ -129,9 +130,7 @@ function configureUserData(): void {
  * @returns `development`, `portable`, or `installed`.
  */
 function getEdition(): 'development' | 'installed' | 'portable' {
-  if (!app.isPackaged) return 'development';
-  if (process.env.PORTABLE_EXECUTABLE_DIR) return 'portable';
-  return 'installed';
+  return resolveEdition(app.isPackaged, process.env.PORTABLE_EXECUTABLE_DIR);
 }
 
 /**
@@ -148,6 +147,7 @@ function getAppInfo(): {
   chromium: string;
   node: string;
   dataDir: string;
+  portableDir: string;
   buildTimestamp: string;
   gitCommit: string;
 } {
@@ -160,6 +160,7 @@ function getAppInfo(): {
     chromium: process.versions.chrome ?? '',
     node: process.versions.node,
     dataDir: app.getPath('userData'),
+    portableDir: process.env.PORTABLE_EXECUTABLE_DIR ?? '',
     buildTimestamp: process.env.BUILD_TIMESTAMP ?? '',
     gitCommit: process.env.GIT_COMMIT_HASH ?? '',
   };

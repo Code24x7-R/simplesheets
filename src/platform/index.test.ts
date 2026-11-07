@@ -12,6 +12,7 @@ const APP_INFO: DesktopBridgeAppInfo = {
   chromium: '142.0.0.0',
   node: '22.0.0',
   dataDir: 'C:/tmp/simplesheets',
+  portableDir: '',
   buildTimestamp: '2026-01-01T00:00:00.000Z',
   gitCommit: 'abc1234',
 };

@@ -16,6 +16,7 @@ export interface DesktopBridgeAppInfo {
   chromium: string;
   node: string;
   dataDir: string;
+  portableDir: string;
   buildTimestamp: string;
   gitCommit: string;
 }

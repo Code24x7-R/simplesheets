@@ -43,6 +43,7 @@ export interface AppInfo {
   readonly chromium: string;
   readonly node: string;
   readonly dataDir: string;
+  readonly portableDir: string;
   readonly buildTimestamp: string;
   readonly gitCommit: string;
 }

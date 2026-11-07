@@ -472,21 +472,49 @@ The tarball contains the full `dist/` — a static site servable by any HTTP ser
 
 ---
 
-## Desktop Installer (Tauri)
+## Desktop Edition (Windows / Electron)
 
-Package as a native Windows app with MSI installer:
+SimpleSheets also ships as a native Windows desktop app. The renderer is the
+same spreadsheet UI; Electron adds native Open/Save dialogs, real file paths,
+`.ssjson` file association, recent files, crash recovery, a native menu, and
+atomic in-place saves.
+
+### Build
 
 ```bash
-npm install -D @tauri-apps/cli @tauri-apps/api
-npx tauri init
-npx tauri build
+npm ci
+npm run electron:build
 ```
 
-Output: `src-tauri/target/release/bundle/msi/`, `nsis/`, and standalone `.exe`. MSI is ~5–8 MB (uses system WebView2).
+Artifacts are written to `release/`:
 
-SimpleSheet needs no Tauri capabilities — file I/O uses `<input type="file">` + Blob downloads, clipboard uses `navigator.clipptr`, no native dialogs.
+| Artifact | Purpose |
+| --- | --- |
+| `SimpleSheets-Setup-0.1.0.exe` | Per-user NSIS installer (no elevation required) |
+| `SimpleSheets-Portable-0.1.0.exe` | Portable executable; no file association |
 
----
+`npm run electron:build:dir` produces an unpacked `release/win-unpacked/` build
+for smoke testing. `npm run electron:dev` runs Vite and the Electron shell with
+HMR.
+
+### Install and uninstall
+
+- The installer registers the `.ssjson` file type and an "Open with
+  SimpleSheets" handler for the current user. Windows still controls the
+  default handler through its normal "Open with" choice.
+- Uninstalling removes the application, shortcuts, and the `.ssjson`
+  association, but preserves `%APPDATA%\SimpleSheets` (recents, recovery,
+  preferences).
+- The portable build stores the same user data under
+  `%APPDATA%\SimpleSheets` and does not register file associations.
+
+### Signing and updates
+
+Builds are unsigned: no code-signing certificate is included, so Windows
+SmartScreen may show a warning and elevation prompts may appear depending on
+the machine policy. There is no auto-update, update check, telemetry, or
+network call at idle. See `docs/desktop/DECISIONS.md` and
+`docs/desktop/INSTALL-CHECKLIST.md` for the verified limits and manual checks.
 
 ## Deployment
 
@@ -494,7 +522,7 @@ SimpleSheet needs no Tauri capabilities — file I/O uses `<input type="file">` 
 - **GitHub Pages** — push `dist/` to `gh-pages` (set `GITHUB_PAGES=true` for subpath base)
 - **Netlify/Vercel** — connect repo
 - **Any static host** — upload `dist/`
-- **Desktop** — see Tauri section above
+- **Desktop** — see the Electron desktop section above
 
 ---
 

@@ -64,6 +64,7 @@ export function createWebAdapter(): PlatformAdapter {
           chromium: '',
           node: '',
           dataDir: '',
+          portableDir: '',
           buildTimestamp: readBuildTimestamp(),
           gitCommit: readGitCommit(),
         },
