@@ -19,7 +19,7 @@ here and in `DECISIONS.md`.
 | M4 | Native menu, accelerators, window state, About | ✅ Complete | See below |
 | M5 | File association, NSIS + portable build | ⬜ Not started | — |
 | M6 | Security hardening | ✅ Complete | See below |
-| M7 | Performance, leak test, packaging polish | ⬜ Not started | — |
+| M7 | Performance, leak test, packaging polish | ✅ Complete | See below |
 | M8 | Final evidence report | ⬜ Not started | — |
 
 ---
@@ -52,6 +52,44 @@ Known M1 limitations:
 - The literal Explorer drag gesture is manual; the drop event and preload path are automated.
 - The native dirty/open-close prompt arrives in M4; M2 uses the existing confirm.
 - M1's FIFO queue was superseded by M3's newest-wins behavior.
+
+---
+
+## M7 evidence
+
+Checks run:
+
+| Check | Result |
+| --- | --- |
+| `npm run verify` | 215 suites, 4,658 passed, 1 skipped |
+| `npm run verify:e2e` | 39 tests passed |
+| 5,000-row CSV navigation | ~16 ms/key (budget < 100 ms average) |
+| `large.ssjson` open | ~3.0 s (budget < 5 s) |
+| `large.ssjson` save | ~237 ms (budget < 2 s) |
+| 20 open cycles | heap growth ≤ 20% after CDP GC |
+| Peak memory, large workbook | ~570 MB working set (ceiling 1.5 GB) |
+| Installer / portable / unpacked | 108 MB / 99 MB / 312 MB |
+| Packaged smoke | pass incl. 30 s idle network |
+
+Root causes fixed:
+
+- `CloudStorageModal` serialized and lz-compressed the entire workbook on every
+  parent render, before its `isOpen` early return. Every cell navigation paid
+  this cost (~425 ms/key on 5,000 rows; multi-second stalls on 9 MB). The share
+  size is now memoized and computed only while the modal is open.
+- `topologicalSort` used `order.includes()` in a loop over every cell, making
+  evaluation O(n²) (~16.8 s on 150k cells). The second pass now uses the
+  `visited` set, reducing large open from ~18.9 s to ~3.0 s.
+
+E2E performance/leak coverage:
+
+- 5,000-row CSV import under 5 s and 20 arrow-key navigation average <100 ms;
+- 9 MB/50k-row open <5 s, save <2 s, memory <1.5 GB;
+- twenty open cycles with CDP GC before/after heap comparison (<20%);
+- cold start to a usable grid <3 s.
+
+Docs: `M7-PERF.md`, README desktop section, MANUAL desktop section, and the M5
+install checklist (uninstall/data preservation).
 
 ---
 
@@ -269,8 +307,8 @@ Known M2 limitations:
 - Last-path persistence and recovery-snapshot clearing are M3.
 - An actual Windows share-lock is a manual check; read-only/permission paths
   are automated.
-- The 10 MB save measured 4–8 s in the dev shell, above SAVE-12's 2 s budget;
-  autosave/rendering optimization is M7.
+- The 10 MB save measured 4–8 s in the dev shell at M2; M7 fixed the
+  render-path compression regression and measures ~237 ms.
 
 ---
 

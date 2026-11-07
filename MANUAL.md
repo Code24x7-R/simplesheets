@@ -35,6 +35,31 @@
 
 ---
 
+## Desktop Edition (Windows)
+
+The Windows desktop edition adds native Open/Save dialogs, real file paths,
+`.ssjson` file association, recent files, crash recovery, and a native menu.
+
+- **Install**: run `SimpleSheets-Setup-0.1.0.exe`. It installs per-user and does
+  not require elevation. `SimpleSheets-Portable-0.1.0.exe` runs without
+  installation and does not register file associations.
+- **Save**: `Ctrl+S` writes the current `.ssjson` in place. The first save of a
+  new document opens Save As. Excel/CSV imports must use Save As so the original
+  spreadsheet is never overwritten with JSON.
+- **Recent files and recovery**: stored in `%APPDATA%\SimpleSheets`. If the app
+  closes with unsaved changes it offers Recover on the next launch; use
+  **File → Recover Unsaved Changes** or the amber banner.
+- **Data**: uninstalling removes the app, shortcuts, and the `.ssjson`
+  association but keeps `%APPDATA%\SimpleSheets`. Your saved documents are
+  never touched.
+- **Signing**: builds are unsigned; Windows SmartScreen may warn. There is no
+  auto-update, telemetry, or idle network traffic.
+- **Copy Link**: desktop share links use the public
+  `https://simplesheets.mouseclick.au/` base and contain the full workbook in
+  the URL fragment.
+
+---
+
 ## Getting Started
 
 SimpleSheet is a browser-based spreadsheet application that works entirely in your browser — no server, no account, no installation required. It reads and writes Excel files (.xlsx), CSV, JSON, and exports to PDF.

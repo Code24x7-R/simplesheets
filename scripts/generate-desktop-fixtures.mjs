@@ -48,6 +48,13 @@ function writeJson(name, value) {
   writeFileSync(join(outDir, name), JSON.stringify(value, null, 2) + '\n');
 }
 
+// ─── Large CSV navigation fixture (5,000 data rows) ─────────────────────────
+const NAV_ROWS = 5000;
+const navLines = ['Name,Value,Category'];
+for (let row = 0; row < NAV_ROWS; row += 1) {
+  navLines.push(`Row ${row},${(row * 3) % 1000},Group ${row % 20}`);
+}
+writeFileSync(join(outDir, 'nav-5000.csv'), `${navLines.join('\n')}\n`);
 // ─── Small workbook: formulas, styles, named ranges ─────────────────────────
 const smallCells = {};
 const headers = ['Item', 'Q1', 'Q2', 'Q3', 'Q4', 'Total'];
@@ -297,6 +304,7 @@ const manifest = {
     'import.xlsx',
     'import-large.csv',
     'small.csv',
+    'nav-5000.csv',
   ],
 };
 writeJson('manifest.json', manifest);

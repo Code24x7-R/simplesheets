@@ -419,3 +419,24 @@ file associations and needs explicit approval.
 - **Unverified.** Forged native input and OS-level antivirus/registry behavior
   remain outside automated coverage; the M5 checklist covers installed-app
   behavior.
+
+---
+
+## 14. Performance measurements (M7)
+
+Method: Windows `10.0.26300` x64, Node `23.11.0`, Electron `45.2.3`, Playwright
+`_electron` against the development shell; fixtures under
+`tmp/desktop-fixtures`. Full table in `M7-PERF.md`.
+
+- **Cold start**: ~1.4–1.7 s to window; usable grid under the 3 s budget.
+- **5,000-row CSV**: navigation ~16 ms/key after deferring share-size
+  compression out of parent renders. Regression fixture `nav-5000.csv`.
+- **Large workbook**: 9 MB / 50,000 rows opens in ~3.0 s and saves in ~237 ms
+  after replacing the O(n²) topological-sort tail with an O(n) pass.
+- **Memory**: ~570 MB working set for the large workbook (1.5 GB ceiling).
+- **Leak**: 20 open cycles with CDP garbage collection stay within 20% heap.
+- **Artifacts**: installer 108 MB, portable 99 MB, unpacked 312 MB.
+- **Recovery**: main coalesces writes at 500 ms (≤2/s) and flushes on quit.
+- **Limits**: a true 20-process launch/quit cycle, Windows share-lock, and
+  OS-cache effects remain manual. No timing values are silently relaxed; the
+  E2E budgets are the guardrails.

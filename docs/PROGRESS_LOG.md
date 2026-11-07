@@ -1264,3 +1264,12 @@
 - **Navigation/shell**: `will-redirect` blocked, subframes rejected, `shell.showItemInFolder` only, external URLs length/control validated.
 - **Packaged security smoke**: CSP header/console, traversal, permissions, window-open, and 30-second idle network checks pass.
 - **Tests**: 215 suites / 4,658 passed / 1 skipped; E2E 35 tests.
+
+## 2026-11-07 [FEATURE] SimpleSheets Desktop — M7 Complete
+
+- **CSV navigation fix**: removed whole-workbook lz-string compression from every App render in CloudStorageModal; 5,000-row navigation 425 ms → ~16 ms/key.
+- **Large open fix**: replaced O(n²) `order.includes()` topological-sort tail with an O(n) `visited` pass; 9 MB/50k-row open 18.9 s → ~3.0 s, save ~237 ms.
+- **Performance/leak E2E**: 5,000-row CSV budget, large open/save/memory, 20-cycle heap, cold start.
+- **Packaging evidence**: 108 MB installer / 99 MB portable / 312 MB unpacked; peak large-workbook memory ~570 MB.
+- **Docs**: `M7-PERF.md`, README desktop section, MANUAL desktop section, install checklist.
+- **Tests**: 215 suites / 4,658 passed / 1 skipped; E2E 39 tests; packaged smoke pass.
