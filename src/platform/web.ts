@@ -118,5 +118,38 @@ export function createWebAdapter(): PlatformAdapter {
     async rendererReady(): Promise<void> {
       return undefined;
     },
+    async openRecent() {
+      return failure('NOT_SUPPORTED', 'The browser edition reopens recent files with the file picker.');
+    },
+    async getStartupInfo() {
+      return failure('NOT_SUPPORTED', 'The browser edition has no desktop startup state.');
+    },
+    async importLegacy() {
+      return failure('NOT_SUPPORTED', 'The browser edition keeps its own localStorage data.');
+    },
+    async listRecents() {
+      return failure('NOT_SUPPORTED', 'The browser edition keeps recent files in localStorage.');
+    },
+    async upsertRecent() {
+      return failure('NOT_SUPPORTED', 'The browser edition keeps recent files in localStorage.');
+    },
+    async removeRecent() {
+      return failure('NOT_SUPPORTED', 'The browser edition keeps recent files in localStorage.');
+    },
+    async clearRecents() {
+      return failure('NOT_SUPPORTED', 'The browser edition keeps recent files in localStorage.');
+    },
+    async setReopenLast() {
+      return failure('NOT_SUPPORTED', 'The browser edition has no relaunch behavior.');
+    },
+    async writeRecovery() {
+      return failure('NOT_SUPPORTED', 'The browser edition autosaves to localStorage.');
+    },
+    async clearRecovery() {
+      return failure('NOT_SUPPORTED', 'The browser edition autosaves to localStorage.');
+    },
+    async promptRecovery() {
+      return failure('NOT_SUPPORTED', 'The browser edition has no recovery prompt.');
+    },
   };
 }

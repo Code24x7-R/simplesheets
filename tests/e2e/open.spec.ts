@@ -84,17 +84,14 @@ test('opens a fixture selected in the native dialog', async () => {
 });
 
 
-test('serializes two open intents behind the import scope dialog', async () => {
-  const session = await launch([fixture('small.csv'), fixture('unicode.ssjson')]);
+test('the newest explicit open intent wins', async () => {
+  const session = await launch([fixture('unicode.ssjson'), fixture('small.csv')]);
   try {
     const dialog = session.page.getByRole('dialog');
     await expect(dialog).toBeVisible({ timeout: 30_000 });
     await expect(session.page.getByText('こんにちは', { exact: true })).toHaveCount(0);
-
     await dialog.getByRole('button', { name: 'Cancel' }).click();
-    await expect(session.page.getByText('こんにちは', { exact: true })).toBeVisible({
-      timeout: 30_000,
-    });
+    await expect(session.page.getByText('こんにちは', { exact: true })).toHaveCount(0);
   } finally {
     await close(session);
   }

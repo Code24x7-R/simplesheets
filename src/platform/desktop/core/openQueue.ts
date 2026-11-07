@@ -28,6 +28,19 @@ export class OpenRequestQueue<T extends SequencedRequest> {
     this.pending.push(request);
   }
 
+  /**
+   * Drop every queued request except the currently active one.
+   *
+   * @returns The number of dropped requests.
+   */
+  clearPending(): number {
+    const active = this.active;
+    const dropped = active ? this.pending.length - 1 : this.pending.length;
+    this.pending.length = 0;
+    if (active) this.pending.push(active);
+    return Math.max(0, dropped);
+  }
+
   /** Update renderer readiness. */
   setReady(ready: boolean): void {
     this.ready = ready;

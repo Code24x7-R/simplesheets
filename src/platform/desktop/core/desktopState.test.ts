@@ -31,6 +31,7 @@ describe('desktopState', () => {
       lastDirectory: null,
       reopenLast: true,
       cleanExit: true,
+      legacyImported: false,
     });
   });
 

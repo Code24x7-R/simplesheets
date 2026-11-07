@@ -57,6 +57,8 @@ interface WriteRequest {
 interface SaveHandlerDeps {
   getWindow: () => BrowserWindow | null;
   assertTrustedSender: (event: Electron.IpcMainInvokeEvent) => void;
+  /** Called after a successful write with the final path. */
+  onSaved?: (filePath: string) => void;
 }
 
 function pathKey(filePath: string): string {
@@ -226,6 +228,7 @@ async function saveAsFromRequest(
   window: BrowserWindow | null,
   request: WriteRequest,
   suggestedName: string,
+  onSaved?: (filePath: string) => void,
 ): Promise<SaveSuccess | SaveFailure> {
   const picked = await pickSavePath(
     window,
@@ -241,6 +244,7 @@ async function saveAsFromRequest(
     { path: picked.path, data: request.data, expected: null },
     true,
     false,
+    onSaved,
   );
 }
 
@@ -249,6 +253,7 @@ async function writeWithPrompts(
   request: WriteRequest,
   force = false,
   allowSaveAs = true,
+  onSaved?: (filePath: string) => void,
 ): Promise<SaveSuccess | SaveFailure> {
   let overwrite = force;
 
@@ -284,7 +289,7 @@ async function writeWithPrompts(
           overwrite = true;
         } else if (choice === 1) {
           if (!allowSaveAs) return { ok: false, code: 'CANCELED', message: 'Save cancelled.' };
-          return saveAsFromRequest(window, request, path.basename(request.path));
+          return saveAsFromRequest(window, request, path.basename(request.path), onSaved);
         } else if (choice === 2) {
           try {
             const info = await fsp.stat(request.path);
@@ -323,7 +328,7 @@ async function writeWithPrompts(
           overwrite = true;
         } else if (choice === 1) {
           if (!allowSaveAs) return { ok: false, code: 'CANCELED', message: 'Save cancelled.' };
-          return saveAsFromRequest(window, request, path.basename(request.path));
+          return saveAsFromRequest(window, request, path.basename(request.path), onSaved);
         } else {
           return { ok: false, code: 'CANCELED', message: 'Save cancelled.' };
         }
@@ -335,6 +340,7 @@ async function writeWithPrompts(
     if (attempt.ok) {
       allowWritePath(request.path);
       lastSaveDirectory = path.dirname(request.path);
+      onSaved?.(request.path);
       return {
         ok: true,
         path: request.path,
@@ -354,7 +360,7 @@ async function writeWithPrompts(
       if (choice === 0) continue;
       if (choice === 1) {
         if (!allowSaveAs) return { ok: false, code: 'CANCELED', message: 'Save cancelled.' };
-        return saveAsFromRequest(window, request, path.basename(request.path));
+        return saveAsFromRequest(window, request, path.basename(request.path), onSaved);
       }
       return { ok: false, code: 'CANCELED', message: 'Save cancelled.' };
     }
@@ -369,7 +375,7 @@ async function writeWithPrompts(
  * @param deps - Window access and sender validation from the main process.
  */
 export function registerSaveHandlers(deps: SaveHandlerDeps): void {
-  const { getWindow, assertTrustedSender } = deps;
+  const { getWindow, assertTrustedSender, onSaved } = deps;
 
   ipcMain.handle('save:pick', async (event, value: unknown) => {
     assertTrustedSender(event);
@@ -400,7 +406,7 @@ export function registerSaveHandlers(deps: SaveHandlerDeps): void {
         message: 'In-place saves must use a .ssjson or .json document.',
       };
     }
-    return writeWithPrompts(getWindow(), parsed);
+    return writeWithPrompts(getWindow(), parsed, false, true, onSaved);
   });
 
   ipcMain.handle('window:set-title', (event, title: unknown) => {

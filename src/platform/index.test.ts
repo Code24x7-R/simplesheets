@@ -34,6 +34,31 @@ function makeBridge(overrides: Partial<DesktopBridge> = {}): DesktopBridge {
     offOpenRequest: () => undefined,
     ackOpenRequest: async () => ({ ok: true }),
     rendererReady: async () => ({ ok: true }),
+    openRecent: async () => ({ ok: true }),
+    getStartupInfo: async () => ({
+      ok: true,
+      value: {
+        recents: [],
+        lastPath: null,
+        reopenLast: true,
+        recovery: null,
+        unclean: false,
+        hadExplicitIntent: false,
+        needsLegacyImport: false,
+      },
+    }),
+    importLegacy: async () => ({ ok: true, value: { imported: 0, recovery: null } }),
+    listRecents: async () => ({ ok: true, value: [] }),
+    upsertRecent: async () => ({
+      ok: true,
+      value: { id: 'r1', name: 'a.ssjson', size: 1, timestamp: 1, source: 'local' },
+    }),
+    removeRecent: async () => ({ ok: true }),
+    clearRecents: async () => ({ ok: true }),
+    setReopenLast: async () => ({ ok: true }),
+    writeRecovery: async () => ({ ok: true }),
+    clearRecovery: async () => ({ ok: true }),
+    promptRecovery: async () => ({ ok: true, action: 'none' }),
     ...overrides,
   };
 }
@@ -307,5 +332,97 @@ describe('desktop adapter', () => {
     const platform = getPlatform();
     await expect(platform.ackOpenRequest(1)).resolves.toBeUndefined();
     await expect(platform.rendererReady()).resolves.toBeUndefined();
+  });
+
+  it('reads startup state, recents, and opens a recent path', async () => {
+    const openRecent = jest.fn(async () => ({ ok: true }));
+    window.simplesheetsDesktop = makeBridge({
+      openRecent,
+      listRecents: async () => ({
+        ok: true,
+        value: [
+          { id: 'r1', name: 'a.ssjson', size: 1, timestamp: 2, source: 'local', path: 'C:/a.ssjson' },
+        ],
+      }),
+    });
+    const platform = getPlatform();
+    const startup = await platform.getStartupInfo();
+    expect(startup.ok).toBe(true);
+    const recents = await platform.listRecents();
+    expect(recents.ok).toBe(true);
+    if (recents.ok) expect(recents.value[0].name).toBe('a.ssjson');
+    await platform.openRecent('C:/a.ssjson');
+    expect(openRecent).toHaveBeenCalledWith('C:/a.ssjson');
+  });
+
+  it('normalizes missing startup and recents values', async () => {
+    window.simplesheetsDesktop = makeBridge({
+      getStartupInfo: async () => ({ ok: true }),
+      listRecents: async () => ({ ok: false, code: 'DENIED', message: 'no recents' }),
+    });
+    const platform = getPlatform();
+    const startup = await platform.getStartupInfo();
+    expect(startup.ok).toBe(false);
+    const recents = await platform.listRecents();
+    expect(recents.ok).toBe(false);
+    if (!recents.ok) expect(recents.code).toBe('DENIED');
+  });
+
+  it('records recents and reports recovery outcomes', async () => {
+    const upsertRecent = jest.fn(async () => ({
+      ok: true,
+      value: { id: 'r2', name: 'b.ssjson', size: 3, timestamp: 4, source: 'local' as const },
+    }));
+    window.simplesheetsDesktop = makeBridge({
+      upsertRecent,
+      promptRecovery: async () => ({
+        ok: true,
+        action: 'recover',
+        value: {
+          timestamp: 1,
+          displayName: 'B',
+          path: null,
+          appVersion: '0.1.0',
+          workbook: { sheets: [] },
+          pathExists: false,
+        },
+      }),
+    });
+    const platform = getPlatform();
+    const added = await platform.upsertRecent({ name: 'b.ssjson', size: 3, source: 'local' });
+    expect(added.ok).toBe(true);
+    expect(upsertRecent).toHaveBeenCalled();
+    const prompt = await platform.promptRecovery();
+    expect(prompt.ok).toBe(true);
+    if (prompt.ok) expect(prompt.value.action).toBe('recover');
+  });
+
+  it('imports legacy state and surfaces recovery write failures', async () => {
+    window.simplesheetsDesktop = makeBridge({
+      importLegacy: async () => ({
+        ok: true,
+        value: {
+          imported: 2,
+          recovery: {
+            timestamp: 1,
+            displayName: 'Legacy',
+            path: null,
+            appVersion: '0.1.0',
+          },
+        },
+      }),
+      writeRecovery: async () => ({ ok: false, code: 'TOO_LARGE', message: 'too large' }),
+    });
+    const platform = getPlatform();
+    const imported = await platform.importLegacy('[]', null);
+    expect(imported.ok).toBe(true);
+    if (imported.ok) expect(imported.value.imported).toBe(2);
+    const written = await platform.writeRecovery({
+      workbook: { sheets: [] },
+      path: null,
+      displayName: 'A',
+    });
+    expect(written.ok).toBe(false);
+    if (!written.ok) expect(written.code).toBe('TOO_LARGE');
   });
 });

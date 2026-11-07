@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
-import { renderHook, act } from '@testing-library/react';
+import { renderHook, act, waitFor } from '@testing-library/react';
 import { useMRU } from './useMRU';
 import { loadMRU } from '../utils/mru';
+import type { DesktopBridge } from '../types/desktop';
 
 describe('useMRU', () => {
   beforeEach(() => {
@@ -178,5 +179,66 @@ describe('useMRU', () => {
 
     expect(removeEventListenerSpy).toHaveBeenCalledWith('storage', expect.any(Function));
     removeEventListenerSpy.mockRestore();
+  });
+});
+
+describe('useMRU (desktop)', () => {
+  afterEach(() => {
+    delete window.simplesheetsDesktop;
+  });
+
+  it('loads main-owned recents and records through the bridge', async () => {
+    const listRecents = jest.fn(async () => ({
+      ok: true,
+      value: [
+        { id: 'r1', name: 'Main.ssjson', size: 1, timestamp: 2, source: 'local' as const },
+      ],
+    }));
+    const upsertRecent = jest.fn(async () => ({
+      ok: true,
+      value: { id: 'r2', name: 'New.ssjson', size: 2, timestamp: 3, source: 'local' as const },
+    }));
+    window.simplesheetsDesktop = {
+      isDesktop: true,
+      platform: 'win32',
+      listRecents,
+      upsertRecent,
+      removeRecent: async () => ({ ok: true }),
+      clearRecents: async () => ({ ok: true }),
+    } as unknown as DesktopBridge;
+
+    const { result } = renderHook(() => useMRU());
+    await waitFor(() => expect(result.current.entries[0]?.name).toBe('Main.ssjson'));
+
+    act(() => {
+      result.current.recordOpen('New.ssjson', 2, 'local', { path: 'C:/New.ssjson' });
+    });
+    expect(result.current.entries[0].name).toBe('New.ssjson');
+    await waitFor(() => expect(upsertRecent).toHaveBeenCalled());
+
+    act(() => {
+      result.current.remove('r2');
+    });
+    expect(result.current.entries.map((entry) => entry.id)).not.toContain('r2');
+
+    act(() => {
+      result.current.clear();
+    });
+    expect(result.current.entries).toEqual([]);
+  });
+
+  it('refreshes on the migration event', async () => {
+    const listRecents = jest.fn(async () => ({ ok: true, value: [] }));
+    window.simplesheetsDesktop = {
+      isDesktop: true,
+      platform: 'win32',
+      listRecents,
+    } as unknown as DesktopBridge;
+    renderHook(() => useMRU());
+    await waitFor(() => expect(listRecents).toHaveBeenCalledTimes(1));
+    act(() => {
+      window.dispatchEvent(new Event('simplesheets:recents-changed'));
+    });
+    await waitFor(() => expect(listRecents).toHaveBeenCalledTimes(2));
   });
 });

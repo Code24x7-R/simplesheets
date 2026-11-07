@@ -37,7 +37,8 @@ import {
   type OpenRequestSource,
 } from '../src/platform/desktop/core/openRequest';
 import { OpenRequestQueue } from '../src/platform/desktop/core/openQueue';
-import { allowWritePath, registerSaveHandlers } from './saveHandlers';
+import { DesktopStateStore, type RecentInput } from '../src/platform/desktop/core/desktopStateStore';
+import { allowWritePath, isWritePathAllowed, registerSaveHandlers } from './saveHandlers';
 
 const DEV_URL = 'http://localhost:3000';
 const APP_URL = 'app://simplesheets/index.html';
@@ -80,6 +81,9 @@ const OPEN_FILTERS: Electron.FileFilter[] = [
 
 let nextOpenSeq = 1;
 const openQueue = new OpenRequestQueue<OpenRequest>();
+let stateStore!: DesktopStateStore;
+let startupHadExplicitIntent = false;
+let startupRestoreAttempted = false;
 
 // Must run before app.ready so storage and fetch work on the custom origin.
 protocol.registerSchemesAsPrivileged([
@@ -109,6 +113,7 @@ function configureUserData(): void {
 
   fs.mkdirSync(dataDir, { recursive: true });
   app.setPath('userData', dataDir);
+  stateStore = new DesktopStateStore(dataDir, app.getVersion());
 }
 
 /**
@@ -233,7 +238,11 @@ async function readOpenRequest(
     nextOpenSeq += 1;
 
     if (isWorkbookSavePath(realPath)) allowWritePath(realPath);
+    stateStore.setLastPath(realPath);
 
+    // A newer explicit intent supersedes queued (not active) intents. Restore
+    // and recovery loads must not clear explicit work.
+    if (source !== 'recent') openQueue.clearPending();
     openQueue.enqueue(request);
     pumpOpenRequests();
     return { ok: true, seq: request.seq };
@@ -285,6 +294,65 @@ function acknowledgeOpenRequest(seq: number): boolean {
   return acknowledged;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function parseRecentInput(value: unknown): RecentInput | null {
+  if (!isRecord(value)) return null;
+  if (typeof value.name !== 'string' || value.name.length === 0 || value.name.length > 260) return null;
+  if (typeof value.size !== 'number' || !Number.isFinite(value.size)) return null;
+  if (value.source !== 'local' && value.source !== 'cloud' && value.source !== 'url') return null;
+  if (value.path !== undefined) {
+    if (typeof value.path !== 'string') return null;
+    if (
+      value.source === 'local' &&
+      (!path.isAbsolute(value.path) || !isSupportedOpenPath(value.path) || !fs.existsSync(value.path))
+    ) {
+      return null;
+    }
+  }
+  if (value.handleId !== undefined && typeof value.handleId !== 'string') return null;
+  if (value.provider !== undefined && typeof value.provider !== 'string') return null;
+  if (value.cloudFileId !== undefined && typeof value.cloudFileId !== 'string') return null;
+  if (value.canReopen !== undefined && typeof value.canReopen !== 'boolean') return null;
+  return {
+    id: typeof value.id === 'string' ? value.id : undefined,
+    name: value.name,
+    size: value.size,
+    timestamp: typeof value.timestamp === 'number' ? value.timestamp : undefined,
+    source: value.source,
+    path: typeof value.path === 'string' ? value.path : undefined,
+    handleId: typeof value.handleId === 'string' ? value.handleId : undefined,
+    provider: typeof value.provider === 'string' ? value.provider : undefined,
+    cloudFileId: typeof value.cloudFileId === 'string' ? value.cloudFileId : undefined,
+    canReopen: typeof value.canReopen === 'boolean' ? value.canReopen : undefined,
+  };
+}
+
+/** Reopen the last document when enabled and still present. */
+async function restoreLastDocument(): Promise<void> {
+  const state = stateStore.getState();
+  if (!state.reopenLast || !state.lastPath) return;
+  const lastPath = state.lastPath;
+  if (!fs.existsSync(lastPath)) {
+    stateStore.setLastPath(null);
+    return;
+  }
+  const result = await readOpenRequest(lastPath, 'recent');
+  if (!result.ok && result.code === 'MISSING') stateStore.setLastPath(null);
+}
+
+/** Explicit intent wins, then recovery, then the last document. */
+async function restoreStartupDocument(): Promise<void> {
+  if (startupRestoreAttempted) return;
+  startupRestoreAttempted = true;
+  if (startupHadExplicitIntent) return;
+  const info = stateStore.getStartupInfo(false);
+  if (info.unclean && info.recovery) return;
+  await restoreLastDocument();
+}
+
 /**
  * Parse a command line for supported file paths, ignoring flags and the app path.
  *
@@ -332,7 +400,9 @@ async function queueOpenPaths(
  */
 function queueCommandLineOpenPaths(source: OpenRequestSource): void {
   const args = process.argv.slice(app.isPackaged ? 1 : 2);
-  void queueOpenPaths(collectOpenPaths(args), source);
+  const paths = collectOpenPaths(args);
+  if (paths.length > 0) startupHadExplicitIntent = true;
+  void queueOpenPaths(paths, source);
 }
 
 /**
@@ -501,6 +571,27 @@ function setupIpc(): void {
     return readOpenRequest(rawPath, 'drag-drop');
   });
 
+  ipcMain.handle('open:recent', async (event, rawPath: unknown) => {
+    assertTrustedSender(event);
+    if (typeof rawPath !== 'string' || !path.isAbsolute(rawPath)) {
+      return { ok: false, code: 'INVALID_PATH', message: 'A valid recent file path is required.' };
+    }
+    const key = process.platform === 'win32'
+      ? path.resolve(rawPath).toLowerCase()
+      : path.resolve(rawPath);
+    const known = stateStore.getState().recents.some((entry) =>
+      entry.path !== undefined && (
+        process.platform === 'win32'
+          ? path.resolve(entry.path).toLowerCase() === key
+          : path.resolve(entry.path) === key
+      ),
+    );
+    if (!known) {
+      return { ok: false, code: 'NOT_ALLOWED', message: 'That path is not in the recent-file list.' };
+    }
+    return readOpenRequest(rawPath, 'recent');
+  });
+
   ipcMain.handle('open:ack', (event, seq: unknown) => {
     assertTrustedSender(event);
     if (typeof seq !== 'number' || !Number.isInteger(seq)) {
@@ -516,12 +607,130 @@ function setupIpc(): void {
     assertTrustedSender(event);
     openQueue.setReady(true);
     pumpOpenRequests();
+    void restoreStartupDocument();
     return { ok: true };
+  });
+
+  ipcMain.handle('state:startup', (event) => {
+    assertTrustedSender(event);
+    return { ok: true, value: stateStore.getStartupInfo(startupHadExplicitIntent) };
+  });
+
+  ipcMain.handle('state:import-legacy', async (event, value: unknown) => {
+    assertTrustedSender(event);
+    if (!isRecord(value)) {
+      return { ok: false, code: 'INVALID_ARGUMENT', message: 'Invalid legacy import payload.' };
+    }
+    const mru = typeof value.mru === 'string' ? value.mru : null;
+    const autosave = typeof value.autosave === 'string' ? value.autosave : null;
+    return { ok: true, value: await stateStore.importLegacy(mru, autosave) };
+  });
+
+  ipcMain.handle('recents:list', (event) => {
+    assertTrustedSender(event);
+    return { ok: true, value: [...stateStore.getState().recents] };
+  });
+
+  ipcMain.handle('recents:upsert', (event, value: unknown) => {
+    assertTrustedSender(event);
+    const parsed = parseRecentInput(value);
+    if (!parsed) {
+      return { ok: false, code: 'INVALID_ARGUMENT', message: 'Invalid recent-file entry.' };
+    }
+    return { ok: true, value: stateStore.upsertRecent(parsed) };
+  });
+
+  ipcMain.handle('recents:remove', (event, id: unknown) => {
+    assertTrustedSender(event);
+    if (typeof id !== 'string' || id.length === 0) {
+      return { ok: false, code: 'INVALID_ARGUMENT', message: 'A recent-file id is required.' };
+    }
+    stateStore.removeRecent(id);
+    return { ok: true };
+  });
+
+  ipcMain.handle('recents:clear', (event) => {
+    assertTrustedSender(event);
+    stateStore.clearRecents();
+    return { ok: true };
+  });
+
+  ipcMain.handle('state:set-reopen-last', (event, value: unknown) => {
+    assertTrustedSender(event);
+    if (typeof value !== 'boolean') {
+      return { ok: false, code: 'INVALID_ARGUMENT', message: 'Expected a boolean preference.' };
+    }
+    stateStore.setReopenLast(value);
+    return { ok: true };
+  });
+
+  ipcMain.handle('recovery:write', (event, value: unknown) => {
+    assertTrustedSender(event);
+    if (!isRecord(value)) {
+      return { ok: false, code: 'INVALID_ARGUMENT', message: 'Invalid recovery payload.' };
+    }
+    if (value.path !== null && typeof value.path !== 'string') {
+      return { ok: false, code: 'INVALID_ARGUMENT', message: 'Invalid recovery path.' };
+    }
+    if (typeof value.displayName !== 'string' || value.displayName.length > 260) {
+      return { ok: false, code: 'INVALID_ARGUMENT', message: 'Invalid recovery display name.' };
+    }
+    if (typeof value.path === 'string') {
+      const key = process.platform === 'win32' ? path.resolve(value.path).toLowerCase() : path.resolve(value.path);
+      const lastPath = stateStore.getState().lastPath;
+      const lastKey = lastPath
+        ? (process.platform === 'win32' ? path.resolve(lastPath).toLowerCase() : path.resolve(lastPath))
+        : null;
+      if (!path.isAbsolute(value.path) || (key !== lastKey && !isWritePathAllowed(value.path))) {
+        return { ok: false, code: 'NOT_ALLOWED', message: 'That recovery path is not the current document.' };
+      }
+    }
+    return stateStore.writeRecovery({
+      workbook: value.workbook,
+      path: value.path,
+      displayName: value.displayName,
+    });
+  });
+
+  ipcMain.handle('recovery:clear', async (event) => {
+    assertTrustedSender(event);
+    await stateStore.clearRecovery();
+    return { ok: true };
+  });
+
+  ipcMain.handle('recovery:prompt', async (event) => {
+    assertTrustedSender(event);
+    const load = await stateStore.loadRecovery();
+    if (!load) return { ok: true, action: 'none' };
+    const options: Electron.MessageBoxOptions = {
+      type: 'question',
+      buttons: ['Recover', 'Discard'],
+      defaultId: 0,
+      cancelId: 1,
+      noLink: true,
+      title: 'Recover unsaved changes?',
+      message: `SimpleSheets found unsaved changes from ${new Date(load.timestamp).toLocaleString()}.`,
+      detail: `Document: ${load.displayName}${load.path ? ` — ${load.path}` : ''}`,
+    };
+    const result = mainWindow
+      ? await dialog.showMessageBox(mainWindow, options)
+      : await dialog.showMessageBox(options);
+    if (result.response === 0) {
+      if (load.pathExists && load.path && isWorkbookSavePath(load.path)) allowWritePath(load.path);
+      await stateStore.clearRecovery();
+      return { ok: true, action: 'recover', value: load };
+    }
+    await stateStore.clearRecovery();
+    await restoreLastDocument();
+    return { ok: true, action: 'discard' };
   });
 
   registerSaveHandlers({
     getWindow: () => mainWindow,
     assertTrustedSender,
+    onSaved: (filePath) => {
+      if (isWorkbookSavePath(filePath)) stateStore.setLastPath(filePath);
+    },
   });
 }
 
@@ -626,11 +835,12 @@ if (!hasSingleInstanceLock) {
     });
   });
 
-  app.whenReady().then(() => {
+  app.whenReady().then(async () => {
     if (process.platform === 'win32') {
       app.setAppUserModelId('au.mouseclick.simplesheets');
     }
 
+    await stateStore.init();
     Menu.setApplicationMenu(null);
     protocol.handle('app', handleAppRequest);
     setupPermissions();
@@ -644,6 +854,14 @@ if (!hasSingleInstanceLock) {
   }).catch((error: unknown) => {
     console.error('[desktop] failed to start:', error);
     app.quit();
+  });
+
+  let quitting = false;
+  app.on('before-quit', (event) => {
+    if (quitting) return;
+    quitting = true;
+    event.preventDefault();
+    void stateStore.markCleanExit().finally(() => app.quit());
   });
 
   app.on('window-all-closed', () => {

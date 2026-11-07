@@ -13,6 +13,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import type { CloudProvider } from '../cloud/types';
+import { getPlatform } from '../platform';
 import {
   loadMRU,
   addMRUEntry,
@@ -52,25 +53,75 @@ interface UseMRUReturn {
  *
  * @returns MRU entries and mutation callbacks.
  */
+function entryKey(entry: MRUEntry): string {
+  return entry.path ? `path:${entry.path.replace(/\\/g, '/').toLowerCase()}` : `id:${entry.id}`;
+}
+
 export function useMRU(): UseMRUReturn {
+  const [platform] = useState(getPlatform);
+  const desktop = platform.kind === 'desktop';
   const [entries, setEntries] = useState<MRUEntry[]>(() => loadMRU());
 
-  // Refresh from storage — used by the storage event listener and exposed
-  // as a manual refresh callback.
+  // Refresh from main on desktop, or localStorage on the web.
   const refresh = useCallback(() => {
-    setEntries(loadMRU());
-  }, []);
+    if (!desktop) {
+      setEntries(loadMRU());
+      return;
+    }
+    void platform.listRecents().then((result) => {
+      if (result.ok) setEntries(result.value as MRUEntry[]);
+    });
+  }, [desktop, platform]);
 
-  // Cross-tab sync: listen for localStorage changes from other tabs.
+  useEffect(() => {
+    if (desktop) refresh();
+  }, [desktop, refresh]);
+
+  // Cross-tab sync (web) and post-migration refresh (desktop).
   useEffect(() => {
     const handleStorage = (e: StorageEvent) => {
       if (e.key === 'simplesheets:mru') {
         refresh();
       }
     };
+    const handleRecentsChanged = () => refresh();
     window.addEventListener('storage', handleStorage);
-    return () => window.removeEventListener('storage', handleStorage);
+    window.addEventListener('simplesheets:recents-changed', handleRecentsChanged);
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+      window.removeEventListener('simplesheets:recents-changed', handleRecentsChanged);
+    };
   }, [refresh]);
+
+  const record = useCallback(
+    (
+      name: string,
+      size: number,
+      source: MRUSource,
+      opts: { provider?: CloudProvider; cloudFileId?: string; path?: string; handleId?: string; canReopen?: boolean } = {},
+    ) => {
+      if (!desktop) {
+        setEntries(addMRUEntry({ name, size, source, ...opts }));
+        return;
+      }
+      const candidate: MRUEntry = {
+        id: `pending-${Date.now()}`,
+        name,
+        size,
+        timestamp: Date.now(),
+        source,
+        ...opts,
+      };
+      setEntries((previous) => {
+        const key = entryKey(candidate);
+        return [candidate, ...previous.filter((entry) => entryKey(entry) !== key)].slice(0, 10);
+      });
+      void platform.upsertRecent({ name, size, source, ...opts }).then((result) => {
+        if (result.ok) refresh();
+      });
+    },
+    [desktop, platform, refresh],
+  );
 
   const recordOpen = useCallback(
     (
@@ -78,10 +129,8 @@ export function useMRU(): UseMRUReturn {
       size: number,
       source: MRUSource,
       opts: { provider?: CloudProvider; cloudFileId?: string; path?: string; handleId?: string; canReopen?: boolean } = {},
-    ) => {
-      setEntries(addMRUEntry({ name, size, source, ...opts }));
-    },
-    [],
+    ) => record(name, size, source, opts),
+    [record],
   );
 
   const recordSave = useCallback(
@@ -90,20 +139,24 @@ export function useMRU(): UseMRUReturn {
       size: number,
       source: MRUSource,
       opts: { provider?: CloudProvider; cloudFileId?: string; path?: string; handleId?: string; canReopen?: boolean } = {},
-    ) => {
-      setEntries(addMRUEntry({ name, size, source, ...opts }));
-    },
-    [],
+    ) => record(name, size, source, opts),
+    [record],
   );
 
-  const remove = useCallback((id: string) => {
-    setEntries(removeMRUEntry(id));
-  }, []);
+  const remove = useCallback(
+    (id: string) => {
+      setEntries((previous) => previous.filter((entry) => entry.id !== id));
+      if (desktop) void platform.removeRecent(id);
+      else removeMRUEntry(id);
+    },
+    [desktop, platform],
+  );
 
   const clear = useCallback(() => {
-    clearMRU();
     setEntries([]);
-  }, []);
+    if (desktop) void platform.clearRecents();
+    else clearMRU();
+  }, [desktop, platform]);
 
   return { entries, recordOpen, recordSave, remove, clear, refresh };
 }

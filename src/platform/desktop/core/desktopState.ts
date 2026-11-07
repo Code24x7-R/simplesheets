@@ -27,6 +27,7 @@ export interface DesktopState {
   readonly lastDirectory: string | null;
   readonly reopenLast: boolean;
   readonly cleanExit: boolean;
+  readonly legacyImported: boolean;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -42,6 +43,7 @@ export function createDefaultState(): DesktopState {
     lastDirectory: null,
     reopenLast: true,
     cleanExit: true,
+    legacyImported: false,
   };
 }
 
@@ -85,6 +87,7 @@ export function normalizeState(value: unknown): DesktopState | null {
     lastDirectory: typeof value.lastDirectory === 'string' ? value.lastDirectory : null,
     reopenLast: typeof value.reopenLast === 'boolean' ? value.reopenLast : true,
     cleanExit: typeof value.cleanExit === 'boolean' ? value.cleanExit : true,
+    legacyImported: value.legacyImported === true,
   };
 }
 

@@ -15,7 +15,7 @@ here and in `DECISIONS.md`.
 | M0 | Environment audit, scaffold, `app://` origin, adapter skeleton, fixtures, icons, verify scripts | ✅ Complete | See below |
 | M1 | Open end-to-end (picker, argv, single instance, drag-drop, errors, packaged smoke) | ✅ Complete | See below |
 | M2 | Save/Save As, atomic writes, conflict prompts, exports | ✅ Complete | See below |
-| M3 | Recents, recovery, session restore, intent state machine | 🚧 In progress | Core schemas landed; main store/UI next |
+| M3 | Recents, recovery, session restore, intent state machine | ✅ Complete | See below |
 | M4 | Native menu, accelerators, window state, About | ⬜ Not started | — |
 | M5 | File association, NSIS + portable build | ⬜ Not started | — |
 | M6 | Security hardening | ⬜ Not started | — |
@@ -51,23 +51,54 @@ Known M1 limitations:
 
 - The literal Explorer drag gesture is manual; the drop event and preload path are automated.
 - The native dirty/open-close prompt arrives in M4; M2 uses the existing confirm.
-- The queue is FIFO; newest-wins precedence arrives with the M3 state machine.
-- Recents remain browser `localStorage` until M3.
+- M1's FIFO queue was superseded by M3's newest-wins behavior.
 
 ---
 
-## M3 progress
+## M3 evidence
 
-Foundation landed:
+Checks run:
 
-- `desktopState.ts` — schema v1, recent-file normalization/upsert/remove/clear, 10-entry cap.
-- `recovery.ts` — recovery schema, 100 MB limit constant, recovered-title helper.
-- `legacyMigration.ts` — one-time legacy MRU/autosave parsing; pathless entries non-reopenable.
-- `openIntentMachine.ts` — generation tokens and newest-wins intent resolution.
-- Unit tests for all four modules; 209 suites / 4,615 tests passing.
+| Check | Result |
+| --- | --- |
+| `npm run verify` | 211 suites, 4,633 passed, 1 skipped |
+| `npm run verify:e2e` | 26 tests passed (open 8, save 10, recovery 7, smoke 1) |
+| `src/platform/desktop/core/*` | state, recovery, migration, intent, queue unit tests pass |
 
-Still to land: main-process `state.json`/`recovery.json` store, recents UI wiring,
-recovery startup prompt/banner, last-document restore, and the restart matrix.
+Implemented:
+
+- Main-owned `state.json` with schema v1, atomic/debounced writes, corrupt-file
+  quarantine, recents, last path/directory, reopen preference, clean-exit flag.
+- Main-owned `recovery.json` with schema validation, 100 MB limit, ≤2 writes/s
+  throttling, atomic writes, corrupt-record deletion, and quit flush.
+- Startup resolution: explicit intent wins; otherwise unclean recovery prompts
+  natively; otherwise the last document reopens. Missing last paths are cleared.
+- Native Recover/Discard prompt plus an in-app amber banner when an explicit
+  open coexists with a recovery snapshot.
+- Recovery loads as a dirty document titled `Name (Recovered)`, retaining the
+  original path only while the file still exists.
+- Main-owned recents wired through `useMRU`; path entries reopen via `open:recent`
+  after verifying the path is in the main recents list.
+- One-time legacy `simplesheets:mru` / `simplesheets:autosave` import; keys are
+  deleted only after the state write succeeds.
+- Newest-wins explicit open intents; stale queued (not active) intents dropped.
+
+E2E restart matrix:
+
+- clean exit reopens the last document;
+- editing writes `recovery.json`, and a dirty close preserves it;
+- unclean startup without argv auto-prompts Recover and applies the snapshot;
+- Discard in the startup prompt deletes recovery and opens the last document;
+- a missing last document is cleared without an open error;
+- an explicit argv open wins over recovery and shows the banner;
+- Recover from the banner replaces the explicit document with the snapshot;
+- Discard from the banner keeps the explicit document and deletes recovery.
+
+Known M3 limitation:
+
+- The native close prompt is M4. To avoid losing work, a dirty quit is recorded
+  as `cleanExit: false` and recovery is preserved; M4 replaces this with
+  Save / Don't Save / Cancel.
 
 ---
 

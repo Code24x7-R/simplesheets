@@ -68,6 +68,64 @@ export interface DesktopWriteResult extends DesktopBridgeResult {
   data?: string;
 }
 
+export interface DesktopRecentEntry {
+  id: string;
+  name: string;
+  size: number;
+  timestamp: number;
+  source: 'local' | 'cloud' | 'url';
+  path?: string;
+  handleId?: string;
+  provider?: string;
+  cloudFileId?: string;
+  canReopen?: boolean;
+}
+
+export interface DesktopRecoverySummary {
+  timestamp: number;
+  displayName: string;
+  path: string | null;
+  appVersion: string;
+}
+
+export interface DesktopRecoveryLoad extends DesktopRecoverySummary {
+  workbook: unknown;
+  pathExists: boolean;
+  mtimeMs?: number;
+  size?: number;
+}
+
+export interface DesktopStartupInfo {
+  recents: DesktopRecentEntry[];
+  lastPath: string | null;
+  reopenLast: boolean;
+  recovery: DesktopRecoverySummary | null;
+  unclean: boolean;
+  hadExplicitIntent: boolean;
+  needsLegacyImport: boolean;
+}
+
+export interface DesktopRecentsResult extends DesktopBridgeResult {
+  value?: DesktopRecentEntry[];
+}
+
+export interface DesktopRecentResult extends DesktopBridgeResult {
+  value?: DesktopRecentEntry;
+}
+
+export interface DesktopStartupResult extends DesktopBridgeResult {
+  value?: DesktopStartupInfo;
+}
+
+export interface DesktopLegacyResult extends DesktopBridgeResult {
+  value?: { imported: number; recovery: DesktopRecoverySummary | null };
+}
+
+export interface DesktopRecoveryPromptResult extends DesktopBridgeResult {
+  action?: 'recover' | 'discard' | 'none';
+  value?: DesktopRecoveryLoad;
+}
+
 export interface DesktopBridge {
   readonly isDesktop: true;
   readonly platform: string;
@@ -85,6 +143,17 @@ export interface DesktopBridge {
   offOpenRequest(id: number): void;
   ackOpenRequest(seq: number): Promise<DesktopBridgeResult>;
   rendererReady(): Promise<DesktopBridgeResult>;
+  openRecent(path: string): Promise<DesktopBridgeResult>;
+  getStartupInfo(): Promise<DesktopStartupResult>;
+  importLegacy(payload: { mru: string | null; autosave: string | null }): Promise<DesktopLegacyResult>;
+  listRecents(): Promise<DesktopRecentsResult>;
+  upsertRecent(entry: unknown): Promise<DesktopRecentResult>;
+  removeRecent(id: string): Promise<DesktopBridgeResult>;
+  clearRecents(): Promise<DesktopBridgeResult>;
+  setReopenLast(reopen: boolean): Promise<DesktopBridgeResult>;
+  writeRecovery(input: { workbook: unknown; path: string | null; displayName: string }): Promise<DesktopBridgeResult>;
+  clearRecovery(): Promise<DesktopBridgeResult>;
+  promptRecovery(): Promise<DesktopRecoveryPromptResult>;
 }
 
 declare global {

@@ -114,6 +114,29 @@ const bridge: DesktopBridge = {
 
   rendererReady: (): Promise<DesktopBridgeResult> =>
     ipcRenderer.invoke('renderer:ready'),
+
+  openRecent: (filePath: string): Promise<DesktopBridgeResult> =>
+    ipcRenderer.invoke('open:recent', filePath),
+
+  getStartupInfo: () => ipcRenderer.invoke('state:startup'),
+
+  importLegacy: (payload) => ipcRenderer.invoke('state:import-legacy', payload),
+
+  listRecents: () => ipcRenderer.invoke('recents:list'),
+
+  upsertRecent: (entry) => ipcRenderer.invoke('recents:upsert', entry),
+
+  removeRecent: (id) => ipcRenderer.invoke('recents:remove', id),
+
+  clearRecents: () => ipcRenderer.invoke('recents:clear'),
+
+  setReopenLast: (reopen) => ipcRenderer.invoke('state:set-reopen-last', reopen),
+
+  writeRecovery: (input) => ipcRenderer.invoke('recovery:write', input),
+
+  clearRecovery: () => ipcRenderer.invoke('recovery:clear'),
+
+  promptRecovery: () => ipcRenderer.invoke('recovery:prompt'),
 };
 
 contextBridge.exposeInMainWorld(

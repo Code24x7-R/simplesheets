@@ -20,9 +20,17 @@ import type {
   PlatformCapabilities,
   PlatformFailureCode,
   PlatformResult,
+  RecoveryPromptResult,
   ReloadedFile,
   SaveFileResult,
 } from '../types';
+import type {
+  RecentEntry,
+  RecentInput,
+  RecoveryInput,
+  RecoverySummary,
+  StartupInfo,
+} from './core/desktopStateStore';
 
 const CAPABILITIES: PlatformCapabilities = {
   // Capabilities are enabled as their milestones land:
@@ -33,7 +41,7 @@ const CAPABILITIES: PlatformCapabilities = {
   nativeMenu: false,
   revealInFolder: true,
   windowStatePersistence: false,
-  recovery: false,
+  recovery: true,
   appInfo: true,
 };
 
@@ -229,6 +237,129 @@ export function createDesktopAdapter(bridge: DesktopBridge): PlatformAdapter {
         await bridge.rendererReady();
       } catch {
         // The first open intent will retry the ready handshake.
+      }
+    },
+    async openRecent(filePath: string): Promise<PlatformResult<void>> {
+      try {
+        return normalizeResult(await bridge.openRecent(filePath));
+      } catch (error) {
+        return toFailure(error instanceof Error ? error.message : 'The recent file could not be opened.');
+      }
+    },
+    async getStartupInfo(): Promise<PlatformResult<StartupInfo>> {
+      try {
+        const result = await bridge.getStartupInfo();
+        if (!result.ok || !result.value) {
+          return {
+            ok: false,
+            code: normalizeFailureCode(result.code),
+            message: result.message ?? 'Startup state is unavailable.',
+          };
+        }
+        return { ok: true, value: result.value as StartupInfo };
+      } catch (error) {
+        return toFailure(error instanceof Error ? error.message : 'Failed to read startup state.');
+      }
+    },
+    async importLegacy(mru, autosave): Promise<PlatformResult<{ imported: number; recovery: RecoverySummary | null }>> {
+      try {
+        const result = await bridge.importLegacy({ mru, autosave });
+        if (!result.ok || !result.value) {
+          return {
+            ok: false,
+            code: normalizeFailureCode(result.code),
+            message: result.message ?? 'Legacy data could not be imported.',
+          };
+        }
+        return { ok: true, value: result.value };
+      } catch (error) {
+        return toFailure(error instanceof Error ? error.message : 'Legacy data could not be imported.');
+      }
+    },
+    async listRecents(): Promise<PlatformResult<RecentEntry[]>> {
+      try {
+        const result = await bridge.listRecents();
+        if (!result.ok || !result.value) {
+          return {
+            ok: false,
+            code: normalizeFailureCode(result.code),
+            message: result.message ?? 'Recent files are unavailable.',
+          };
+        }
+        return { ok: true, value: result.value as RecentEntry[] };
+      } catch (error) {
+        return toFailure(error instanceof Error ? error.message : 'Recent files are unavailable.');
+      }
+    },
+    async upsertRecent(input: RecentInput): Promise<PlatformResult<RecentEntry>> {
+      try {
+        const result = await bridge.upsertRecent(input);
+        if (!result.ok || !result.value) {
+          return {
+            ok: false,
+            code: normalizeFailureCode(result.code),
+            message: result.message ?? 'The recent file could not be recorded.',
+          };
+        }
+        return { ok: true, value: result.value as RecentEntry };
+      } catch (error) {
+        return toFailure(error instanceof Error ? error.message : 'The recent file could not be recorded.');
+      }
+    },
+    async removeRecent(id: string): Promise<PlatformResult<void>> {
+      try {
+        return normalizeResult(await bridge.removeRecent(id));
+      } catch (error) {
+        return toFailure(error instanceof Error ? error.message : 'The recent file could not be removed.');
+      }
+    },
+    async clearRecents(): Promise<PlatformResult<void>> {
+      try {
+        return normalizeResult(await bridge.clearRecents());
+      } catch (error) {
+        return toFailure(error instanceof Error ? error.message : 'Recent files could not be cleared.');
+      }
+    },
+    async setReopenLast(reopen: boolean): Promise<PlatformResult<void>> {
+      try {
+        return normalizeResult(await bridge.setReopenLast(reopen));
+      } catch (error) {
+        return toFailure(error instanceof Error ? error.message : 'The preference could not be saved.');
+      }
+    },
+    async writeRecovery(input: RecoveryInput): Promise<PlatformResult<void>> {
+      try {
+        return normalizeResult(await bridge.writeRecovery(input));
+      } catch (error) {
+        return toFailure(error instanceof Error ? error.message : 'The recovery snapshot could not be saved.');
+      }
+    },
+    async clearRecovery(): Promise<PlatformResult<void>> {
+      try {
+        return normalizeResult(await bridge.clearRecovery());
+      } catch (error) {
+        return toFailure(error instanceof Error ? error.message : 'The recovery snapshot could not be cleared.');
+      }
+    },
+    async promptRecovery(): Promise<PlatformResult<RecoveryPromptResult>> {
+      try {
+        const result = await bridge.promptRecovery();
+        if (!result.ok || !result.action) {
+          return {
+            ok: false,
+            code: normalizeFailureCode(result.code),
+            message: result.message ?? 'The recovery prompt failed.',
+          };
+        }
+        return {
+          ok: true,
+          value: {
+            action: result.action,
+            recovery: result.value as RecoveryPromptResult['recovery'],
+          },
+        };
+      } catch (error) {
+        return toFailure(error instanceof Error ? error.message : 'The recovery prompt failed.');
       }
     },
   };

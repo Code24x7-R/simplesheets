@@ -1225,3 +1225,13 @@
 - **Legacy migration**: added `legacyMigration.ts` to parse same-origin `simplesheets:mru`/`simplesheets:autosave` payloads; pathless entries are marked non-reopenable.
 - **Intent machine**: added `openIntentMachine.ts` with monotonic generation tokens and newest-wins resolution.
 - **Tests**: 17 new unit tests; full suite 209 suites / 4,615 passed / 1 skipped.
+
+## 2026-11-07 [FEATURE] SimpleSheets Desktop — M3 Complete
+
+- **Main-owned state**: `desktopStateStore.ts` loads/writes `state.json` (schema v1, atomic, 250 ms debounce), quarantines corrupt state, tracks recents, last path/directory, reopen preference, and clean-exit status.
+- **Recovery**: debounced `recovery.json` at ≤2 writes/s, 100 MB cap, corrupt-record deletion, quit flush, dirty-quit preservation until the M4 close prompt.
+- **Startup**: explicit intent beats recovery; unclean recovery shows the native Recover/Discard prompt; clean startup reopens the last document; missing paths clear silently.
+- **Recents**: `useMRU` now reads/writes main-owned recents on desktop; `open:recent` verifies the path against the main list. Legacy `simplesheets:mru`/`simplesheets:autosave` migrate once.
+- **Recovery UX**: native prompt plus an amber banner for explicit+recovery, `(Recovered)` dirty loading, and path retention only when the original still exists.
+- **Intents**: newest-wins queued-intent handling; active imports finish before the next intent.
+- **Tests**: 211 suites / 4,633 passed / 1 skipped; E2E 26 tests incl. 7-case restart matrix; `npm run verify` passes.

@@ -10,6 +10,14 @@
 
 import type { OpenRequest } from './desktop/core/openRequest';
 import type { FileVersion } from './desktop/core/saveTarget';
+import type {
+  RecentEntry,
+  RecentInput,
+  RecoveryInput,
+  RecoveryLoad,
+  RecoverySummary,
+  StartupInfo,
+} from './desktop/core/desktopStateStore';
 
 export type PlatformKind = 'web' | 'desktop';
 
@@ -94,6 +102,18 @@ export interface ReloadedFile {
   readonly size: number;
 }
 
+export interface LegacyImportResult {
+  readonly imported: number;
+  readonly recovery: RecoverySummary | null;
+}
+
+export type RecoveryPromptAction = 'recover' | 'discard' | 'none';
+
+export interface RecoveryPromptResult {
+  readonly action: RecoveryPromptAction;
+  readonly recovery?: RecoveryLoad;
+}
+
 export interface PlatformAdapter {
   readonly kind: PlatformKind;
   readonly capabilities: PlatformCapabilities;
@@ -120,4 +140,26 @@ export interface PlatformAdapter {
   ackOpenRequest(seq: number): Promise<void>;
   /** Tell main the renderer is ready to receive open intents. */
   rendererReady(): Promise<void>;
+  /** Open a main-owned recent path (desktop only). */
+  openRecent(path: string): Promise<PlatformResult<void>>;
+  /** Read startup recents/recovery/last-document metadata. */
+  getStartupInfo(): Promise<PlatformResult<StartupInfo>>;
+  /** Import legacy same-origin localStorage data once. */
+  importLegacy(mru: string | null, autosave: string | null): Promise<PlatformResult<LegacyImportResult>>;
+  /** List main-owned recent entries. */
+  listRecents(): Promise<PlatformResult<RecentEntry[]>>;
+  /** Add or promote a recent entry. */
+  upsertRecent(input: RecentInput): Promise<PlatformResult<RecentEntry>>;
+  /** Remove one recent entry. */
+  removeRecent(id: string): Promise<PlatformResult<void>>;
+  /** Clear all recent entries. */
+  clearRecents(): Promise<PlatformResult<void>>;
+  /** Update the reopen-last-document preference. */
+  setReopenLast(reopen: boolean): Promise<PlatformResult<void>>;
+  /** Queue a debounced recovery snapshot. */
+  writeRecovery(input: RecoveryInput): Promise<PlatformResult<void>>;
+  /** Delete the recovery snapshot. */
+  clearRecovery(): Promise<PlatformResult<void>>;
+  /** Show the native Recover/Discard prompt. */
+  promptRecovery(): Promise<PlatformResult<RecoveryPromptResult>>;
 }

@@ -245,10 +245,9 @@ file associations and needs explicit approval.
 
 - Dirty opens use the existing confirm prompt; the native Save / Don't Save /
   Cancel prompt and close prompt arrive in M4 with the native menu.
-- The queue is FIFO; the "newest explicit intent wins" lifecycle precedence
-  arrives with the M3 intent state machine.
-- Recent files still use the existing `localStorage`/File System Access path;
-  native path reopening is deferred to the main-owned recents in M3.
+- The original FIFO queue was superseded in M3 by newest-wins handling for
+  queued explicit intents.
+- M1 recents used `localStorage`; M3 moved them to main-owned `state.json`.
 - A dropped file without an OS path opens through the File API and has no save
   path until Save As.
 
@@ -301,3 +300,40 @@ file associations and needs explicit approval.
 - The 10 MB save measured 4–8 s in the dev shell, above SAVE-12's 2 s budget.
   The main costs are serialization/autosave/render; M7 pins the optimization and
   measurement so the budget is not silently relaxed.
+
+---
+
+## 10. Recents, recovery, and startup (M3)
+
+- **Main owns state and recovery.** `state.json` and `recovery.json` live in
+  `%APPDATA%\SimpleSheets` (or `SIMPLESHEETS_PROFILE`). Both use
+  `schemaVersion: 1`, atomic temp+rename writes, and never touch user documents.
+- **State writes are debounced 250 ms.** `recovery.json` writes are coalesced
+  to the newest snapshot and throttled to at most two per second. A 100 MB
+  snapshot is rejected with `TOO_LARGE`; the app stays usable.
+- **Corrupt files do not block startup.** A corrupt state file is renamed to
+  `state.json.corrupt` and replaced with defaults. A corrupt recovery record is
+  logged and deleted (REC-13).
+- **Startup precedence.** An explicit argv/open-with intent wins. Otherwise an
+  unclean recovery snapshot prompts natively (Recover/Discard). Otherwise the
+  last `.ssjson`/`.json` path reopens when `reopenLast` is true. Missing last
+  paths are cleared silently.
+- **Explicit + recovery.** When an explicit open coexists with recovery, startup
+  shows a non-modal amber banner with Recover/Discard instead of replacing the
+  explicitly opened document. Recovery is applied only on Recover.
+- **Dirty quit before M4.** The native close prompt is M4. To avoid data loss, a
+  quit with a pending snapshot writes `cleanExit: false` and preserves
+  `recovery.json`; the next start prompts. After M4, Save/Don't Save/Cancel
+  decides whether recovery is cleared.
+- **Newest-wins intents.** `openIntentMachine.ts` defines monotonic generation
+  tokens, and `OpenRequestQueue.clearPending()` drops queued explicit intents
+  when a newer explicit intent arrives. The active intent is allowed to finish
+  so an Import Scope dialog is never torn down under the user.
+- **Recents path policy.** `recents:upsert` accepts a local path only when it is
+  absolute, supported, and exists. `open:recent` verifies the path is in the
+  main recents list before reading. Recovery paths must match the current
+  document or an approved write path.
+- **Legacy migration.** The renderer reads the same-origin `simplesheets:mru`
+  and `simplesheets:autosave` keys once, sends them to `state:import-legacy`,
+  and deletes them only after main confirms the state write. A legacy autosave
+  becomes a recovery snapshot.

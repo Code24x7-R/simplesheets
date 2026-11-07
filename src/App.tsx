@@ -34,6 +34,7 @@ import { adjustFormulaRefs, prefixRefsWithSheet } from './utils/formulaParser';
 import { validateCellValue } from './utils/dataValidationEngine';
 import type { CellValidationResult } from './types';
 import { useAutosave } from './hooks/useAutosave';
+import { useDesktopRecovery } from './hooks/useDesktopRecovery';
 import { useCellEditing } from './hooks/useCellEditing';
 import { useCellStyles } from './hooks/useCellStyles';
 import { useReferenceFormat } from './hooks/useReferenceFormat';
@@ -65,6 +66,8 @@ import {
 } from './platform/desktop/core/openRequest';
 import type { FileVersion } from './platform/desktop/core/saveTarget';
 import type { ReloadedFile } from './platform/types';
+import type { RecoveryLoad, RecoverySummary } from './platform/desktop/core/desktopStateStore';
+import { recoveredTitle } from './platform/desktop/core/recovery';
 import type { Cell, Selection, Sheet, NamedRange } from './types';
 import { insertRow, deleteRow, insertCol, deleteCol } from './utils/sheetOperations';
 import { computeFillSeries } from './utils/fillSeries';
@@ -199,6 +202,9 @@ function WorkbookView() {
   const isDirty = lastCleanWorkbook !== workbook;
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
   const [currentFileName, setCurrentFileName] = useState<string>(workbook.title ?? 'Untitled');
+  const [platform] = useState(getPlatform);
+  const [startupRecovery, setStartupRecovery] = useState<RecoverySummary | null>(null);
+  const [recoveryReady, setRecoveryReady] = useState(false);
   const [isReadOnly, setIsReadOnly] = useState(false);
   // Retained File System Access handle for the current document (null = none).
   const [currentHandleId, setCurrentHandleId] = useState<string | null>(null);
@@ -246,8 +252,8 @@ function WorkbookView() {
     [isDirty],
   );
 
-  // Auto-save to localStorage on every workbook change (debounced)
-  useAutosave(workbook);
+  // Web autosaves to localStorage; desktop uses main-owned recovery.json.
+  useAutosave(workbook, { enabled: platform.kind !== 'desktop' });
   const { format: referenceFormat, toggle: toggleReferenceFormat } = useReferenceFormat();
   const { entries: recentFiles, recordOpen: recordOpenMRU, recordSave: recordSaveMRU, remove: removeMRU, clear: clearMRU } = useMRU();
   const [showPrintSetup, setShowPrintSetup] = useState(false);
@@ -308,6 +314,18 @@ function WorkbookView() {
     }, 0);
   }, [closeFormulaWizard, wizardTargetCell]);
   const [statusMessage, setStatusMessage] = useState<string>('Ready');
+
+  const handleRecoveryError = useCallback((message: string) => {
+    setStatusMessage(`Recovery: ${message}`);
+  }, []);
+
+  useDesktopRecovery(
+    workbook,
+    isDirty,
+    currentFilePathRef.current,
+    recoveryReady && startupRecovery === null,
+    handleRecoveryError,
+  );
 
   /**
    * Open a shared document from a `#doc=` URL (read-only snapshot).
@@ -1265,6 +1283,13 @@ function WorkbookView() {
 
   const handleOpenRecent = useCallback(
     (entry: MRUEntry) => {
+      const currentPlatform = getPlatform();
+      if (currentPlatform.kind === 'desktop' && entry.source === 'local' && entry.path) {
+        void currentPlatform.openRecent(entry.path).then((result) => {
+          if (!result.ok) setStatusMessage(result.message);
+        });
+        return;
+      }
       if (entry.source === 'url' && entry.path) {
         // URL-opened documents: decode and reopen the shared snapshot directly
         // (no full reload; the fragment may already have been stripped).
@@ -1835,15 +1860,109 @@ function WorkbookView() {
 
   // Subscribe once to desktop open intents and announce readiness afterwards.
   useEffect(() => {
-    const platform = getPlatform();
-    if (!platform.capabilities.nativeFileDialogs) return;
+    const currentPlatform = getPlatform();
+    if (!currentPlatform.capabilities.nativeFileDialogs) return;
 
-    const unsubscribe = platform.onOpenRequest((request) => {
+    const unsubscribe = currentPlatform.onOpenRequest((request) => {
       void processOpenRequest(request);
     });
-    void platform.rendererReady();
+    void currentPlatform.rendererReady();
     return unsubscribe;
   }, [processOpenRequest]);
+
+  /** Load a recovery snapshot as a dirty document. */
+  const applyRecovery = useCallback(
+    (load: RecoveryLoad): boolean => {
+      const recovered = load.workbook as Workbook | null;
+      if (!recovered || !Array.isArray(recovered.sheets)) {
+        setStatusMessage('Recovery snapshot is invalid — the existing document was kept.');
+        return false;
+      }
+      const title = recoveredTitle(load.displayName || recovered.title || 'Untitled');
+      const wbWithTitle: Workbook = { ...recovered, title, lastModified: Date.now() };
+      pushHistory(wbWithTitle, 'Recover unsaved changes', filterStateRef.current, gridSelectionRef.current);
+      const canKeepPath = load.pathExists && load.path !== null && isWorkbookSavePath(load.path);
+      currentFilePathRef.current = canKeepPath ? load.path : null;
+      currentFileStatRef.current = canKeepPath && load.mtimeMs !== undefined && load.size !== undefined
+        ? { mtimeMs: load.mtimeMs, size: load.size }
+        : null;
+      setCurrentFileName(title);
+      setIsReadOnly(false);
+      setStatusMessage(`Recovered "${title}" — save to keep your changes`);
+      return true;
+    },
+    [pushHistory, filterStateRef, gridSelectionRef, setStatusMessage],
+  );
+
+  // Resolve legacy migration, recovery, and restore prompts once per launch.
+  useEffect(() => {
+    const currentPlatform = platform;
+    if (!currentPlatform.capabilities.recovery) {
+      setRecoveryReady(true);
+      return;
+    }
+    let cancelled = false;
+
+    void (async () => {
+      const initial = await currentPlatform.getStartupInfo();
+      if (!initial.ok) {
+        if (!cancelled) setRecoveryReady(true);
+        return;
+      }
+      let startup = initial.value;
+
+      if (startup.needsLegacyImport) {
+        const mru = localStorage.getItem('simplesheets:mru');
+        const autosave = localStorage.getItem('simplesheets:autosave');
+        const imported = await currentPlatform.importLegacy(mru, autosave);
+        if (imported.ok) {
+          localStorage.removeItem('simplesheets:mru');
+          localStorage.removeItem('simplesheets:autosave');
+          window.dispatchEvent(new Event('simplesheets:recents-changed'));
+          const refreshed = await currentPlatform.getStartupInfo();
+          if (refreshed.ok) startup = refreshed.value;
+        }
+      }
+
+      if (cancelled) return;
+      setStartupRecovery(startup.recovery);
+
+      if (startup.recovery && startup.unclean && !startup.hadExplicitIntent) {
+        const prompt = await currentPlatform.promptRecovery();
+        if (!cancelled && prompt.ok && prompt.value.action === 'recover' && prompt.value.recovery) {
+          applyRecovery(prompt.value.recovery);
+        }
+        if (!cancelled) setStartupRecovery(null);
+      }
+      if (!cancelled) setRecoveryReady(true);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [platform, applyRecovery]);
+
+  const handleRecoverBanner = useCallback(async () => {
+    const result = await platform.promptRecovery();
+    if (result.ok) {
+      if (result.value.action === 'recover' && result.value.recovery) {
+        applyRecovery(result.value.recovery);
+      }
+      setStartupRecovery(null);
+    } else {
+      setStatusMessage(result.message);
+    }
+  }, [platform, applyRecovery, setStatusMessage]);
+
+  const handleDiscardRecovery = useCallback(async () => {
+    const result = await platform.clearRecovery();
+    if (!result.ok) {
+      setStatusMessage(result.message);
+      return;
+    }
+    setStartupRecovery(null);
+    setStatusMessage('Discarded unsaved changes from the previous session');
+  }, [platform, setStatusMessage]);
 
   // Desktop window title: document name plus an unsaved marker.
   useEffect(() => {
@@ -3772,6 +3891,32 @@ function WorkbookView() {
         />
         <span className="text-sm text-gray-500">{workbook.title}</span>
       </header>
+
+      {startupRecovery && (
+        <div
+          data-testid="recovery-banner"
+          className="flex items-center gap-3 border-b border-amber-300 bg-amber-50 px-4 py-2 text-sm text-amber-900"
+        >
+          <span>
+            Unsaved changes from {new Date(startupRecovery.timestamp).toLocaleString()}
+            {startupRecovery.displayName ? ` — ${startupRecovery.displayName}` : ''}.
+          </span>
+          <button
+            type="button"
+            className="rounded bg-amber-600 px-2 py-1 font-medium text-white hover:bg-amber-700"
+            onClick={() => { void handleRecoverBanner(); }}
+          >
+            Recover
+          </button>
+          <button
+            type="button"
+            className="rounded border border-amber-600 px-2 py-1 font-medium text-amber-800 hover:bg-amber-100"
+            onClick={() => { void handleDiscardRecovery(); }}
+          >
+            Discard
+          </button>
+        </div>
+      )}
 
       {/* Toolbar */}
       <Toolbar
