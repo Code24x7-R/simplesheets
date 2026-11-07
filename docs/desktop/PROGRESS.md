@@ -80,6 +80,8 @@ Root causes fixed:
 - `topologicalSort` used `order.includes()` in a loop over every cell, making
   evaluation O(n²) (~16.8 s on 150k cells). The second pass now uses the
   `visited` set, reducing large open from ~18.9 s to ~3.0 s.
+- `ChartDialog` scanned/derived chart data while closed; gated by `isOpen` so
+  navigation on large sheets does not pay chart work.
 
 E2E performance/leak coverage:
 

@@ -94,6 +94,16 @@ test('10 MB-class workbook opens and saves within budget', async () => {
     const openMs = Date.now() - launchStart;
     expect(openMs).toBeLessThan(5_000);
 
+    await session.page.getByText('Column 1', { exact: true }).first().click();
+    const navigation: number[] = [];
+    for (let index = 0; index < 10; index += 1) {
+      const start = Date.now();
+      await session.page.keyboard.press('ArrowDown');
+      navigation.push(Date.now() - start);
+    }
+    const navigationAverage = navigation.reduce((sum, value) => sum + value, 0) / navigation.length;
+    expect(navigationAverage).toBeLessThan(100);
+
     const metrics = await session.app.evaluate(({ app }) =>
       app.getAppMetrics().reduce((total, metric) => total + metric.memory.workingSetSize, 0),
     );

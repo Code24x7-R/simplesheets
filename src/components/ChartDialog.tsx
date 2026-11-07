@@ -69,7 +69,12 @@ const LEGEND_POSITIONS: Array<{ value: LegendPosition; label: string }> = [
  * Dialog for creating or editing a chart.
  */
 export function ChartDialog({ isOpen, onClose, onApply, sheet, initialRange, existingChart, isRangePickerActive, rangePickerTarget, onToggleRangePicker, initialSettings, onSettingsChange, workbook }: ChartDialogProps) {
-  const defaultRange = initialRange || findDataRange(sheet) || 'A1:B5';
+  // Do not scan the sheet for a default range while this dialog is closed;
+  // the component stays mounted for the life of the workbook.
+  const defaultRange = useMemo(
+    () => (isOpen ? (initialRange || findDataRange(sheet) || 'A1:B5') : 'A1:B5'),
+    [isOpen, initialRange, sheet],
+  );
   const settings = initialSettings;
 
   const [chartType, setChartType] = useState<ChartType>(existingChart?.type || settings?.type || 'bar');
@@ -106,6 +111,7 @@ export function ChartDialog({ isOpen, onClose, onApply, sheet, initialRange, exi
 
   // Extract data for preview (supports cross-sheet references via workbook)
   const previewData = useMemo(() => {
+    if (!isOpen) return { categories: [], series: [] };
     try {
       if (workbook) {
         return extractChartDataFromWorkbook(workbook, dataRange);
@@ -118,7 +124,7 @@ export function ChartDialog({ isOpen, onClose, onApply, sheet, initialRange, exi
     } catch {
       return { categories: [], series: [] };
     }
-  }, [sheet, workbook, dataRange]);
+  }, [isOpen, sheet, workbook, dataRange]);
 
   // Generate preview config
   const previewConfig = useMemo<ChartConfig>(() => {

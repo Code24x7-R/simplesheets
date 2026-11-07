@@ -1273,3 +1273,10 @@
 - **Packaging evidence**: 108 MB installer / 99 MB portable / 312 MB unpacked; peak large-workbook memory ~570 MB.
 - **Docs**: `M7-PERF.md`, README desktop section, MANUAL desktop section, install checklist.
 - **Tests**: 215 suites / 4,658 passed / 1 skipped; E2E 39 tests; packaged smoke pass.
+
+## 2026-11-07 [PERF] Closed-modal render work audit
+
+- Audited always-mounted components after the CSV navigation regression.
+- `ChartDialog` was still calling `findDataRange` and extracting chart data while closed; both are now gated by `isOpen`.
+- Added a large-workbook navigation budget to the performance E2E.
+- Full verification: 215 suites / 4,658 passed; E2E 39 passed.

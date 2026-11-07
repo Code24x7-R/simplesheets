@@ -20,6 +20,7 @@ fixtures from `tmp/desktop-fixtures`.
 | --- | --- | --- | --- |
 | PERF-01 cold start to usable grid | < 3 s | ~1.4–1.7 s window; grid ready under 3 s | pass |
 | PERF-02 open `large.ssjson` | < 5 s, no >200 ms single task | ~3.0 s after fixes | pass |
+| PERF-02 large-workbook navigation | responsive | <100 ms average/key assert | pass |
 | PERF-03 / SAVE-12 save `large.ssjson` | < 2 s | ~237 ms | pass |
 | PERF-04 20 open cycles | ≤ 20% heap growth after GC | E2E asserts ≤ 20% | pass |
 | PERF-05 recovery writes | ≤ 2/s, non-blocking | main coalesces at 500 ms | pass |
@@ -42,6 +43,11 @@ fixtures from `tmp/desktop-fixtures`.
    cell**, making it O(n²). A 150,000-cell workbook spent ~16.8 s in that
    function. The second pass now uses the existing `visited` set, making it
    O(n). Large open dropped from ~18.9 s to ~3.0 s.
+3. **`ChartDialog` scanned the sheet for a default data range and extracted
+   chart data while closed**, before its `if (!isOpen) return null`. The dialog
+   stays mounted, so every cell navigation paid `findDataRange` +
+   `extractChartDataFromWorkbook` on large sheets. Both are now gated by
+   `isOpen`; the large-workbook navigation budget was added to E2E.
 
 ## Commands
 
