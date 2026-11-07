@@ -15,7 +15,7 @@ here and in `DECISIONS.md`.
 | M0 | Environment audit, scaffold, `app://` origin, adapter skeleton, fixtures, icons, verify scripts | ✅ Complete | See below |
 | M1 | Open end-to-end (picker, argv, single instance, drag-drop, errors, packaged smoke) | ✅ Complete | See below |
 | M2 | Save/Save As, atomic writes, conflict prompts, exports | ✅ Complete | See below |
-| M3 | Recents, recovery, session restore, intent state machine | ⏳ Next | — |
+| M3 | Recents, recovery, session restore, intent state machine | 🚧 In progress | Core schemas landed; main store/UI next |
 | M4 | Native menu, accelerators, window state, About | ⬜ Not started | — |
 | M5 | File association, NSIS + portable build | ⬜ Not started | — |
 | M6 | Security hardening | ⬜ Not started | — |
@@ -53,6 +53,21 @@ Known M1 limitations:
 - The native dirty/open-close prompt arrives in M4; M2 uses the existing confirm.
 - The queue is FIFO; newest-wins precedence arrives with the M3 state machine.
 - Recents remain browser `localStorage` until M3.
+
+---
+
+## M3 progress
+
+Foundation landed:
+
+- `desktopState.ts` — schema v1, recent-file normalization/upsert/remove/clear, 10-entry cap.
+- `recovery.ts` — recovery schema, 100 MB limit constant, recovered-title helper.
+- `legacyMigration.ts` — one-time legacy MRU/autosave parsing; pathless entries non-reopenable.
+- `openIntentMachine.ts` — generation tokens and newest-wins intent resolution.
+- Unit tests for all four modules; 209 suites / 4,615 tests passing.
+
+Still to land: main-process `state.json`/`recovery.json` store, recents UI wiring,
+recovery startup prompt/banner, last-document restore, and the restart matrix.
 
 ---
 

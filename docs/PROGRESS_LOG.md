@@ -1216,3 +1216,12 @@
 - **Exports**: Excel, CSV, JSON, and PDF exports use the native Save dialog on desktop and keep the existing download path on web.
 - **Tests**: atomic-write and conflict classifier unit tests; 10 Playwright save/export tests; packaged smoke now covers Save.
 - **Verification**: `npm run verify` (205 suites, 4,594 passed, 1 skipped), `npm run verify:e2e` (19 passed), packaged smoke passed twice.
+
+
+## 2026-11-07 [FEATURE] SimpleSheets Desktop — M3 Foundations
+
+- **State schema**: added `desktopState.ts` with schema v1, normalized recent entries, upsert-by-path (case-insensitive Windows), 10-entry cap, remove/clear.
+- **Recovery schema**: added `recovery.ts` with schema validation, 100 MB limit constant, and recovered-title helper.
+- **Legacy migration**: added `legacyMigration.ts` to parse same-origin `simplesheets:mru`/`simplesheets:autosave` payloads; pathless entries are marked non-reopenable.
+- **Intent machine**: added `openIntentMachine.ts` with monotonic generation tokens and newest-wins resolution.
+- **Tests**: 17 new unit tests; full suite 209 suites / 4,615 passed / 1 skipped.
