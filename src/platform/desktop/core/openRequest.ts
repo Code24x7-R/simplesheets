@@ -25,6 +25,7 @@ export interface OpenRequest {
   readonly path: string;
   readonly name: string;
   readonly size: number;
+  readonly mtimeMs: number;
   readonly data: ArrayBuffer;
 }
 
@@ -41,6 +42,9 @@ export const SUPPORTED_OPEN_EXTENSIONS = [
   '.tsv',
   '.txt',
 ] as const;
+
+/** Extensions that are saved in place as a workbook document. */
+export const WORKBOOK_SAVE_EXTENSIONS = ['.ssjson', '.json'] as const;
 
 /** Extensions that route through the Import Scope dialog. */
 export const SPREADSHEET_OPEN_EXTENSIONS = [
@@ -64,6 +68,16 @@ function endsWithAny(filePath: string, extensions: readonly string[]): boolean {
  */
 export function isSupportedOpenPath(filePath: string): boolean {
   return endsWithAny(filePath, SUPPORTED_OPEN_EXTENSIONS);
+}
+
+/**
+ * Return true when a path can be saved in place as a workbook document.
+ *
+ * @param filePath - File name or absolute path.
+ * @returns True for `.ssjson` and `.json`.
+ */
+export function isWorkbookSavePath(filePath: string): boolean {
+  return endsWithAny(filePath, WORKBOOK_SAVE_EXTENSIONS);
 }
 
 /**

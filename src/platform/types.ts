@@ -9,6 +9,7 @@
  */
 
 import type { OpenRequest } from './desktop/core/openRequest';
+import type { FileVersion } from './desktop/core/saveTarget';
 
 export type PlatformKind = 'web' | 'desktop';
 
@@ -44,11 +45,54 @@ export type PlatformFailureCode =
   | 'IPC_ERROR'
   | 'DENIED'
   | 'NO_PATH'
+  | 'CANCELED'
+  | 'CONFLICT'
+  | 'RELOAD'
+  | 'MISSING'
+  | 'PERMISSION'
+  | 'IN_USE'
+  | 'NOT_ALLOWED'
+  | 'TOO_LARGE'
   | 'UNKNOWN';
 
 export type PlatformResult<T> =
   | { readonly ok: true; readonly value: T }
-  | { readonly ok: false; readonly code: PlatformFailureCode; readonly message: string };
+  | {
+      readonly ok: false;
+      readonly code: PlatformFailureCode;
+      readonly message: string;
+      /** Present when a save conflict was resolved by reloading from disk. */
+      readonly reload?: ReloadedFile;
+    };
+
+export interface FileFilter {
+  readonly name: string;
+  readonly extensions: readonly string[];
+}
+
+export interface SaveDialogOptions {
+  readonly suggestedName: string;
+  readonly filters: readonly FileFilter[];
+}
+
+export interface SaveFileRequest {
+  readonly path: string;
+  readonly data: string | Uint8Array;
+  readonly expected: FileVersion | null;
+}
+
+export interface SaveFileResult {
+  readonly path: string;
+  readonly mtimeMs: number;
+  readonly size: number;
+}
+
+export interface ReloadedFile {
+  readonly path: string;
+  readonly data: string;
+  readonly mtimeMs: number;
+  readonly size: number;
+}
 
 export interface PlatformAdapter {
   readonly kind: PlatformKind;
@@ -64,6 +108,12 @@ export interface PlatformAdapter {
    * the renderer never supplies an arbitrary filesystem path.
    */
   openDroppedFile(file: File): Promise<PlatformResult<void>>;
+  /** Show the native Save As dialog. Returns null when cancelled. */
+  saveFileDialog(options: SaveDialogOptions): Promise<PlatformResult<string | null>>;
+  /** Write a document/export atomically. */
+  writeFile(request: SaveFileRequest): Promise<PlatformResult<SaveFileResult>>;
+  /** Update the native window title (desktop only). */
+  setWindowTitle(title: string): Promise<void>;
   /** Subscribe to open intents delivered by the desktop main process. */
   onOpenRequest(callback: (request: OpenRequest) => void): () => void;
   /** Acknowledge an open intent so the next queued intent can be delivered. */

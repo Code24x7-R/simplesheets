@@ -4,6 +4,7 @@ import {
   MAX_OPEN_BYTES,
   isSpreadsheetImportPath,
   isSupportedOpenPath,
+  isWorkbookSavePath,
 } from './openRequest';
 
 describe('isSupportedOpenPath', () => {
@@ -53,5 +54,17 @@ describe('isSpreadsheetImportPath', () => {
 describe('MAX_OPEN_BYTES', () => {
   it('is 100 MB', () => {
     expect(MAX_OPEN_BYTES).toBe(100 * 1024 * 1024);
+  });
+});
+
+describe('isWorkbookSavePath', () => {
+  it('accepts workbook documents regardless of case', () => {
+    expect(isWorkbookSavePath('a.ssjson')).toBe(true);
+    expect(isWorkbookSavePath('A.JSON')).toBe(true);
+  });
+
+  it('rejects imported spreadsheet formats', () => {
+    expect(isWorkbookSavePath('a.xlsx')).toBe(false);
+    expect(isWorkbookSavePath('a.csv')).toBe(false);
   });
 });

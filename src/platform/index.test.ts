@@ -27,6 +27,9 @@ function makeBridge(overrides: Partial<DesktopBridge> = {}): DesktopBridge {
     offMenuAction: () => undefined,
     pickOpenFile: async () => ({ ok: true }),
     openDroppedFile: async () => ({ ok: true }),
+    pickSaveFile: async () => ({ ok: true }),
+    writeFile: async () => ({ ok: true, path: 'C:/tmp/a.ssjson', mtimeMs: 1, size: 2 }),
+    setWindowTitle: async () => ({ ok: true }),
     onOpenRequest: () => 2,
     offOpenRequest: () => undefined,
     ackOpenRequest: async () => ({ ok: true }),
@@ -199,6 +202,97 @@ describe('desktop adapter', () => {
     const unsubscribe = platform.onOpenRequest(() => undefined);
     unsubscribe();
     expect(offOpenRequest).toHaveBeenCalledWith(2);
+  });
+
+  it('opens the native save dialog and returns its path', async () => {
+    const pickSaveFile = jest.fn(async () => ({ ok: true, path: 'C:/tmp/a.ssjson' }));
+    window.simplesheetsDesktop = makeBridge({ pickSaveFile });
+    const result = await getPlatform().saveFileDialog({
+      suggestedName: 'a.ssjson',
+      filters: [{ name: 'SimpleSheets', extensions: ['ssjson'] }],
+    });
+    expect(result).toEqual({ ok: true, value: 'C:/tmp/a.ssjson' });
+    expect(pickSaveFile).toHaveBeenCalledWith({
+      suggestedName: 'a.ssjson',
+      filters: [{ name: 'SimpleSheets', extensions: ['ssjson'] }],
+    });
+  });
+
+  it('returns null when the native save dialog is cancelled', async () => {
+    window.simplesheetsDesktop = makeBridge({ pickSaveFile: async () => ({ ok: true }) });
+    const result = await getPlatform().saveFileDialog({ suggestedName: 'a.ssjson', filters: [] });
+    expect(result).toEqual({ ok: true, value: null });
+  });
+
+  it('writes a file and preserves failure codes', async () => {
+    window.simplesheetsDesktop = makeBridge({
+      writeFile: async () => ({ ok: false, code: 'CONFLICT', message: 'changed' }),
+    });
+    const result = await getPlatform().writeFile({
+      path: 'C:/tmp/a.ssjson',
+      data: '{}',
+      expected: { mtimeMs: 1, size: 2 },
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.code).toBe('CONFLICT');
+      expect(result.message).toBe('changed');
+    }
+  });
+
+  it('exposes reload data on a RELOAD result', async () => {
+    window.simplesheetsDesktop = makeBridge({
+      writeFile: async () => ({
+        ok: false,
+        code: 'RELOAD',
+        message: 'reloaded',
+        path: 'C:/tmp/a.ssjson',
+        data: '{"title":"disk"}',
+        mtimeMs: 5,
+        size: 6,
+      }),
+    });
+    const result = await getPlatform().writeFile({
+      path: 'C:/tmp/a.ssjson',
+      data: '{}',
+      expected: null,
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.code).toBe('RELOAD');
+      expect(result.reload).toEqual({
+        path: 'C:/tmp/a.ssjson',
+        data: '{"title":"disk"}',
+        mtimeMs: 5,
+        size: 6,
+      });
+    }
+  });
+
+  it('rejects a write result without a version', async () => {
+    window.simplesheetsDesktop = makeBridge({
+      writeFile: async () => ({ ok: true, path: 'C:/tmp/a.ssjson' }),
+    });
+    const result = await getPlatform().writeFile({
+      path: 'C:/tmp/a.ssjson',
+      data: '{}',
+      expected: null,
+    });
+    expect(result.ok).toBe(false);
+  });
+
+  it('updates and swallows title failures', async () => {
+    const setWindowTitle = jest.fn(async () => ({ ok: true }));
+    window.simplesheetsDesktop = makeBridge({ setWindowTitle });
+    await expect(getPlatform().setWindowTitle('a — SimpleSheets')).resolves.toBeUndefined();
+    expect(setWindowTitle).toHaveBeenCalledWith('a — SimpleSheets');
+
+    window.simplesheetsDesktop = makeBridge({
+      setWindowTitle: async () => {
+        throw new Error('title failed');
+      },
+    });
+    await expect(getPlatform().setWindowTitle('a')).resolves.toBeUndefined();
   });
 
   it('swallows acknowledgement and ready failures', async () => {

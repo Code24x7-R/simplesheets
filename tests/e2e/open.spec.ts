@@ -60,9 +60,10 @@ test.beforeAll(async () => {
 test('opens a fixture passed on the command line', async () => {
   const session = await launch([fixture('small.ssjson')]);
   try {
-    await expect(session.page.getByText('Item 1', { exact: true })).toBeVisible({
-      timeout: 30_000,
-    });
+    await expect(session.page.getByTestId('status-message')).toContainText(
+      /Imported "small"/,
+      { timeout: 30_000 },
+    );
   } finally {
     await close(session);
   }

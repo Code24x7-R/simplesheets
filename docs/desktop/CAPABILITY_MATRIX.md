@@ -1,6 +1,6 @@
 # SimpleSheets Desktop — Capability Matrix
 
-Status reflects M1. Capabilities are enabled as milestones land; the adapter in
+Status reflects M2. Capabilities are enabled as milestones land; the adapter in
 `src/platform/desktop/index.ts` is the source of truth.
 
 | Capability | Web | Desktop dev | Installed | Portable |
@@ -8,9 +8,11 @@ Status reflects M1. Capabilities are enabled as milestones land; the adapter in
 | Edit cells, formulas, styles, charts, extensions | ✅ | ✅ | ✅ | ✅ |
 | Local autosave to `localStorage` | ✅ | ✅ | ✅ | ✅ |
 | Native Open dialog | ❌ | ✅ | ✅ | ✅ |
-| Native Save / Save As dialogs | ❌ | ⏳ M2 | ⏳ M2 | ⏳ M2 |
+| Native Save / Save As dialogs | ❌ | ✅ | ✅ | ✅ |
 | Real file paths on open | ❌ | ✅ | ✅ | ✅ |
-| Save-in-place to a real path | ❌ | ⏳ M2 | ⏳ M2 | ⏳ M2 |
+| Save-in-place to a real path | ❌ | ✅ | ✅ | ✅ |
+| Atomic writes with conflict prompts | ❌ | ✅ | ✅ | ✅ |
+| Exports through a native Save dialog | ❌ | ✅ | ✅ | ✅ |
 | Drag-and-drop files | ✅ (File API) | ✅ (preload path) | ✅ (preload path) | ✅ (preload path) |
 | Recent files backed by real paths | ❌ | ⏳ M3 | ⏳ M3 | ⏳ M3 |
 | Crash recovery | ❌ | ⏳ M3 | ⏳ M3 | ⏳ M3 |

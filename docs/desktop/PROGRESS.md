@@ -14,8 +14,8 @@ here and in `DECISIONS.md`.
 | --- | --- | --- | --- |
 | M0 | Environment audit, scaffold, `app://` origin, adapter skeleton, fixtures, icons, verify scripts | ✅ Complete | See below |
 | M1 | Open end-to-end (picker, argv, single instance, drag-drop, errors, packaged smoke) | ✅ Complete | See below |
-| M2 | Save/Save As, atomic writes, conflict prompts, exports | ⏳ Next | — |
-| M3 | Recents, recovery, session restore, intent state machine | ⬜ Not started | — |
+| M2 | Save/Save As, atomic writes, conflict prompts, exports | ✅ Complete | See below |
+| M3 | Recents, recovery, session restore, intent state machine | ⏳ Next | — |
 | M4 | Native menu, accelerators, window state, About | ⬜ Not started | — |
 | M5 | File association, NSIS + portable build | ⬜ Not started | — |
 | M6 | Security hardening | ⬜ Not started | — |
@@ -50,9 +50,46 @@ E2E coverage added:
 Known M1 limitations:
 
 - The literal Explorer drag gesture is manual; the drop event and preload path are automated.
-- Window/document titles arrive in M4; Save-in-place and the native dirty prompt in M2.
+- The native dirty/open-close prompt arrives in M4; M2 uses the existing confirm.
 - The queue is FIFO; newest-wins precedence arrives with the M3 state machine.
 - Recents remain browser `localStorage` until M3.
+
+---
+
+## M2 evidence
+
+Checks run:
+
+| Check | Result |
+| --- | --- |
+| `npm run verify` | 205 suites, 4,594 passed, 1 skipped |
+| `npm run verify:e2e` | 19 tests passed |
+| `npm run electron:build:dir` | packaged build produced |
+| `node scripts/desktop-packaged-smoke.mjs` | packaged argv + picker + Save passed (2 runs) |
+
+E2E coverage added:
+
+- Save writes the current `.ssjson` in place and updates the native title;
+- Save on an untitled document opens Save As;
+- cancelling Save As writes nothing;
+- Save As writes a new file with the filename-derived title;
+- a deleted target is recreated after the native prompt;
+- an external change prompts Overwrite and replaces the external bytes;
+- Reload replaces the in-memory workbook with the disk version;
+- a read-only target offers Save As and writes the replacement;
+- Excel binary and CSV exports use the native Save dialog.
+
+Atomic-write and save-target classification are unit-tested; packaged smoke
+covers Save inside the ASAR build.
+
+Known M2 limitations:
+
+- The native Save/Don't Save/Cancel open/close prompt is M4.
+- Last-path persistence and recovery-snapshot clearing are M3.
+- An actual Windows share-lock is a manual check; read-only/permission paths
+  are automated.
+- The 10 MB save measured 4–8 s in the dev shell, above SAVE-12's 2 s budget;
+  autosave/rendering optimization is M7.
 
 ---
 

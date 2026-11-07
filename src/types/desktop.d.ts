@@ -32,7 +32,40 @@ export interface DesktopOpenRequest {
   path: string;
   name: string;
   size: number;
+  mtimeMs: number;
   data: ArrayBuffer;
+}
+
+export interface DesktopFileFilter {
+  name: string;
+  extensions: string[];
+}
+
+export interface DesktopSaveDialogOptions {
+  suggestedName: string;
+  filters: DesktopFileFilter[];
+}
+
+export interface DesktopFileVersion {
+  mtimeMs: number;
+  size: number;
+}
+
+export interface DesktopWriteRequest {
+  path: string;
+  data: string | Uint8Array;
+  expected: DesktopFileVersion | null;
+}
+
+export interface DesktopSaveResult extends DesktopBridgeResult {
+  path?: string;
+}
+
+export interface DesktopWriteResult extends DesktopBridgeResult {
+  path?: string;
+  mtimeMs?: number;
+  size?: number;
+  data?: string;
 }
 
 export interface DesktopBridge {
@@ -45,6 +78,9 @@ export interface DesktopBridge {
   offMenuAction(id: number): void;
   pickOpenFile(): Promise<DesktopBridgeResult>;
   openDroppedFile(file: File): Promise<DesktopBridgeResult>;
+  pickSaveFile(options: DesktopSaveDialogOptions): Promise<DesktopSaveResult>;
+  writeFile(request: DesktopWriteRequest): Promise<DesktopWriteResult>;
+  setWindowTitle(title: string): Promise<DesktopBridgeResult>;
   onOpenRequest(callback: (request: DesktopOpenRequest) => void): number;
   offOpenRequest(id: number): void;
   ackOpenRequest(seq: number): Promise<DesktopBridgeResult>;

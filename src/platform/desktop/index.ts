@@ -7,12 +7,21 @@
  * a PlatformResult so the UI never receives a raw IPC rejection.
  */
 
-import type { DesktopBridge, DesktopBridgeResult } from '../../types/desktop';
+import type {
+  DesktopBridge,
+  DesktopBridgeResult,
+  DesktopSaveDialogOptions,
+  DesktopWriteRequest,
+  DesktopWriteResult,
+} from '../../types/desktop';
 import type {
   AppInfo,
   PlatformAdapter,
   PlatformCapabilities,
+  PlatformFailureCode,
   PlatformResult,
+  ReloadedFile,
+  SaveFileResult,
 } from '../types';
 
 const CAPABILITIES: PlatformCapabilities = {
@@ -28,6 +37,29 @@ const CAPABILITIES: PlatformCapabilities = {
   appInfo: true,
 };
 
+const FAILURE_CODES = new Set<PlatformFailureCode>([
+  'NOT_SUPPORTED',
+  'INVALID_ARGUMENT',
+  'IPC_ERROR',
+  'DENIED',
+  'NO_PATH',
+  'CANCELED',
+  'CONFLICT',
+  'RELOAD',
+  'MISSING',
+  'PERMISSION',
+  'IN_USE',
+  'NOT_ALLOWED',
+  'TOO_LARGE',
+  'UNKNOWN',
+]);
+
+function normalizeFailureCode(code: string | undefined): PlatformFailureCode {
+  return code && FAILURE_CODES.has(code as PlatformFailureCode)
+    ? (code as PlatformFailureCode)
+    : 'IPC_ERROR';
+}
+
 function toFailure(message: string): PlatformResult<never> {
   return { ok: false, code: 'IPC_ERROR', message };
 }
@@ -36,11 +68,52 @@ function normalizeResult(result: DesktopBridgeResult): PlatformResult<void> {
   if (!result.ok) {
     return {
       ok: false,
-      code: result.code === 'NO_PATH' ? 'NO_PATH' : 'IPC_ERROR',
+      code: normalizeFailureCode(result.code),
       message: result.message ?? 'The desktop request failed.',
     };
   }
   return { ok: true, value: undefined };
+}
+
+function normalizeWriteResult(result: DesktopWriteResult): PlatformResult<SaveFileResult> {
+  if (!result.ok) {
+    let reload: ReloadedFile | undefined;
+    if (
+      result.code === 'RELOAD' &&
+      typeof result.path === 'string' &&
+      typeof result.data === 'string' &&
+      typeof result.mtimeMs === 'number' &&
+      typeof result.size === 'number'
+    ) {
+      reload = {
+        path: result.path,
+        data: result.data,
+        mtimeMs: result.mtimeMs,
+        size: result.size,
+      };
+    }
+    return {
+      ok: false,
+      code: normalizeFailureCode(result.code),
+      message: result.message ?? 'The file could not be written.',
+      reload,
+    };
+  }
+  if (
+    typeof result.path !== 'string' ||
+    typeof result.mtimeMs !== 'number' ||
+    typeof result.size !== 'number'
+  ) {
+    return toFailure('The desktop writer returned an invalid result.');
+  }
+  return {
+    ok: true,
+    value: {
+      path: result.path,
+      mtimeMs: result.mtimeMs,
+      size: result.size,
+    },
+  };
 }
 
 /**
@@ -97,6 +170,47 @@ export function createDesktopAdapter(bridge: DesktopBridge): PlatformAdapter {
         return normalizeResult(await bridge.openDroppedFile(file));
       } catch (error) {
         return toFailure(error instanceof Error ? error.message : 'Failed to open the dropped file.');
+      }
+    },
+    async saveFileDialog(options): Promise<PlatformResult<string | null>> {
+      const request: DesktopSaveDialogOptions = {
+        suggestedName: options.suggestedName,
+        filters: options.filters.map((filter) => ({
+          name: filter.name,
+          extensions: [...filter.extensions],
+        })),
+      };
+      try {
+        const result = await bridge.pickSaveFile(request);
+        if (!result.ok) {
+          return {
+            ok: false,
+            code: normalizeFailureCode(result.code),
+            message: result.message ?? 'The save dialog failed.',
+          };
+        }
+        return { ok: true, value: result.path ?? null };
+      } catch (error) {
+        return toFailure(error instanceof Error ? error.message : 'Failed to open the save dialog.');
+      }
+    },
+    async writeFile(request): Promise<PlatformResult<SaveFileResult>> {
+      const desktopRequest: DesktopWriteRequest = {
+        path: request.path,
+        data: request.data,
+        expected: request.expected ? { ...request.expected } : null,
+      };
+      try {
+        return normalizeWriteResult(await bridge.writeFile(desktopRequest));
+      } catch (error) {
+        return toFailure(error instanceof Error ? error.message : 'Failed to write the file.');
+      }
+    },
+    async setWindowTitle(title: string): Promise<void> {
+      try {
+        await bridge.setWindowTitle(title);
+      } catch {
+        // A title update must never break saving or editing.
       }
     },
     onOpenRequest(callback): () => void {

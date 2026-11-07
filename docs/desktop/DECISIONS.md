@@ -243,13 +243,61 @@ file associations and needs explicit approval.
 
 ### M1 known limitations
 
-- Window title still shows `SimpleSheets`; document titles arrive in M4.
-- The document path is remembered in a renderer ref but Save-in-place is M2.
 - Dirty opens use the existing confirm prompt; the native Save / Don't Save /
-  Cancel prompt depends on Save and arrives in M2.
+  Cancel prompt and close prompt arrive in M4 with the native menu.
 - The queue is FIFO; the "newest explicit intent wins" lifecycle precedence
   arrives with the M3 intent state machine.
 - Recent files still use the existing `localStorage`/File System Access path;
   native path reopening is deferred to the main-owned recents in M3.
 - A dropped file without an OS path opens through the File API and has no save
   path until Save As.
+
+---
+
+## 9. Save pipeline (M2)
+
+- **Main owns writes.** The renderer never writes a path directly. `save:write`
+  validates the path against the paths approved by the current document or a
+  native Save dialog, then performs the write. A renderer path that was not
+  approved returns `NOT_ALLOWED`.
+- **Atomic writes.** `atomicWriteFile` writes a sibling temp file, fsyncs it,
+  preserves the target mode, renames over the target, and fsyncs the directory
+  on POSIX. A failure removes the temp file and leaves the original intact.
+- **Conflict detection.** The open request carries `mtimeMs` and `size`; the
+  renderer stores that version and sends it with Save. Main compares it to the
+  on-disk `stat` immediately before writing. A changed or missing file shows a
+  native prompt; no write happens until the user chooses.
+- **Native prompts.** Conflict: Overwrite / Save As… / Reload / Cancel.
+  Missing: Recreate / Save As… / Cancel. Read-only, permission-denied, and
+  locked targets: Retry / Save As… / Cancel, with three 50 ms retries for
+  `EBUSY`/`EPERM` before the prompt. Reload returns the current disk text so the
+  renderer can replace the in-memory workbook without another IPC round trip.
+- **Save As.** The native dialog suggests the sanitized title plus `.ssjson`,
+  starts in the last save directory, and appends the suggested extension when
+  the user omits one. Save As rewrites the serialized title to match the chosen
+  filename. A conflict-driven Save As performs one follow-up write so the file
+  title matches the new path.
+- **Imported formats are not overwritten in place.** Only `.ssjson`/`.json`
+  opens become the current save path. Excel/CSV imports require Save As, which
+  prevents writing JSON over an `.xlsx` or `.csv` file.
+- **Title.** The renderer sends the document title and dirty marker to main
+  over `window:set-title`; the native title updates without changing browser
+  tab behavior.
+- **Exports.** `saveExport` uses the native Save dialog on desktop and the
+  existing download path on the web. The File menu and the toolbar export
+  buttons share this helper.
+- **Stale closures.** Save callbacks read the workbook through a ref so a
+  fast `Ctrl+S` immediately after an open cannot serialize the previous
+  workbook.
+
+### M2 known limitations
+
+- The native Save / Don't Save / Cancel prompt on open/close is M4
+  (OPEN-08/MENU-06); M2 keeps the existing confirm prompt for replacement.
+- Last-path state and recovery-snapshot clearing are M3; recents still use the
+  existing `localStorage` MRU.
+- Locked-file behavior is unit/E2E covered for read-only/permission paths;
+  an actual Windows share-lock remains a manual check.
+- The 10 MB save measured 4–8 s in the dev shell, above SAVE-12's 2 s budget.
+  The main costs are serialization/autosave/render; M7 pins the optimization and
+  measurement so the budget is not silently relaxed.

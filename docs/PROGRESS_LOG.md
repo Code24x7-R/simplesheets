@@ -1205,3 +1205,14 @@
 - **Error handling**: missing, corrupt, unsupported, permission, and oversized files surface actionable status messages without replacing the UI.
 - **Tests**: 9 Playwright Electron E2E tests (argv, picker, queued CSV+ssjson, corrupt, missing, drop, synthetic-File rejection, second instance) plus packaged argv+picker smoke; queue and path rules unit-tested.
 - **Verification**: `npm run verify` (203 suites, 4,576 passed, 1 skipped), `npm run verify:e2e` (9 passed), packaged smoke passed.
+
+## 2026-11-07 [FEATURE] SimpleSheets Desktop — M2 Save Pipeline
+
+- **Atomic writes**: added `atomicWriteFile` (sibling temp, fsync, mode preservation, rename, POSIX directory fsync) and shared save-target classification.
+- **Main-owned save IPC**: `save:pick` and `save:write` validate native-dialog/current-document paths, enforce `.ssjson`/`.json` for in-place saves, and show native conflict/recreate/read-only prompts.
+- **Conflict handling**: mtime+size comparison, Overwrite / Save As / Reload / Cancel, Recreate for deleted targets, and three 50 ms retries for busy/locked files.
+- **Renderer integration**: Save writes in place or falls back to Save As; Save As rewrites the serialized title to match the chosen filename; conflicts can reload the disk version; the native window title tracks the document and dirty marker.
+- **Imported formats**: `.xlsx`/`.csv` imports no longer become in-place save paths, preventing JSON writes over the original spreadsheet.
+- **Exports**: Excel, CSV, JSON, and PDF exports use the native Save dialog on desktop and keep the existing download path on web.
+- **Tests**: atomic-write and conflict classifier unit tests; 10 Playwright save/export tests; packaged smoke now covers Save.
+- **Verification**: `npm run verify` (205 suites, 4,594 passed, 1 skipped), `npm run verify:e2e` (19 passed), packaged smoke passed twice.

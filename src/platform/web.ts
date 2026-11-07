@@ -94,6 +94,21 @@ export function createWebAdapter(): PlatformAdapter {
         'The browser edition opens dropped files with the File API.',
       );
     },
+    async saveFileDialog(): Promise<PlatformResult<string | null>> {
+      return failure(
+        'NOT_SUPPORTED',
+        'The browser edition saves with the File System Access picker.',
+      );
+    },
+    async writeFile(): Promise<PlatformResult<never>> {
+      return failure(
+        'NOT_SUPPORTED',
+        'The browser edition cannot write filesystem paths directly.',
+      );
+    },
+    async setWindowTitle(): Promise<void> {
+      return undefined;
+    },
     onOpenRequest(): () => void {
       return () => undefined;
     },

@@ -32,10 +32,12 @@ import { mimeTypeForPath, resolveAppAssetPath } from '../src/platform/desktop/co
 import {
   MAX_OPEN_BYTES,
   isSupportedOpenPath,
+  isWorkbookSavePath,
   type OpenRequest,
   type OpenRequestSource,
 } from '../src/platform/desktop/core/openRequest';
 import { OpenRequestQueue } from '../src/platform/desktop/core/openQueue';
+import { allowWritePath, registerSaveHandlers } from './saveHandlers';
 
 const DEV_URL = 'http://localhost:3000';
 const APP_URL = 'app://simplesheets/index.html';
@@ -225,9 +227,12 @@ async function readOpenRequest(
       path: realPath,
       name: path.basename(realPath),
       size: stat.size,
+      mtimeMs: stat.mtimeMs,
       data,
     };
     nextOpenSeq += 1;
+
+    if (isWorkbookSavePath(realPath)) allowWritePath(realPath);
 
     openQueue.enqueue(request);
     pumpOpenRequests();
@@ -512,6 +517,11 @@ function setupIpc(): void {
     openQueue.setReady(true);
     pumpOpenRequests();
     return { ok: true };
+  });
+
+  registerSaveHandlers({
+    getWindow: () => mainWindow,
+    assertTrustedSender,
   });
 }
 

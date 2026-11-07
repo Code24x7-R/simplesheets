@@ -7,10 +7,11 @@ import { importJson } from '../services/jsonService';
 import type { Workbook, Sheet } from '../types';
 
 // Mock export services to prevent actual file downloads in tests
-jest.mock('../services/excelExport', () => ({ downloadExcel: jest.fn() }));
-jest.mock('../services/csvService', () => ({ downloadCsv: jest.fn() }));
+jest.mock('../services/excelExport', () => ({ downloadExcel: jest.fn(), exportExcel: jest.fn(() => new Blob()) }));
+jest.mock('../services/csvService', () => ({ downloadCsv: jest.fn(), exportCsv: jest.fn(() => 'a,b') }));
 jest.mock('../services/jsonService', () => ({
   downloadJson: jest.fn(),
+  exportJson: jest.fn(() => '{}'),
   importJson: jest.fn((text: string) => {
     try {
       const wb = JSON.parse(text);
@@ -20,7 +21,7 @@ jest.mock('../services/jsonService', () => ({
     }
   }),
 }));
-jest.mock('../services/pdfExport', () => ({ downloadPdf: jest.fn() }));
+jest.mock('../services/pdfExport', () => ({ downloadPdf: jest.fn(), generatePdf: jest.fn(async () => new Blob()) }));
 
 function createTestWorkbook(): Workbook {
   return {

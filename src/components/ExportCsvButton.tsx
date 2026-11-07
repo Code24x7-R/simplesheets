@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
 import { useCallback, forwardRef } from 'react';
-import { downloadCsv } from '../services/csvService';
+import { downloadCsv, exportCsv } from '../services/csvService';
+import { saveExport } from '../platform/export';
 import type { Sheet } from '../types';
 
 interface ExportCsvButtonProps {
@@ -13,8 +14,13 @@ interface ExportCsvButtonProps {
  */
 export const ExportCsvButton = forwardRef<HTMLButtonElement, ExportCsvButtonProps>(
   function ExportCsvButton({ sheet }, ref) {
-    const handleClick = useCallback(() => {
-      downloadCsv(sheet);
+    const handleClick = useCallback(async () => {
+      await saveExport({
+        data: exportCsv(sheet),
+        suggestedName: `${sheet.name || 'Sheet'}.csv`,
+        filters: [{ name: 'CSV file', extensions: ['csv'] }],
+        download: () => downloadCsv(sheet),
+      });
     }, [sheet]);
 
     return (

@@ -17,6 +17,10 @@ import type {
   DesktopBridge,
   DesktopBridgeResult,
   DesktopOpenRequest,
+  DesktopSaveDialogOptions,
+  DesktopSaveResult,
+  DesktopWriteRequest,
+  DesktopWriteResult,
 } from '../src/types/desktop';
 
 let nextMenuListenerId = 1;
@@ -61,6 +65,15 @@ const bridge: DesktopBridge = {
 
   pickOpenFile: (): Promise<DesktopBridgeResult> =>
     ipcRenderer.invoke('open:pick'),
+
+  pickSaveFile: (options: DesktopSaveDialogOptions): Promise<DesktopSaveResult> =>
+    ipcRenderer.invoke('save:pick', options),
+
+  writeFile: (request: DesktopWriteRequest): Promise<DesktopWriteResult> =>
+    ipcRenderer.invoke('save:write', request),
+
+  setWindowTitle: (title: string): Promise<DesktopBridgeResult> =>
+    ipcRenderer.invoke('window:set-title', title),
 
   openDroppedFile: (file: File): Promise<DesktopBridgeResult> => {
     let filePath = '';
