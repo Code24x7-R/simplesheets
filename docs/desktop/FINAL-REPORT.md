@@ -13,8 +13,8 @@ with a manual procedure.
 | Level | Count |
 | --- | ---: |
 | automated-pass | 120 |
-| manual-pass | 1 |
-| unverified-environment | 18 |
+| manual-pass | 3 |
+| unverified-environment | 16 |
 | failed | 0 |
 | **total** | **139** |
 
@@ -162,8 +162,8 @@ and hashes are in `M5-EVIDENCE.md`; performance method/results are in
 | --- | --- | --- | --- |
 | PKG-01 | automated-pass | electron-builder.yml; M5-EVIDENCE.md; release artifacts. | electron-builder.yml identity + artifact names. |
 | PKG-02 | unverified-environment | electron-builder.yml; M5-EVIDENCE.md; release artifacts. | Upgrade-in-place unverified; builder output automated. |
-| PKG-03 | unverified-environment | electron-builder.yml; M5-EVIDENCE.md; release artifacts. | Edition detection unit-tested; real portable-wrapper launch unverified. |
-| PKG-04 | unverified-environment | electron-builder.yml; M5-EVIDENCE.md; release artifacts. | Association config inspected; installer/registry unverified. |
+| PKG-03 | manual-pass | electron-builder.yml; M5-EVIDENCE.md; release artifacts. | User-verified: portable package launched and worked as expected. |
+| PKG-04 | unverified-environment | electron-builder.yml; M5-EVIDENCE.md; release artifacts. | Association config inspected; installer ran, but .ssjson/Open With not separately confirmed. |
 | PKG-05 | automated-pass | electron-builder.yml; M5-EVIDENCE.md; release artifacts. | About/README unsigned/SmartScreen text. |
 | PKG-06 | automated-pass | electron-builder.yml; M5-EVIDENCE.md; release artifacts. | no updater dependency/config. |
 | PKG-07 | automated-pass | electron-builder.yml; M5-EVIDENCE.md; release artifacts. | ICO 16-256 + 512 PNG inspected. |
@@ -172,7 +172,7 @@ and hashes are in `M5-EVIDENCE.md`; performance method/results are in
 | PKG-10 | unverified-environment | electron-builder.yml; M5-EVIDENCE.md; release artifacts. | Uninstall association/data behavior unverified; checklist provided. |
 | PKG-11 | unverified-environment | electron-builder.yml; M5-EVIDENCE.md; release artifacts. | Clean npm ci not run in this tree; lockfile/build procedure documented. |
 | PKG-12 | automated-pass | electron-builder.yml; M5-EVIDENCE.md; release artifacts. | no publish/CI release configuration added. |
-| PKG-13 | unverified-environment | electron-builder.yml; M5-EVIDENCE.md; release artifacts. | Installer execution requires explicit approval; not run. |
+| PKG-13 | manual-pass | electron-builder.yml; M5-EVIDENCE.md; release artifacts. | User-verified: installer was executed successfully and the installed app worked. |
 
 ## About and diagnostics (ABT)
 

@@ -20,16 +20,16 @@ unverified = {
     'IO-09': 'No URL protocol is registered; browser shared-link behavior manual.',
     'IO-10': 'Cloud entry point hidden on desktop; in-app/native parity manual.',
     'PKG-02': 'Upgrade-in-place unverified; builder output automated.',
-    'PKG-03': 'Edition detection unit-tested; real portable-wrapper launch unverified.',
-    'PKG-04': 'Association config inspected; installer/registry unverified.',
+    'PKG-04': 'Association config inspected; installer ran, but .ssjson/Open With not separately confirmed.',
     'PKG-10': 'Uninstall association/data behavior unverified; checklist provided.',
     'PKG-11': 'Clean npm ci not run in this tree; lockfile/build procedure documented.',
-    'PKG-13': 'Installer execution requires explicit approval; not run.',
     'PERF-06': 'Heap measured; listener/object-URL counts code-reviewed, not instrumented.',
 }
 
 manual_pass = {
     'APP-02': 'Verified manually: electron:dev starts Vite + Electron, loads the dev server, and HMR works.',
+    'PKG-03': 'User-verified: portable package launched and worked as expected.',
+    'PKG-13': 'User-verified: installer was executed successfully and the installed app worked.',
 }
 status = {
     i: ('manual-pass' if i in manual_pass else ('unverified-environment' if i in unverified else 'automated-pass'))

@@ -59,8 +59,8 @@ Known M1 limitations:
 
 Final report: `docs/desktop/FINAL-REPORT.md`.
 
-- **139 requirements tagged**: 120 automated-pass, 1 manual-pass,
-  18 unverified-environment, 0 failed.
+- **139 requirements tagged**: 120 automated-pass, 3 manual-pass,
+  16 unverified-environment, 0 failed.
 - Manual checklist consolidates installer/association/portable/clean-machine
   checks plus display scaling, OS shutdown, share-lock, >100 MB recovery,
   recent parity, PDF/export/shared-link/cloud paths, and clean npm ci.
