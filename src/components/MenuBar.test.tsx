@@ -546,4 +546,12 @@ describe('MenuBar', () => {
     fireEvent.click(screen.getByText('Load Demo Workbook'));
     expect(defaultProps.onLoadDemo).toHaveBeenCalled();
   });
+
+  it('hides cloud account entry points when disabled', () => {
+    render(<MenuBar {...defaultProps} cloudAccountsEnabled={false} />);
+    fireEvent.click(screen.getByText('File'));
+    fireEvent.mouseEnter(screen.getByText('Share'));
+    expect(screen.queryByText('Cloud accounts…')).not.toBeInTheDocument();
+  });
 });
+

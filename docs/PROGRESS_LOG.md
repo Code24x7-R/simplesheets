@@ -1185,3 +1185,106 @@
 - **Fix**: Elevated the SVG connections layer (`z-10`), set `pointer-events: none` on the overlay containers with `pointer-events: auto` scoped to individual connector hitboxes/lines/midpoints and node cards, and added a dedicated wide hit area (`canvas-connection-hitbox-*`) on every connector for smooth click selection.
 - **Tests**: Added explicit connector selection hit area test in `CreatorCanvasView.test.tsx`.
 - **Verification**: All 9 Creator Canvas test suites pass (57 tests), type check clean, lint clean.
+
+## 2026-11-07 [FEATURE] SimpleSheets Desktop — M0 Electron Scaffold
+
+- **Spec**: Added `docs/SimpleSheets-Desktop-build-spec.md` (133 requirements, milestones M0–M8).
+- **Shell**: Electron 45 main/preload with `contextIsolation`, sandboxing, no Node in the renderer, single-instance lock, and a stable `app://simplesheets` origin served from ASAR.
+- **Security**: validated IPC sender origins, strict packaged CSP, navigation/window-open blocking, denied permissions, disabled DevTools in packaged builds.
+- **Adapter**: web/desktop platform adapter skeleton with freeze-safe preload bridge and typed results.
+- **Tooling**: deterministic fixture generator, ImageMagick icon generator, electron-builder config (per-user NSIS + portable), packed smoke script, Playwright Electron smoke test.
+- **Docs**: `docs/desktop/DECISIONS.md`, `PROGRESS.md`, and `CAPABILITY_MATRIX.md`.
+- **Verification**: `npm run verify` (201 suites, 4,535 passed, 0 skipped), `npm run verify:e2e` (1 passed), `npm run electron:build:dir` produced an unpacked build, and the packaged app loaded from `app://` with edition `installed`.
+
+## 2026-11-07 [FEATURE] SimpleSheets Desktop — M1 Open Pipeline
+
+- **Open intents**: added the main-process `OpenRequestQueue` (one intent at a time, ack-gated, argv order preserved) and wired argv, Open With, second-instance, native picker, and drag-drop sources. Spreadsheet imports acknowledge after the Import Scope dialog resolves.
+- **Native picker**: `dialog.showOpenDialog` with format filters; files are read in main with realpath + extension + 100 MB validation and delivered to the renderer as an ArrayBuffer.
+- **Renderer integration**: desktop Open replaces the File System Access path when native dialogs are available; Excel/CSV route through the Import Scope dialog, while `.ssjson`/`.json` replace the workbook directly.
+- **Drag-drop**: the renderer passes the dropped `File` to preload, which resolves the OS path with `webUtils.getPathForFile` and sends only that path to main; synthetic files are rejected and fall back to the existing File pipeline.
+- **Error handling**: missing, corrupt, unsupported, permission, and oversized files surface actionable status messages without replacing the UI.
+- **Tests**: 9 Playwright Electron E2E tests (argv, picker, queued CSV+ssjson, corrupt, missing, drop, synthetic-File rejection, second instance) plus packaged argv+picker smoke; queue and path rules unit-tested.
+- **Verification**: `npm run verify` (203 suites, 4,576 passed, 0 skipped), `npm run verify:e2e` (9 passed), packaged smoke passed.
+
+## 2026-11-07 [FEATURE] SimpleSheets Desktop — M2 Save Pipeline
+
+- **Atomic writes**: added `atomicWriteFile` (sibling temp, fsync, mode preservation, rename, POSIX directory fsync) and shared save-target classification.
+- **Main-owned save IPC**: `save:pick` and `save:write` validate native-dialog/current-document paths, enforce `.ssjson`/`.json` for in-place saves, and show native conflict/recreate/read-only prompts.
+- **Conflict handling**: mtime+size comparison, Overwrite / Save As / Reload / Cancel, Recreate for deleted targets, and three 50 ms retries for busy/locked files.
+- **Renderer integration**: Save writes in place or falls back to Save As; Save As rewrites the serialized title to match the chosen filename; conflicts can reload the disk version; the native window title tracks the document and dirty marker.
+- **Imported formats**: `.xlsx`/`.csv` imports no longer become in-place save paths, preventing JSON writes over the original spreadsheet.
+- **Exports**: Excel, CSV, JSON, and PDF exports use the native Save dialog on desktop and keep the existing download path on web.
+- **Tests**: atomic-write and conflict classifier unit tests; 10 Playwright save/export tests; packaged smoke now covers Save.
+- **Verification**: `npm run verify` (205 suites, 4,594 passed, 0 skipped), `npm run verify:e2e` (19 passed), packaged smoke passed twice.
+
+
+## 2026-11-07 [FEATURE] SimpleSheets Desktop — M3 Foundations
+
+- **State schema**: added `desktopState.ts` with schema v1, normalized recent entries, upsert-by-path (case-insensitive Windows), 10-entry cap, remove/clear.
+- **Recovery schema**: added `recovery.ts` with schema validation, 100 MB limit constant, and recovered-title helper.
+- **Legacy migration**: added `legacyMigration.ts` to parse same-origin `simplesheets:mru`/`simplesheets:autosave` payloads; pathless entries are marked non-reopenable.
+- **Intent machine**: added `openIntentMachine.ts` with monotonic generation tokens and newest-wins resolution.
+- **Tests**: 17 new unit tests; full suite 209 suites / 4,615 passed / 0 skipped.
+
+## 2026-11-07 [FEATURE] SimpleSheets Desktop — M3 Complete
+
+- **Main-owned state**: `desktopStateStore.ts` loads/writes `state.json` (schema v1, atomic, 250 ms debounce), quarantines corrupt state, tracks recents, last path/directory, reopen preference, and clean-exit status.
+- **Recovery**: debounced `recovery.json` at ≤2 writes/s, 100 MB cap, corrupt-record deletion, quit flush, dirty-quit preservation until the M4 close prompt.
+- **Startup**: explicit intent beats recovery; unclean recovery shows the native Recover/Discard prompt; clean startup reopens the last document; missing paths clear silently.
+- **Recents**: `useMRU` now reads/writes main-owned recents on desktop; `open:recent` verifies the path against the main list. Legacy `simplesheets:mru`/`simplesheets:autosave` migrate once.
+- **Recovery UX**: native prompt plus an amber banner for explicit+recovery, `(Recovered)` dirty loading, and path retention only when the original still exists.
+- **Intents**: newest-wins queued-intent handling; active imports finish before the next intent.
+- **Tests**: 211 suites / 4,633 passed / 0 skipped; E2E 26 tests incl. 7-case restart matrix; `npm run verify` passes.
+
+## 2026-11-07 [FEATURE] SimpleSheets Desktop — M4 Complete
+
+- **Native menu**: File/Edit/View/Help with Recents, Recover, Import/Export, fullscreen/dev reload, Manual/Shortcuts/About/Data Folder; actions route to existing renderer handlers.
+- **Accelerators**: New/Open/Save/Save As/Undo/Redo/Find/Quit owned by `shortcutOwner.ts`; renderer ignores them and forwards synthetic keys that `before-input-event` misses.
+- **Menu state**: Undo/Redo and Recover enable states update live; Save/Save As remain available while a document exists.
+- **Window state**: `windowBounds` schema, display validation/clamping, centered fallback, 900×600 minimum, maximize restore without fullscreen.
+- **Dirty prompts**: native Save / Don't Save / Cancel for close and dirty open/new; close Save writes before closing.
+- **About/reset**: edition + runtime versions, build/commit, data folder, Copy Diagnostics, SmartScreen note, and confirmed Reset Application Data.
+- **Fixes**: desktop Copy Link uses the public web base; SimpleDocs/Help use the validated external-link adapter; missing recent entries offer Remove/Locate/Keep.
+- **Tests**: 213 suites / 4,650 passed / 0 skipped; E2E 34 tests; packaged build + smoke passed.
+
+## 2026-11-07 [FEATURE] SimpleSheets Desktop — M5 Complete
+
+- **Packaging**: `npm run electron:build` produced the per-user NSIS installer and portable executable; both unsigned with ASAR enabled.
+- **Association**: generated NSIS script contains exactly one `.ssjson` `APP_ASSOCIATE` with "Open with SimpleSheets"; no `UserChoice` write. Portable script registers nothing.
+- **Portable edition**: sets `PORTABLE_EXECUTABLE_DIR`; About reports `portable` plus the portable folder.
+- **Identity**: appId `au.mouseclick.simplesheets`, product `SimpleSheets`, per-user assisted installer, data preserved on uninstall.
+- **Docs**: README Electron build/install/signing section, `INSTALL-CHECKLIST.md`, and `M5-EVIDENCE.md` with sizes, SHA-256 hashes, script snippets, and unverified-environment list.
+- **Tests**: 214 suites / 4,653 passed / 0 skipped; E2E 34; packaged smoke pass.
+
+## 2026-11-07 [FEATURE] SimpleSheets Desktop — M6 Complete
+
+- **Trust boundary**: top-level-frame-only IPC; packaged builds trust only the app origin, dev adds localhost.
+- **Payloads**: strict unknown-field rejection across recents, recovery, menu state, legacy import, save dialogs, and writes.
+- **Path policy**: canonical real-path write allowlist, with real parent + basename for new files; `..` and symlink bypass tests pass.
+- **Navigation/shell**: `will-redirect` blocked, subframes rejected, `shell.showItemInFolder` only, external URLs length/control validated.
+- **Packaged security smoke**: CSP header/console, traversal, permissions, window-open, and 30-second idle network checks pass.
+- **Tests**: 215 suites / 4,661 passed / 0 skipped; E2E 35 tests.
+
+## 2026-11-07 [FEATURE] SimpleSheets Desktop — M7 Complete
+
+- **CSV navigation fix**: removed whole-workbook lz-string compression from every App render in CloudStorageModal; 5,000-row navigation 425 ms → ~16 ms/key.
+- **Large open fix**: replaced O(n²) `order.includes()` topological-sort tail with an O(n) `visited` pass; 9 MB/50k-row open 18.9 s → ~3.0 s, save ~237 ms.
+- **Performance/leak E2E**: 5,000-row CSV budget, large open/save/memory, 20-cycle heap, cold start.
+- **Packaging evidence**: 108 MB installer / 99 MB portable / 312 MB unpacked; peak large-workbook memory ~570 MB.
+- **Docs**: `M7-PERF.md`, README desktop section, MANUAL desktop section, install checklist.
+- **Tests**: 215 suites / 4,661 passed / 0 skipped; E2E 51 tests; packaged smoke pass.
+
+## 2026-11-07 [PERF] Closed-modal render work audit
+
+- Audited always-mounted components after the CSV navigation regression.
+- `ChartDialog` was still calling `findDataRange` and extracting chart data while closed; both are now gated by `isOpen`.
+- Added a large-workbook navigation budget to the performance E2E.
+- Full verification: 215 suites / 4,661 passed; E2E 51 passed.
+
+## 2026-11-07 [FEATURE] SimpleSheets Desktop — M8 Complete
+
+- Generated `docs/desktop/FINAL-REPORT.md` with all 139 requirement IDs tagged: 129 automated-pass, 10 manual-pass, 0 unverified-environment, 0 failed.
+- Consolidated manual installer/association/portable/clean-machine checklist plus scaling, OS shutdown, share-lock, recovery-limit, recent parity, IO/About, and clean-npm-ci checks.
+- Final verification: 215 suites / 4,661 passed / 0 skipped; E2E 51 passed; full NSIS/portable build; packaged security/idle smoke pass.
+- Final artifacts: NSIS ~109 MB `3dc341d2…`, portable ~99 MB `619e1ab6…`, unpacked 312 MB.
+- Installer, association, upgrade, uninstall, and portable launch were user-verified; no publish or release was performed.

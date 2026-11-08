@@ -2038,9 +2038,10 @@ function topologicalSort(deps: DependencyGraph, cells: Record<string, Cell>): st
     }
   }
 
-  // Also include non-formula cells that might be referenced
+  // Also include non-formula cells that might be referenced. `visited` holds
+  // every formula key, so this is O(n) rather than O(n²) via order.includes().
   for (const key of Object.keys(cells)) {
-    if (!order.includes(key)) {
+    if (!visited.has(key)) {
       order.push(key);
     }
   }

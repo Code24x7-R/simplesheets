@@ -26,6 +26,11 @@ export interface IncomingImport {
   rawText?: string;
   /** Detected delimiter for CSV/TSV (may be overridden in the dialog). */
   detectedDelimiter?: string;
+  /** Real filesystem path when opened through the desktop edition. */
+  sourcePath?: string;
+  /** On-disk version at open time, for desktop save conflict detection. */
+  sourceMtimeMs?: number;
+  sourceSize?: number;
 }
 
 /** Options confirmed by the import scope dialog. */

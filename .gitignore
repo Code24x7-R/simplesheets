@@ -4,7 +4,11 @@ yarn.pnpm-lock.yaml
 
 # Build output
 dist/
-build/
+dist-electron/
+release/
+build/*
+!build/icon.ico
+!build/icon.png
 .vite/
 
 # TypeScript
@@ -28,6 +32,8 @@ desktop.ini
 
 # Testing
 coverage/
+test-results/
+playwright-report/
 cypress/videos/
 cypress/screenshots/
 cypress/downloads/
@@ -41,7 +47,11 @@ yarn-error.log*
 # Agent/runtime
 .pi/
 
+# Syncthing conflict copies (never commit these)
+*.sync-conflict-*
+
 # Misc
 *.local
 .cache/
 .temp/
+tmp/

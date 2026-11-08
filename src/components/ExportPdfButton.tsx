@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
 import { useCallback, useState, forwardRef } from 'react';
-import { downloadPdf } from '../services/pdfExport';
+import { downloadPdf, generatePdf } from '../services/pdfExport';
+import { getPlatform } from '../platform';
+import { saveExport } from '../platform/export';
 import type { Sheet } from '../types';
 import { usePrintSetup } from '../context/PrintSetupContext';
 
@@ -21,7 +23,17 @@ export const ExportPdfButton = forwardRef<HTMLButtonElement, ExportPdfButtonProp
     const handleClick = useCallback(async () => {
       setLoading(true);
       try {
-        await downloadPdf(sheet, { setup, title: sheet.name });
+        if (getPlatform().capabilities.nativeFileDialogs) {
+          const blob = await generatePdf(sheet, { setup, title: sheet.name });
+          await saveExport({
+            data: blob,
+            suggestedName: `${sheet.name || 'Sheet'}.pdf`,
+            filters: [{ name: 'PDF document', extensions: ['pdf'] }],
+            download: () => downloadPdf(sheet, { setup, title: sheet.name }),
+          });
+        } else {
+          await downloadPdf(sheet, { setup, title: sheet.name });
+        }
       } catch (err) {
         onError?.(err instanceof Error ? err.message : /* istanbul ignore next */ 'PDF generation failed');
       } finally {

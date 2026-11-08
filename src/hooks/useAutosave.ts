@@ -12,12 +12,15 @@ const AUTOSAVE_DEBOUNCE_MS = 500;
  * The save is debounced to avoid excessive writes during rapid editing.
  *
  * @param workbook - The workbook state to auto-save.
+ * @param options.enabled - False on desktop, where recovery.json replaces localStorage.
  */
-export function useAutosave(workbook: Workbook): void {
+export function useAutosave(workbook: Workbook, options?: { enabled?: boolean }): void {
+  const enabled = options?.enabled ?? true;
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isFirstRender = useRef(true);
 
   useEffect(() => {
+    if (!enabled) return;
     // Skip the first render to avoid saving the initial demo workbook unnecessarily
     if (isFirstRender.current) {
       isFirstRender.current = false;
@@ -39,5 +42,5 @@ export function useAutosave(workbook: Workbook): void {
         clearTimeout(timerRef.current);
       }
     };
-  }, [workbook]);
+  }, [workbook, enabled]);
 }

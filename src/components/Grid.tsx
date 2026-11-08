@@ -157,6 +157,7 @@ const ROW_WIDTH = 50; // Width of row number column
 export interface GridHandle {
   focus: () => void;
   focusCell: (row: number, col: number) => void;
+  selectAll: () => void;
   getSelection: () => Selection | null;
   acceptPointSelection: () => void;
   /** Scroll the viewport to make the given cell visible. */
@@ -205,6 +206,21 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
       handleCellSelectRef.current(row, col);
       parentRef.current?.focus();
     },
+    selectAll: () => {
+      const all: Selection = {
+        type: 'cell',
+        startRow: 0,
+        startCol: 0,
+        endRow: Math.max(0, sheet.rowCount - 1),
+        endCol: Math.max(0, sheet.columnCount - 1),
+        anchorRow: 0,
+        anchorCol: 0,
+      };
+      setSelection(all);
+      onSelect?.(0, 0);
+      onSelectionChange?.(all);
+      parentRef.current?.focus();
+    },
     getSelection: () => selectionRef.current,
     acceptPointSelection: () => acceptPointSelectionRef.current(),
     scrollToCell: (row: number, col: number) => {
@@ -213,7 +229,7 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
       rowVirtualizerRef.current.scrollToIndex(row, { align: 'auto' });
       columnVirtualizerRef.current.scrollToIndex(col, { align: 'auto' });
     },
-  }), [parentRef]);
+  }), [parentRef, onSelect, onSelectionChange, sheet.columnCount, sheet.rowCount]);
 
   // Define the accept point selection logic (shared between Enter key and touch button)
   acceptPointSelectionRef.current = () => {

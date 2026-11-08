@@ -10,7 +10,7 @@
  * can be wired up.
  */
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import type { ComponentType, SVGProps } from 'react';
 import {
   X,
@@ -28,7 +28,7 @@ import {
 } from 'lucide-react';
 import type { Workbook } from '../types';
 import type { CloudProvider } from '../cloud/types';
-import { encodeDocToUrl, estimateShareSize, canShareViaUrl } from '../utils/shareUrl';
+import { encodeDocToUrl, estimateShareSize, MAX_SHARE_URL_SIZE } from '../utils/shareUrl';
 import { downloadDocument, shareDocument } from '../utils/webShare';
 import { readWorkbookFile, ACCEPTED_FILE_TYPES } from '../utils/fileIO';
 
@@ -157,15 +157,18 @@ export function CloudStorageModal({
 
   // ─── Size guard ─────────────────────────────────────────────────────────
 
-  let linkTooLarge = false;
-  let linkSizeLabel = '';
-  try {
-    const size = estimateShareSize(workbook);
-    linkTooLarge = !canShareViaUrl(workbook);
-    linkSizeLabel = `${Math.round(size / 1024)} KB`;
-  } catch {
-    linkTooLarge = true;
-  }
+  // Serializing/compressing the workbook is expensive on large sheets. Do it
+  // only while this modal is open, not on every parent render (cell navigation).
+  const shareSize = useMemo(() => {
+    if (!isOpen) return null;
+    try {
+      return estimateShareSize(workbook);
+    } catch {
+      return Number.POSITIVE_INFINITY;
+    }
+  }, [isOpen, workbook]);
+  const linkTooLarge = shareSize !== null && shareSize > MAX_SHARE_URL_SIZE;
+  const linkSizeLabel = shareSize === null ? '' : `${Math.round(shareSize / 1024)} KB`;
 
   // ─── Userland handlers ──────────────────────────────────────────────────
 

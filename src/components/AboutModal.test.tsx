@@ -111,7 +111,7 @@ describe('AboutModal', () => {
 
   it('renders a copy button next to version info', () => {
     render(<AboutModal isOpen={true} onClose={jest.fn()} />);
-    expect(screen.getByLabelText('Copy version info')).toBeInTheDocument();
+    expect(screen.getByLabelText('Copy diagnostics')).toBeInTheDocument();
   });
 
   it('copies labeled version info to clipboard when copy button is clicked', async () => {
@@ -121,7 +121,7 @@ describe('AboutModal', () => {
 
     render(<AboutModal isOpen={true} onClose={jest.fn()} />);
 
-    const copyBtn = screen.getByLabelText('Copy version info');
+    const copyBtn = screen.getByLabelText('Copy diagnostics');
     fireEvent.click(copyBtn);
 
     // Wait for the async clipboard write to resolve
@@ -131,7 +131,7 @@ describe('AboutModal', () => {
     expect(writeMock).toHaveBeenCalled();
     const lastCall = writeMock.mock.calls[writeMock.mock.calls.length - 1];
     const copiedText = lastCall[0] as string;
-    expect(copiedText).toContain('Version: 0.1.0');
+    expect(copiedText).toContain('SimpleSheets 0.1.0');
     expect(copiedText).toContain('Build:');
     expect(copiedText).toContain('2024-03-01');
     expect(copiedText).toContain('Commit: abc1234');
@@ -146,7 +146,7 @@ describe('AboutModal', () => {
 
     render(<AboutModal isOpen={true} onClose={jest.fn()} />);
 
-    const copyBtn = screen.getByLabelText('Copy version info');
+    const copyBtn = screen.getByLabelText('Copy diagnostics');
     fireEvent.click(copyBtn);
 
     await new Promise((r) => setTimeout(r, 0));
@@ -155,7 +155,7 @@ describe('AboutModal', () => {
     expect(writeMock).toHaveBeenCalled();
     const lastCall = writeMock.mock.calls[writeMock.mock.calls.length - 1];
     const copiedText = lastCall[0] as string;
-    expect(copiedText).toContain('Version: 0.1.0');
+    expect(copiedText).toContain('SimpleSheets 0.1.0');
     expect(copiedText).toContain('Build: dev');
     expect(copiedText).toContain('Commit: unknown');
   });
@@ -164,7 +164,7 @@ describe('AboutModal', () => {
     jest.useFakeTimers();
     render(<AboutModal isOpen={true} onClose={jest.fn()} />);
 
-    const copyBtn = screen.getByLabelText('Copy version info');
+    const copyBtn = screen.getByLabelText('Copy diagnostics');
 
     await act(async () => {
       fireEvent.click(copyBtn);

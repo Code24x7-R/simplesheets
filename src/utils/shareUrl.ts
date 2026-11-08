@@ -18,7 +18,7 @@ import type { Workbook } from '../types';
  * Browsers support ~2MB URLs, but paste bins, chat apps, and email clients
  * truncate at 2KB–16KB. 16KB is conservative — works in most contexts.
  */
-const MAX_URL_SIZE = 16 * 1024;
+export const MAX_SHARE_URL_SIZE = 16 * 1024;
 
 /** Fragment identifier used to detect a shared document in the URL. */
 export const DOC_FRAGMENT_PREFIX = '#doc=';
@@ -73,5 +73,5 @@ export function estimateShareSize(workbook: Workbook): number {
  * @returns True if the encoded URL would be within MAX_URL_SIZE.
  */
 export function canShareViaUrl(workbook: Workbook): boolean {
-  return estimateShareSize(workbook) <= MAX_URL_SIZE;
+  return estimateShareSize(workbook) <= MAX_SHARE_URL_SIZE;
 }

@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
 import { useCallback, forwardRef } from 'react';
-import { downloadJson } from '../services/jsonService';
+import { downloadJson, exportJson } from '../services/jsonService';
+import { saveExport } from '../platform/export';
 import type { Workbook } from '../types';
 
 interface ExportJsonButtonProps {
@@ -13,8 +14,13 @@ interface ExportJsonButtonProps {
  */
 export const ExportJsonButton = forwardRef<HTMLButtonElement, ExportJsonButtonProps>(
   function ExportJsonButton({ workbook }, ref) {
-    const handleClick = useCallback(() => {
-      downloadJson(workbook);
+    const handleClick = useCallback(async () => {
+      await saveExport({
+        data: exportJson(workbook),
+        suggestedName: `${workbook.title || 'Workbook'}.json`,
+        filters: [{ name: 'JSON document', extensions: ['json'] }],
+        download: () => downloadJson(workbook),
+      });
     }, [workbook]);
 
     return (
