@@ -460,5 +460,6 @@ Method: Windows `10.0.26300` x64, Node `23.11.0`, Electron `45.2.3`, Playwright
   PKG-13 (per-user installer, no elevation).
 - Clean `npm ci` verification: `npm ci`, `npm run build`, and
   `npm run electron:build:dir` succeeded in a temp copy.
-- Remaining unverified items: APP-11 (OS shutdown) and APP-14 (display scaling).
+- APP-11 (OS shutdown/logoff) and APP-14 (100/125/150% display scaling) were
+  user-verified. No unverified-environment requirements remain.
 - No failed requirements are reported. No artifacts were published.

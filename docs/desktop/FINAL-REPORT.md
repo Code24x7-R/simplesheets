@@ -13,8 +13,8 @@ with a manual procedure.
 | Level | Count |
 | --- | ---: |
 | automated-pass | 129 |
-| manual-pass | 8 |
-| unverified-environment | 2 |
+| manual-pass | 10 |
+| unverified-environment | 0 |
 | failed | 0 |
 | **total** | **139** |
 
@@ -51,10 +51,10 @@ and hashes are in `M5-EVIDENCE.md`; performance method/results are in
 | APP-08 | automated-pass | Electron main/preload; E2E and packaged smoke. | Packaged smoke: 30 s idle request log empty. |
 | APP-09 | automated-pass | Electron main/preload; E2E and packaged smoke. | Vite electron build; packaged asset load. |
 | APP-10 | automated-pass | Electron main/preload; E2E and packaged smoke. | Hidden BrowserWindow + renderer:ready handshake. |
-| APP-11 | unverified-environment | Electron main/preload; E2E and packaged smoke. | OS shutdown/logoff is outside E2E; manual checklist. |
+| APP-11 | manual-pass | Electron main/preload; E2E and packaged smoke. | User-verified: OS shutdown/logoff behavior checked; recovery behavior acceptable. |
 | APP-12 | automated-pass | Electron main/preload; E2E and packaged smoke. | desktopStateStore corrupt/atomic tests. |
 | APP-13 | automated-pass | Electron main/preload; E2E and packaged smoke. | Covered by the cited suite/code check. |
-| APP-14 | unverified-environment | Electron main/preload; E2E and packaged smoke. | Display scaling/focus requires a real display; manual checklist. |
+| APP-14 | manual-pass | Electron main/preload; E2E and packaged smoke. | User-verified: 100%, 125%, and 150% display scaling; no clipping or focus loss. |
 
 ## Open pipeline (OPEN)
 
@@ -225,12 +225,10 @@ and hashes are in `M5-EVIDENCE.md`; performance method/results are in
 
 ## Failed requirements
 
-None. Remaining gaps are `unverified-environment` and listed below.
+None.
 
 ## Manual checklist
 
-Installer/association/portable/upgrade/uninstall checks were user-verified.
-Remaining manual checks:
-
-- Windows display scaling at 100%, 125%, and 150% (APP-14).
-- OS shutdown/logoff recovery behavior (APP-11).
+All previously unverified-environment checks have now been user-verified:
+installer/association/upgrade/uninstall/portable, display scaling, and OS
+shutdown/logoff recovery. No manual checks remain.

@@ -1283,7 +1283,7 @@
 
 ## 2026-11-07 [FEATURE] SimpleSheets Desktop — M8 Complete
 
-- Generated `docs/desktop/FINAL-REPORT.md` with all 139 requirement IDs tagged: 129 automated-pass, 8 manual-pass, 2 unverified-environment, 0 failed.
+- Generated `docs/desktop/FINAL-REPORT.md` with all 139 requirement IDs tagged: 129 automated-pass, 10 manual-pass, 0 unverified-environment, 0 failed.
 - Consolidated manual installer/association/portable/clean-machine checklist plus scaling, OS shutdown, share-lock, recovery-limit, recent parity, IO/About, and clean-npm-ci checks.
 - Final verification: 215 suites / 4,660 passed / 1 skipped; E2E 51 passed; full NSIS/portable build; packaged security/idle smoke pass.
 - Final artifacts: NSIS ~109 MB `3dc341d2…`, portable ~99 MB `619e1ab6…`, unpacked 312 MB.

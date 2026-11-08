@@ -8,12 +8,12 @@ ids = re.findall(r'^- \*\*([A-Z]+-\d+)\*\*', spec, re.M)
 assert len(ids) == 139, len(ids)
 
 unverified = {
-    'APP-11': 'OS shutdown/logoff is outside E2E; manual checklist.',
-    'APP-14': 'Display scaling/focus requires a real display; manual checklist.',
 }
 
 manual_pass = {
     'APP-02': 'Verified manually: electron:dev starts Vite + Electron, loads the dev server, and HMR works.',
+    'APP-11': 'User-verified: OS shutdown/logoff behavior checked; recovery behavior acceptable.',
+    'APP-14': 'User-verified: 100%, 125%, and 150% display scaling; no clipping or focus loss.',
     'OPEN-02': 'User-verified: double-click / Open with .ssjson launched the installed app.',
     'PKG-02': 'User-verified: per-user install upgraded in place and preserved data/association.',
     'PKG-03': 'User-verified: portable launched; About showed portable/folder; no association.',
@@ -229,15 +229,13 @@ for prefix, title in groups:
 out += [
     '## Failed requirements',
     '',
-    'None. Remaining gaps are `unverified-environment` and listed below.',
+    'None.',
     '',
     '## Manual checklist',
     '',
-    'Installer/association/portable/upgrade/uninstall checks were user-verified.',
-    'Remaining manual checks:',
-    '',
-    '- Windows display scaling at 100%, 125%, and 150% (APP-14).',
-    '- OS shutdown/logoff recovery behavior (APP-11).',
+    'All previously unverified-environment checks have now been user-verified:',
+    'installer/association/upgrade/uninstall/portable, display scaling, and OS',
+    'shutdown/logoff recovery. No manual checks remain.',
 ]
 Path('docs/desktop/FINAL-REPORT.md').write_text('\n'.join(out) + '\n', encoding='utf-8')
 print(f'wrote {len(ids)} requirements: {counts}')

@@ -59,18 +59,18 @@ Known M1 limitations:
 
 Final report: `docs/desktop/FINAL-REPORT.md`.
 
-- **139 requirements tagged**: 129 automated-pass, 8 manual-pass,
-  2 unverified-environment, 0 failed.
-- Manual checklist now tracks the remaining display scaling and OS shutdown
-  checks only.
+- **139 requirements tagged**: 129 automated-pass, 10 manual-pass,
+  0 unverified-environment, 0 failed.
+- Manual checklist: all previously unverified checks are now user-verified;
+  none remain.
 - Final verification: `npm run verify` 215 suites / 4,660 passed / 1 skipped;
   `npm run verify:e2e` 51 tests passed; `npm run electron:build` produced both
   artifacts; packaged smoke passed including security and 30 s idle checks.
 - Final artifacts: NSIS ~109 MB (`3dc341d2…8c43`), portable ~99 MB
   (`619e1ab6…a784`), unpacked 312 MB.
 
-Remaining work is intentionally **unverified-environment**, not failed:
-OS shutdown/logoff and display scaling.
+No unverified-environment or failed requirements remain. The final report is
+complete at 129 automated-pass and 10 manual-pass.
 
 ---
 
