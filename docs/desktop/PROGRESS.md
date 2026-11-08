@@ -59,22 +59,18 @@ Known M1 limitations:
 
 Final report: `docs/desktop/FINAL-REPORT.md`.
 
-- **139 requirements tagged**: 113 automated-pass, 1 manual-pass,
-  25 unverified-environment, 0 failed.
-- Manual checklist consolidates installer/association/portable/clean-machine
-  checks plus display scaling, OS shutdown, share-lock, >100 MB recovery,
-  missing-recent dialogs, PDF/Import/Copy Link clipboard paths, About actions,
-  and clean `npm ci` reproducibility.
-- Final verification: `npm run verify` 215 suites / 4,661 passed / 0 skipped;
-  `npm run verify:e2e` 41 tests passed; `npm run electron:build` produced both
-  artifacts; packaged smoke passed including security and 30 s idle checks.
-- Final artifacts: NSIS ~109 MB (`ef223f2e…59d3`), portable ~99 MB
-  (`73a645b0…d2f3`), unpacked 312 MB.
+- **139 requirements tagged**: 129 automated-pass, 10 manual-pass,
+  0 unverified-environment, 0 failed.
+- Manual checklist: all previously unverified checks are now user-verified;
+  none remain.
+- Final verification: `npm run verify` 219 suites / 4,707 passed / 0 skipped;
+  `npm run verify:e2e` 53 tests passed; `npm run electron:build` produced both
+  artifacts; packaged smoke passed including security, local-fonts, and 30 s idle checks.
+- Final artifacts: NSIS ~109 MB (`677bde67…e0f4`), portable ~99 MB
+  (`e7b1b785…19ef`), unpacked 312 MB.
 
-Remaining work is intentionally **unverified-environment**, not failed:
-installer execution, association/Open With, upgrade/uninstall cycles, portable
-wrapper launch, SmartScreen/antivirus, OS shutdown/logoff, scaling, actual
-share-lock, and clean `npm ci`.
+No unverified-environment or failed requirements remain. The final report is
+complete at 129 automated-pass and 10 manual-pass.
 
 ---
 
@@ -139,7 +135,9 @@ Hardening:
 - Write allowlist keys now use `realpath` (or the real parent + basename for a
   new file), so symlink and `..` aliases cannot bypass the approved path.
 - `will-redirect` is blocked like `will-navigate`; window-open, webview attach,
-  permissions, and external schemes remain denied/validated.
+  permissions, and external schemes remain denied/validated. The sole
+  exception is `local-fonts` for the trusted top-level frame (system-font
+  picker).
 - `app:reveal-data-folder` uses `shell.showItemInFolder` on the fixed app data
   folder; no `shell.openPath` path operation remains.
 - Packaged CSP response header verified, CSP console checked, protocol

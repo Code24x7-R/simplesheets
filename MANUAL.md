@@ -690,7 +690,8 @@ Open the Find & Replace dialog with **Edit → Find & Replace…** or **Ctrl + H
 | **Italic** | Toolbar I, Format → Italic | `Ctrl + I` |
 | **Underline** | Toolbar U, Format → Underline | `Ctrl + U` |
 | **Strikethrough** | Toolbar S | — |
-| **Wrap Text** | Format → Wrap Text | — |
+| **Wrap Text** | Toolbar Wrap button, Format → Wrap Text | — |
+| **Font family** | Toolbar font picker | — |
 | **Font size** | Toolbar size box (type or pick), Format → Font Size | — |
 
 > **Custom font sizes** snap to the nearest standard size: type a value in the toolbar size box and press Enter (or click away). For example `11.5` becomes `12` and `13` becomes `14`. The box then shows the snapped size.
@@ -861,6 +862,10 @@ The frozen area is visually distinct (light blue background) and stays in place 
 ### Drag Resize
 
 Hover over the **right edge** of a column header or **bottom edge** of a row header. The cursor changes to a resize indicator. Drag to resize.
+
+**Double-click the same margin to auto-fit.** Columns size to their widest displayed value; rows size to wrapped or multiline content. Auto-fit respects the column 30–500 px and row 28–500 px limits.
+
+**Font family:** use the toolbar font picker to choose an installed system font (or a common fallback). The choice is saved with the workbook and used for display, PDF export, and Excel export.
 
 > **Touch support:** On mobile/touch devices, the resize handle responds to touch-drag gestures.
 
@@ -1527,7 +1532,7 @@ Restrict cell input to predefined criteria with custom error alerts:
 3. **Start a formula with `=`** (e.g., `=SUM(A1:A10)`)
 4. **Use `$` for absolute references** (e.g., `$A$1` won't shift on paste)
 5. **Freeze panes** via View menu to keep headers visible while scrolling
-6. **Resize columns/rows** by dragging header borders or use Format → Column / Row Size…
+6. **Resize columns/rows** by dragging header borders, double-click a margin to auto-fit, or use Format → Column / Row Size…
 7. **Escape** clears the marching-ants clipboard selection
 8. **Type `=SUM(` then click cells or drag** to build ranges visually
 9. **Ctrl + F2** moves focus between formula bar and grid

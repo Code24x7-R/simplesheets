@@ -140,10 +140,18 @@ function detectExportType(raw: string): { type: XLSX.ExcelDataType; value: unkno
 function convertCellStyle(style: NonNullable<Cell['style']>): object {
   const result: Record<string, unknown> = {};
 
-  if (style.fontWeight || style.fontStyle || style.color || style.textDecoration || style.fontSize) {
+  if (
+    style.fontWeight ||
+    style.fontStyle ||
+    style.color ||
+    style.textDecoration ||
+    style.fontSize ||
+    style.fontFamily
+  ) {
     result.font = {};
     if (style.fontWeight === 'bold') (result.font as Record<string, unknown>).bold = true;
     if (style.fontStyle === 'italic') (result.font as Record<string, unknown>).italic = true;
+    if (style.fontFamily) (result.font as Record<string, unknown>).name = style.fontFamily;
     if (style.color) (result.font as Record<string, unknown>).color = { rgb: style.color.replace('#', '') };
     // SheetJS/Excel store font size in points; the app stores CSS pixels.
     if (style.fontSize) {

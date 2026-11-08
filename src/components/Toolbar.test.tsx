@@ -17,6 +17,10 @@ describe('Toolbar', () => {
     onSetNumberFormat: jest.fn(),
     onSetFontSize: jest.fn(),
     currentFontSize: 14,
+    onSetFontFamily: jest.fn(),
+    currentFontFamily: undefined,
+    onToggleWrapText: jest.fn(),
+    isWrapText: false,
     onSetBorderTop: jest.fn(),
     onSetBorderBottom: jest.fn(),
     onSetBorderLeft: jest.fn(),
@@ -71,6 +75,24 @@ describe('Toolbar', () => {
     fireEvent.change(input, { target: { value: '11.5' } });
     fireEvent.keyDown(input, { key: 'Enter' });
     expect(defaultProps.onSetFontSize).toHaveBeenCalledWith(12);
+  });
+
+  it('renders the font family picker with the current family', () => {
+    render(<Toolbar {...defaultProps} currentFontFamily="Georgia" />);
+    expect(screen.getByLabelText('Font Family').textContent).toContain('Georgia');
+  });
+
+  it('calls onToggleWrapText when the wrap button is clicked', () => {
+    render(<Toolbar {...defaultProps} />);
+    fireEvent.click(screen.getByTestId('toolbar-wrap-text'));
+    expect(defaultProps.onToggleWrapText).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows the wrap button as active when wrapping is enabled', () => {
+    render(<Toolbar {...defaultProps} isWrapText />);
+    const button = screen.getByTestId('toolbar-wrap-text');
+    expect(button.getAttribute('aria-pressed')).toBe('true');
+    expect(button.className).toContain('bg-blue-100');
   });
 
   it('calls onToggleBold when bold button is clicked', () => {

@@ -300,6 +300,14 @@ function extractCellStyle(el: HTMLElement): CellStyle | null {
     }
   }
 
+  // font-family
+  const fontFamily = extractCssValue(style, 'font-family');
+  if (fontFamily) {
+    // Keep the first named family; generic fallbacks are implied by the app.
+    const first = fontFamily.split(',')[0]?.trim().replace(/^['"]|['"]$/g, '');
+    if (first) css.fontFamily = first;
+  }
+
   // font-style
   const fontStyle = extractCssValue(style, 'font-style');
   if (fontStyle === 'italic') {

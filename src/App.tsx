@@ -76,6 +76,7 @@ import { applyPasteOptions } from './utils/pasteSpecial';
 import type { PasteMode } from './utils/pasteSpecial';
 import { isEditableTarget } from './utils/dom';
 import { computeAutoRowHeights, applyAutoRowHeights, ROW_LINE_HEIGHT } from './utils/rowHeight';
+import { clampColumnWidth, clampRowHeight } from './utils/autoSize';
 import { extractColumnWidths, applyColumnWidths } from './utils/pasteWidths';
 import { sortRange, getCurrentRegion } from './utils/sheetSort';
 import { SortDialog } from './components/SortDialog';
@@ -1686,10 +1687,11 @@ function WorkbookView() {
 
   const handleColumnResize = useCallback(
     (col: number, newWidth: number) => {
+      const width = clampColumnWidth(newWidth);
       const newSheets = workbook.sheets.map((s, idx) => {
         if (idx !== workbook.activeSheetIndex) return s;
         const previousAuto = computeAutoRowHeights(s);
-        const resized = { ...s, columnWidths: { ...s.columnWidths, [col]: newWidth } };
+        const resized = { ...s, columnWidths: { ...s.columnWidths, [col]: width } };
         // Column width changes how wrapped cells wrap — recompute row heights.
         return applyAutoRowHeights(resized, previousAuto);
       });
@@ -1698,18 +1700,19 @@ function WorkbookView() {
         sheets: newSheets,
         lastModified: Date.now(),
       };
-      pushHistory(newWorkbook, `Resize column ${colToLetter(col)} to ${newWidth}px`, filterStateRef.current, gridSelectionRef.current);
+      pushHistory(newWorkbook, `Resize column ${colToLetter(col)} to ${width}px`, filterStateRef.current, gridSelectionRef.current);
     },
     [workbook, pushHistory]
   );
 
   const handleRowResize = useCallback(
     (row: number, newHeight: number) => {
+      const height = clampRowHeight(newHeight);
       const newSheets = workbook.sheets.map((s, idx) => {
         if (idx !== workbook.activeSheetIndex) return s;
         return {
           ...s,
-          rowHeights: { ...s.rowHeights, [row]: Math.max(newHeight, ROW_LINE_HEIGHT) },
+          rowHeights: { ...s.rowHeights, [row]: height },
         };
       });
       const newWorkbook: Workbook = {
@@ -1717,7 +1720,7 @@ function WorkbookView() {
         sheets: newSheets,
         lastModified: Date.now(),
       };
-      pushHistory(newWorkbook, `Resize row ${row + 1} to ${newHeight}px`, filterStateRef.current, gridSelectionRef.current);
+      pushHistory(newWorkbook, `Resize row ${row + 1} to ${height}px`, filterStateRef.current, gridSelectionRef.current);
     },
     [workbook, pushHistory]
   );
@@ -2805,6 +2808,7 @@ function WorkbookView() {
     setNumberFormat,
     toggleWrapTextStyle,
     setFontSizeStyle,
+    setFontFamilyStyle,
     clearCellStyles,
     borderColor,
     setBorderColor,
@@ -4216,6 +4220,10 @@ function WorkbookView() {
         onSetNumberFormat={setNumberFormat}
         onSetFontSize={setFontSizeStyle}
         currentFontSize={styleState.fontSize}
+        onSetFontFamily={setFontFamilyStyle}
+        currentFontFamily={styleState.fontFamily}
+        onToggleWrapText={toggleWrapTextStyle}
+        isWrapText={styleState.whiteSpace === 'normal'}
         onSetBorderTop={setBorderTop}
         onSetBorderBottom={setBorderBottom}
         onSetBorderLeft={setBorderLeft}

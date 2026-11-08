@@ -150,6 +150,8 @@ export interface CellStyleState {
   fontWeight: 'normal' | 'bold' | number;
   fontStyle: 'normal' | 'italic';
   fontSize: number;
+  /** Stored font family, if any. */
+  fontFamily: string | undefined;
   textDecoration: 'none' | 'underline' | 'line-through';
   color: string | undefined;
   backgroundColor: string | undefined;
@@ -163,6 +165,7 @@ export const DEFAULTCellStyle: CellStyleState = {
   fontWeight: 'normal',
   fontStyle: 'normal',
   fontSize: DEFAULT_FONT_SIZE,
+  fontFamily: undefined,
   textDecoration: 'none',
   color: undefined,
   backgroundColor: undefined,
@@ -180,6 +183,7 @@ export function deriveCellStyleState(style: CellStyle | undefined): CellStyleSta
     fontWeight: style?.fontWeight ?? 'normal',
     fontStyle: style?.fontStyle ?? 'normal',
     fontSize: style?.fontSize ?? DEFAULT_FONT_SIZE,
+    fontFamily: style?.fontFamily,
     textDecoration: style?.textDecoration ?? 'none',
     color: style?.color,
     backgroundColor: style?.backgroundColor,

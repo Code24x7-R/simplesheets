@@ -18,9 +18,9 @@ with a manual procedure.
 | failed | 0 |
 | **total** | **139** |
 
-Final checks: `npm run verify` (215 suites / 4,661 passed / 0 skipped),
-`npm run verify:e2e` (51 passed), `npm run electron:build` (NSIS + portable),
-and packaged smoke (argv/picker/save/security/30 s idle). Artifact measurements
+Final checks: `npm run verify` (219 suites / 4,707 passed / 0 skipped),
+`npm run verify:e2e` (53 passed), `npm run electron:build` (NSIS + portable),
+and packaged smoke (argv/picker/save/security/local-fonts/30 s idle). Artifact measurements
 and hashes are in `M5-EVIDENCE.md`; performance method/results are in
 `M7-PERF.md`.
 
@@ -32,7 +32,7 @@ and hashes are in `M5-EVIDENCE.md`; performance method/results are in
 | PLAT-02 | automated-pass | src/platform/types.ts; platform/index.test.ts; npm run verify. | Covered by the cited suite/code check. |
 | PLAT-03 | automated-pass | src/platform/types.ts; platform/index.test.ts; npm run verify. | Grep confirms no renderer electron/ipcRenderer/window bridge outside src/platform. |
 | PLAT-04 | automated-pass | src/platform/types.ts; platform/index.test.ts; npm run verify. | Covered by the cited suite/code check. |
-| PLAT-05 | automated-pass | src/platform/types.ts; platform/index.test.ts; npm run verify. | npm run verify: 215 suites / 4,661 passed / 0 skipped. |
+| PLAT-05 | automated-pass | src/platform/types.ts; platform/index.test.ts; npm run verify. | npm run verify: 219 suites / 4,707 passed / 0 skipped. |
 | PLAT-06 | automated-pass | src/platform/types.ts; platform/index.test.ts; npm run verify. | Electron renderer build + bundle grep. |
 | PLAT-07 | automated-pass | src/platform/types.ts; platform/index.test.ts; npm run verify. | Covered by the cited suite/code check. |
 | PLAT-08 | automated-pass | src/platform/types.ts; platform/index.test.ts; npm run verify. | CAPABILITY_MATRIX.md compared with desktop adapter. |
@@ -198,7 +198,7 @@ and hashes are in `M5-EVIDENCE.md`; performance method/results are in
 | SEC-06 | automated-pass | security.spec.ts; packaged smoke; path/origin tests. | open:recent allowlist test; preload path policy. |
 | SEC-07 | automated-pass | security.spec.ts; packaged smoke; path/origin tests. | packaged CSP header + no console violations. |
 | SEC-08 | automated-pass | security.spec.ts; packaged smoke; path/origin tests. | window.open denial; navigation/redirect guards. |
-| SEC-09 | automated-pass | security.spec.ts; packaged smoke; path/origin tests. | packaged geolocation denial. |
+| SEC-09 | automated-pass | security.spec.ts; packaged smoke; path/origin tests. | packaged geolocation denial; local-fonts allowed only for trusted top-level frame; font E2E. |
 | SEC-10 | automated-pass | security.spec.ts; packaged smoke; path/origin tests. | assetPath tests + packaged traversal. |
 | SEC-11 | automated-pass | security.spec.ts; packaged smoke; path/origin tests. | packaged menu has no Reload; devTools false. |
 | SEC-12 | automated-pass | security.spec.ts; packaged smoke; path/origin tests. | packaged 30 s idle log empty. |

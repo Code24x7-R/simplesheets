@@ -140,6 +140,9 @@ export function importExcel(
               if (s.font) {
                 if (s.font.bold) style.fontWeight = 'bold';
                 if (s.font.italic) style.fontStyle = 'italic';
+                if (typeof s.font.name === 'string' && s.font.name.trim()) {
+                  style.fontFamily = s.font.name.trim();
+                }
                 if (s.font.color?.rgb) style.color = `#${s.font.color.rgb.slice(2)}`;
                 // SheetJS/Excel store font size in points; the app stores CSS pixels.
                 const sz = Number(s.font.sz);

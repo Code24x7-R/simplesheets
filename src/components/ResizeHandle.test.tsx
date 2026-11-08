@@ -150,6 +150,55 @@ describe('ResizeHandle', () => {
     expect(onResizeMove).toHaveBeenCalledTimes(callCountAfterUp);
   });
 
+
+  it('does not commit a resize when the handle is clicked without moving', () => {
+    const onResizeEnd = jest.fn();
+    const onResizeCancel = jest.fn();
+    const { container } = render(
+      <ResizeHandle
+        orientation="column"
+        currentSize={100}
+        onResizeEnd={onResizeEnd}
+        onResizeCancel={onResizeCancel}
+      />
+    );
+    const handle = container.firstChild as HTMLElement;
+
+    fireEvent.mouseDown(handle, { clientX: 100 });
+    fireEvent.mouseUp(document, { clientX: 100 });
+
+    expect(onResizeEnd).not.toHaveBeenCalled();
+    expect(onResizeCancel).toHaveBeenCalledTimes(1);
+  });
+
+  it('calls onAutoFit on double-click without committing a drag', () => {
+    const onAutoFit = jest.fn();
+    const onResizeEnd = jest.fn();
+    const { container } = render(
+      <ResizeHandle
+        orientation="column"
+        currentSize={100}
+        onAutoFit={onAutoFit}
+        onResizeEnd={onResizeEnd}
+      />
+    );
+    const handle = container.firstChild as HTMLElement;
+
+    fireEvent.doubleClick(handle);
+
+    expect(onAutoFit).toHaveBeenCalledTimes(1);
+    expect(onResizeEnd).not.toHaveBeenCalled();
+  });
+
+  it('supports auto-fit on row orientation', () => {
+    const onAutoFit = jest.fn();
+    const { container } = render(
+      <ResizeHandle orientation="row" currentSize={28} onAutoFit={onAutoFit} />
+    );
+    fireEvent.doubleClick(container.firstChild as HTMLElement);
+    expect(onAutoFit).toHaveBeenCalledTimes(1);
+  });
+
   // ─── Touch support (mobile) ─────────────────────────────────────────
 
   it('calls onResizeStart, onResizeMove, and onResizeEnd during a touch drag', () => {

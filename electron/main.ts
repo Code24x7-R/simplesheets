@@ -45,6 +45,7 @@ import { resolveEdition } from '../src/platform/desktop/core/edition';
 import { hasOnlyKeys } from '../src/platform/desktop/core/ipcValidation';
 import { NATIVE_SHORTCUTS, nativeShortcutAction } from '../src/platform/desktop/core/shortcutOwner';
 import { allowWritePath, isWritePathAllowed, registerSaveHandlers } from './saveHandlers';
+import { isAllowedDesktopPermission } from '../src/platform/desktop/core/permissionPolicy';
 
 const DEV_URL = 'http://localhost:3000';
 const APP_URL = 'app://simplesheets/index.html';
@@ -733,13 +734,42 @@ async function handleAppRequest(request: Request): Promise<Response> {
 }
 
 /**
- * Deny every permission request and check. The app needs no device access.
+ * Permission policy: deny everything except the Local Font Access API for the
+ * trusted top-level app frame. The font picker uses that API to enumerate
+ * installed families; no camera, microphone, location, notification, or
+ * clipboard-read access is ever granted.
  */
 function setupPermissions(): void {
+  const isTrustedPermissionSource = (
+    webContents: Electron.WebContents | null,
+    requestingUrl: string,
+    isMainFrame: boolean,
+  ): boolean =>
+    isMainFrame &&
+    webContents !== null &&
+    webContents === mainWindow?.webContents &&
+    isTrustedOrigin(requestingUrl, TRUSTED_ORIGINS);
+
   session.defaultSession.setPermissionRequestHandler(
-    (_webContents, _permission, callback) => callback(false),
+    (webContents, permission, callback, details) => {
+      const trusted = isTrustedPermissionSource(
+        webContents,
+        details.requestingUrl,
+        details.isMainFrame,
+      );
+      callback(isAllowedDesktopPermission(permission, trusted));
+    },
   );
-  session.defaultSession.setPermissionCheckHandler(() => false);
+  session.defaultSession.setPermissionCheckHandler(
+    (webContents, permission, requestingOrigin, details) => {
+      const trusted = isTrustedPermissionSource(
+        webContents,
+        details.requestingUrl ?? requestingOrigin,
+        details.isMainFrame,
+      );
+      return isAllowedDesktopPermission(permission, trusted);
+    },
+  );
 }
 
 /**

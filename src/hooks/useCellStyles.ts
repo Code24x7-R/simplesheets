@@ -49,6 +49,8 @@ interface UseCellStylesReturn {
   toggleWrapTextStyle: () => void;
   /** Set the font size (px) on the selected cells. */
   setFontSizeStyle: (size: number) => void;
+  /** Set (or clear) the font family on the selected cells. */
+  setFontFamilyStyle: (family: string | undefined) => void;
   /** Clear all styling from the selected cells. */
   clearCellStyles: () => void;
   /** Current border color for the next border application. */
@@ -223,6 +225,18 @@ export function useCellStyles({
 
   const setFontSizeStyle = useCallback(
     (size: number) => applyStyle(() => ({ fontSize: size }), `Font size ${size}px`, { recomputeRowHeights: true }),
+    [applyStyle]
+  );
+
+  const setFontFamilyStyle = useCallback(
+    (family: string | undefined) => {
+      const normalized = family?.trim() || undefined;
+      applyStyle(
+        () => ({ fontFamily: normalized }),
+        normalized ? `Font ${normalized}` : 'Default font',
+        { recomputeRowHeights: true },
+      );
+    },
     [applyStyle]
   );
 
@@ -460,6 +474,7 @@ export function useCellStyles({
     setNumberFormat,
     toggleWrapTextStyle,
     setFontSizeStyle,
+    setFontFamilyStyle,
     clearCellStyles,
     borderColor,
     setBorderColor: setBorderColorWithRef,

@@ -517,7 +517,7 @@ function computeRowRenderedHeight(
     const lineHeight = pdfLineHeight(fontSize);
 
     if (isWrappedCell(cell)) {
-      const font = `${fontSize}px ${PDF_FONT}`;
+      const font = `${fontSize}px ${cell.style?.fontFamily ?? PDF_FONT}`;
       const value = getCellValue(cell);
       const width = colWidths[c - bounds.startCol];
       const lines = countWrappedLines(value, width, font, cell.style?.whiteSpace === 'pre');
@@ -663,6 +663,7 @@ function applyCellStyle(el: HTMLElement, cell: Cell | undefined, fontScale: numb
   if (style) {
     if (style.fontWeight !== undefined) el.style.fontWeight = String(style.fontWeight);
     if (style.fontStyle) el.style.fontStyle = style.fontStyle;
+    if (style.fontFamily) el.style.fontFamily = style.fontFamily;
     if (style.fontSize) el.style.fontSize = `${style.fontSize * fontScale}px`;
     if (style.color) el.style.color = style.color;
     if (style.backgroundColor) el.style.backgroundColor = style.backgroundColor;

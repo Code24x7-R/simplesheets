@@ -19,6 +19,10 @@ interface ResizeHandleProps {
   onResizeMove?: (newSize: number) => void;
   /** Callback when resize completes with the new size. */
   onResizeEnd?: (newSize: number) => void;
+  /** Callback when the user double-clicks the margin to auto-fit. */
+  onAutoFit?: () => void;
+  /** Callback when a press ends without moving (clear drag state). */
+  onResizeCancel?: () => void;
 }
 
 /**
@@ -35,10 +39,13 @@ export function ResizeHandle({
   onResizeStart,
   onResizeMove,
   onResizeEnd,
+  onAutoFit,
+  onResizeCancel,
 }: ResizeHandleProps) {
   const startPos = useRef(0);
   const startSize = useRef(0);
   const isActive = useRef(false);
+  const moved = useRef(false);
   const handleRef = useRef<HTMLDivElement>(null);
 
   const handleMouseDown = useCallback(
@@ -47,6 +54,7 @@ export function ResizeHandle({
       e.stopPropagation();
 
       isActive.current = true;
+      moved.current = false;
       startPos.current = orientation === 'column' ? e.clientX : e.clientY;
       startSize.current = currentSize;
 
@@ -56,6 +64,7 @@ export function ResizeHandle({
         /* istanbul ignore next - defensive guard */
         if (!isActive.current) return;
         const delta = (orientation === 'column' ? moveEvent.clientX : moveEvent.clientY) - startPos.current;
+        if (delta !== 0) moved.current = true;
         const newSize = Math.min(maxSize, Math.max(minSize, startSize.current + delta));
         onResizeMove?.(newSize);
       };
@@ -65,8 +74,10 @@ export function ResizeHandle({
         if (!isActive.current) return;
         isActive.current = false;
         const delta = (orientation === 'column' ? upEvent.clientX : upEvent.clientY) - startPos.current;
+        if (delta !== 0) moved.current = true;
         const newSize = Math.min(maxSize, Math.max(minSize, startSize.current + delta));
-        onResizeEnd?.(newSize);
+        if (moved.current) onResizeEnd?.(newSize);
+        else onResizeCancel?.();
         document.removeEventListener('mousemove', handleMouseMove);
         document.removeEventListener('mouseup', handleMouseUp);
         document.body.style.cursor = '';
@@ -79,7 +90,7 @@ export function ResizeHandle({
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
     },
-    [orientation, currentSize, minSize, maxSize, onResizeStart, onResizeMove, onResizeEnd]
+    [orientation, currentSize, minSize, maxSize, onResizeStart, onResizeMove, onResizeEnd, onResizeCancel]
   );
 
   const isColumn = orientation === 'column';
@@ -96,6 +107,7 @@ export function ResizeHandle({
       e.preventDefault();
 
       isActive.current = true;
+      moved.current = false;
       startPos.current = isColumn ? e.touches[0].clientX : e.touches[0].clientY;
       startSize.current = currentSize;
 
@@ -107,6 +119,7 @@ export function ResizeHandle({
         moveEvent.preventDefault();
         const clientPos = isColumn ? moveEvent.touches[0].clientX : moveEvent.touches[0].clientY;
         const delta = clientPos - startPos.current;
+        if (delta !== 0) moved.current = true;
         const newSize = Math.min(maxSize, Math.max(minSize, startSize.current + delta));
         onResizeMove?.(newSize);
       };
@@ -118,8 +131,10 @@ export function ResizeHandle({
         const touch = endEvent.changedTouches[0];
         const clientPos = isColumn ? touch.clientX : touch.clientY;
         const delta = clientPos - startPos.current;
+        if (delta !== 0) moved.current = true;
         const newSize = Math.min(maxSize, Math.max(minSize, startSize.current + delta));
-        onResizeEnd?.(newSize);
+        if (moved.current) onResizeEnd?.(newSize);
+        else onResizeCancel?.();
         document.removeEventListener('touchmove', handleTouchMove);
         document.removeEventListener('touchend', handleTouchEnd);
       };
@@ -133,7 +148,16 @@ export function ResizeHandle({
     return () => {
       el.removeEventListener('touchstart', handleTouchStart);
     };
-  }, [orientation, currentSize, minSize, maxSize, isColumn, onResizeStart, onResizeMove, onResizeEnd]);
+  }, [orientation, currentSize, minSize, maxSize, isColumn, onResizeStart, onResizeMove, onResizeEnd, onResizeCancel]);
+
+  const handleDoubleClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      onAutoFit?.();
+    },
+    [onAutoFit]
+  );
 
   return (
     <div
@@ -146,7 +170,8 @@ export function ResizeHandle({
         visible ? 'opacity-100 bg-blue-500' : 'opacity-0'
       }`}
       onMouseDown={handleMouseDown}
-      title={`Drag to resize ${orientation}`}
+      onDoubleClick={handleDoubleClick}
+      title={`Drag to resize ${orientation}; double-click to auto-fit`}
     />
   );
 }

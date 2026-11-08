@@ -125,6 +125,12 @@ describe('clipboardParse', () => {
       expect(result.styles[0][0]?.fontWeight).toBe('bold');
     });
 
+    it('extracts the first font family from font-family', () => {
+      const html = '<table><tr><td style="font-family: Georgia, serif">Hello</td></tr></table>';
+      const result = parseHtmlTable(html);
+      expect(result.styles[0][0]?.fontFamily).toBe('Georgia');
+    });
+
     it('extracts italic style', () => {
       const html = '<table><tr><td style="font-style: italic">Hello</td></tr></table>';
       const result = parseHtmlTable(html);

@@ -44,7 +44,7 @@ prefix_refs = {
 
 specific = {
     'PLAT-03': 'Grep confirms no renderer electron/ipcRenderer/window bridge outside src/platform.',
-    'PLAT-05': 'npm run verify: 215 suites / 4,661 passed / 0 skipped.',
+    'PLAT-05': 'npm run verify: 219 suites / 4,707 passed / 0 skipped.',
     'PLAT-06': 'Electron renderer build + bundle grep.',
     'PLAT-08': 'CAPABILITY_MATRIX.md compared with desktop adapter.',
     'APP-01': 'Packaged smoke loads app:// and a fixture.',
@@ -141,7 +141,7 @@ specific = {
     'SEC-06': 'open:recent allowlist test; preload path policy.',
     'SEC-07': 'packaged CSP header + no console violations.',
     'SEC-08': 'window.open denial; navigation/redirect guards.',
-    'SEC-09': 'packaged geolocation denial.',
+    'SEC-09': 'packaged geolocation denial; local-fonts allowed only for trusted top-level frame; font E2E.',
     'SEC-10': 'assetPath tests + packaged traversal.',
     'SEC-11': 'packaged menu has no Reload; devTools false.',
     'SEC-12': 'packaged 30 s idle log empty.',
@@ -205,9 +205,9 @@ for level in ['automated-pass', 'manual-pass', 'unverified-environment', 'failed
 out.append(f'| **total** | **{len(ids)}** |')
 out += [
     '',
-    'Final checks: `npm run verify` (215 suites / 4,661 passed / 0 skipped),',
-    '`npm run verify:e2e` (51 passed), `npm run electron:build` (NSIS + portable),',
-    'and packaged smoke (argv/picker/save/security/30 s idle). Artifact measurements',
+    'Final checks: `npm run verify` (219 suites / 4,707 passed / 0 skipped),',
+    '`npm run verify:e2e` (53 passed), `npm run electron:build` (NSIS + portable),',
+    'and packaged smoke (argv/picker/save/security/local-fonts/30 s idle). Artifact measurements',
     'and hashes are in `M5-EVIDENCE.md`; performance method/results are in',
     '`M7-PERF.md`.',
     '',

@@ -72,6 +72,14 @@ try {
     throw new Error(`unexpected edition: ${JSON.stringify(info)}`);
   }
 
+  // System-font permission: the trusted main frame may enumerate installed
+  // families, and the picker must render them without a fallback warning.
+  await window.getByLabel('Font Family').click();
+  await window.getByLabel('Search font families').waitFor({ timeout: 30_000 });
+  await window.getByLabel('Search font families').fill('Arial');
+  await window.getByRole('option', { name: 'Arial', exact: true }).waitFor({ timeout: 30_000 });
+  await window.keyboard.press('Escape');
+
   // Security negative checks: permissions, window.open, traversal.
   const permission = await window.evaluate(() => {
     if (!navigator.geolocation) return Promise.resolve('unavailable');

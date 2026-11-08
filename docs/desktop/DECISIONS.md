@@ -127,7 +127,10 @@ CommonJS so the sandboxed preload loads reliably:
   `app://simplesheets` (packaged) and `http://localhost:3000` (development).
 - Main-process path handling is not exposed yet; file dialogs arrive in M1 with
   a path allowlist.
-- Permission request and permission check handlers deny everything.
+- Permission request and permission check handlers deny everything except
+  `local-fonts` for the trusted top-level app frame. This powers the system
+  font picker; all other permissions (camera, microphone, geolocation,
+  notifications, clipboard-read, MIDI) remain denied.
 - Navigation to non-trusted origins is blocked. New windows are denied;
   `http`, `https`, and `mailto` links open in the default browser.
 - Packaged CSP:
@@ -463,3 +466,21 @@ Method: Windows `10.0.26300` x64, Node `23.11.0`, Electron `45.2.3`, Playwright
 - APP-11 (OS shutdown/logoff) and APP-14 (100/125/150% display scaling) were
   user-verified. No unverified-environment requirements remain.
 - No failed requirements are reported. No artifacts were published.
+
+
+## 16. Iteration — autofit, toolbar wrap, system fonts
+
+- **Column/row autofit** uses whole-sheet content, not only virtualized cells,
+  and clamps to the existing drag bounds: 30–500 px columns and 28–500 px rows.
+  A double-click commits through the normal resize path, producing one undo
+  entry. A click without movement no longer commits a no-op resize.
+- **Wrap Text** remains owned by `useCellStyles`; the toolbar button calls the
+  same toggle as Format → Wrap Text and reflects active state.
+- **Font family** is an optional `CellStyle.fontFamily` field. Existing
+  workbooks remain valid because unset values fall back to the original
+  monospace stack.
+- Installed families are requested lazily with the Local Font Access API; the
+  renderer caches the result and falls back to a curated common-font list when
+  the API is unavailable or permission is declined.
+- Excel export/import maps the family to `font.name`; PDF rendering and
+  clipboard HTML parsing preserve it where the format supports it.

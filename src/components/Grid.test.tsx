@@ -369,6 +369,23 @@ describe('Grid Component', () => {
     expect(span.style.lineHeight).toBe('28px');
   });
 
+  it('renders the cell font family on the cell and span', () => {
+    const sheet = createTestSheet();
+    sheet.cells['1:1'] = { rawValue: 'Styled', style: { fontFamily: 'Georgia' } };
+    render(<Grid sheet={sheet} />);
+    const cellEl = screen.getByText('Styled').closest('.grid-cell') as HTMLElement;
+    expect(cellEl.style.fontFamily).toBe('Georgia');
+    expect(screen.getByText('Styled').style.fontFamily).toBe('Georgia');
+  });
+
+  it('renders the font family on frozen cells', () => {
+    const sheet = createTestSheet({ frozenRows: 1, frozenColumns: 1 });
+    sheet.cells['0:0'] = { rawValue: 'Frozen', style: { fontFamily: 'Georgia' } };
+    render(<Grid sheet={sheet} />);
+    const cellEl = document.querySelector('[data-row-container="0"] [data-col="0"]') as HTMLElement;
+    expect(cellEl.style.fontFamily).toBe('Georgia');
+  });
+
   it('renders the font size on frozen cells', () => {
     const sheet = createTestSheet({ frozenRows: 1, frozenColumns: 1 });
     sheet.cells['0:0'] = { rawValue: 'Frozen', style: { fontSize: 18 } };
@@ -704,6 +721,37 @@ describe('Grid Component', () => {
     // Parent callback fires exactly once — on commit
     expect(onColumnResize).toHaveBeenCalledTimes(1);
     expect(onColumnResize).toHaveBeenCalledWith(1, 150);
+  });
+
+  it('auto-fits a column when its margin is double-clicked', () => {
+    const onColumnResize = jest.fn();
+    const sheet = createTestSheet();
+    sheet.cells['0:0'] = { rawValue: 'A very wide column value' };
+    render(<Grid sheet={sheet} onColumnResize={onColumnResize} />);
+
+    const handle = document.querySelector('[data-col-header="0"] .resize-handle') as HTMLElement;
+    fireEvent.doubleClick(handle);
+
+    expect(onColumnResize).toHaveBeenCalledTimes(1);
+    const [, width] = onColumnResize.mock.calls[0];
+    expect(width).toBeGreaterThan(100);
+    expect(width).toBeLessThanOrEqual(500);
+  });
+
+  it('auto-fits a row when its margin is double-clicked', () => {
+    const onRowResize = jest.fn();
+    const sheet = createTestSheet();
+    sheet.cells['0:0'] = { rawValue: 'x'.repeat(80), style: { whiteSpace: 'normal' } };
+    render(<Grid sheet={sheet} onRowResize={onRowResize} />);
+
+    const rowHeader = document.querySelector('[data-row-header="0"]') as HTMLElement;
+    const handle = rowHeader.querySelector('.resize-handle') as HTMLElement;
+    fireEvent.doubleClick(handle);
+
+    expect(onRowResize).toHaveBeenCalledTimes(1);
+    const [, height] = onRowResize.mock.calls[0];
+    expect(height).toBeGreaterThan(28);
+    expect(height).toBeLessThanOrEqual(500);
   });
 
   it('updates column header width in the DOM during drag (live preview)', () => {

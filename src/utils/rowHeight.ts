@@ -11,6 +11,7 @@
 import type { Cell, Sheet } from '../types';
 import { DEFAULT_FONT_SIZE } from '../hooks/useCellStyle';
 import { formatCellDisplayValue } from './numberFormat';
+import { buildCanvasFont } from './fontFamily';
 
 /** Line-height of a grid cell (Tailwind `leading-7` on `.grid-cell`). */
 export const ROW_LINE_HEIGHT = 28;
@@ -140,8 +141,12 @@ export function computeAutoRowHeight(
   font: string = CELL_FONT,
   preserveWhitespace = false,
   fontSize: number = DEFAULT_FONT_SIZE,
+  fontFamily?: string,
 ): number {
-  const lines = countWrappedLines(text, widthPx, font, preserveWhitespace);
+  const measuredFont = fontFamily
+    ? buildCanvasFont(fontSize, fontFamily)
+    : font;
+  const lines = countWrappedLines(text, widthPx, measuredFont, preserveWhitespace);
   return Math.max(defaultRowHeight, lines * lineHeightForFont(fontSize));
 }
 
@@ -167,6 +172,7 @@ export function computeAutoRowHeights(sheet: Sheet, font: string = CELL_FONT): R
       font,
       cell.style?.whiteSpace === 'pre',
       cell.style?.fontSize ?? DEFAULT_FONT_SIZE,
+      cell.style?.fontFamily,
     );
     result[row] = Math.max(result[row] ?? 0, height);
   }

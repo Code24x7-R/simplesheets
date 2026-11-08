@@ -21,6 +21,9 @@ export interface CellStyle {
   /** Font size in pixels. Unset inherits the grid default (14px). */
   fontSize?: number;
 
+  /** CSS font-family name (e.g., "Calibri"). Unset inherits the grid monospace stack. */
+  fontFamily?: string;
+
   /** CSS text-decoration value. */
   textDecoration?: 'none' | 'underline' | 'line-through';
 

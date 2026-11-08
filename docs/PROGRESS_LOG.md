@@ -1288,3 +1288,20 @@
 - Final verification: 215 suites / 4,661 passed / 0 skipped; E2E 51 passed; full NSIS/portable build; packaged security/idle smoke pass.
 - Final artifacts: NSIS ~109 MB `3dc341d2…`, portable ~99 MB `619e1ab6…`, unpacked 312 MB.
 - Installer, association, upgrade, uninstall, and portable launch were user-verified; no publish or release was performed.
+
+
+## 2026-11-08 [FEATURE] Grid autofit, toolbar wrap, system fonts
+
+- Double-click column/row margins to auto-fit content, clamped to 30–500 px
+  columns and 28–500 px rows; one undo entry, wrapped rows recomputed.
+- Added a toolbar Wrap Text toggle with active state, reusing the Format menu
+  action.
+- Added an optional `CellStyle.fontFamily` and a searchable installed-font
+  picker. The desktop app now grants `local-fonts` only to the trusted
+  top-level frame; all other permissions remain denied.
+- Font family flows through grid rendering, row-height measurement, Excel
+  import/export, PDF export, and clipboard HTML parsing.
+- Tests: 219 suites / 4,707 passed / 0 skipped; E2E 53 passed; packaged smoke
+  pass. Unit coverage includes autofit bounds, resize-handle double-click,
+  font fallback/cache/picker, style state, clipboard, and PDF; the E2E font
+  test verifies installed-font permission and application.

@@ -22,6 +22,7 @@ import { isEditableTarget } from '../utils/dom';
 import type { ColumnFilter } from '../utils/sheetFilter';
 import { HIGHLIGHT_COLORS, HIGHLIGHT_BORDER_COLORS } from '../utils/highlightColors';
 import { lineHeightForFont } from '../utils/rowHeight';
+import { computeAutoFitColumnWidth, computeAutoFitRowHeight } from '../utils/autoSize';
 
 /** Point mode selection range (for visual feedback during formula editing). */
 export interface PointModeSelection {
@@ -1410,6 +1411,26 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
     [onColumnResize, onRowResize]
   );
 
+  /** Clear drag state without committing when the margin is merely clicked. */
+  const handleResizeCancel = useCallback(() => {
+    resizeDragRef.current = null;
+    setIsResizing(false);
+  }, []);
+
+  /**
+   * Auto-fit a column or row from the whole sheet, then commit the size
+   * through the same path as a drag so it becomes one undo entry.
+   */
+  const handleAutoFit = useCallback(
+    (type: 'col' | 'row', index: number) => {
+      const newSize = type === 'col'
+        ? computeAutoFitColumnWidth(sheet, index)
+        : computeAutoFitRowHeight(sheet, index);
+      handleResizeEnd(type, index, newSize);
+    },
+    [sheet, handleResizeEnd]
+  );
+
   /**
    * Checks if a key is a printable character (letters, numbers, punctuation).
    */
@@ -1886,6 +1907,8 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
                   onResizeStart={() => handleResizeStart('col', col, getColWidth(col))}
                   onResizeMove={(newWidth) => handleResizeMove('col', col, newWidth)}
                   onResizeEnd={(newWidth) => handleResizeEnd('col', col, newWidth)}
+                  onAutoFit={() => handleAutoFit('col', col)}
+                  onResizeCancel={handleResizeCancel}
                 />
               )}
             </div>
@@ -1974,7 +1997,7 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
                       className={`w-full h-full outline-none bg-white border border-blue-500 px-1 font-mono text-sm resize-none ${
                         showOverlay ? 'text-transparent selection:bg-blue-200' : ''
                       }`}
-                      style={{ caretColor: '#000' }}
+                      style={{ caretColor: '#000', fontFamily: cell?.style?.fontFamily, fontSize: cell?.style?.fontSize }}
                       value={editBuffer}
                       rows={Math.min(editBuffer.split('\n').length + 1, 5)}
                       onFocus={syncCursorPosition}
@@ -2017,7 +2040,7 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
                       className={`w-full h-full outline-none bg-white border border-blue-500 px-1 font-mono text-sm ${
                         showOverlay ? 'text-transparent selection:bg-blue-200' : ''
                       }`}
-                      style={{ caretColor: '#000' }}
+                      style={{ caretColor: '#000', fontFamily: cell?.style?.fontFamily, fontSize: cell?.style?.fontSize }}
                       value={editBuffer}
                       onFocus={syncCursorPosition}
                       onClick={reportEditorCaret}
@@ -2063,6 +2086,7 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
                     if (cell.style.fontWeight) cellStyle.fontWeight = cell.style.fontWeight;
                     if (cell.style.fontStyle) cellStyle.fontStyle = cell.style.fontStyle;
                     if (cell.style.fontSize) cellStyle.fontSize = cell.style.fontSize;
+                    if (cell.style.fontFamily) cellStyle.fontFamily = cell.style.fontFamily;
                     if (cell.style.textDecoration) cellStyle.textDecoration = cell.style.textDecoration;
                     if (cell.style.color) cellStyle.color = cell.style.color;
                     if (cell.style.backgroundColor) cellStyle.backgroundColor = cell.style.backgroundColor;
@@ -2110,6 +2134,7 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
                             className={`flex items-center px-1 ${cell?.style?.whiteSpace === 'normal' ? 'whitespace-normal break-words' : cell?.style?.whiteSpace === 'pre' ? 'whitespace-pre-wrap break-words' : 'truncate'}`}
                             style={{
                               fontSize: cell?.style?.fontSize,
+                              fontFamily: cell?.style?.fontFamily,
                               lineHeight: `${lineHeightForFont(cell?.style?.fontSize ?? 14)}px`,
                               fontStyle: cell?.style?.fontStyle,
                               textDecoration: cell?.style?.textDecoration,
@@ -2195,6 +2220,8 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
                   onResizeStart={() => handleResizeStart('row', actualRowIndex, getRowHeight(actualRowIndex))}
                   onResizeMove={(newHeight) => handleResizeMove('row', actualRowIndex, newHeight)}
                   onResizeEnd={(newHeight) => handleResizeEnd('row', actualRowIndex, newHeight)}
+                  onAutoFit={() => handleAutoFit('row', actualRowIndex)}
+                  onResizeCancel={handleResizeCancel}
                 />
               )}
             </div>
@@ -2219,6 +2246,7 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
                 if (cell.style.fontWeight) cellStyle.fontWeight = cell.style.fontWeight;
                 if (cell.style.fontStyle) cellStyle.fontStyle = cell.style.fontStyle;
                 if (cell.style.fontSize) cellStyle.fontSize = cell.style.fontSize;
+                if (cell.style.fontFamily) cellStyle.fontFamily = cell.style.fontFamily;
                 if (cell.style.textDecoration) cellStyle.textDecoration = cell.style.textDecoration;
                 if (cell.style.color) cellStyle.color = cell.style.color;
                 if (cell.style.backgroundColor) cellStyle.backgroundColor = cell.style.backgroundColor;
@@ -2320,7 +2348,7 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
                   className={`w-full h-full outline-none bg-white border border-blue-500 px-1 font-mono text-sm resize-none ${
                     showOverlay ? 'text-transparent selection:bg-blue-200' : ''
                   }`}
-                  style={{ caretColor: '#000' }}
+                  style={{ caretColor: '#000', fontFamily: cell?.style?.fontFamily, fontSize: cell?.style?.fontSize }}
                   value={editBuffer}
                   rows={Math.min(editBuffer.split('\n').length + 1, 5)}
                   onFocus={syncCursorPosition}
@@ -2380,7 +2408,7 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
                   className={`w-full h-full outline-none bg-white border border-blue-500 px-1 font-mono text-sm ${
                     showOverlay ? 'text-transparent selection:bg-blue-200' : ''
                   }`}
-                  style={{ caretColor: '#000' }}
+                  style={{ caretColor: '#000', fontFamily: cell?.style?.fontFamily, fontSize: cell?.style?.fontSize }}
                   value={editBuffer}
                   onFocus={syncCursorPosition}
                   onClick={reportEditorCaret}
@@ -2495,6 +2523,7 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid(
                         }`}
                         style={{
                           fontSize: cell?.style?.fontSize,
+                          fontFamily: cell?.style?.fontFamily,
                           lineHeight: `${lineHeightForFont(cell?.style?.fontSize ?? 14)}px`,
                           textAlign: cell?.style?.textAlign
                             ? cell.style.textAlign

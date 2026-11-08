@@ -15,6 +15,7 @@ import {
   AlignLeft,
   AlignCenter,
   AlignRight,
+  WrapText,
   Palette,
   PaintBucket,
   ChevronDown,
@@ -22,6 +23,7 @@ import {
 import { BorderAll } from './icons/BorderIcons';
 import { COLOR_PALETTE } from '../hooks/useCellStyle';
 import { FontSizeInput } from './FontSizeInput';
+import { FontFamilyInput } from './FontFamilyInput';
 
 /** Border preset definition with icon pattern. */
 interface BorderPreset {
@@ -62,6 +64,10 @@ interface ToolbarProps {
   onSetNumberFormat: (format: string) => void;
   onSetFontSize: (size: number) => void;
   currentFontSize: number;
+  onSetFontFamily?: (family: string | undefined) => void;
+  currentFontFamily?: string;
+  onToggleWrapText?: () => void;
+  isWrapText?: boolean;
   // ── Border callbacks ─────────────────────────────────────────────
   onSetBorderTop: () => void;
   onSetBorderBottom: () => void;
@@ -196,6 +202,10 @@ export function Toolbar(props: ToolbarProps) {
 
       {/* ── Font Formatting Section ─────────────────────────────────── */}
       <div className="toolbar-section flex items-center gap-0.5">
+        <FontFamilyInput
+          value={props.currentFontFamily}
+          onChange={props.onSetFontFamily ?? (() => {})}
+        />
         <FontSizeInput value={props.currentFontSize} onChange={props.onSetFontSize} />
         <button
           className={`toolbar-btn ${props.isBold ? 'bg-blue-100 text-blue-700' : ''}`}
@@ -224,6 +234,15 @@ export function Toolbar(props: ToolbarProps) {
           title="Strikethrough"
         >
           <Strikethrough className="w-4 h-4" />
+        </button>
+        <button
+          className={`toolbar-btn ${props.isWrapText ? 'bg-blue-100 text-blue-700' : ''}`}
+          onClick={props.onToggleWrapText}
+          title="Wrap Text"
+          aria-pressed={props.isWrapText}
+          data-testid="toolbar-wrap-text"
+        >
+          <WrapText className="w-4 h-4" />
         </button>
       </div>
 

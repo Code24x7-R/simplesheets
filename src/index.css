@@ -538,3 +538,50 @@
   0% { background-position: 0 0; }
   100% { background-position: 28px 0; }
 }
+
+  /* Font-family picker: compact trigger + searchable list */
+  .font-family-input {
+    @apply relative flex items-center h-[28px] rounded border border-gray-300 bg-white;
+  }
+
+  .font-family-input-button {
+    @apply flex items-center justify-between gap-1 w-[132px] h-full px-2 text-sm text-left text-gray-700 bg-transparent border-none cursor-pointer;
+  }
+
+  .font-family-input-label {
+    @apply min-w-0 overflow-hidden text-ellipsis whitespace-nowrap;
+  }
+
+  .font-family-dropdown {
+    @apply absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded shadow-lg z-[200] p-1;
+    width: 220px;
+  }
+
+  .font-family-search {
+    @apply w-full px-2 py-1 mb-1 text-sm border border-gray-300 rounded outline-none;
+  }
+
+  .font-family-search:focus {
+    @apply border-blue-400;
+  }
+
+  .font-family-list {
+    @apply max-h-64 overflow-y-auto;
+  }
+
+  .font-family-option {
+    @apply block w-full px-2 py-1 text-left text-sm rounded hover:bg-blue-50 cursor-pointer border-none bg-transparent;
+    font-size: 13px;
+  }
+
+  .font-family-option-active {
+    @apply bg-blue-100 text-blue-700;
+  }
+
+  .font-family-note {
+    @apply px-2 py-1 text-xs text-gray-500;
+  }
+
+  .font-family-note-footer {
+    @apply border-t border-gray-200 mt-1;
+  }

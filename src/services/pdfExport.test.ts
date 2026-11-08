@@ -210,6 +210,19 @@ describe('pdfExport', () => {
       expect(cell!.style.fontSize).toBe('24px');
     });
 
+    it('applies the cell font family to the data cell', async () => {
+      const sheet: Sheet = {
+        ...createTestSheet(),
+        cells: { '2:2': { rawValue: 'Styled', style: { fontFamily: 'Georgia' } } },
+      };
+
+      await generatePdf(sheet, { setup: baseSetup() });
+
+      const cell = findCell('Styled');
+      expect(cell).toBeTruthy();
+      expect(cell!.style.fontFamily).toBe('Georgia');
+    });
+
     it('auto-fits row height for wrapped cells', async () => {
       const sheet: Sheet = {
         ...createTestSheet(),

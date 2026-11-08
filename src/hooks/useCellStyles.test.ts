@@ -72,6 +72,7 @@ describe('useCellStyles', () => {
         fontWeight: 'normal',
         fontStyle: 'normal',
         fontSize: 14,
+        fontFamily: undefined,
         textDecoration: 'none',
         color: undefined,
         backgroundColor: undefined,
@@ -88,6 +89,7 @@ describe('useCellStyles', () => {
         fontWeight: 'normal',
         fontStyle: 'normal',
         fontSize: 14,
+        fontFamily: undefined,
         textDecoration: 'none',
         color: undefined,
         backgroundColor: undefined,
@@ -766,6 +768,45 @@ describe('useCellStyles', () => {
       });
 
       expect(mockPushHistory).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('setFontFamilyStyle', () => {
+    it('sets a font family on selected cells and pushes history', () => {
+      const workbook = createTestWorkbook();
+      const selection: Selection = {
+        type: 'cell',
+        startRow: 0, startCol: 0, endRow: 0, endCol: 0,
+        anchorRow: 0, anchorCol: 0,
+      };
+      const { result } = renderCellStyles(workbook, { row: 0, col: 0 }, selection);
+
+      act(() => {
+        result.current.setFontFamilyStyle('  Georgia  ');
+      });
+
+      const newWb = mockPushHistory.mock.calls[0][0];
+      expect(newWb.sheets[0].cells['0:0'].style?.fontFamily).toBe('Georgia');
+      expect(mockSetStatus).toHaveBeenCalledWith('Font Georgia (1 cell(s))');
+    });
+
+    it('clears the family when passed undefined', () => {
+      const workbook = createTestWorkbook();
+      workbook.sheets[0].cells['0:0'].style = { fontFamily: 'Arial' };
+      const selection: Selection = {
+        type: 'cell',
+        startRow: 0, startCol: 0, endRow: 0, endCol: 0,
+        anchorRow: 0, anchorCol: 0,
+      };
+      const { result } = renderCellStyles(workbook, { row: 0, col: 0 }, selection);
+
+      act(() => {
+        result.current.setFontFamilyStyle(undefined);
+      });
+
+      const newWb = mockPushHistory.mock.calls[0][0];
+      expect(newWb.sheets[0].cells['0:0'].style?.fontFamily).toBeUndefined();
+      expect(mockSetStatus).toHaveBeenCalledWith('Default font (1 cell(s))');
     });
   });
 
