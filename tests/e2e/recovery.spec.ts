@@ -242,6 +242,10 @@ test('a missing last document is cleared without an open error', async () => {
 
     const session = await launch(profile);
     try {
+      await expect(session.page.getByTestId('status-message')).toContainText(
+        /last document no longer exists/i,
+        { timeout: 30_000 },
+      );
       await expect(session.page.getByTestId('status-message')).not.toContainText(/Open error/i);
       await session.page.waitForTimeout(500);
     } finally {
@@ -249,8 +253,10 @@ test('a missing last document is cleared without an open error', async () => {
     }
     const saved = JSON.parse(await readFile(path.join(profile, 'state.json'), 'utf8')) as {
       lastPath: string | null;
+      recents: Array<{ path?: string }>;
     };
     expect(saved.lastPath).toBeNull();
+    expect(saved.recents).toEqual([]);
   } finally {
     await cleanupProfile(profile);
   }

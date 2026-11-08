@@ -281,6 +281,15 @@ function rebuildMenu(): void {
         },
         { type: 'separator' },
         {
+          id: 'file-share',
+          label: 'Share',
+          submenu: [
+            { id: 'file-share-link', label: 'Copy Link', click: () => sendMenuAction('file:copy-link') },
+            { id: 'file-share-file', label: 'Share File…', click: () => sendMenuAction('file:share-file') },
+          ],
+        },
+        { type: 'separator' },
+        {
           id: 'file-exit',
           label: 'Exit',
           accelerator: 'CmdOrCtrl+Q',
@@ -544,7 +553,18 @@ async function restoreLastDocument(): Promise<void> {
   if (!state.reopenLast || !state.lastPath) return;
   const lastPath = state.lastPath;
   if (!fs.existsSync(lastPath)) {
+    const key = process.platform === 'win32' ? lastPath.toLowerCase() : lastPath;
+    const stale = stateStore.getState().recents.find((entry) => {
+      if (!entry.path) return false;
+      const entryKey = process.platform === 'win32' ? entry.path.toLowerCase() : entry.path;
+      return entryKey === key;
+    });
+    if (stale) {
+      stateStore.removeRecent(stale.id);
+      rebuildMenu();
+    }
     stateStore.setLastPath(null);
+    sendMenuAction('status:last-document-missing');
     return;
   }
   const result = await readOpenRequest(lastPath, 'recent');

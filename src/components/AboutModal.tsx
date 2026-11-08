@@ -347,7 +347,9 @@ export function AboutModal({ isOpen, onClose }: AboutModalProps) {
                 )}
               </div>
               <p className="mt-2 text-gray-500">
-                Builds are unsigned. Windows SmartScreen may warn on first launch. Workbook data never leaves this device.
+                Builds are unsigned. Windows SmartScreen may warn on first launch.
+                Workbook data stays on this device unless you explicitly export it.
+                Shared links contain the full workbook in the URL fragment.
               </p>
               <div className="mt-2 flex flex-wrap gap-2">
                 <button

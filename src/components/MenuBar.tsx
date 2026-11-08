@@ -88,6 +88,8 @@ interface MenuBarProps {
   onCopyShareLink: () => void;
   onShareFile: () => void;
   onCloudAccounts: () => void;
+  /** Hide cloud/account entry points in the desktop edition. */
+  cloudAccountsEnabled?: boolean;
   // Edit menu
   onUndo: () => void;
   onRedo: () => void;
@@ -400,7 +402,9 @@ export function MenuBar(props: MenuBarProps) {
       submenu: [
         { id: 'file-share-link', label: 'Copy Link', icon: Link },
         { id: 'file-share-file', label: 'Share File', icon: Share2 },
-        { id: 'file-cloud-accounts', label: 'Cloud accounts…', icon: Cloud },
+        ...(props.cloudAccountsEnabled === false
+          ? []
+          : [{ id: 'file-cloud-accounts', label: 'Cloud accounts…', icon: Cloud }]),
       ],
     },
     { id: 'sep-file-3', label: '', separator: true },

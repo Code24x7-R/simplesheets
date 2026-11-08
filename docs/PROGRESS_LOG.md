@@ -1272,11 +1272,19 @@
 - **Performance/leak E2E**: 5,000-row CSV budget, large open/save/memory, 20-cycle heap, cold start.
 - **Packaging evidence**: 108 MB installer / 99 MB portable / 312 MB unpacked; peak large-workbook memory ~570 MB.
 - **Docs**: `M7-PERF.md`, README desktop section, MANUAL desktop section, install checklist.
-- **Tests**: 215 suites / 4,658 passed / 1 skipped; E2E 39 tests; packaged smoke pass.
+- **Tests**: 215 suites / 4,658 passed / 1 skipped; E2E 41 tests; packaged smoke pass.
 
 ## 2026-11-07 [PERF] Closed-modal render work audit
 
 - Audited always-mounted components after the CSV navigation regression.
 - `ChartDialog` was still calling `findDataRange` and extracting chart data while closed; both are now gated by `isOpen`.
 - Added a large-workbook navigation budget to the performance E2E.
-- Full verification: 215 suites / 4,658 passed; E2E 39 passed.
+- Full verification: 215 suites / 4,658 passed; E2E 41 passed.
+
+## 2026-11-07 [FEATURE] SimpleSheets Desktop — M8 Complete
+
+- Generated `docs/desktop/FINAL-REPORT.md` with all 139 requirement IDs tagged: 113 automated-pass, 26 unverified-environment, 0 failed.
+- Consolidated manual installer/association/portable/clean-machine checklist plus scaling, OS shutdown, share-lock, recovery-limit, missing-recent, IO/About, and clean-npm-ci checks.
+- Final verification: 215 suites / 4,658 passed / 1 skipped; E2E 41 passed; full NSIS/portable build; packaged security/idle smoke pass.
+- Final artifacts: NSIS ~109 MB `ef223f2e…`, portable ~99 MB `73a645b0…`, unpacked 312 MB.
+- No installer execution, publish, or release without explicit approval.

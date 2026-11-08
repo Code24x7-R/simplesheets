@@ -1267,8 +1267,22 @@ function WorkbookView() {
   }, [workbook]);
 
   const handleShareFile = useCallback(async () => {
+    const name = (workbook.title || 'Untitled').replace(/[^a-zA-Z0-9-_]/g, '_') || 'Untitled';
     try {
-      const name = (workbook.title || 'Untitled').replace(/[^a-zA-Z0-9-_]/g, '_') || 'Untitled';
+      if (getPlatform().kind === 'desktop') {
+        const result = await saveExport({
+          data: serializeWorkbook(workbook),
+          suggestedName: `${name}.ssjson`,
+          filters: NATIVE_WORKBOOK_FILTERS,
+          download: () => downloadDocument(workbook, name),
+        });
+        if (result.status === 'saved') {
+          setStatusMessage(`Saved shared copy "${fileNameFromPath(result.path ?? `${name}.ssjson`)}"`);
+        } else if (result.status === 'failed') {
+          setStatusMessage(result.message ?? 'Share File failed');
+        }
+        return;
+      }
       const result = await shareDocument(workbook, name);
       if (result === 'shared') {
         setStatusMessage('Share sheet opened');
@@ -1278,7 +1292,7 @@ function WorkbookView() {
     } catch (err) {
       setStatusMessage(err instanceof Error ? err.message : 'Failed to share file');
     }
-  }, [workbook]);
+  }, [workbook, setStatusMessage]);
 
   const handleCloudAccounts = useCallback(() => {
     setCloudModalMode('save');
@@ -2140,6 +2154,9 @@ function WorkbookView() {
       if (!files || files.length === 0) return;
       const file = files[0];
       const name = file.name.toLowerCase();
+      if (files.length > 1) {
+        setStatusMessage(`Multiple files dropped — opening "${file.name}" only`);
+      }
 
       const platform = getPlatform();
       if (platform.capabilities.nativeFileDialogs) {
@@ -3877,6 +3894,12 @@ function WorkbookView() {
         case 'edit:find':
           handleSearchReplace();
           break;
+        case 'file:copy-link':
+          void handleCopyShareLink();
+          break;
+        case 'file:share-file':
+          void handleShareFile();
+          break;
         case 'help:manual':
           void platform.openExternal('https://simplesheets.mouseclick.au/MANUAL.md').then((result) => {
             if (!result.ok) setStatusMessage(result.message);
@@ -3893,6 +3916,9 @@ function WorkbookView() {
             if (!result.ok) setStatusMessage(result.message);
           });
           break;
+        case 'status:last-document-missing':
+          setStatusMessage('The last document no longer exists — opened a blank workbook');
+          break;
         default:
           break;
       }
@@ -3903,7 +3929,7 @@ function WorkbookView() {
       handleImportJsonMenu, handleExportExcelMenu, handleExportCsvMenu,
       handleExportJsonMenu, handleExportPdfMenu, handleUndo, handleRedo,
       handleCutMenu, handleCopyMenu, handlePasteMenu, handlePasteSpecial,
-      handleSelectAll, handleSearchReplace,
+      handleSelectAll, handleSearchReplace, handleCopyShareLink, handleShareFile,
     ],
   );
 
@@ -4054,6 +4080,7 @@ function WorkbookView() {
           onCopyShareLink={handleCopyShareLink}
           onShareFile={handleShareFile}
           onCloudAccounts={handleCloudAccounts}
+          cloudAccountsEnabled={platform.kind !== 'desktop'}
           onUndo={handleUndo}
           onRedo={handleRedo}
           canUndo={canUndo}

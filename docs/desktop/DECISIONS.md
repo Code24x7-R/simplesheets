@@ -443,3 +443,18 @@ Method: Windows `10.0.26300` x64, Node `23.11.0`, Electron `45.2.3`, Playwright
 - **Limits**: a true 20-process launch/quit cycle, Windows share-lock, and
   OS-cache effects remain manual. No timing values are silently relaxed; the
   E2E budgets are the guardrails.
+
+
+---
+
+## 15. Final evidence and unverified-environment (M8)
+
+- The final report tags all 139 requirement IDs per section 3.3. Automated-pass
+  includes unit/E2E/build/static enforcement; unverified-environment is used
+  whenever no automated check could run here.
+- The installer was not executed, no registry/association was changed, and no
+  clean machine was available. `INSTALL-CHECKLIST.md` is the procedure.
+- Remaining unverified items: APP-02/11/14, OPEN-02/11, SAVE-06, REC-10,
+  MRU-04/05, IO-02/03/05/08/09/10, PKG-02/03/04/10/11/13, ABT-02/03/04/07,
+  PERF-06.
+- No failed requirements are reported. No artifacts were published.

@@ -20,7 +20,7 @@ here and in `DECISIONS.md`.
 | M5 | File association, NSIS + portable build | ⬜ Not started | — |
 | M6 | Security hardening | ✅ Complete | See below |
 | M7 | Performance, leak test, packaging polish | ✅ Complete | See below |
-| M8 | Final evidence report | ⬜ Not started | — |
+| M8 | Final evidence report | ✅ Complete | `FINAL-REPORT.md` |
 
 ---
 
@@ -55,6 +55,29 @@ Known M1 limitations:
 
 ---
 
+## M8 evidence
+
+Final report: `docs/desktop/FINAL-REPORT.md`.
+
+- **139 requirements tagged**: 113 automated-pass, 0 manual-pass,
+  26 unverified-environment, 0 failed.
+- Manual checklist consolidates installer/association/portable/clean-machine
+  checks plus display scaling, OS shutdown, share-lock, >100 MB recovery,
+  missing-recent dialogs, PDF/Import/Copy Link clipboard paths, About actions,
+  and clean `npm ci` reproducibility.
+- Final verification: `npm run verify` 215 suites / 4,658 passed / 1 skipped;
+  `npm run verify:e2e` 41 tests passed; `npm run electron:build` produced both
+  artifacts; packaged smoke passed including security and 30 s idle checks.
+- Final artifacts: NSIS ~109 MB (`ef223f2e…59d3`), portable ~99 MB
+  (`73a645b0…d2f3`), unpacked 312 MB.
+
+Remaining work is intentionally **unverified-environment**, not failed:
+installer execution, association/Open With, upgrade/uninstall cycles, portable
+wrapper launch, SmartScreen/antivirus, OS shutdown/logoff, scaling, actual
+share-lock, and clean `npm ci`.
+
+---
+
 ## M7 evidence
 
 Checks run:
@@ -62,7 +85,7 @@ Checks run:
 | Check | Result |
 | --- | --- |
 | `npm run verify` | 215 suites, 4,658 passed, 1 skipped |
-| `npm run verify:e2e` | 39 tests passed |
+| `npm run verify:e2e` | 41 tests passed |
 | 5,000-row CSV navigation | ~16 ms/key (budget < 100 ms average) |
 | `large.ssjson` open | ~3.0 s (budget < 5 s) |
 | `large.ssjson` save | ~237 ms (budget < 2 s) |

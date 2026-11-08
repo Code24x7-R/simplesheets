@@ -47,6 +47,12 @@ async function stubOpenDialog(app: ElectronApplication, filePath: string): Promi
   }, filePath);
 }
 
+async function stubSaveDialog(app: ElectronApplication, filePath: string): Promise<void> {
+  await app.evaluate(({ dialog }, target) => {
+    dialog.showSaveDialog = async () => ({ canceled: false, filePath: target });
+  }, filePath);
+}
+
 async function stubMessageBox(app: ElectronApplication, response: number): Promise<void> {
   await app.evaluate(({ dialog }, choice) => {
     dialog.showMessageBox = async () => ({
@@ -288,5 +294,48 @@ test('About opens from the native Help menu', async () => {
   } finally {
     await session.app.close();
     await cleanupProfile(profile);
+  }
+});
+
+test('native menu still works after a modal closes', async () => {
+  const profile = await mkdtemp(path.join(os.tmpdir(), 'simplesheets-menu-modal-'));
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'simplesheets-menu-modal-target-'));
+  const target = path.join(dir, 'small.ssjson');
+  await copyFile(fixture('small.ssjson'), target);
+  const session = await launch(profile, [target]);
+  try {
+    await clickMenu(session.app, 'help-about');
+    await expect(session.page.getByRole('heading', { name: 'About SimpleSheets' })).toBeVisible();
+    await session.page.getByRole('button', { name: 'Close' }).last().click();
+    await expect(session.page.getByRole('heading', { name: 'About SimpleSheets' })).toHaveCount(0);
+    await clickMenu(session.app, 'file-save');
+    await expect(session.page.getByTestId('status-message')).toContainText(/Saved "small\.ssjson"/i);
+  } finally {
+    await session.app.close();
+    await cleanupProfile(profile);
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+
+test('desktop Share File uses the native Save dialog', async () => {
+  const profile = await mkdtemp(path.join(os.tmpdir(), 'simplesheets-menu-share-'));
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'simplesheets-menu-share-target-'));
+  const source = path.join(dir, 'small.ssjson');
+  const shared = path.join(dir, 'shared-copy.ssjson');
+  await copyFile(fixture('small.ssjson'), source);
+  const session = await launch(profile, [source]);
+  try {
+    await expect(session.page.getByText('Item 1', { exact: true })).toBeVisible();
+    await stubSaveDialog(session.app, shared);
+    await clickMenu(session.app, 'file-share-file');
+    await expect(session.page.getByTestId('status-message')).toContainText(
+      /Saved shared copy "shared-copy\.ssjson"/i,
+    );
+    await expect(access(shared, constants.R_OK)).resolves.toBeUndefined();
+  } finally {
+    await session.app.close();
+    await cleanupProfile(profile);
+    await rm(dir, { recursive: true, force: true });
   }
 });
