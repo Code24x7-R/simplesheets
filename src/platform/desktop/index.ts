@@ -400,6 +400,13 @@ export function createDesktopAdapter(bridge: DesktopBridge): PlatformAdapter {
         // The native accelerator remains the primary path.
       }
     },
+    async copyText(text: string): Promise<PlatformResult<void>> {
+      try {
+        return normalizeResult(await bridge.copyText(text));
+      } catch (error) {
+        return toFailure(error instanceof Error ? error.message : 'Clipboard write failed.');
+      }
+    },
     async resetApplicationData(): Promise<PlatformResult<void>> {
       try {
         return normalizeResult(await bridge.resetApplicationData());

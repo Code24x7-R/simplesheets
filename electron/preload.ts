@@ -154,6 +154,9 @@ const bridge: DesktopBridge = {
 
   dispatchMenuAction: (action: string): Promise<DesktopBridgeResult> =>
     ipcRenderer.invoke('menu:dispatch', action),
+
+  copyText: (text: string): Promise<DesktopBridgeResult> =>
+    ipcRenderer.invoke('app:copy-text', text),
 };
 
 contextBridge.exposeInMainWorld(

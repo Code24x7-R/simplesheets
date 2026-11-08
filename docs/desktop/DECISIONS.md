@@ -456,6 +456,5 @@ Method: Windows `10.0.26300` x64, Node `23.11.0`, Electron `45.2.3`, Playwright
   clean machine was available. `INSTALL-CHECKLIST.md` is the procedure.
 - APP-02 (`electron:dev` startup/HMR) was verified manually.
 - Remaining unverified items: APP-11/14, OPEN-02/11, SAVE-06, REC-10,
-  MRU-04/05, IO-02/03/05/08/09/10, PKG-02/03/04/10/11/13, ABT-02/03/04/07,
-  PERF-06.
+  MRU-05, IO-02/08/09/10, PKG-02/03/04/10/11/13, PERF-06.
 - No failed requirements are reported. No artifacts were published.

@@ -246,18 +246,27 @@ export function AboutModal({ isOpen, onClose }: AboutModalProps) {
       `Node: ${appInfo?.node ?? 'n/a'}`,
       `Data folder: ${appInfo?.dataDir ?? 'n/a'}`,
     ].join('\n');
-    try {
-      await navigator.clipboard.writeText(text);
-    } catch {
-      // Fallback for older browsers or non-secure contexts
-      const ta = document.createElement('textarea');
-      ta.value = text;
-      ta.style.position = 'fixed';
-      ta.style.opacity = '0';
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand('copy');
-      document.body.removeChild(ta);
+    const platform = getPlatform();
+    if (platform.kind === 'desktop') {
+      const result = await platform.copyText(text);
+      if (!result.ok) {
+        setActionMessage(result.message);
+        return;
+      }
+    } else {
+      try {
+        await navigator.clipboard.writeText(text);
+      } catch {
+        // Fallback for older browsers or non-secure contexts
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+      }
     }
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -311,8 +320,8 @@ export function AboutModal({ isOpen, onClose }: AboutModalProps) {
             <button
               onClick={handleCopyVersionInfo}
               className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded p-1 transition-colors"
-              aria-label="Copy version info"
-              title="Copy version info"
+              aria-label="Copy diagnostics"
+              title="Copy diagnostics"
             >
               {copied ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5" />}
             </button>

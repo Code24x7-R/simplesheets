@@ -12,9 +12,9 @@ with a manual procedure.
 
 | Level | Count |
 | --- | ---: |
-| automated-pass | 113 |
+| automated-pass | 120 |
 | manual-pass | 1 |
-| unverified-environment | 25 |
+| unverified-environment | 18 |
 | failed | 0 |
 | **total** | **139** |
 
@@ -120,7 +120,7 @@ and hashes are in `M5-EVIDENCE.md`; performance method/results are in
 | MRU-01 | automated-pass | desktopStateStore/useMRU tests; menu E2E. | desktopStateStore recents cap/key tests. |
 | MRU-02 | automated-pass | desktopStateStore/useMRU tests; menu E2E. | upsertRecent tests + open/save E2E. |
 | MRU-03 | automated-pass | desktopStateStore/useMRU tests; menu E2E. | main recents list -> native menu; useMRU tests. |
-| MRU-04 | unverified-environment | desktopStateStore/useMRU tests; menu E2E. | Missing-recent Remove/Locate/Keep native dialog; manual probe. |
+| MRU-04 | automated-pass | desktopStateStore/useMRU tests; menu E2E. | manual-verification.spec: missing recent Remove via native dialog. |
 | MRU-05 | unverified-environment | desktopStateStore/useMRU tests; menu E2E. | Remove/clear parity is code/store tested; native/in-app immediate parity manual. |
 | MRU-06 | automated-pass | desktopStateStore/useMRU tests; menu E2E. | RecentEntry schema holds paths/metadata only. |
 | MRU-07 | automated-pass | desktopStateStore/useMRU tests; menu E2E. | useMRU web tests unchanged. |
@@ -146,9 +146,9 @@ and hashes are in `M5-EVIDENCE.md`; performance method/results are in
 | --- | --- | --- | --- |
 | IO-01 | automated-pass | save/export E2E; native Share File test; web export tests. | save.spec Excel/CSV native export; JSON handler. |
 | IO-02 | unverified-environment | save/export E2E; native Share File test; web export tests. | PDF native-dialog export not E2E; PDF generator tests + manual. |
-| IO-03 | unverified-environment | save/export E2E; native Share File test; web export tests. | Native Import menu to Import Scope not E2E; CSV scope automated. |
+| IO-03 | automated-pass | save/export E2E; native Share File test; web export tests. | manual-verification.spec: native Import menu -> Import Scope. |
 | IO-04 | automated-pass | save/export E2E; native Share File test; web export tests. | exports do not change path/title/clean state. |
-| IO-05 | unverified-environment | save/export E2E; native Share File test; web export tests. | Copy Link base is code-verified; clipboard assertion manual. |
+| IO-05 | automated-pass | save/export E2E; native Share File test; web export tests. | manual-verification.spec: native Copy Link -> public base in clipboard. |
 | IO-06 | automated-pass | save/export E2E; native Share File test; web export tests. | PDF generator consumes current sheet/workbook. |
 | IO-07 | automated-pass | save/export E2E; native Share File test; web export tests. | existing web export tests. |
 | IO-08 | unverified-environment | save/export E2E; native Share File test; web export tests. | Export cancel/failure paths not all E2E. |
@@ -179,12 +179,12 @@ and hashes are in `M5-EVIDENCE.md`; performance method/results are in
 | ID | Evidence | Test / procedure | Notes |
 | --- | --- | --- | --- |
 | ABT-01 | automated-pass | AboutModal tests/E2E; app:reset-data unit. | About E2E edition; version/build tests. |
-| ABT-02 | unverified-environment | AboutModal tests/E2E; app:reset-data unit. | Runtime version rows code-verified; manual About inspection recommended. |
-| ABT-03 | unverified-environment | AboutModal tests/E2E; app:reset-data unit. | Open Data Folder not automated; manual checklist. |
-| ABT-04 | unverified-environment | AboutModal tests/E2E; app:reset-data unit. | Copy Diagnostics content code-verified; clipboard assertion manual. |
+| ABT-02 | automated-pass | AboutModal tests/E2E; app:reset-data unit. | manual-verification.spec: About shows Electron/Chromium/Node. |
+| ABT-03 | automated-pass | AboutModal tests/E2E; app:reset-data unit. | manual-verification.spec: Open Data Folder calls showItemInFolder(userData). |
+| ABT-04 | automated-pass | AboutModal tests/E2E; app:reset-data unit. | manual-verification.spec: clipboard diagnostics contain versions/data path, no file names. |
 | ABT-05 | automated-pass | AboutModal tests/E2E; app:reset-data unit. | About MIT + library notices tests. |
 | ABT-06 | automated-pass | AboutModal tests/E2E; app:reset-data unit. | no update controls in About/MenuBar. |
-| ABT-07 | unverified-environment | AboutModal tests/E2E; app:reset-data unit. | Main reset unit-tested; About button/confirmation manual. |
+| ABT-07 | automated-pass | AboutModal tests/E2E; app:reset-data unit. | manual-verification.spec: confirmed Reset clears recents/last path. |
 
 ## Security and privacy (SEC)
 
@@ -237,7 +237,7 @@ clean-machine checks, plus:
 - Same-file clean/dirty reload (OPEN-11).
 - Actual Windows share-lock retry (SAVE-06).
 - >100 MB recovery skip (REC-10).
-- Missing-recent Remove/Locate/Keep and native/in-app parity (MRU-04/05).
-- PDF native export, native Import menu, Copy Link clipboard, export cancel/failure (IO-02/03/05/08/09/10).
+- Native/in-app recent parity (MRU-05).
+- PDF native export, export cancel/failure, shared-link/URL-protocol, and cloud-entry parity (IO-02/08/09/10).
 - About runtime versions, Open Data Folder, Copy Diagnostics, Reset (ABT-02/03/04/07).
 - Clean `npm ci` build reproducibility (PKG-11).

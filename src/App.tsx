@@ -1259,7 +1259,13 @@ function WorkbookView() {
         ? 'https://simplesheets.mouseclick.au/'
         : `${window.location.origin}${window.location.pathname}`;
       const url = encodeDocToUrl(workbook, baseUrl);
-      await navigator.clipboard.writeText(url);
+      const platform = getPlatform();
+      if (platform.kind === 'desktop') {
+        const result = await platform.copyText(url);
+        if (!result.ok) throw new Error(result.message);
+      } else {
+        await navigator.clipboard.writeText(url);
+      }
       setStatusMessage('Link copied to clipboard — share it with anyone');
     } catch {
       setStatusMessage('Failed to copy link to clipboard');
@@ -1514,16 +1520,37 @@ function WorkbookView() {
 
   // Import / Export triggers — dispatch events that the hidden import buttons listen for
   const handleImportExcelMenu = useCallback(() => {
+    const platform = getPlatform();
+    if (platform.capabilities.nativeFileDialogs) {
+      void platform.openFileDialog().then((result) => {
+        if (!result.ok) setStatusMessage(result.message);
+      });
+      return;
+    }
     window.dispatchEvent(new CustomEvent('simplesheets:import-excel'));
-  }, []);
+  }, [setStatusMessage]);
 
   const handleImportCsvMenu = useCallback(() => {
+    const platform = getPlatform();
+    if (platform.capabilities.nativeFileDialogs) {
+      void platform.openFileDialog().then((result) => {
+        if (!result.ok) setStatusMessage(result.message);
+      });
+      return;
+    }
     window.dispatchEvent(new CustomEvent('simplesheets:import-csv'));
-  }, []);
+  }, [setStatusMessage]);
 
   const handleImportJsonMenu = useCallback(() => {
+    const platform = getPlatform();
+    if (platform.capabilities.nativeFileDialogs) {
+      void platform.openFileDialog().then((result) => {
+        if (!result.ok) setStatusMessage(result.message);
+      });
+      return;
+    }
     window.dispatchEvent(new CustomEvent('simplesheets:import-json'));
-  }, []);
+  }, [setStatusMessage]);
 
   const handleExportExcelMenu = useCallback(() => {
     const defaultName = workbook.title.replace(/[^a-zA-Z0-9-_]/g, '_') || 'Untitled';

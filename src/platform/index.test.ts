@@ -68,6 +68,7 @@ function makeBridge(overrides: Partial<DesktopBridge> = {}): DesktopBridge {
     setMenuState: async () => ({ ok: true }),
     resetApplicationData: async () => ({ ok: true }),
     dispatchMenuAction: async () => ({ ok: true }),
+    copyText: async () => ({ ok: true }),
     ...overrides,
   };
 }

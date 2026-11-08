@@ -11,6 +11,7 @@
 import {
   app,
   BrowserWindow,
+  clipboard,
   dialog,
   ipcMain,
   Menu,
@@ -219,7 +220,11 @@ function rebuildMenu(): void {
     .map((entry, index) => ({
       id: `recent-${index}`,
       label: entry.name,
-      click: () => sendMenuAction(`recent-id:${entry.id}`),
+      click: () => sendMenuAction(
+        entry.source === 'local' && entry.path
+          ? `recent:${entry.path}`
+          : `recent-id:${entry.id}`,
+      ),
     }));
   if (recentItems.length > 0) {
     recentItems.push({ type: 'separator' });
@@ -773,6 +778,15 @@ function setupIpc(): void {
   ipcMain.handle('app:ping', (event) => {
     assertTrustedSender(event);
     return 'pong';
+  });
+
+  ipcMain.handle('app:copy-text', (event, text: unknown) => {
+    assertTrustedSender(event);
+    if (typeof text !== 'string' || text.length === 0 || text.length > 1_000_000) {
+      return { ok: false, code: 'INVALID_ARGUMENT', message: 'Invalid clipboard text.' };
+    }
+    clipboard.writeText(text);
+    return { ok: true };
   });
 
   ipcMain.handle('app:reset-data', async (event) => {

@@ -111,7 +111,7 @@ describe('AboutModal', () => {
 
   it('renders a copy button next to version info', () => {
     render(<AboutModal isOpen={true} onClose={jest.fn()} />);
-    expect(screen.getByLabelText('Copy version info')).toBeInTheDocument();
+    expect(screen.getByLabelText('Copy diagnostics')).toBeInTheDocument();
   });
 
   it('copies labeled version info to clipboard when copy button is clicked', async () => {
@@ -121,7 +121,7 @@ describe('AboutModal', () => {
 
     render(<AboutModal isOpen={true} onClose={jest.fn()} />);
 
-    const copyBtn = screen.getByLabelText('Copy version info');
+    const copyBtn = screen.getByLabelText('Copy diagnostics');
     fireEvent.click(copyBtn);
 
     // Wait for the async clipboard write to resolve
@@ -146,7 +146,7 @@ describe('AboutModal', () => {
 
     render(<AboutModal isOpen={true} onClose={jest.fn()} />);
 
-    const copyBtn = screen.getByLabelText('Copy version info');
+    const copyBtn = screen.getByLabelText('Copy diagnostics');
     fireEvent.click(copyBtn);
 
     await new Promise((r) => setTimeout(r, 0));
@@ -164,7 +164,7 @@ describe('AboutModal', () => {
     jest.useFakeTimers();
     render(<AboutModal isOpen={true} onClose={jest.fn()} />);
 
-    const copyBtn = screen.getByLabelText('Copy version info');
+    const copyBtn = screen.getByLabelText('Copy diagnostics');
 
     await act(async () => {
       fireEvent.click(copyBtn);

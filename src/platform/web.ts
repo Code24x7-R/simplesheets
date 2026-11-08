@@ -170,6 +170,14 @@ export function createWebAdapter(): PlatformAdapter {
     async setMenuState() {
       return undefined;
     },
+    async copyText(text: string) {
+      try {
+        await navigator.clipboard.writeText(text);
+        return { ok: true, value: undefined };
+      } catch {
+        return failure('NOT_SUPPORTED', 'Clipboard write failed.');
+      }
+    },
     async resetApplicationData() {
       return failure('NOT_SUPPORTED', 'The browser edition has no desktop application data.');
     },

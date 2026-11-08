@@ -171,6 +171,7 @@ export interface DesktopBridge {
   }): Promise<DesktopBridgeResult>;
   resetApplicationData(): Promise<DesktopBridgeResult>;
   dispatchMenuAction(action: string): Promise<DesktopBridgeResult>;
+  copyText(text: string): Promise<DesktopBridgeResult>;
 }
 
 declare global {

@@ -183,6 +183,8 @@ export interface PlatformAdapter {
   closeCancel(): Promise<void>;
   /** Update native menu enable states. */
   setMenuState(state: MenuState): Promise<void>;
+  /** Copy text to the system clipboard. */
+  copyText(text: string): Promise<PlatformResult<void>>;
   /** Forward a native-owned accelerator that the main process did not catch. */
   dispatchMenuAction(action: string): Promise<void>;
   /** Clear desktop state and preferences (never user documents). */

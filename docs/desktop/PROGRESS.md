@@ -59,17 +59,17 @@ Known M1 limitations:
 
 Final report: `docs/desktop/FINAL-REPORT.md`.
 
-- **139 requirements tagged**: 113 automated-pass, 1 manual-pass,
-  25 unverified-environment, 0 failed.
+- **139 requirements tagged**: 120 automated-pass, 1 manual-pass,
+  18 unverified-environment, 0 failed.
 - Manual checklist consolidates installer/association/portable/clean-machine
   checks plus display scaling, OS shutdown, share-lock, >100 MB recovery,
-  missing-recent dialogs, PDF/Import/Copy Link clipboard paths, About actions,
+  recent parity, PDF/export/shared-link/cloud paths, and clean npm ci.
   and clean `npm ci` reproducibility.
 - Final verification: `npm run verify` 215 suites / 4,658 passed / 1 skipped;
-  `npm run verify:e2e` 41 tests passed; `npm run electron:build` produced both
+  `npm run verify:e2e` 45 tests passed; `npm run electron:build` produced both
   artifacts; packaged smoke passed including security and 30 s idle checks.
-- Final artifacts: NSIS ~109 MB (`ef223f2e…59d3`), portable ~99 MB
-  (`73a645b0…d2f3`), unpacked 312 MB.
+- Final artifacts: NSIS ~109 MB (`e1100136…f804`), portable ~99 MB
+  (`64dfedcb…44c6`), unpacked 312 MB.
 
 Remaining work is intentionally **unverified-environment**, not failed:
 installer execution, association/Open With, upgrade/uninstall cycles, portable
@@ -85,13 +85,13 @@ Checks run:
 | Check | Result |
 | --- | --- |
 | `npm run verify` | 215 suites, 4,658 passed, 1 skipped |
-| `npm run verify:e2e` | 41 tests passed |
+| `npm run verify:e2e` | 45 tests passed |
 | 5,000-row CSV navigation | ~16 ms/key (budget < 100 ms average) |
 | `large.ssjson` open | ~3.0 s (budget < 5 s) |
 | `large.ssjson` save | ~237 ms (budget < 2 s) |
 | 20 open cycles | heap growth ≤ 20% after CDP GC |
 | Peak memory, large workbook | ~570 MB working set (ceiling 1.5 GB) |
-| Installer / portable / unpacked | 108 MB / 99 MB / 312 MB |
+| Installer / portable / unpacked | 109 MB / 99 MB / 312 MB |
 | Packaged smoke | pass incl. 30 s idle network |
 
 Root causes fixed:
