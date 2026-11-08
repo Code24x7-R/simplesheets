@@ -63,11 +63,11 @@ Final report: `docs/desktop/FINAL-REPORT.md`.
   0 unverified-environment, 0 failed.
 - Manual checklist: all previously unverified checks are now user-verified;
   none remain.
-- Final verification: `npm run verify` 219 suites / 4,707 passed / 0 skipped;
+- Final verification: `npm run verify` 219 suites / 4,710 passed / 0 skipped;
   `npm run verify:e2e` 53 tests passed; `npm run electron:build` produced both
   artifacts; packaged smoke passed including security, local-fonts, and 30 s idle checks.
-- Final artifacts: NSIS ~109 MB (`677bde67…e0f4`), portable ~99 MB
-  (`e7b1b785…19ef`), unpacked 312 MB.
+- Final artifacts: NSIS ~109 MB (`a8c98503…eec0`), portable ~99 MB
+  (`851b4f9a…1b6`), unpacked 312 MB.
 
 No unverified-environment or failed requirements remain. The final report is
 complete at 129 automated-pass and 10 manual-pass.

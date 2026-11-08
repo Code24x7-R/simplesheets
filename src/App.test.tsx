@@ -367,6 +367,38 @@ describe('App - Global Keyboard Shortcuts', () => {
     });
   });
 
+  it('Ctrl+H seeds Find with the active cell contents', () => {
+    render(
+      <App
+        initialWorkbook={{
+          id: 'wb-seed',
+          title: 'Seed',
+          activeSheetIndex: 0,
+          lastModified: Date.now(),
+          sheets: [{
+            id: 's1',
+            name: 'Sheet1',
+            rowCount: 100,
+            columnCount: 26,
+            defaultColWidth: 100,
+            defaultRowHeight: 28,
+            columnWidths: {},
+            rowHeights: {},
+            frozenRows: 0,
+            frozenColumns: 0,
+            cells: { '0:0': { rawValue: 'active value' } },
+          }],
+        }}
+      />,
+    );
+
+    fireEvent.mouseDown(
+      screen.getByText('active value', { exact: true }).closest('.grid-cell') as HTMLElement,
+    );
+    fireGlobalKeyDown('h');
+    expect(screen.getByLabelText('Find')).toHaveValue('active value');
+  });
+
   it('Ctrl+H opens Find & Replace', () => {
     render(<App />);
     // Press Ctrl+H

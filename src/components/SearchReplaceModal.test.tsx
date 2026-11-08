@@ -88,6 +88,67 @@ describe('SearchReplaceModal', () => {
     expect(screen.getByLabelText('Replace with')).toBeTruthy();
   });
 
+  it('seeds the Find field with the active cell contents', () => {
+    render(
+      <SearchReplaceModal
+        isOpen={true}
+        onClose={jest.fn()}
+        workbook={makeWorkbook()}
+        activeSheetIndex={0}
+        initialQuery="hello"
+        onUpdate={jest.fn()}
+      />,
+    );
+    expect(screen.getByLabelText('Find')).toHaveValue('hello');
+  });
+
+  it('re-seeds the Find field each time it reopens', () => {
+    const { rerender } = render(
+      <SearchReplaceModal
+        isOpen={false}
+        onClose={jest.fn()}
+        workbook={makeWorkbook()}
+        activeSheetIndex={0}
+        initialQuery="first"
+        onUpdate={jest.fn()}
+      />,
+    );
+    rerender(
+      <SearchReplaceModal
+        isOpen={true}
+        onClose={jest.fn()}
+        workbook={makeWorkbook()}
+        activeSheetIndex={0}
+        initialQuery="first"
+        onUpdate={jest.fn()}
+      />,
+    );
+    expect(screen.getByLabelText('Find')).toHaveValue('first');
+
+    fireEvent.change(screen.getByLabelText('Find'), { target: { value: 'edited' } });
+    rerender(
+      <SearchReplaceModal
+        isOpen={false}
+        onClose={jest.fn()}
+        workbook={makeWorkbook()}
+        activeSheetIndex={0}
+        initialQuery="second"
+        onUpdate={jest.fn()}
+      />,
+    );
+    rerender(
+      <SearchReplaceModal
+        isOpen={true}
+        onClose={jest.fn()}
+        workbook={makeWorkbook()}
+        activeSheetIndex={0}
+        initialQuery="second"
+        onUpdate={jest.fn()}
+      />,
+    );
+    expect(screen.getByLabelText('Find')).toHaveValue('second');
+  });
+
   it('shows checkboxes for all options', () => {
     render(
       <SearchReplaceModal

@@ -658,6 +658,8 @@ When you paste formulas that reference other sheets:
 
 Open the Find & Replace dialog with **Edit → Find & Replace…** or **Ctrl + H**.
 
+The **Find** field is prefilled with the active cell's contents on the active sheet, so you can search for a value without retyping it. Clear or edit the field before searching.
+
 ### Search Options
 
 | Option | Description |

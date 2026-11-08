@@ -1305,3 +1305,13 @@
   pass. Unit coverage includes autofit bounds, resize-handle double-click,
   font fallback/cache/picker, style state, clipboard, and PDF; the E2E font
   test verifies installed-font permission and application.
+
+
+## 2026-11-08 [FEATURE] Find seeds from the active cell
+
+- Opening Find & Replace now prefills the Find field with the active cell's
+  raw contents on the active sheet.
+- The seed refreshes on each open without overwriting edits while the dialog
+  stays open; stale result summaries are cleared.
+- Tests: SearchReplaceModal seeding/reopen behavior and App Ctrl+H integration.
+- Verification: 219 suites / 4,710 passed / 0 skipped.

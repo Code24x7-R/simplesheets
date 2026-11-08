@@ -4545,6 +4545,7 @@ function WorkbookView() {
         onClose={() => { setShowSearchReplace(false); gridRef.current?.focus(); }}
         workbook={workbook}
         activeSheetIndex={workbook.activeSheetIndex}
+        initialQuery={getActiveCellValue()}
         onUpdate={handleSearchReplaceApply}
       />
       <PasteModal

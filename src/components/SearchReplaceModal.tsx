@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import type { Workbook } from '../types';
 import { searchSheets, replaceInSheets, type SearchResult, type ReplaceResult } from '../utils/sheetSearch';
 
@@ -13,6 +13,8 @@ interface SearchReplaceModalProps {
   onClose: () => void;
   workbook: Workbook;
   activeSheetIndex: number;
+  /** Seed for the Find field when the dialog opens (active cell contents). */
+  initialQuery?: string;
   onUpdate: (updatedWorkbook: Workbook, description: string) => void;
 }
 
@@ -38,11 +40,24 @@ export function SearchReplaceModal({
   onClose,
   workbook,
   activeSheetIndex,
+  initialQuery = '',
   onUpdate,
 }: SearchReplaceModalProps) {
-  const [state, setState] = useState(DEFAULT_STATE);
+  const [state, setState] = useState(() => ({ ...DEFAULT_STATE, query: initialQuery }));
   const [searchResult, setSearchResult] = useState<SearchResult | null>(null);
   const [replaceResult, setReplaceResult] = useState<ReplaceResult | null>(null);
+  const wasOpen = useRef(isOpen);
+
+  // Seed the Find field from the active cell each time the dialog opens.
+  // Keep the user's in-dialog edits intact while it stays open.
+  useEffect(() => {
+    if (isOpen && !wasOpen.current) {
+      setState((prev) => ({ ...prev, query: initialQuery }));
+      setSearchResult(null);
+      setReplaceResult(null);
+    }
+    wasOpen.current = isOpen;
+  }, [isOpen, initialQuery]);
 
   // Determine sheet indices to search
   const sheetIndices = useMemo(() => {

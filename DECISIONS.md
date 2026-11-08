@@ -49,3 +49,12 @@ Run E2E with an isolated `SIMPLESHEETS_PROFILE`; never point it at real user dat
 - **Decision:** `CellStyle.fontFamily` is optional; unset means the original
   monospace grid stack. Desktop grants only `local-fonts` to the trusted
   top-level frame; every other permission remains denied.
+
+
+## Iteration SS-04 — Find field seed
+
+- **Acceptance:** opening Find & Replace from the active sheet prefills Find
+  with that cell's raw contents; editing the active cell and reopening uses the
+  new value; user edits inside the open dialog are not overwritten.
+- **Decision:** the App passes `initialQuery` from `getActiveCellValue()`, and
+  the modal applies it only when transitioning from closed to open.
