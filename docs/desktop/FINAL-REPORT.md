@@ -13,8 +13,8 @@ with a manual procedure.
 | Level | Count |
 | --- | ---: |
 | automated-pass | 113 |
-| manual-pass | 0 |
-| unverified-environment | 26 |
+| manual-pass | 1 |
+| unverified-environment | 25 |
 | failed | 0 |
 | **total** | **139** |
 
@@ -42,7 +42,7 @@ and hashes are in `M5-EVIDENCE.md`; performance method/results are in
 | ID | Evidence | Test / procedure | Notes |
 | --- | --- | --- | --- |
 | APP-01 | automated-pass | Electron main/preload; E2E and packaged smoke. | Packaged smoke loads app:// and a fixture. |
-| APP-02 | unverified-environment | Electron main/preload; E2E and packaged smoke. | HMR not exercised by automated test; run electron:dev manually. |
+| APP-02 | manual-pass | Electron main/preload; E2E and packaged smoke. | Verified manually: electron:dev starts Vite + Electron, loads the dev server, and HMR works. |
 | APP-03 | automated-pass | Electron main/preload; E2E and packaged smoke. | Covered by the cited suite/code check. |
 | APP-04 | automated-pass | Electron main/preload; E2E and packaged smoke. | open.spec second-instance test. |
 | APP-05 | automated-pass | Electron main/preload; E2E and packaged smoke. | windowBounds.test + menu bounds restore E2E. |

@@ -59,8 +59,8 @@ Known M1 limitations:
 
 Final report: `docs/desktop/FINAL-REPORT.md`.
 
-- **139 requirements tagged**: 113 automated-pass, 0 manual-pass,
-  26 unverified-environment, 0 failed.
+- **139 requirements tagged**: 113 automated-pass, 1 manual-pass,
+  25 unverified-environment, 0 failed.
 - Manual checklist consolidates installer/association/portable/clean-machine
   checks plus display scaling, OS shutdown, share-lock, >100 MB recovery,
   missing-recent dialogs, PDF/Import/Copy Link clipboard paths, About actions,

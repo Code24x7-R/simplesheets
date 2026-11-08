@@ -8,7 +8,6 @@ ids = re.findall(r'^- \*\*([A-Z]+-\d+)\*\*', spec, re.M)
 assert len(ids) == 139, len(ids)
 
 unverified = {
-    'APP-02': 'HMR not exercised by automated test; run electron:dev manually.',
     'APP-11': 'OS shutdown/logoff is outside E2E; manual checklist.',
     'APP-14': 'Display scaling/focus requires a real display; manual checklist.',
     'OPEN-02': 'Cold argv and second instance automated; association/double-click needs installer approval.',
@@ -36,7 +35,13 @@ unverified = {
     'PERF-06': 'Heap measured; listener/object-URL counts code-reviewed, not instrumented.',
 }
 
-status = {i: ('unverified-environment' if i in unverified else 'automated-pass') for i in ids}
+manual_pass = {
+    'APP-02': 'Verified manually: electron:dev starts Vite + Electron, loads the dev server, and HMR works.',
+}
+status = {
+    i: ('manual-pass' if i in manual_pass else ('unverified-environment' if i in unverified else 'automated-pass'))
+    for i in ids
+}
 
 prefix_refs = {
     'PLAT': 'src/platform/types.ts; platform/index.test.ts; npm run verify.',
@@ -217,7 +222,7 @@ for prefix, title in groups:
     for req in ids:
         if not req.startswith(prefix + '-'):
             continue
-        note = specific.get(req, unverified.get(req, 'Covered by the cited suite/code check.'))
+        note = manual_pass.get(req, specific.get(req, unverified.get(req, 'Covered by the cited suite/code check.')))
         out.append(f'| {req} | {status[req]} | {prefix_refs[prefix]} | {note} |')
     out.append('')
 
