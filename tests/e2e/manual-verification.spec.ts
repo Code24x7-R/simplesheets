@@ -7,7 +7,8 @@ import {
   type ElectronApplication,
   type Page,
 } from '@playwright/test';
-import { access, copyFile, mkdtemp, readFile, rm, unlink } from 'node:fs/promises';
+import { access, copyFile, mkdtemp, readFile, rm, unlink, writeFile } from 'node:fs/promises';
+import { spawn } from 'node:child_process';
 import { constants } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -45,6 +46,12 @@ async function clickMenu(app: ElectronApplication, id: string): Promise<void> {
 async function stubOpenDialog(app: ElectronApplication, filePath: string): Promise<void> {
   await app.evaluate(({ dialog }, target) => {
     dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [target] });
+  }, filePath);
+}
+
+async function stubSaveDialog(app: ElectronApplication, filePath: string | null): Promise<void> {
+  await app.evaluate(({ dialog }, target) => {
+    dialog.showSaveDialog = async () => ({ canceled: target === null, filePath: target ?? undefined });
   }, filePath);
 }
 
@@ -218,5 +225,113 @@ test('clearing recents updates state and the native menu', async () => {
   } finally {
     await session.app.close();
     await cleanupProfile(profile);
+  }
+});
+
+
+test('PDF export writes through the native Save dialog', async () => {
+  const profile = await mkdtemp(path.join(os.tmpdir(), 'simplesheets-pdf-export-'));
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'simplesheets-pdf-target-'));
+  const target = path.join(dir, 'small.pdf');
+  const session = await launch(profile, [path.join(FIXTURES, 'small.ssjson')]);
+  try {
+    await stubSaveDialog(session.app, target);
+    await clickMenu(session.app, 'file-export-pdf');
+    await expect(session.page.getByTestId('status-message')).toContainText(/Exported "small\.pdf"/i, {
+      timeout: 60_000,
+    });
+    await expect(access(target, constants.R_OK)).resolves.toBeUndefined();
+  } finally {
+    await session.app.close();
+    await cleanupProfile(profile);
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('cancelling an export leaves the document untouched', async () => {
+  const profile = await mkdtemp(path.join(os.tmpdir(), 'simplesheets-export-cancel-'));
+  const session = await launch(profile, [path.join(FIXTURES, 'small.ssjson')]);
+  try {
+    await stubSaveDialog(session.app, null);
+    await clickMenu(session.app, 'file-export-csv');
+    await session.page.waitForTimeout(500);
+    await expect(session.page.getByTestId('status-message')).toContainText(/Imported "small"/);
+    await expect(session.page.getByTestId('save-state')).not.toContainText(/Unsaved changes/);
+  } finally {
+    await session.app.close();
+    await cleanupProfile(profile);
+  }
+});
+
+test('a simplesheets:// argument is ignored without registering a protocol', async () => {
+  const profile = await mkdtemp(path.join(os.tmpdir(), 'simplesheets-url-protocol-'));
+  const session = await launch(profile, ['simplesheets://open?file=small.ssjson']);
+  try {
+    await expect(session.page.getByTestId('grid-drop-zone')).toBeVisible();
+    await expect(session.page.getByTestId('status-message')).not.toContainText(/Open error/i);
+  } finally {
+    await session.app.close();
+    await cleanupProfile(profile);
+  }
+});
+
+
+test('a Windows share-lock is retried and can be cancelled', async () => {
+  const profile = await mkdtemp(path.join(os.tmpdir(), 'simplesheets-lock-'));
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'simplesheets-lock-file-'));
+  const target = path.join(dir, 'small.ssjson');
+  await copyFile(path.join(FIXTURES, 'small.ssjson'), target);
+  const session = await launch(profile, [target]);
+  let locker: ReturnType<typeof spawn> | null = null;
+  try {
+    await expect(session.page.getByText('Item 1', { exact: true })).toBeVisible();
+    await session.page.getByText('Item 1', { exact: true }).click();
+    await session.page.keyboard.press('Delete');
+    await session.page.keyboard.type('Locked edit');
+    await session.page.keyboard.press('Enter');
+    await expect(session.page.getByTestId('save-state')).toContainText(/Unsaved changes/);
+    await session.page.waitForTimeout(800);
+
+    const script = path.join(dir, 'lock.ps1');
+    const escaped = target.replace(/'/g, "''");
+    await writeFile(
+      script,
+      `$fs = [System.IO.File]::Open('${escaped}', 'Open', 'ReadWrite', 'None')
+Write-Output 'LOCKED'
+Start-Sleep -Seconds 15
+$fs.Close()
+`,
+    );
+    locker = spawn('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', script]);
+    await new Promise<void>((resolve, reject) => {
+      let output = '';
+      const timer = setTimeout(() => reject(new Error('locker did not start')), 10_000);
+      locker!.stdout?.on('data', (chunk) => {
+        output += String(chunk);
+        if (output.includes('LOCKED')) {
+          clearTimeout(timer);
+          resolve();
+        }
+      });
+      locker!.on('error', reject);
+    });
+
+    await stubMessageBox(session.app, 2);
+    await session.page.keyboard.press('Control+s');
+    await session.page.waitForTimeout(1_500);
+    await expect(session.page.getByTestId('save-state')).toContainText(/Unsaved changes/);
+
+    locker.kill();
+    await new Promise<void>((resolve) => locker!.once('exit', () => resolve()));
+    locker = null;
+    await session.page.keyboard.press('Control+s');
+    await expect(session.page.getByTestId('status-message')).toContainText(/Saved "small\.ssjson"/i, {
+      timeout: 30_000,
+    });
+  } finally {
+    locker?.kill();
+    await session.app.close();
+    await cleanupProfile(profile);
+    await rm(dir, { recursive: true, force: true });
   }
 });

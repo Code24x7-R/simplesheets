@@ -139,7 +139,19 @@ test('twenty open cycles do not grow the renderer heap by more than 20%', async 
       return usage.usedSize;
     };
 
+    const windowObject = await client.send('Runtime.evaluate', { expression: 'window' });
+    const objectId = windowObject.result.objectId;
+    const listenerCount = async (): Promise<number> => {
+      if (!objectId) return 0;
+      const result = await client.send('DOMDebugger.getEventListeners', { objectId });
+      return result.listeners.length;
+    };
+    const resourceCount = () =>
+      session.app.evaluate(() => process.getActiveResourcesInfo().length);
+
     const first = await heap();
+    const firstListeners = await listenerCount();
+    const firstResources = await resourceCount();
     for (let index = 0; index < 20; index += 1) {
       await session.page.bringToFront();
       await session.page.keyboard.press('Control+o');
@@ -149,7 +161,11 @@ test('twenty open cycles do not grow the renderer heap by more than 20%', async 
       );
     }
     const last = await heap();
+    const lastListeners = await listenerCount();
+    const lastResources = await resourceCount();
     expect(last).toBeLessThan(first * 1.2);
+    expect(lastListeners).toBeLessThanOrEqual(firstListeners + 2);
+    expect(lastResources).toBeLessThanOrEqual(firstResources + 2);
   } finally {
     await session.app.close();
     await cleanupProfile(profile);

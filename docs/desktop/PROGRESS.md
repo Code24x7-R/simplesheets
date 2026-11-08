@@ -59,22 +59,18 @@ Known M1 limitations:
 
 Final report: `docs/desktop/FINAL-REPORT.md`.
 
-- **139 requirements tagged**: 122 automated-pass, 7 manual-pass,
-  10 unverified-environment, 0 failed.
-- Manual checklist now tracks the remaining display scaling, OS shutdown,
-  share-lock, >100 MB recovery, PDF/export/shared-link/cloud paths, clean
-  npm ci, and listener-count checks.
-  and clean `npm ci` reproducibility.
-- Final verification: `npm run verify` 215 suites / 4,658 passed / 1 skipped;
-  `npm run verify:e2e` 47 tests passed; `npm run electron:build` produced both
+- **139 requirements tagged**: 129 automated-pass, 8 manual-pass,
+  2 unverified-environment, 0 failed.
+- Manual checklist now tracks the remaining display scaling and OS shutdown
+  checks only.
+- Final verification: `npm run verify` 215 suites / 4,660 passed / 1 skipped;
+  `npm run verify:e2e` 51 tests passed; `npm run electron:build` produced both
   artifacts; packaged smoke passed including security and 30 s idle checks.
-- Final artifacts: NSIS ~109 MB (`45074848…2e4b`), portable ~99 MB
-  (`1f1d2b2a…de95`), unpacked 312 MB.
+- Final artifacts: NSIS ~109 MB (`3dc341d2…8c43`), portable ~99 MB
+  (`619e1ab6…a784`), unpacked 312 MB.
 
 Remaining work is intentionally **unverified-environment**, not failed:
-OS shutdown/logoff, scaling, actual share-lock, >100 MB recovery,
-PDF/export/shared-link/cloud paths, clean `npm ci`, and listener-count
-instrumentation.
+OS shutdown/logoff and display scaling.
 
 ---
 
@@ -84,8 +80,8 @@ Checks run:
 
 | Check | Result |
 | --- | --- |
-| `npm run verify` | 215 suites, 4,658 passed, 1 skipped |
-| `npm run verify:e2e` | 47 tests passed |
+| `npm run verify` | 215 suites, 4,660 passed, 1 skipped |
+| `npm run verify:e2e` | 51 tests passed |
 | 5,000-row CSV navigation | ~16 ms/key (budget < 100 ms average) |
 | `large.ssjson` open | ~3.0 s (budget < 5 s) |
 | `large.ssjson` save | ~237 ms (budget < 2 s) |
@@ -124,7 +120,7 @@ Checks run:
 
 | Check | Result |
 | --- | --- |
-| `npm run verify` | 215 suites, 4,658 passed, 1 skipped |
+| `npm run verify` | 215 suites, 4,660 passed, 1 skipped |
 | `npm run verify:e2e` | 35 tests passed |
 | Packaged smoke | argv/picker/save/security pass, including 30 s idle network |
 | `npm run electron:build:dir` | pass |

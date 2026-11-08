@@ -22,8 +22,8 @@ The full build ran successfully:
 
 | Artifact | Size | SHA-256 |
 | --- | ---: | --- |
-| `release/SimpleSheets-Setup-0.1.0.exe` | ~109 MB | `450748488b7d174ad67b16ff7b442be4e523f456731ba67686477bcad6302e4b` |
-| `release/SimpleSheets-Portable-0.1.0.exe` | ~99 MB | `1f1d2b2af8128fba4d0df572940e1d1d528352f75d07952ef7c94e4a8173de95` |
+| `release/SimpleSheets-Setup-0.1.0.exe` | ~109 MB | `3dc341d24a8a83420c1a172219d96c48de11de3aa37063a4a1303f16ea058c43` |
+| `release/SimpleSheets-Portable-0.1.0.exe` | ~99 MB | `619e1ab60b078bbdd59913a7a4f903392b3a9b0ed8bf2e78c35072b2a507a784` |
 | `release/SimpleSheets-Setup-0.1.0.exe.blockmap` | 117 KB | generated |
 
 Artifacts are under the git-ignored `release/` directory. No binaries are

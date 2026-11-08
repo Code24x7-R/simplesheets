@@ -95,6 +95,19 @@ describe('DesktopStateStore', () => {
     await expect(fs.stat(path.join(dir, 'recovery.json'))).rejects.toThrow();
   });
 
+  it('rejects a recovery payload above the configured limit', async () => {
+    const limited = new DesktopStateStore(dir, '0.1.0', 1024);
+    await limited.init();
+    const result = limited.writeRecovery({
+      workbook: { sheets: [], padding: 'x'.repeat(4096) },
+      path: null,
+      displayName: 'Too big',
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.code).toBe('TOO_LARGE');
+    await limited.dispose();
+  });
+
   it('rejects an unserializable recovery payload', () => {
     const circular: Record<string, unknown> = {};
     circular.self = circular;

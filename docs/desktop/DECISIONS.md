@@ -458,6 +458,7 @@ Method: Windows `10.0.26300` x64, Node `23.11.0`, Electron `45.2.3`, Playwright
   Open With), PKG-02 (upgrade in place), PKG-03 (portable launch/About/no
   association), PKG-04 (association), PKG-10 (uninstall/data preservation), and
   PKG-13 (per-user installer, no elevation).
-- Remaining unverified items: APP-11/14, SAVE-06, REC-10, IO-02/08/09/10,
-  PKG-11, PERF-06.
+- Clean `npm ci` verification: `npm ci`, `npm run build`, and
+  `npm run electron:build:dir` succeeded in a temp copy.
+- Remaining unverified items: APP-11 (OS shutdown) and APP-14 (display scaling).
 - No failed requirements are reported. No artifacts were published.

@@ -12,14 +12,14 @@ with a manual procedure.
 
 | Level | Count |
 | --- | ---: |
-| automated-pass | 122 |
-| manual-pass | 7 |
-| unverified-environment | 10 |
+| automated-pass | 129 |
+| manual-pass | 8 |
+| unverified-environment | 2 |
 | failed | 0 |
 | **total** | **139** |
 
-Final checks: `npm run verify` (215 suites / 4,658 passed / 1 skipped),
-`npm run verify:e2e` (47 passed), `npm run electron:build` (NSIS + portable),
+Final checks: `npm run verify` (215 suites / 4,660 passed / 1 skipped),
+`npm run verify:e2e` (51 passed), `npm run electron:build` (NSIS + portable),
 and packaged smoke (argv/picker/save/security/30 s idle). Artifact measurements
 and hashes are in `M5-EVIDENCE.md`; performance method/results are in
 `M7-PERF.md`.
@@ -32,7 +32,7 @@ and hashes are in `M5-EVIDENCE.md`; performance method/results are in
 | PLAT-02 | automated-pass | src/platform/types.ts; platform/index.test.ts; npm run verify. | Covered by the cited suite/code check. |
 | PLAT-03 | automated-pass | src/platform/types.ts; platform/index.test.ts; npm run verify. | Grep confirms no renderer electron/ipcRenderer/window bridge outside src/platform. |
 | PLAT-04 | automated-pass | src/platform/types.ts; platform/index.test.ts; npm run verify. | Covered by the cited suite/code check. |
-| PLAT-05 | automated-pass | src/platform/types.ts; platform/index.test.ts; npm run verify. | npm run verify: 215 suites / 4,658 passed / 1 skipped. |
+| PLAT-05 | automated-pass | src/platform/types.ts; platform/index.test.ts; npm run verify. | npm run verify: 215 suites / 4,660 passed / 1 skipped. |
 | PLAT-06 | automated-pass | src/platform/types.ts; platform/index.test.ts; npm run verify. | Electron renderer build + bundle grep. |
 | PLAT-07 | automated-pass | src/platform/types.ts; platform/index.test.ts; npm run verify. | Covered by the cited suite/code check. |
 | PLAT-08 | automated-pass | src/platform/types.ts; platform/index.test.ts; npm run verify. | CAPABILITY_MATRIX.md compared with desktop adapter. |
@@ -82,7 +82,7 @@ and hashes are in `M5-EVIDENCE.md`; performance method/results are in
 | SAVE-03 | automated-pass | tests/e2e/save.spec.ts; atomicWrite/saveTarget tests. | save.spec cancelled Save As. |
 | SAVE-04 | automated-pass | tests/e2e/save.spec.ts; atomicWrite/saveTarget tests. | atomicWrite tests + save E2E. |
 | SAVE-05 | automated-pass | tests/e2e/save.spec.ts; atomicWrite/saveTarget tests. | save.spec read-only target. |
-| SAVE-06 | unverified-environment | tests/e2e/save.spec.ts; atomicWrite/saveTarget tests. | Actual Windows share-lock needs a second process; read-only automated. |
+| SAVE-06 | automated-pass | tests/e2e/save.spec.ts; atomicWrite/saveTarget tests. | manual-verification.spec: PowerShell FileShare.None lock -> Retry prompt/Cancel; retry after unlock. |
 | SAVE-07 | automated-pass | tests/e2e/save.spec.ts; atomicWrite/saveTarget tests. | save.spec external-change Overwrite/Reload. |
 | SAVE-08 | automated-pass | tests/e2e/save.spec.ts; atomicWrite/saveTarget tests. | save.spec deleted-target Recreate. |
 | SAVE-09 | automated-pass | tests/e2e/save.spec.ts; atomicWrite/saveTarget tests. | save.spec round-trip readback. |
@@ -105,7 +105,7 @@ and hashes are in `M5-EVIDENCE.md`; performance method/results are in
 | REC-07 | automated-pass | tests/e2e/recovery.spec.ts; desktopStateStore tests. | recovery.spec explicit banner + precedence. |
 | REC-08 | automated-pass | tests/e2e/recovery.spec.ts; desktopStateStore tests. | recovery.spec explicit+recovery no auto-overwrite. |
 | REC-09 | automated-pass | tests/e2e/recovery.spec.ts; desktopStateStore tests. | before-quit flush + markCleanExit tests. |
-| REC-10 | unverified-environment | tests/e2e/recovery.spec.ts; desktopStateStore tests. | >100 MB snapshot not exercised (memory-heavy); manual probe. |
+| REC-10 | automated-pass | tests/e2e/recovery.spec.ts; desktopStateStore tests. | desktopStateStore test with injected size limit returns TOO_LARGE. |
 | REC-11 | automated-pass | tests/e2e/recovery.spec.ts; desktopStateStore tests. | desktopStateStore legacy import test + App handler. |
 | REC-12 | automated-pass | tests/e2e/recovery.spec.ts; desktopStateStore tests. | Covered by the cited suite/code check. |
 | REC-13 | automated-pass | tests/e2e/recovery.spec.ts; desktopStateStore tests. | desktopStateStore corrupt-recovery deletion test. |
@@ -145,15 +145,15 @@ and hashes are in `M5-EVIDENCE.md`; performance method/results are in
 | ID | Evidence | Test / procedure | Notes |
 | --- | --- | --- | --- |
 | IO-01 | automated-pass | save/export E2E; native Share File test; web export tests. | save.spec Excel/CSV native export; JSON handler. |
-| IO-02 | unverified-environment | save/export E2E; native Share File test; web export tests. | PDF native-dialog export not E2E; PDF generator tests + manual. |
+| IO-02 | automated-pass | save/export E2E; native Share File test; web export tests. | manual-verification.spec: PDF export through native Save dialog. |
 | IO-03 | automated-pass | save/export E2E; native Share File test; web export tests. | manual-verification.spec: native Import menu -> Import Scope. |
 | IO-04 | automated-pass | save/export E2E; native Share File test; web export tests. | exports do not change path/title/clean state. |
 | IO-05 | automated-pass | save/export E2E; native Share File test; web export tests. | manual-verification.spec: native Copy Link -> public base in clipboard. |
 | IO-06 | automated-pass | save/export E2E; native Share File test; web export tests. | PDF generator consumes current sheet/workbook. |
 | IO-07 | automated-pass | save/export E2E; native Share File test; web export tests. | existing web export tests. |
-| IO-08 | unverified-environment | save/export E2E; native Share File test; web export tests. | Export cancel/failure paths not all E2E. |
-| IO-09 | unverified-environment | save/export E2E; native Share File test; web export tests. | No URL protocol is registered; browser shared-link behavior manual. |
-| IO-10 | unverified-environment | save/export E2E; native Share File test; web export tests. | Cloud entry point hidden on desktop; in-app/native parity manual. |
+| IO-08 | automated-pass | save/export E2E; native Share File test; web export tests. | manual-verification.spec: cancelled export leaves document clean. |
+| IO-09 | automated-pass | save/export E2E; native Share File test; web export tests. | manual-verification.spec: simplesheets:// argument ignored; no protocol registered. |
+| IO-10 | automated-pass | save/export E2E; native Share File test; web export tests. | MenuBar unit test hides cloud accounts when desktop-disabled. |
 | IO-11 | automated-pass | save/export E2E; native Share File test; web export tests. | menu.spec native Share File writes a copy. |
 
 ## Packaging and Windows integration (PKG)
@@ -170,7 +170,7 @@ and hashes are in `M5-EVIDENCE.md`; performance method/results are in
 | PKG-08 | automated-pass | electron-builder.yml; M5-EVIDENCE.md; release artifacts. | release/ gitignored; no binaries tracked. |
 | PKG-09 | automated-pass | electron-builder.yml; M5-EVIDENCE.md; release artifacts. | ASAR enabled; packaged smoke loads. |
 | PKG-10 | manual-pass | electron-builder.yml; M5-EVIDENCE.md; release artifacts. | User-verified: uninstall removed app/shortcuts/association and preserved %APPDATA%. |
-| PKG-11 | unverified-environment | electron-builder.yml; M5-EVIDENCE.md; release artifacts. | Clean npm ci not run in this tree; lockfile/build procedure documented. |
+| PKG-11 | manual-pass | electron-builder.yml; M5-EVIDENCE.md; release artifacts. | Clean temp copy: npm ci succeeded; npm run build and electron:build:dir succeeded. |
 | PKG-12 | automated-pass | electron-builder.yml; M5-EVIDENCE.md; release artifacts. | no publish/CI release configuration added. |
 | PKG-13 | manual-pass | electron-builder.yml; M5-EVIDENCE.md; release artifacts. | User-verified: installer ran without elevation; installed app worked. |
 
@@ -218,7 +218,7 @@ and hashes are in `M5-EVIDENCE.md`; performance method/results are in
 | PERF-03 | automated-pass | tests/e2e/performance.spec.ts; M7-PERF.md. | performance.spec large save <2 s; ~237 ms. |
 | PERF-04 | automated-pass | tests/e2e/performance.spec.ts; M7-PERF.md. | performance.spec 20 open cycles, CDP GC <20%. |
 | PERF-05 | automated-pass | tests/e2e/performance.spec.ts; M7-PERF.md. | main recovery timer coalesces at 500 ms. |
-| PERF-06 | unverified-environment | tests/e2e/performance.spec.ts; M7-PERF.md. | Heap measured; listener/object-URL counts code-reviewed, not instrumented. |
+| PERF-06 | automated-pass | tests/e2e/performance.spec.ts; M7-PERF.md. | performance.spec checks renderer window listener and main resource counts after 20 cycles. |
 | PERF-07 | automated-pass | tests/e2e/performance.spec.ts; M7-PERF.md. | 109 MB installer / 99 MB portable / 312 MB unpacked. |
 | PERF-08 | automated-pass | tests/e2e/performance.spec.ts; M7-PERF.md. | performance.spec working set <1.5 GB. |
 | PERF-09 | automated-pass | tests/e2e/performance.spec.ts; M7-PERF.md. | M7-PERF.md + DECISIONS section 14. |
@@ -234,10 +234,3 @@ Remaining manual checks:
 
 - Windows display scaling at 100%, 125%, and 150% (APP-14).
 - OS shutdown/logoff recovery behavior (APP-11).
-- Same-file clean/dirty reload (OPEN-11).
-- Actual Windows share-lock retry (SAVE-06).
-- >100 MB recovery skip (REC-10).
-- Native/in-app recent parity (MRU-05).
-- PDF native export, export cancel/failure, shared-link/URL-protocol, and cloud-entry parity (IO-02/08/09/10).
-- Clean `npm ci` build reproducibility (PKG-11).
-- Listener/object-URL count instrumentation (PERF-06).

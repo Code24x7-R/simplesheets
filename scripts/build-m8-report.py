@@ -10,14 +10,6 @@ assert len(ids) == 139, len(ids)
 unverified = {
     'APP-11': 'OS shutdown/logoff is outside E2E; manual checklist.',
     'APP-14': 'Display scaling/focus requires a real display; manual checklist.',
-    'SAVE-06': 'Actual Windows share-lock needs a second process; read-only automated.',
-    'REC-10': '>100 MB snapshot not exercised (memory-heavy); manual probe.',
-    'IO-02': 'PDF native-dialog export not E2E; PDF generator tests + manual.',
-    'IO-08': 'Export cancel/failure paths not all E2E.',
-    'IO-09': 'No URL protocol is registered; browser shared-link behavior manual.',
-    'IO-10': 'Cloud entry point hidden on desktop; in-app/native parity manual.',
-    'PKG-11': 'Clean npm ci not run in this tree; lockfile/build procedure documented.',
-    'PERF-06': 'Heap measured; listener/object-URL counts code-reviewed, not instrumented.',
 }
 
 manual_pass = {
@@ -27,6 +19,7 @@ manual_pass = {
     'PKG-03': 'User-verified: portable launched; About showed portable/folder; no association.',
     'PKG-04': 'User-verified: .ssjson association and Open With worked; Windows kept default control.',
     'PKG-10': 'User-verified: uninstall removed app/shortcuts/association and preserved %APPDATA%.',
+    'PKG-11': 'Clean temp copy: npm ci succeeded; npm run build and electron:build:dir succeeded.',
     'PKG-13': 'User-verified: installer ran without elevation; installed app worked.',
 }
 status = {
@@ -51,7 +44,7 @@ prefix_refs = {
 
 specific = {
     'PLAT-03': 'Grep confirms no renderer electron/ipcRenderer/window bridge outside src/platform.',
-    'PLAT-05': 'npm run verify: 215 suites / 4,658 passed / 1 skipped.',
+    'PLAT-05': 'npm run verify: 215 suites / 4,660 passed / 1 skipped.',
     'PLAT-06': 'Electron renderer build + bundle grep.',
     'PLAT-08': 'CAPABILITY_MATRIX.md compared with desktop adapter.',
     'APP-01': 'Packaged smoke loads app:// and a fixture.',
@@ -76,6 +69,7 @@ specific = {
     'SAVE-03': 'save.spec cancelled Save As.',
     'SAVE-04': 'atomicWrite tests + save E2E.',
     'SAVE-05': 'save.spec read-only target.',
+    'SAVE-06': 'manual-verification.spec: PowerShell FileShare.None lock -> Retry prompt/Cancel; retry after unlock.',
     'SAVE-07': 'save.spec external-change Overwrite/Reload.',
     'SAVE-08': 'save.spec deleted-target Recreate.',
     'SAVE-09': 'save.spec round-trip readback.',
@@ -92,6 +86,7 @@ specific = {
     'REC-07': 'recovery.spec explicit banner + precedence.',
     'REC-08': 'recovery.spec explicit+recovery no auto-overwrite.',
     'REC-09': 'before-quit flush + markCleanExit tests.',
+    'REC-10': 'desktopStateStore test with injected size limit returns TOO_LARGE.',
     'REC-11': 'desktopStateStore legacy import test + App handler.',
     'REC-13': 'desktopStateStore corrupt-recovery deletion test.',
     'REC-15': 'recovery.spec missing path status + stale recent removal.',
@@ -116,9 +111,13 @@ specific = {
     'IO-01': 'save.spec Excel/CSV native export; JSON handler.',
     'IO-03': 'manual-verification.spec: native Import menu -> Import Scope.',
     'IO-05': 'manual-verification.spec: native Copy Link -> public base in clipboard.',
+    'IO-02': 'manual-verification.spec: PDF export through native Save dialog.',
     'IO-04': 'exports do not change path/title/clean state.',
     'IO-06': 'PDF generator consumes current sheet/workbook.',
     'IO-07': 'existing web export tests.',
+    'IO-08': 'manual-verification.spec: cancelled export leaves document clean.',
+    'IO-09': 'manual-verification.spec: simplesheets:// argument ignored; no protocol registered.',
+    'IO-10': 'MenuBar unit test hides cloud accounts when desktop-disabled.',
     'IO-11': 'menu.spec native Share File writes a copy.',
     'PKG-01': 'electron-builder.yml identity + artifact names.',
     'PKG-05': 'About/README unsigned/SmartScreen text.',
@@ -157,6 +156,7 @@ specific = {
     'PERF-03': 'performance.spec large save <2 s; ~237 ms.',
     'PERF-04': 'performance.spec 20 open cycles, CDP GC <20%.',
     'PERF-05': 'main recovery timer coalesces at 500 ms.',
+    'PERF-06': 'performance.spec checks renderer window listener and main resource counts after 20 cycles.',
     'PERF-07': '109 MB installer / 99 MB portable / 312 MB unpacked.',
     'PERF-08': 'performance.spec working set <1.5 GB.',
     'PERF-09': 'M7-PERF.md + DECISIONS section 14.',
@@ -205,8 +205,8 @@ for level in ['automated-pass', 'manual-pass', 'unverified-environment', 'failed
 out.append(f'| **total** | **{len(ids)}** |')
 out += [
     '',
-    'Final checks: `npm run verify` (215 suites / 4,658 passed / 1 skipped),',
-    '`npm run verify:e2e` (47 passed), `npm run electron:build` (NSIS + portable),',
+    'Final checks: `npm run verify` (215 suites / 4,660 passed / 1 skipped),',
+    '`npm run verify:e2e` (51 passed), `npm run electron:build` (NSIS + portable),',
     'and packaged smoke (argv/picker/save/security/30 s idle). Artifact measurements',
     'and hashes are in `M5-EVIDENCE.md`; performance method/results are in',
     '`M7-PERF.md`.',
@@ -238,13 +238,6 @@ out += [
     '',
     '- Windows display scaling at 100%, 125%, and 150% (APP-14).',
     '- OS shutdown/logoff recovery behavior (APP-11).',
-    '- Same-file clean/dirty reload (OPEN-11).',
-    '- Actual Windows share-lock retry (SAVE-06).',
-    '- >100 MB recovery skip (REC-10).',
-    '- Native/in-app recent parity (MRU-05).',
-    '- PDF native export, export cancel/failure, shared-link/URL-protocol, and cloud-entry parity (IO-02/08/09/10).',
-    '- Clean `npm ci` build reproducibility (PKG-11).',
-    '- Listener/object-URL count instrumentation (PERF-06).',
 ]
 Path('docs/desktop/FINAL-REPORT.md').write_text('\n'.join(out) + '\n', encoding='utf-8')
 print(f'wrote {len(ids)} requirements: {counts}')

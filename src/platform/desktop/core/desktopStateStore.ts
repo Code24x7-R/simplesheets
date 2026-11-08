@@ -117,6 +117,7 @@ export class DesktopStateStore {
   constructor(
     private readonly dataDir: string,
     private readonly appVersion: string,
+    private readonly maxRecoveryBytes: number = MAX_RECOVERY_BYTES,
   ) {
     this.statePath = path.join(dataDir, 'state.json');
     this.recoveryPath = path.join(dataDir, 'recovery.json');
@@ -336,11 +337,11 @@ export class DesktopStateStore {
     } catch {
       return { ok: false, code: 'INVALID_RECORD', message: 'The recovery snapshot cannot be serialized.' };
     }
-    if (bytes > MAX_RECOVERY_BYTES) {
+    if (bytes > this.maxRecoveryBytes) {
       return {
         ok: false,
         code: 'TOO_LARGE',
-        message: `The recovery snapshot exceeds the ${Math.round(MAX_RECOVERY_BYTES / (1024 * 1024))} MB limit.`,
+        message: `The recovery snapshot exceeds the ${Math.round(this.maxRecoveryBytes / (1024 * 1024))} MB limit.`,
       };
     }
 
