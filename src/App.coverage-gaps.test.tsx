@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Richard Robertson
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import App from './App';
+import { clearClipboard } from './utils/clipboard';
 
 // Mock the virtualizer
 jest.mock('@tanstack/react-virtual', () => ({
@@ -397,7 +398,11 @@ describe('App - Filter Apply and Clear', () => {
 });
 
 describe('App - Paste Special', () => {
-  it.skip('shows message when paste special is invoked with no clipboard data', () => {
+  beforeEach(() => {
+    clearClipboard();
+  });
+
+  it('shows message when paste special is invoked with no clipboard data', () => {
     render(<App />);
     // Select a cell
     const cell = document.querySelector('.grid-cell') as HTMLElement;

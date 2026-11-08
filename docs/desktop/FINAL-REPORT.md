@@ -18,7 +18,7 @@ with a manual procedure.
 | failed | 0 |
 | **total** | **139** |
 
-Final checks: `npm run verify` (215 suites / 4,660 passed / 1 skipped),
+Final checks: `npm run verify` (215 suites / 4,661 passed / 0 skipped),
 `npm run verify:e2e` (51 passed), `npm run electron:build` (NSIS + portable),
 and packaged smoke (argv/picker/save/security/30 s idle). Artifact measurements
 and hashes are in `M5-EVIDENCE.md`; performance method/results are in
@@ -32,7 +32,7 @@ and hashes are in `M5-EVIDENCE.md`; performance method/results are in
 | PLAT-02 | automated-pass | src/platform/types.ts; platform/index.test.ts; npm run verify. | Covered by the cited suite/code check. |
 | PLAT-03 | automated-pass | src/platform/types.ts; platform/index.test.ts; npm run verify. | Grep confirms no renderer electron/ipcRenderer/window bridge outside src/platform. |
 | PLAT-04 | automated-pass | src/platform/types.ts; platform/index.test.ts; npm run verify. | Covered by the cited suite/code check. |
-| PLAT-05 | automated-pass | src/platform/types.ts; platform/index.test.ts; npm run verify. | npm run verify: 215 suites / 4,660 passed / 1 skipped. |
+| PLAT-05 | automated-pass | src/platform/types.ts; platform/index.test.ts; npm run verify. | npm run verify: 215 suites / 4,661 passed / 0 skipped. |
 | PLAT-06 | automated-pass | src/platform/types.ts; platform/index.test.ts; npm run verify. | Electron renderer build + bundle grep. |
 | PLAT-07 | automated-pass | src/platform/types.ts; platform/index.test.ts; npm run verify. | Covered by the cited suite/code check. |
 | PLAT-08 | automated-pass | src/platform/types.ts; platform/index.test.ts; npm run verify. | CAPABILITY_MATRIX.md compared with desktop adapter. |

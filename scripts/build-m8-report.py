@@ -44,7 +44,7 @@ prefix_refs = {
 
 specific = {
     'PLAT-03': 'Grep confirms no renderer electron/ipcRenderer/window bridge outside src/platform.',
-    'PLAT-05': 'npm run verify: 215 suites / 4,660 passed / 1 skipped.',
+    'PLAT-05': 'npm run verify: 215 suites / 4,661 passed / 0 skipped.',
     'PLAT-06': 'Electron renderer build + bundle grep.',
     'PLAT-08': 'CAPABILITY_MATRIX.md compared with desktop adapter.',
     'APP-01': 'Packaged smoke loads app:// and a fixture.',
@@ -205,7 +205,7 @@ for level in ['automated-pass', 'manual-pass', 'unverified-environment', 'failed
 out.append(f'| **total** | **{len(ids)}** |')
 out += [
     '',
-    'Final checks: `npm run verify` (215 suites / 4,660 passed / 1 skipped),',
+    'Final checks: `npm run verify` (215 suites / 4,661 passed / 0 skipped),',
     '`npm run verify:e2e` (51 passed), `npm run electron:build` (NSIS + portable),',
     'and packaged smoke (argv/picker/save/security/30 s idle). Artifact measurements',
     'and hashes are in `M5-EVIDENCE.md`; performance method/results are in',

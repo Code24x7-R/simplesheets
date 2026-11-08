@@ -30,7 +30,7 @@ Checks run:
 
 | Check | Result |
 | --- | --- |
-| `npm run verify` | 203 suites, 4,576 passed, 1 skipped |
+| `npm run verify` | 203 suites, 4,576 passed, 0 skipped |
 | `npm run verify:e2e` | 9 tests passed |
 | `npm run electron:build:dir` | unpacked packaged build produced |
 | `node scripts/desktop-packaged-smoke.mjs` | packaged argv + picker open passed |
@@ -59,18 +59,22 @@ Known M1 limitations:
 
 Final report: `docs/desktop/FINAL-REPORT.md`.
 
-- **139 requirements tagged**: 129 automated-pass, 10 manual-pass,
-  0 unverified-environment, 0 failed.
-- Manual checklist: all previously unverified checks are now user-verified;
-  none remain.
-- Final verification: `npm run verify` 215 suites / 4,660 passed / 1 skipped;
-  `npm run verify:e2e` 51 tests passed; `npm run electron:build` produced both
+- **139 requirements tagged**: 113 automated-pass, 1 manual-pass,
+  25 unverified-environment, 0 failed.
+- Manual checklist consolidates installer/association/portable/clean-machine
+  checks plus display scaling, OS shutdown, share-lock, >100 MB recovery,
+  missing-recent dialogs, PDF/Import/Copy Link clipboard paths, About actions,
+  and clean `npm ci` reproducibility.
+- Final verification: `npm run verify` 215 suites / 4,661 passed / 0 skipped;
+  `npm run verify:e2e` 41 tests passed; `npm run electron:build` produced both
   artifacts; packaged smoke passed including security and 30 s idle checks.
-- Final artifacts: NSIS ~109 MB (`3dc341d2…8c43`), portable ~99 MB
-  (`619e1ab6…a784`), unpacked 312 MB.
+- Final artifacts: NSIS ~109 MB (`ef223f2e…59d3`), portable ~99 MB
+  (`73a645b0…d2f3`), unpacked 312 MB.
 
-No unverified-environment or failed requirements remain. The final report is
-complete at 129 automated-pass and 10 manual-pass.
+Remaining work is intentionally **unverified-environment**, not failed:
+installer execution, association/Open With, upgrade/uninstall cycles, portable
+wrapper launch, SmartScreen/antivirus, OS shutdown/logoff, scaling, actual
+share-lock, and clean `npm ci`.
 
 ---
 
@@ -80,14 +84,14 @@ Checks run:
 
 | Check | Result |
 | --- | --- |
-| `npm run verify` | 215 suites, 4,660 passed, 1 skipped |
-| `npm run verify:e2e` | 51 tests passed |
+| `npm run verify` | 215 suites, 4,661 passed, 0 skipped |
+| `npm run verify:e2e` | 41 tests passed |
 | 5,000-row CSV navigation | ~16 ms/key (budget < 100 ms average) |
 | `large.ssjson` open | ~3.0 s (budget < 5 s) |
 | `large.ssjson` save | ~237 ms (budget < 2 s) |
 | 20 open cycles | heap growth ≤ 20% after CDP GC |
 | Peak memory, large workbook | ~570 MB working set (ceiling 1.5 GB) |
-| Installer / portable / unpacked | 109 MB / 99 MB / 312 MB |
+| Installer / portable / unpacked | 108 MB / 99 MB / 312 MB |
 | Packaged smoke | pass incl. 30 s idle network |
 
 Root causes fixed:
@@ -120,7 +124,7 @@ Checks run:
 
 | Check | Result |
 | --- | --- |
-| `npm run verify` | 215 suites, 4,660 passed, 1 skipped |
+| `npm run verify` | 215 suites, 4,661 passed, 0 skipped |
 | `npm run verify:e2e` | 35 tests passed |
 | Packaged smoke | argv/picker/save/security pass, including 30 s idle network |
 | `npm run electron:build:dir` | pass |
@@ -167,7 +171,7 @@ Checks run:
 | Portable script inspection | `PORTABLE_EXECUTABLE_DIR` set; no association |
 | Icon inspection | ICO 16/24/32/48/64/128/256 + 512 PNG |
 | Artifact hashes | recorded in `M5-EVIDENCE.md` |
-| `npm run verify` | 214 suites, 4,653 passed, 1 skipped |
+| `npm run verify` | 214 suites, 4,653 passed, 0 skipped |
 | `npm run verify:e2e` | 34 tests passed |
 | Packaged `--dir` + smoke | pass |
 
@@ -198,7 +202,7 @@ Checks run:
 
 | Check | Result |
 | --- | --- |
-| `npm run verify` | 213 suites, 4,650 passed, 1 skipped |
+| `npm run verify` | 213 suites, 4,650 passed, 0 skipped |
 | `npm run verify:e2e` | 34 tests passed (menu 8, open 8, recovery 7, save 10, smoke 1) |
 | `npm run electron:build:dir` | unpacked packaged build produced |
 | `node scripts/desktop-packaged-smoke.mjs` | packaged argv+picker/save OK |
@@ -258,7 +262,7 @@ Checks run:
 
 | Check | Result |
 | --- | --- |
-| `npm run verify` | 211 suites, 4,633 passed, 1 skipped |
+| `npm run verify` | 211 suites, 4,633 passed, 0 skipped |
 | `npm run verify:e2e` | 26 tests passed (open 8, save 10, recovery 7, smoke 1) |
 | `src/platform/desktop/core/*` | state, recovery, migration, intent, queue unit tests pass |
 
@@ -302,7 +306,7 @@ Checks run:
 
 | Check | Result |
 | --- | --- |
-| `npm run verify` | 205 suites, 4,594 passed, 1 skipped |
+| `npm run verify` | 205 suites, 4,594 passed, 0 skipped |
 | `npm run verify:e2e` | 19 tests passed |
 | `npm run electron:build:dir` | packaged build produced |
 | `node scripts/desktop-packaged-smoke.mjs` | packaged argv + picker + Save passed (2 runs) |
@@ -349,7 +353,7 @@ Checks run:
 | `npm run type-check` | pass |
 | `npm run lint:electron` | pass |
 | `npm run type-check:electron` | pass |
-| `npm test` | 201 suites, 4,535 passed, 1 skipped |
+| `npm test` | 201 suites, 4,535 passed, 0 skipped |
 | `npm run verify:e2e` | 1 smoke test passed (dev shell) |
 | `npm run electron:build:dir` | unpacked packaged build produced (312 MB) |
 | `node scripts/desktop-packaged-smoke.mjs` | packaged app loaded from `app://`, edition `installed` |
