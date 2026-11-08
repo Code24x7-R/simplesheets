@@ -454,8 +454,10 @@ Method: Windows `10.0.26300` x64, Node `23.11.0`, Electron `45.2.3`, Playwright
   whenever no automated check could run here.
 - The installer was not executed, no registry/association was changed, and no
   clean machine was available. `INSTALL-CHECKLIST.md` is the procedure.
-- APP-02 (`electron:dev` startup/HMR), PKG-03 (portable launch), and PKG-13
-  (installer execution) were verified manually by the user.
-- Remaining unverified items: APP-11/14, OPEN-02/11, SAVE-06, REC-10,
-  MRU-05, IO-02/08/09/10, PKG-02/04/10/11, PERF-06.
+- User-verified manually: APP-02 (`electron:dev`/HMR), OPEN-02 (double-click/
+  Open With), PKG-02 (upgrade in place), PKG-03 (portable launch/About/no
+  association), PKG-04 (association), PKG-10 (uninstall/data preservation), and
+  PKG-13 (per-user installer, no elevation).
+- Remaining unverified items: APP-11/14, SAVE-06, REC-10, IO-02/08/09/10,
+  PKG-11, PERF-06.
 - No failed requirements are reported. No artifacts were published.

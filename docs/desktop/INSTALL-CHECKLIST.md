@@ -1,9 +1,8 @@
 # SimpleSheets Desktop — Install & Association Manual Checklist
 
-Status: **unverified-environment**. The artifacts are built locally, but the
-installer has not been executed and no registry/file association has been
-changed on this machine. Running the installer requires explicit approval
-(PKG-13).
+Status: **user-verified on 2026-11-07** for installer execution, per-user
+install, upgrade, `.ssjson` association/Open With, uninstall/data preservation,
+and portable launch. Keep this checklist for clean-machine/re-verification.
 
 ## Artifacts
 

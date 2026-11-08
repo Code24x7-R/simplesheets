@@ -12,14 +12,14 @@ with a manual procedure.
 
 | Level | Count |
 | --- | ---: |
-| automated-pass | 120 |
-| manual-pass | 3 |
-| unverified-environment | 16 |
+| automated-pass | 122 |
+| manual-pass | 7 |
+| unverified-environment | 10 |
 | failed | 0 |
 | **total** | **139** |
 
 Final checks: `npm run verify` (215 suites / 4,658 passed / 1 skipped),
-`npm run verify:e2e` (41 passed), `npm run electron:build` (NSIS + portable),
+`npm run verify:e2e` (47 passed), `npm run electron:build` (NSIS + portable),
 and packaged smoke (argv/picker/save/security/30 s idle). Artifact measurements
 and hashes are in `M5-EVIDENCE.md`; performance method/results are in
 `M7-PERF.md`.
@@ -61,7 +61,7 @@ and hashes are in `M5-EVIDENCE.md`; performance method/results are in
 | ID | Evidence | Test / procedure | Notes |
 | --- | --- | --- | --- |
 | OPEN-01 | automated-pass | tests/e2e/open.spec.ts; menu dirty-open tests. | open.spec picker; native filters. |
-| OPEN-02 | unverified-environment | tests/e2e/open.spec.ts; menu dirty-open tests. | Cold argv and second instance automated; association/double-click needs installer approval. |
+| OPEN-02 | manual-pass | tests/e2e/open.spec.ts; menu dirty-open tests. | User-verified: double-click / Open with .ssjson launched the installed app. |
 | OPEN-03 | automated-pass | tests/e2e/open.spec.ts; menu dirty-open tests. | open.spec drop + NO_PATH; multi-file status. |
 | OPEN-04 | automated-pass | tests/e2e/open.spec.ts; menu dirty-open tests. | Covered by the cited suite/code check. |
 | OPEN-05 | automated-pass | tests/e2e/open.spec.ts; menu dirty-open tests. | open.spec corrupt/missing; read-only save E2E. |
@@ -70,7 +70,7 @@ and hashes are in `M5-EVIDENCE.md`; performance method/results are in
 | OPEN-08 | automated-pass | tests/e2e/open.spec.ts; menu dirty-open tests. | menu.spec dirty-open Cancel/Discard/Save. |
 | OPEN-09 | automated-pass | tests/e2e/open.spec.ts; menu dirty-open tests. | performance.spec large open/navigation budgets. |
 | OPEN-10 | automated-pass | tests/e2e/open.spec.ts; menu dirty-open tests. | open.spec CSV Import Scope. |
-| OPEN-11 | unverified-environment | tests/e2e/open.spec.ts; menu dirty-open tests. | Same-file clean/dirty reload is code-covered but not E2E. |
+| OPEN-11 | automated-pass | tests/e2e/open.spec.ts; menu dirty-open tests. | manual-verification.spec: same-file clean reload and dirty Don’t Save reopen. |
 | OPEN-12 | automated-pass | tests/e2e/open.spec.ts; menu dirty-open tests. | Covered by the cited suite/code check. |
 
 ## Save pipeline (SAVE)
@@ -121,7 +121,7 @@ and hashes are in `M5-EVIDENCE.md`; performance method/results are in
 | MRU-02 | automated-pass | desktopStateStore/useMRU tests; menu E2E. | upsertRecent tests + open/save E2E. |
 | MRU-03 | automated-pass | desktopStateStore/useMRU tests; menu E2E. | main recents list -> native menu; useMRU tests. |
 | MRU-04 | automated-pass | desktopStateStore/useMRU tests; menu E2E. | manual-verification.spec: missing recent Remove via native dialog. |
-| MRU-05 | unverified-environment | desktopStateStore/useMRU tests; menu E2E. | Remove/clear parity is code/store tested; native/in-app immediate parity manual. |
+| MRU-05 | automated-pass | desktopStateStore/useMRU tests; menu E2E. | manual-verification.spec: clear recents updates state and native menu. |
 | MRU-06 | automated-pass | desktopStateStore/useMRU tests; menu E2E. | RecentEntry schema holds paths/metadata only. |
 | MRU-07 | automated-pass | desktopStateStore/useMRU tests; menu E2E. | useMRU web tests unchanged. |
 
@@ -161,18 +161,18 @@ and hashes are in `M5-EVIDENCE.md`; performance method/results are in
 | ID | Evidence | Test / procedure | Notes |
 | --- | --- | --- | --- |
 | PKG-01 | automated-pass | electron-builder.yml; M5-EVIDENCE.md; release artifacts. | electron-builder.yml identity + artifact names. |
-| PKG-02 | unverified-environment | electron-builder.yml; M5-EVIDENCE.md; release artifacts. | Upgrade-in-place unverified; builder output automated. |
-| PKG-03 | manual-pass | electron-builder.yml; M5-EVIDENCE.md; release artifacts. | User-verified: portable package launched and worked as expected. |
-| PKG-04 | unverified-environment | electron-builder.yml; M5-EVIDENCE.md; release artifacts. | Association config inspected; installer ran, but .ssjson/Open With not separately confirmed. |
+| PKG-02 | manual-pass | electron-builder.yml; M5-EVIDENCE.md; release artifacts. | User-verified: per-user install upgraded in place and preserved data/association. |
+| PKG-03 | manual-pass | electron-builder.yml; M5-EVIDENCE.md; release artifacts. | User-verified: portable launched; About showed portable/folder; no association. |
+| PKG-04 | manual-pass | electron-builder.yml; M5-EVIDENCE.md; release artifacts. | User-verified: .ssjson association and Open With worked; Windows kept default control. |
 | PKG-05 | automated-pass | electron-builder.yml; M5-EVIDENCE.md; release artifacts. | About/README unsigned/SmartScreen text. |
 | PKG-06 | automated-pass | electron-builder.yml; M5-EVIDENCE.md; release artifacts. | no updater dependency/config. |
 | PKG-07 | automated-pass | electron-builder.yml; M5-EVIDENCE.md; release artifacts. | ICO 16-256 + 512 PNG inspected. |
 | PKG-08 | automated-pass | electron-builder.yml; M5-EVIDENCE.md; release artifacts. | release/ gitignored; no binaries tracked. |
 | PKG-09 | automated-pass | electron-builder.yml; M5-EVIDENCE.md; release artifacts. | ASAR enabled; packaged smoke loads. |
-| PKG-10 | unverified-environment | electron-builder.yml; M5-EVIDENCE.md; release artifacts. | Uninstall association/data behavior unverified; checklist provided. |
+| PKG-10 | manual-pass | electron-builder.yml; M5-EVIDENCE.md; release artifacts. | User-verified: uninstall removed app/shortcuts/association and preserved %APPDATA%. |
 | PKG-11 | unverified-environment | electron-builder.yml; M5-EVIDENCE.md; release artifacts. | Clean npm ci not run in this tree; lockfile/build procedure documented. |
 | PKG-12 | automated-pass | electron-builder.yml; M5-EVIDENCE.md; release artifacts. | no publish/CI release configuration added. |
-| PKG-13 | manual-pass | electron-builder.yml; M5-EVIDENCE.md; release artifacts. | User-verified: installer was executed successfully and the installed app worked. |
+| PKG-13 | manual-pass | electron-builder.yml; M5-EVIDENCE.md; release artifacts. | User-verified: installer ran without elevation; installed app worked. |
 
 ## About and diagnostics (ABT)
 
@@ -229,8 +229,8 @@ None. Remaining gaps are `unverified-environment` and listed below.
 
 ## Manual checklist
 
-Use `docs/desktop/INSTALL-CHECKLIST.md` for installer/association/portable/
-clean-machine checks, plus:
+Installer/association/portable/upgrade/uninstall checks were user-verified.
+Remaining manual checks:
 
 - Windows display scaling at 100%, 125%, and 150% (APP-14).
 - OS shutdown/logoff recovery behavior (APP-11).
@@ -239,5 +239,5 @@ clean-machine checks, plus:
 - >100 MB recovery skip (REC-10).
 - Native/in-app recent parity (MRU-05).
 - PDF native export, export cancel/failure, shared-link/URL-protocol, and cloud-entry parity (IO-02/08/09/10).
-- About runtime versions, Open Data Folder, Copy Diagnostics, Reset (ABT-02/03/04/07).
 - Clean `npm ci` build reproducibility (PKG-11).
+- Listener/object-URL count instrumentation (PERF-06).

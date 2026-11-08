@@ -57,6 +57,7 @@ async function stubMessageBox(app: ElectronApplication, response: number): Promi
 test.beforeAll(async () => {
   await access(path.join(FIXTURES, 'small.ssjson'), constants.R_OK);
   await access(path.join(FIXTURES, 'small.csv'), constants.R_OK);
+  await access(path.join(FIXTURES, 'unicode.ssjson'), constants.R_OK);
 });
 
 test('About actions: versions, Open Data Folder, Copy Diagnostics, Reset', async () => {
@@ -161,5 +162,61 @@ test('a missing recent offers Remove from list', async () => {
     await session.app.close();
     await cleanupProfile(profile);
     await rm(dir, { recursive: true, force: true });
+  }
+});
+
+
+test('same file reopens cleanly and prompts when dirty', async () => {
+  const profile = await mkdtemp(path.join(os.tmpdir(), 'simplesheets-reopen-same-'));
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'simplesheets-reopen-file-'));
+  const target = path.join(dir, 'small.ssjson');
+  await copyFile(path.join(FIXTURES, 'small.ssjson'), target);
+  const session = await launch(profile, [target]);
+  try {
+    await expect(session.page.getByText('Item 1', { exact: true })).toBeVisible();
+    await stubOpenDialog(session.app, target);
+
+    // Replace the file behind the app, then reopen while clean.
+    await copyFile(path.join(FIXTURES, 'unicode.ssjson'), target);
+    await session.page.keyboard.press('Control+o');
+    await expect(session.page.getByText('こんにちは', { exact: true })).toBeVisible({
+      timeout: 30_000,
+    });
+
+    // Edit, then reopen the same file with Don't Save.
+    await session.page.getByText('こんにちは', { exact: true }).click();
+    await session.page.keyboard.press('Delete');
+    await session.page.keyboard.type('Dirty local');
+    await session.page.keyboard.press('Enter');
+    await stubMessageBox(session.app, 1);
+    await session.page.keyboard.press('Control+o');
+    await expect(session.page.getByText('こんにちは', { exact: true })).toBeVisible({
+      timeout: 30_000,
+    });
+  } finally {
+    await session.app.close();
+    await cleanupProfile(profile);
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('clearing recents updates state and the native menu', async () => {
+  const profile = await mkdtemp(path.join(os.tmpdir(), 'simplesheets-recents-clear-'));
+  const session = await launch(profile, [path.join(FIXTURES, 'small.ssjson')]);
+  try {
+    await expect(session.page.getByText('Item 1', { exact: true })).toBeVisible();
+    await clickMenu(session.app, 'file-clear-recents');
+    await session.page.waitForTimeout(300);
+    const state = JSON.parse(await readFile(path.join(profile, 'state.json'), 'utf8')) as {
+      recents: unknown[];
+    };
+    expect(state.recents).toEqual([]);
+    const recentLabel = await session.app.evaluate(
+      ({ Menu }) => Menu.getApplicationMenu()?.getMenuItemById('recent-0')?.label ?? null,
+    );
+    expect(recentLabel).toBeNull();
+  } finally {
+    await session.app.close();
+    await cleanupProfile(profile);
   }
 });

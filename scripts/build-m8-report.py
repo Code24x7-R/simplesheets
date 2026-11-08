@@ -10,26 +10,24 @@ assert len(ids) == 139, len(ids)
 unverified = {
     'APP-11': 'OS shutdown/logoff is outside E2E; manual checklist.',
     'APP-14': 'Display scaling/focus requires a real display; manual checklist.',
-    'OPEN-02': 'Cold argv and second instance automated; association/double-click needs installer approval.',
-    'OPEN-11': 'Same-file clean/dirty reload is code-covered but not E2E.',
     'SAVE-06': 'Actual Windows share-lock needs a second process; read-only automated.',
     'REC-10': '>100 MB snapshot not exercised (memory-heavy); manual probe.',
-    'MRU-05': 'Remove/clear parity is code/store tested; native/in-app immediate parity manual.',
     'IO-02': 'PDF native-dialog export not E2E; PDF generator tests + manual.',
     'IO-08': 'Export cancel/failure paths not all E2E.',
     'IO-09': 'No URL protocol is registered; browser shared-link behavior manual.',
     'IO-10': 'Cloud entry point hidden on desktop; in-app/native parity manual.',
-    'PKG-02': 'Upgrade-in-place unverified; builder output automated.',
-    'PKG-04': 'Association config inspected; installer ran, but .ssjson/Open With not separately confirmed.',
-    'PKG-10': 'Uninstall association/data behavior unverified; checklist provided.',
     'PKG-11': 'Clean npm ci not run in this tree; lockfile/build procedure documented.',
     'PERF-06': 'Heap measured; listener/object-URL counts code-reviewed, not instrumented.',
 }
 
 manual_pass = {
     'APP-02': 'Verified manually: electron:dev starts Vite + Electron, loads the dev server, and HMR works.',
-    'PKG-03': 'User-verified: portable package launched and worked as expected.',
-    'PKG-13': 'User-verified: installer was executed successfully and the installed app worked.',
+    'OPEN-02': 'User-verified: double-click / Open with .ssjson launched the installed app.',
+    'PKG-02': 'User-verified: per-user install upgraded in place and preserved data/association.',
+    'PKG-03': 'User-verified: portable launched; About showed portable/folder; no association.',
+    'PKG-04': 'User-verified: .ssjson association and Open With worked; Windows kept default control.',
+    'PKG-10': 'User-verified: uninstall removed app/shortcuts/association and preserved %APPDATA%.',
+    'PKG-13': 'User-verified: installer ran without elevation; installed app worked.',
 }
 status = {
     i: ('manual-pass' if i in manual_pass else ('unverified-environment' if i in unverified else 'automated-pass'))
@@ -70,6 +68,7 @@ specific = {
     'OPEN-05': 'open.spec corrupt/missing; read-only save E2E.',
     'OPEN-07': 'open.spec newest-wins + openQueue tests.',
     'OPEN-08': 'menu.spec dirty-open Cancel/Discard/Save.',
+    'OPEN-11': 'manual-verification.spec: same-file clean reload and dirty Don’t Save reopen.',
     'OPEN-09': 'performance.spec large open/navigation budgets.',
     'OPEN-10': 'open.spec CSV Import Scope.',
     'SAVE-01': 'save.spec in-place save.',
@@ -101,6 +100,7 @@ specific = {
     'MRU-02': 'upsertRecent tests + open/save E2E.',
     'MRU-03': 'main recents list -> native menu; useMRU tests.',
     'MRU-04': 'manual-verification.spec: missing recent Remove via native dialog.',
+    'MRU-05': 'manual-verification.spec: clear recents updates state and native menu.',
     'MRU-06': 'RecentEntry schema holds paths/metadata only.',
     'MRU-07': 'useMRU web tests unchanged.',
     'MENU-01': 'menu.spec structure test.',
@@ -206,7 +206,7 @@ out.append(f'| **total** | **{len(ids)}** |')
 out += [
     '',
     'Final checks: `npm run verify` (215 suites / 4,658 passed / 1 skipped),',
-    '`npm run verify:e2e` (41 passed), `npm run electron:build` (NSIS + portable),',
+    '`npm run verify:e2e` (47 passed), `npm run electron:build` (NSIS + portable),',
     'and packaged smoke (argv/picker/save/security/30 s idle). Artifact measurements',
     'and hashes are in `M5-EVIDENCE.md`; performance method/results are in',
     '`M7-PERF.md`.',
@@ -233,8 +233,8 @@ out += [
     '',
     '## Manual checklist',
     '',
-    'Use `docs/desktop/INSTALL-CHECKLIST.md` for installer/association/portable/',
-    'clean-machine checks, plus:',
+    'Installer/association/portable/upgrade/uninstall checks were user-verified.',
+    'Remaining manual checks:',
     '',
     '- Windows display scaling at 100%, 125%, and 150% (APP-14).',
     '- OS shutdown/logoff recovery behavior (APP-11).',
@@ -243,8 +243,8 @@ out += [
     '- >100 MB recovery skip (REC-10).',
     '- Native/in-app recent parity (MRU-05).',
     '- PDF native export, export cancel/failure, shared-link/URL-protocol, and cloud-entry parity (IO-02/08/09/10).',
-    '- About runtime versions, Open Data Folder, Copy Diagnostics, Reset (ABT-02/03/04/07).',
     '- Clean `npm ci` build reproducibility (PKG-11).',
+    '- Listener/object-URL count instrumentation (PERF-06).',
 ]
 Path('docs/desktop/FINAL-REPORT.md').write_text('\n'.join(out) + '\n', encoding='utf-8')
 print(f'wrote {len(ids)} requirements: {counts}')

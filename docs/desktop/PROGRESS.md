@@ -59,22 +59,22 @@ Known M1 limitations:
 
 Final report: `docs/desktop/FINAL-REPORT.md`.
 
-- **139 requirements tagged**: 120 automated-pass, 3 manual-pass,
-  16 unverified-environment, 0 failed.
-- Manual checklist consolidates installer/association/portable/clean-machine
-  checks plus display scaling, OS shutdown, share-lock, >100 MB recovery,
-  recent parity, PDF/export/shared-link/cloud paths, and clean npm ci.
+- **139 requirements tagged**: 122 automated-pass, 7 manual-pass,
+  10 unverified-environment, 0 failed.
+- Manual checklist now tracks the remaining display scaling, OS shutdown,
+  share-lock, >100 MB recovery, PDF/export/shared-link/cloud paths, clean
+  npm ci, and listener-count checks.
   and clean `npm ci` reproducibility.
 - Final verification: `npm run verify` 215 suites / 4,658 passed / 1 skipped;
-  `npm run verify:e2e` 45 tests passed; `npm run electron:build` produced both
+  `npm run verify:e2e` 47 tests passed; `npm run electron:build` produced both
   artifacts; packaged smoke passed including security and 30 s idle checks.
-- Final artifacts: NSIS ~109 MB (`e1100136…f804`), portable ~99 MB
-  (`64dfedcb…44c6`), unpacked 312 MB.
+- Final artifacts: NSIS ~109 MB (`45074848…2e4b`), portable ~99 MB
+  (`1f1d2b2a…de95`), unpacked 312 MB.
 
 Remaining work is intentionally **unverified-environment**, not failed:
-installer execution, association/Open With, upgrade/uninstall cycles, portable
-wrapper launch, SmartScreen/antivirus, OS shutdown/logoff, scaling, actual
-share-lock, and clean `npm ci`.
+OS shutdown/logoff, scaling, actual share-lock, >100 MB recovery,
+PDF/export/shared-link/cloud paths, clean `npm ci`, and listener-count
+instrumentation.
 
 ---
 
@@ -85,7 +85,7 @@ Checks run:
 | Check | Result |
 | --- | --- |
 | `npm run verify` | 215 suites, 4,658 passed, 1 skipped |
-| `npm run verify:e2e` | 45 tests passed |
+| `npm run verify:e2e` | 47 tests passed |
 | 5,000-row CSV navigation | ~16 ms/key (budget < 100 ms average) |
 | `large.ssjson` open | ~3.0 s (budget < 5 s) |
 | `large.ssjson` save | ~237 ms (budget < 2 s) |
